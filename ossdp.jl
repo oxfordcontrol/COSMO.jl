@@ -1,6 +1,6 @@
-module OSQPSolver
+module OSSDPSolver
 using Formatting
-export solveOSQP, qpResult, qpSettings, test
+export solveSDP, sdpResult, sdpSettings,project_sdcone
 
 # TODO: use vec() and reshape() to perform the vectorize and matrixify operations
 # TODO: rename OSQP specific objects and function names
@@ -14,23 +14,38 @@ export solveOSQP, qpResult, qpSettings, test
   end
 
    function project_sdcone(x::Array{Float64},n::Int64)
-    # recreate original matrix from input vector
-    X = reshape(X,n,n)
+    # recreate original matrix from input vectors
+    X = reshape(x,n,n)
     X = X./2
     X = X+X'
+
+
     # compute eigenvalue decomposition
     F = eigfact(X)
-    Λ = diag(F[:values])
-    Q = F[:vectors]
-    # set negative eigenvalues to 0
-    Xp = Q*max(Λ,0)*Q'
+
+    ind = find(x-> x>0, F[:values])
+    Λ = diagm(F[:values])
+    UsE = F[:vectors][:,ind]*sqrt.(Λ[ind,ind])
+    Xp = UsE*UsE'
+
+    # different method
+    # Λ = diagm(F[:values])
+    # Q = F[:vectors]
+    # # set negative eigenvalues to 0
+    # Xp = Q*max.(Λ,0)*Q'
+
+
     return vec(Xp)
+
+
+
+
   end
 
 # -------------------------------------
 # TYPE DEFINITIONS
 # -------------------------------------
-  type qpResult
+  type sdpResult
     x::Array{Float64}
     y::Array{Float64}
     cost::Float64
@@ -39,12 +54,12 @@ export solveOSQP, qpResult, qpSettings, test
     solverTime::Float64
   end
   # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::qpResult)
+  function Base.show(io::IO, obj::sdpResult)
     println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ny = $(round.(obj.y,3))" )
   end
 
 
-  type qpSettings
+  type sdpSettings
     rho::Float64
     sigma::Float64
     alpha::Float64
@@ -56,7 +71,7 @@ export solveOSQP, qpResult, qpSettings, test
     verbose::Bool
 
     #constructor
-    function qpSettings(;rho=0.1,sigma=10e-6,alpha=1.5,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-5,eps_dual_inf=1e-5,max_iter=2500,verbose=false)
+    function sdpSettings(;rho=0.1,sigma=10e-6,alpha=1.5,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-5,eps_dual_inf=1e-5,max_iter=2500,verbose=false)
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose)
     end
   end
@@ -98,7 +113,7 @@ export solveOSQP, qpResult, qpSettings, test
 
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveOSQP(P,q::Array{Float64},A,l::Array{Float64},u::Array{Float64},b::Array{Float64},settings::qpSettings)
+  function solveSDP(P,q::Array{Float64},A,l::Array{Float64},u::Array{Float64},b::Array{Float64},settings::sdpSettings)
 
     #Load algorithm settings
     σ = settings.sigma
