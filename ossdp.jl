@@ -1,4 +1,4 @@
-module OSSDPSolver
+module OSSDP
 using Formatting
 export solveSDP, sdpResult, sdpSettings,project_sdcone
 
@@ -33,13 +33,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     # Q = F[:vectors]
     # # set negative eigenvalues to 0
     # Xp = Q*max.(Λ,0)*Q'
-
-
     return vec(Xp)
-
-
-
-
   end
 
 # -------------------------------------
@@ -113,7 +107,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
 
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P,q::Array{Float64},A,l::Array{Float64},u::Array{Float64},b::Array{Float64},settings::sdpSettings)
+  function solveSDP(P,Q::Array{Float64},A,b::Array{Float64},settings::sdpSettings)
 
     #Load algorithm settings
     σ = settings.sigma
@@ -131,28 +125,29 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     r_dual = 100
 
     # determine size of decision variables
-    m = size(A,1)
-    n = size(A,2)
-    x = zeros(n)
-    y = zeros(m)
+    n = size(Q,1)
+    m = size(b,1)
+    x = zeros(n^2)
+    s = zeros(n^2)
     z = zeros(m)
 
-    xhat = copy(x)
-    zhat = copy(z)
-    cost = Inf
 
+    cost = Inf
+    q = vec(Q)
     # create initial guess vectors
-    xPrev = zeros(n,1)
-    yPrev = zeros(m,1)
-    zPrev = zeros(m,1)
+    xPrev = copy(x)
+    sPrev = copy(s)
+    zPrev = copy(z)
+    λPrev = copy(x)
+    μPrev = copy(z)
     nuNew = zeros(m,1)
-    xNew = zeros(n,1)
-    yNew = zeros(m,1)
-    zNew = zeros(m,1)
+    xNew = copy(x)
+    sNew = copy(s)
+    zNew = copy(z)
 
     # print information about settings to the screen
     println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, October 2017\n" * "-"^50 * "\n")
-    println("Problem:  variables n = $(n), constraints m = $(m)")
+    println("Problem:  variable size n = $(n), constraints m = $(m)")
     println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
 
     tic()
@@ -168,31 +163,36 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
 
       # assign previous variables
       xPrev = xNew
-      yPrev = yNew
+      sPrev = sNew
       zPrev = zNew
 
       # construct right hand side
-      RHS = [σ*xPrev-q; b-zPrev + 1/ρ*yPrev]
+      RHS = [-q+σ*sPrev-λPrev; b-1/ρ*μPrev]
 
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
 
       #deconstruct solution vector k = [xt_(k+1);nu_(k+1)]
-      xt = k[1:n]
-      nuNew = k[n+1:end]
-      zt = zPrev + 1/ρ * (nuNew - yPrev)
+      xt = k[1:n^2]
+      nuNew = k[n^2+1:end]
+      zt = b + 1/ρ * (nuNew - μPrev)
 
-      # Projection steps
+      # Projection steps and relaxation
+      # TODO: Find out why and where relaxation with α makes sense
       xNew = α*xt + (1-α)*xPrev
-      zNew = project_sdcone( α*zt + (1-α)*zPrev + 1/ρ*yPrev,n)
+      #TODO: SCS uses approximate projection (see Paper)
+      sNew = project_sdcone( α*xt + (1-α)*xPrev + 1/σ*λPrev,n)
+      zNew = α*zt + (1-α)*zPrev
 
-      # update dual variable
-      yNew = yPrev + ρ* (α*zt + (1-α)*zPrev - zNew)
+      # update dual variables
+      λNew = λPrev + σ* (xNew - sNew)
+      μNew = μPrev + ρ* (zNew - b)
 
       # update cost
       cost = (1/2 * xNew'*P*xNew + q'*xNew)[1]
 
       # compute residuals to check for termination condition
+      # TODO: Correct residuals
       r_prim = norm(A*xNew - zNew,Inf)
       r_dual = norm(P*xNew + q + A'*yNew,Inf)
 
@@ -228,6 +228,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
       # end
 
       # check convergence with residuals
+      # TODO: Check convergence condition for SDP case
       ϵ_prim = ϵ_abs + ϵ_rel * max(norm(A*xNew,Inf), norm(zNew,Inf) )
       ϵ_dual = ϵ_abs + ϵ_rel * max(norm(P*xNew,Inf), norm(A'*yNew,Inf), norm(q,Inf) )
       if ( r_prim < ϵ_prim && r_dual < ϵ_dual  )
@@ -244,7 +245,8 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     println("\n\n" * "-"^50 * "\nRESULT: Status: $(status)\nTotal Iterations: $(iter)\nOptimal objective: $(round.(cost,4))\nRuntime: $(round.(rt,3))s ($(round.(rt*1000,2))ms)\n" * "-"^50 )
 
     # create result object
-    result = qpResult(xNew,yNew,cost,iter,status,rt);
+    #TODO: Change result object
+    result = sdpResult(xNew,yNew,cost,iter,status,rt);
 
     return result;
 
