@@ -19,7 +19,6 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     X = X./2
     X = X+X'
 
-
     # compute eigenvalue decomposition
     F = eigfact(X)
 
@@ -27,7 +26,6 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     Λ = diagm(F[:values])
     UsE = F[:vectors][:,ind]*sqrt.(Λ[ind,ind])
     Xp = UsE*UsE'
-
     # different method
     # Λ = diagm(F[:values])
     # Q = F[:vectors]
@@ -41,7 +39,10 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
 # -------------------------------------
   type sdpResult
     x::Array{Float64}
-    y::Array{Float64}
+    s::Array{Float64}
+    z::Array{Float64}
+    λ::Array{Float64}
+    μ::Array{Float64}
     cost::Float64
     iter::Int64
     status::String
@@ -49,7 +50,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
   end
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::sdpResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ny = $(round.(obj.y,3))" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\n μ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
   end
 
 
@@ -65,7 +66,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     verbose::Bool
 
     #constructor
-    function sdpSettings(;rho=0.1,sigma=10e-6,alpha=1.5,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-5,eps_dual_inf=1e-5,max_iter=2500,verbose=false)
+    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.5,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-5,eps_dual_inf=1e-5,max_iter=2500,verbose=false)
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose)
     end
   end
@@ -107,7 +108,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
 
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P,Q::Array{Float64},A,b::Array{Float64},settings::sdpSettings)
+  function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
 
     #Load algorithm settings
     σ = settings.sigma
@@ -125,34 +126,34 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     r_dual = 100
 
     # determine size of decision variables
-    n = size(Q,1)
+    r = size(P,1)
+    # n: r^2 since we are working with vectorized matrixes of size r
+    n = r^2
     m = size(b,1)
-    x = zeros(n^2)
-    s = zeros(n^2)
-    z = zeros(m)
-
-
+    xPrev = zeros(n)
+    sPrev = zeros(n)
+    zPrev = zeros(m)
+    λPrev = zeros(n)
+    μPrev = zeros(m)
+    xNew = zeros(n)
+    sNew = zeros(n)
+    zNew = zeros(m)
+    λNew = zeros(n)
+    μNew = zeros(m)
+    ν = zeros(m)
     cost = Inf
-    q = vec(Q)
-    # create initial guess vectors
-    xPrev = copy(x)
-    sPrev = copy(s)
-    zPrev = copy(z)
-    λPrev = copy(x)
-    μPrev = copy(z)
-    nuNew = zeros(m,1)
-    xNew = copy(x)
-    sNew = copy(s)
-    zNew = copy(z)
 
+    # TODO: Print information still true?
     # print information about settings to the screen
-    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, October 2017\n" * "-"^50 * "\n")
-    println("Problem:  variable size n = $(n), constraints m = $(m)")
+    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, January 2018\n" * "-"^50 * "\n")
+    println("Problem: variable vec(X) size: n = $(n), constraints m = $(m)")
     println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
 
     tic()
 
     # KKT matrix M
+    # FIXME: Correct representation of P
+    P=0.0
     M = [P+σ*eye(n) A';A -1/ρ*eye(m)]
     M = sparse(M)
 
@@ -172,35 +173,36 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
 
-      #deconstruct solution vector k = [xt_(k+1);nu_(k+1)]
-      xt = k[1:n^2]
-      nuNew = k[n^2+1:end]
-      zt = b + 1/ρ * (nuNew - μPrev)
+      #deconstruct solution vector k = [xt_(k+1);ν(k+1)]
+      xt = k[1:n]
+      ν = k[n+1:end]
+      zt = b + 1/ρ * (ν - μPrev)
 
       # Projection steps and relaxation
       # TODO: Find out why and where relaxation with α makes sense
       xNew = α*xt + (1-α)*xPrev
+
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = project_sdcone( α*xt + (1-α)*xPrev + 1/σ*λPrev,n)
+      sNew = project_sdcone( xNew + 1/σ*λPrev,r)
       zNew = α*zt + (1-α)*zPrev
 
       # update dual variables
-      λNew = λPrev + σ* (xNew - sNew)
-      μNew = μPrev + ρ* (zNew - b)
+      λNew = λPrev + σ*(xNew - sNew)
+      μNew = μPrev + ρ*(zNew - b)
 
       # update cost
       cost = (1/2 * xNew'*P*xNew + q'*xNew)[1]
 
       # compute residuals to check for termination condition
-      # TODO: Correct residuals
+      # TODO: Correct residuals?
       r_prim = norm(A*xNew - zNew,Inf)
-      r_dual = norm(P*xNew + q + A'*yNew,Inf)
+      r_dual = norm(P*xNew + q + A'*μNew,Inf)
 
       # compute deltas
-      δx = xNew - xPrev
-      δy = yNew - yPrev
+      # δx = xNew - xPrev
+      # δy = yNew - yPrev
 
-      # print iterations steps
+      # print iteration steps
       # TODO: Might be slow
       if settings.verbose
         if iter == 1
@@ -230,8 +232,8 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
       # check convergence with residuals
       # TODO: Check convergence condition for SDP case
       ϵ_prim = ϵ_abs + ϵ_rel * max(norm(A*xNew,Inf), norm(zNew,Inf) )
-      ϵ_dual = ϵ_abs + ϵ_rel * max(norm(P*xNew,Inf), norm(A'*yNew,Inf), norm(q,Inf) )
-      if ( r_prim < ϵ_prim && r_dual < ϵ_dual  )
+      ϵ_dual = ϵ_abs + ϵ_rel * max(norm(P*xNew,Inf), norm(A'*μNew,Inf), norm(q,Inf) )
+      if ( r_prim < ϵ_prim && r_dual < ϵ_dual)
         if settings.verbose
           printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
         end
@@ -246,7 +248,8 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
 
     # create result object
     #TODO: Change result object
-    result = sdpResult(xNew,yNew,cost,iter,status,rt);
+    result = sdpResult(xNew,sNew,zNew,λNew,μNew,cost,iter,status,rt);
+
 
     return result;
 
