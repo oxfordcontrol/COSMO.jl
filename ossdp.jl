@@ -1,9 +1,6 @@
 module OSSDP
 using Formatting
-export solveSDP, sdpResult, sdpSettings,project_sdcone
-
-# TODO: use vec() and reshape() to perform the vectorize and matrixify operations
-# TODO: rename OSQP specific objects and function names
+export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
 
 # -------------------------------------
 # HELPER FUNCTIONS
@@ -48,9 +45,19 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     status::String
     solverTime::Float64
   end
+
+  type sdpDebug
+    x::Array{Float64,2}
+    s::Array{Float64,2}
+    z::Array{Float64,2}
+    λ::Array{Float64,2}
+    μ::Array{Float64,2}
+    ν::Array{Float64,2}
+    cost::Array{Float64}
+  end
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::sdpResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\n μ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\nμ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
   end
 
 
@@ -66,7 +73,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     verbose::Bool
 
     #constructor
-    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.5,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-5,eps_dual_inf=1e-5,max_iter=2500,verbose=false)
+    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.6,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-4,eps_dual_inf=1e-4,max_iter=2500,verbose=false)
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose)
     end
   end
@@ -143,6 +150,15 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     ν = zeros(m)
     cost = Inf
 
+    # create debugging variables
+    xArr = zeros(settings.max_iter,n)
+    sArr = zeros(settings.max_iter,n)
+    zArr = zeros(settings.max_iter,m)
+    λArr = zeros(settings.max_iter,n)
+    μArr = zeros(settings.max_iter,m)
+    costArr = zeros(settings.max_iter)
+    νArr = zeros(settings.max_iter,m)
+
     # TODO: Print information still true?
     # print information about settings to the screen
     println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, January 2018\n" * "-"^50 * "\n")
@@ -173,7 +189,7 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
 
-      #deconstruct solution vector k = [xt_(k+1);ν(k+1)]
+      #deconstruct solution vector k = [xt_(k+1);ν_(k+1)]
       xt = k[1:n]
       ν = k[n+1:end]
       zt = b + 1/ρ * (ν - μPrev)
@@ -198,6 +214,14 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
       r_prim = norm(A*xNew - zNew,Inf)
       r_dual = norm(P*xNew + q + A'*μNew,Inf)
 
+      # store variables
+      xArr[iter,:] = xNew
+      sArr[iter,:] = sNew
+      zArr[iter,:] = zNew
+      λArr[iter,:] = λNew
+      μArr[iter,:] = μNew
+      costArr[iter] = cost
+      νArr[iter,:] = ν
       # compute deltas
       # δx = xNew - xPrev
       # δy = yNew - yPrev
@@ -250,8 +274,9 @@ export solveSDP, sdpResult, sdpSettings,project_sdcone
     #TODO: Change result object
     result = sdpResult(xNew,sNew,zNew,λNew,μNew,cost,iter,status,rt);
 
+    dbg = sdpDebug(xArr,sArr,zArr,λArr,μArr,νArr,costArr)
 
-    return result;
+    return result,dbg;
 
   end
 
