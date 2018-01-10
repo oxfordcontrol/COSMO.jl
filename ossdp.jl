@@ -212,7 +212,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
       # compute residuals to check for termination condition
       # TODO: Correct residuals?
       r_prim = norm(A*xNew - zNew,Inf)
-      r_dual = norm(P*xNew + q + A'*μNew,Inf)
+      r_dual = norm(P*xNew + q + A'*μNew + λNew,Inf)
 
       # store variables
       xArr[iter,:] = xNew
