@@ -200,7 +200,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
 
       #TODO: SCS uses approximate projection (see Paper)
       sNew = project_sdcone( xNew + (1/σ)*λPrev,r)
-      zNew = α*zt + (1-α)*zPrev
+      #zNew = α*zt + (1-α)*zPrev
+      zNew = zt
 
       # update dual variables
       λNew = λPrev + σ*(xNew - sNew)

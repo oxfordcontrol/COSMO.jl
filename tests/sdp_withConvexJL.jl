@@ -44,7 +44,7 @@ q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=100.0,alpha=1.6,max_iter=2500,verbose=true)
+settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true)
 
 # solve SDP problem
 res,dbg = solveSDP(P,q,A,b,settings)
