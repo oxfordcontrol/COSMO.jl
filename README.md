@@ -5,7 +5,7 @@ min trace(X,PX)+trace(Q,X)
 s.t. trace(A_i*X) = b_i, i=1,...,m
      X in S+
 ```
-The problem data has to be transformed into the following vector matrix description of the problem:
+where S+ is the cone of symmetric positive semidefinite matrices. The problem data has to be transformed into the following vector matrix description of the problem:
 ```
 min 1/2 x'Px + q'x 
 s.t. Ax = b, x in S+
@@ -15,6 +15,7 @@ s.t. Ax = b, x in S+
 ## Installation / Usage
 - Clone repository to local machine
 - include the ossdp.jl file into your project and load the OSSDP module.
+- Consider the following example:
 
 ```julia
 include("../ossdp.jl")
@@ -41,8 +42,8 @@ settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true)
 result,dbg = solveSDP(P,q,A,b,settings)
 
 # Check results
-@show(reshape(res.x,3,3))
-@show(res.cost)
+@show(reshape(result.x,3,3))
+@show(result.cost)
 ```
 
 ## Tasks / Future Work
