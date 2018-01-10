@@ -170,7 +170,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
     # KKT matrix M
     # FIXME: Correct representation of P
     P=0.0
-    M = [P+σ*eye(n) A';A -1/ρ*eye(m)]
+    M = [P+σ*eye(n) A';A -(1/ρ)*eye(m)]
     M = sparse(M)
 
     # Do LDLT Factorization: A = LDL^T
@@ -184,7 +184,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
       zPrev = zNew
 
       # construct right hand side
-      RHS = [-q+σ*sPrev-λPrev; b-1/ρ*μPrev]
+      RHS = [-q+σ*sPrev-λPrev; b-(1/ρ)*μPrev]
 
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
@@ -192,14 +192,14 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
       #deconstruct solution vector k = [xt_(k+1);ν_(k+1)]
       xt = k[1:n]
       ν = k[n+1:end]
-      zt = b + 1/ρ * (ν - μPrev)
+      zt = b + (1/ρ) * (ν - μPrev)
 
       # Projection steps and relaxation
       # TODO: Find out why and where relaxation with α makes sense
       xNew = α*xt + (1-α)*xPrev
 
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = project_sdcone( xNew + 1/σ*λPrev,r)
+      sNew = project_sdcone( xNew + (1/σ)*λPrev,r)
       zNew = α*zt + (1-α)*zPrev
 
       # update dual variables
@@ -212,7 +212,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
       # compute residuals to check for termination condition
       # TODO: Correct residuals?
       r_prim = norm(A*xNew - zNew,Inf)
-      r_dual = norm(P*xNew + q + A'*μNew + λNew,Inf)
+      #r_dual = norm(P*xNew + q + A'*μNew + λNew,Inf)
+      r_dual = norm(σ*(sNew - sPrev),Inf)
 
       # store variables
       xArr[iter,:] = xNew

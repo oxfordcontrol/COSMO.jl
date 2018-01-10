@@ -2,13 +2,13 @@
 
 workspace()
 include("../ossdp.jl")
-using OSSDPSolver, Base.Test
+using OSSDP, Base.Test
 
 rng = MersenneTwister(1234)
 
 nn = 1000
 
-function isNumericallyPosDef(X,eps)
+function isNumericallyPosSemDef(X,eps)
   F = eigfact(X)
   if size(find(x-> x<eps,F[:values]), 1) == 0
     return true
@@ -30,7 +30,7 @@ end
     X = project_sdcone(a,dim)
 
     # check positive semidefiniteness
-    @test isNumericallyPosDef(reshape(X,dim,dim),-1e-10) == true
+    @test isNumericallyPosSemDef(reshape(X,dim,dim),-1e-10) == true
 
   end
 
