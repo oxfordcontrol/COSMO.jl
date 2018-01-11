@@ -1,6 +1,7 @@
 # Test script to have an easy example solved by SCS that can be used to compare OSSDP solutions against
 workspace()
-include("../ossdp.jl")
+include("../Projections.jl")
+include("../Solver.jl")
 
 using Convex, SCS
 using Base.Test

@@ -1,35 +1,7 @@
 module OSSDP
-using Formatting
-export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
 
-# -------------------------------------
-# HELPER FUNCTIONS
-# -------------------------------------
-  # compute projection of x onto a box defined by l and u
-  function project_box(x::Array{Float64},l::Array{Float64},u::Array{Float64})
-    return min.( max.(x,l), u)
-  end
-
-   function project_sdcone(x::Array{Float64},n::Int64)
-    # recreate original matrix from input vectors
-    X = reshape(x,n,n)
-    X = X./2
-    X = X+X'
-
-    # compute eigenvalue decomposition
-    F = eigfact(X)
-
-    ind = find(x-> x>0, F[:values])
-    Λ = diagm(F[:values])
-    UsE = F[:vectors][:,ind]*sqrt.(Λ[ind,ind])
-    Xp = UsE*UsE'
-    # different method
-    # Λ = diagm(F[:values])
-    # Q = F[:vectors]
-    # # set negative eigenvalues to 0
-    # Xp = Q*max.(Λ,0)*Q'
-    return vec(Xp)
-  end
+using Formatting, Projections
+export solveSDP, sdpResult, sdpDebug, sdpSettings
 
 # -------------------------------------
 # TYPE DEFINITIONS
@@ -55,11 +27,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
     ν::Array{Float64,2}
     cost::Array{Float64}
   end
-  # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::sdpResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\nμ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
-  end
-
 
   type sdpSettings
     rho::Float64
@@ -77,6 +44,14 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose)
     end
   end
+
+  # Redefinition of the show function that fires when the object is called
+  function Base.show(io::IO, obj::sdpResult)
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\nμ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
+  end
+
+
+
 
   function isPrimalInfeasible(δy::Array{Float64},A,l::Array{Float64},u::Array{Float64},ϵ_prim_inf::Float64)
     norm_δy = norm(δy,Inf)
@@ -133,9 +108,9 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
     r_dual = 100
 
     # determine size of decision variables
-    r = size(P,1)
     # n: r^2 since we are working with vectorized matrixes of size r
-    n = r^2
+    n = size(q,1)
+    r = Int(sqrt(n))
     m = size(b,1)
     xPrev = zeros(n)
     sPrev = zeros(n)
@@ -199,7 +174,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
       xNew = α*xt + (1-α)*xPrev
 
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = project_sdcone( xNew + (1/σ)*λPrev,r)
+      sNew = Projections.sdcone( xNew + (1/σ)*λPrev,r)
       #zNew = α*zt + (1-α)*zPrev
       zNew = zt
 
@@ -229,7 +204,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings,project_sdcone
       # δy = yNew - yPrev
 
       # print iteration steps
-      # TODO: Might be slow
       if settings.verbose
         if iter == 1
           println("Iter:\tObjective:\tPrimal Res:\tDual Res:")

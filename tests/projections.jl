@@ -1,8 +1,8 @@
 # Test file to check the projections
 
 workspace()
-include("../ossdp.jl")
-using OSSDP, Base.Test
+include("../Projections.jl")
+using Base.Test
 
 rng = MersenneTwister(1234)
 
@@ -22,12 +22,12 @@ end
   for iii = 1:nn
 
     # create random matrix
-    dim = rand(rng,2:100)
+    dim = rand(rng,1:100)
     A = rand(rng,dim,dim)
     A = full(Symmetric(A))
     # project matrix onto positive semidefinite cone
     a = vec(A)
-    X = project_sdcone(a,dim)
+    X = Projections.sdcone(a,dim)
 
     # check positive semidefiniteness
     @test isNumericallyPosSemDef(reshape(X,dim,dim),-1e-10) == true
