@@ -90,7 +90,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
+  #function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
+  function solveSDP(P,q,A,b,settings::sdpSettings)
 
     #Load algorithm settings
     σ = settings.sigma
@@ -111,6 +112,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     # n: r^2 since we are working with vectorized matrixes of size r
     n = size(q,1)
     r = Int(sqrt(n))
+
     m = size(b,1)
     xPrev = zeros(n)
     sPrev = zeros(n)
@@ -157,6 +159,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       xPrev = xNew
       sPrev = sNew
       zPrev = zNew
+      λPrev = λNew
+      μPrev = μNew
 
       # construct right hand side
       RHS = [-q+σ*sPrev-λPrev; b-(1/ρ)*μPrev]
@@ -167,16 +171,16 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       #deconstruct solution vector k = [xt_(k+1);ν_(k+1)]
       xt = k[1:n]
       ν = k[n+1:end]
-      zt = b + (1/ρ) * (ν - μPrev)
+      zNew = b + (1/ρ) * (ν - μPrev)
 
       # Projection steps and relaxation
       # TODO: Find out why and where relaxation with α makes sense
       xNew = α*xt + (1-α)*xPrev
 
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = Projections.sdcone( xNew + (1/σ)*λPrev,r)
-      #zNew = α*zt + (1-α)*zPrev
-      zNew = zt
+      st = Projections.sdcone( xNew + (1/σ)*λPrev,r)
+      sNew = α*st + (1-α)*sPrev
+
 
       # update dual variables
       λNew = λPrev + σ*(xNew - sNew)
@@ -188,9 +192,9 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # compute residuals to check for termination condition
       # TODO: Correct residuals?
       r_prim = norm(A*xNew - zNew,Inf)
-      #r_dual = norm(P*xNew + q + A'*μNew + λNew,Inf)
-      r_dual = norm(σ*(sNew - sPrev),Inf)
-
+      r_dual = norm(P*xNew + q + A'*μNew + λNew,Inf)
+      r_dual = 100
+      #r_dual = norm(σ*(sNew - sPrev),Inf)
       # store variables
       xArr[iter,:] = xNew
       sArr[iter,:] = sNew
@@ -231,8 +235,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # check convergence with residuals
       # TODO: Check convergence condition for SDP case
-      ϵ_prim = ϵ_abs + ϵ_rel * max(norm(A*xNew,Inf), norm(zNew,Inf) )
-      ϵ_dual = ϵ_abs + ϵ_rel * max(norm(P*xNew,Inf), norm(A'*μNew,Inf), norm(q,Inf) )
+      ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(A*xNew,Inf), norm(zNew,Inf) )
+      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*xNew,Inf), norm(A'*μNew,Inf), norm(λNew,Inf),norm(q,Inf) )
       if ( r_prim < ϵ_prim && r_dual < ϵ_dual)
         if settings.verbose
           printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
