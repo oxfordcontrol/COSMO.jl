@@ -17,22 +17,23 @@ b1 = 11.0
 b2 = 19.0
 
 ############## Solution with ConvexJL = SCS
-X = Variable(3,3)
+Y = Variable(3,3)
+problem = minimize(trace(C*Y))
 
-problem = minimize(trace(C*X))
-constraint1 = trace(A1*X) ==b1
-constraint2 = trace(A2*X) ==b2
-constraint3 = lambdamin(X) >=0
+constraint1 = trace(A1*Y) ==b1
+constraint2 = trace(A2*Y) ==b2
+constraint3 = isposdef(Y)
 
 problem.constraints += [constraint1,constraint2,constraint3]
 
-solve!(problem,SCSSolver(verbose=true))
-
+solve!(problem,SCSSolver(verbose=false))
 
 # print result
 # problem.status
-# @show(problem.optval)
-# @show(X.value)
+println("\nSCS Result:")
+println("X: $(Y.value)")
+println("Cost: $(problem.optval)\n")
+# @show(constraints[1].dual)
 
 # A = [vec(A1)';vec(A2)']
 # b = [b1;b2]
@@ -45,7 +46,7 @@ q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true)
+settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.2,max_iter=200,verbose=true)
 
 # solve SDP problem
 res,dbg = solveSDP(P,q,A,b,settings)
@@ -69,10 +70,10 @@ F = eigfact(X)
 XλMin = minimum(F[:values])
 F = eigfact(reshape(res.s,3,3))
 SλMin = minimum(F[:values])
-epsEV = -1e-15
+epsEV = -1e-9
 @testset "Compare results" begin
-  @test norm(X-[1.05593 0.369185 0.868298; 0.369185 0.129079 0.303585; 0.868299 0.303585 0.714011],Inf) < 1e-3
-  @test norm(res.cost-13.902255839911007) < 1e-3
+  @test norm(X-Y.value,Inf) < 1e-3
+  @test norm(res.cost-problem.optval) < 1e-3
   @test norm(res.x-res.s,Inf)<1e-3
   @test XλMin > epsEV
   @test SλMin > epsEV
