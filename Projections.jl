@@ -10,6 +10,7 @@ export box, sdcone
     return min.( max.(x,l), u)
   end
 
+  # compute projection of X=mat(x) onto the positive semidefinite cone
    function sdcone(x::Array{Float64},n::Int64)
     # handle 1D case
     if size(x,1) == 1
