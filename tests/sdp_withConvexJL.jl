@@ -41,10 +41,11 @@ println("Cost: $(problem.optval)\n")
 
 
 ############## Solution with OSSDP
-P = zeros(3,3)
 q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
+P = zeros(9,9)
+
 # define example problem
 settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.2,max_iter=500,verbose=true)
 

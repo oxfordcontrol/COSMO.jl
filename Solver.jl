@@ -90,8 +90,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
 # SOLVER ROUTINE
 # -------------------------------------
-  #function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
-  function solveSDP(P,q,A,b,settings::sdpSettings)
+  function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
 
     #Load algorithm settings
     σ = settings.sigma
@@ -146,7 +145,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
     # KKT matrix M
     # FIXME: Correct representation of P
-    P=0.0
     M = [P+σ*eye(n) A';A -(1/ρ)*eye(m)]
     M = sparse(M)
 
