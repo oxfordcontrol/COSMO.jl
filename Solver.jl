@@ -168,6 +168,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
 
+      # The relaxation definitely has to be double checked
       #deconstruct solution vector k = [xt_(k+1);ν_(k+1)]
       xt = k[1:n]
       ν = k[n+1:end]
@@ -178,8 +179,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       xNew = α*xt + (1-α)*xPrev
 
       #TODO: SCS uses approximate projection (see Paper)
-      st = Projections.sdcone( xNew + (1/σ)*λPrev,r)
-      sNew = α*st + (1-α)*sPrev
+      sNew = Projections.sdcone( xNew + (1/σ)*λPrev,r)
+      #sNew = α*st + (1-α)*sPrev
 
 
       # update dual variables
