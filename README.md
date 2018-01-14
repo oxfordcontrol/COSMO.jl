@@ -18,7 +18,8 @@ s.t. Ax = b, x in S+
 - Consider the following example:
 
 ```julia
-include("../ossdp.jl")
+include("../Projections.jl")
+include("../Solver.jl")
 using OSSDP
 
 
