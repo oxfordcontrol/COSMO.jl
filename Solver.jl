@@ -176,15 +176,15 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # Projection steps and relaxation
       # TODO: Find out why and where relaxation with α makes sense
-      xNew = α*xt + (1-α)*xPrev
+      xNew = xt
 
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = Projections.sdcone( xNew + (1/σ)*λPrev,r)
+      sNew = Projections.sdcone( α*xNew+(1-α)*xPrev + (1/σ)*λPrev,r)
       #sNew = α*st + (1-α)*sPrev
 
 
       # update dual variables
-      λNew = λPrev + σ*(xNew - sNew)
+      λNew = λPrev + σ*(α*xNew+(1-α)*xPrev - sNew)
       μNew = μPrev + ρ*(zNew - b)
 
       # update cost
