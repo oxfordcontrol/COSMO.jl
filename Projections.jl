@@ -1,14 +1,45 @@
 module Projections
 
-export box, sdcone
+export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone
 
 # -------------------------------------
 # HELPER FUNCTIONS
 # -------------------------------------
-  # compute projection of x onto a box defined by l and u
-  function box(x::Array{Float64},l::Array{Float64},u::Array{Float64})
-    return min.( max.(x,l), u)
-  end
+
+    # projection onto nonegative orthant R_+^n
+    function nonNegativeOrthant(x::Array{Float64})
+      return max.(x,0)
+    end
+
+    # projection onto zero cone
+    function zeroCone(x::Array{Float64})
+      return zeros(size(x,1),1)
+    end
+
+      # projection onto free cone R^n
+    function freeCone(x::Array{Float64})
+      return x
+    end
+
+    # compute projection of x onto a box defined by l and u
+    function box(x::Array{Float64},l::Array{Float64},u::Array{Float64})
+      return min.( max.(x,l), u)
+    end
+
+
+    # projection onto second-order-cone {(t,x) | ||x||_2 <= t}
+    function secondOrderCone(x::Array{Float64},t::Float64)
+      normX = norm(x,2)
+      if  normX <= -t
+        return 0.0.*x,0
+      elseif normX <= t
+        return x,t
+      else
+        tNew = (normX+t)/2
+        x = (normX+t)/(2*normX).*x
+        return x,tNew
+      end
+    end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
    function sdcone(x::Array{Float64},n::Int64)
