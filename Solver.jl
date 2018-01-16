@@ -170,21 +170,19 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # The relaxation definitely has to be double checked
       #deconstruct solution vector k = [xt_(k+1);ν_(k+1)]
-      xt = k[1:n]
+      xNew = k[1:n]
       ν = k[n+1:end]
       zNew = b + (1/ρ) * (ν - μPrev)
 
       # Projection steps and relaxation
-      # TODO: Find out why and where relaxation with α makes sense
-      xNew = xt
+      xRelax = α*xNew+(1-α)*sPrev
 
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = Projections.sdcone( α*xNew+(1-α)*xPrev + (1/σ)*λPrev,r)
-      #sNew = α*st + (1-α)*sPrev
+      sNew = Projections.sdcone( xRelax + (1/σ)*λPrev,r)
 
 
       # update dual variables
-      λNew = λPrev + σ*(α*xNew+(1-α)*xPrev - sNew)
+      λNew = λPrev + σ*(xRelax - sNew)
       μNew = μPrev + ρ*(zNew - b)
 
       # update cost

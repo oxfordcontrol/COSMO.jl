@@ -20,7 +20,7 @@ q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
 
-αArr = 0.5:0.1:1.6
+αArr = 0.5:0.1:1.9
 #αArr = 1.0:0.1:1.1
 nn = 2000
 iterToConv = zeros(length(αArr))
