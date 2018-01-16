@@ -40,7 +40,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     verbose::Bool
 
     #constructor
-    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.6,eps_abs=1e-3,eps_rel=1e-3,eps_prim_inf=1e-4,eps_dual_inf=1e-4,max_iter=2500,verbose=false)
+    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.6,eps_abs=1e-5,eps_rel=1e-5,eps_prim_inf=1e-4,eps_dual_inf=1e-4,max_iter=2500,verbose=false)
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose)
     end
   end
@@ -49,9 +49,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
   function Base.show(io::IO, obj::sdpResult)
     println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\nμ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
   end
-
-
-
 
   function isPrimalInfeasible(δy::Array{Float64},A,l::Array{Float64},u::Array{Float64},ϵ_prim_inf::Float64)
     norm_δy = norm(δy,Inf)
@@ -104,8 +101,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     # instantiate variables
     iter = 0
     status = "unsolved"
-    r_prim = 100
-    r_dual = 100
+    # r_prim = 100
+    # r_dual = 100
 
     # determine size of decision variables
     # n: r^2 since we are working with vectorized matrixes of size r
@@ -144,7 +141,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     tic()
 
     # KKT matrix M
-    # FIXME: Correct representation of P
     M = [P+σ*eye(n) A';A -(1/ρ)*eye(m)]
     M = sparse(M)
 
@@ -186,12 +182,16 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # update cost
       cost = (1/2 * xNew'*P*xNew + q'*xNew)[1]
 
-      # compute residuals to check for termination condition
-      # TODO: Correct residuals?
-      r_prim = norm(A*xNew - zNew,Inf)
-      r_dual = norm(P*xNew + q + A'*μNew + λNew,Inf)
-      r_dual = 100
-      #r_dual = norm(σ*(sNew - sPrev),Inf)
+      # compute residuals (based on optimality conditions of the problem) to check for termination condition
+
+      # primal feasibility conditions
+      r_prim1 = norm(A*xNew - zNew,Inf)
+      r_prim2 = norm( (xNew - sNew),Inf)
+
+      # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
+      r_dual = norm(P*xNew + q + λNew + A'*ν,Inf)
+
+      # complementary slackness condition
       # store variables
       xArr[iter,:] = xNew
       sArr[iter,:] = sNew
@@ -200,6 +200,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       μArr[iter,:] = μNew
       costArr[iter] = cost
       νArr[iter,:] = ν
+
       # compute deltas
       # δx = xNew - xPrev
       # δy = yNew - yPrev
@@ -207,10 +208,10 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # print iteration steps
       if settings.verbose
         if iter == 1
-          println("Iter:\tObjective:\tPrimal Res:\tDual Res:")
+          println("Iter:\tObjective:\tPrimal Res 1:\tPrimal Res 2:\tDual Res:")
         end
         if mod(iter,100) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\t{5:.4e}\n", iter,cost,r_prim1,r_prim2,r_dual)
        end
       end
 
@@ -232,11 +233,12 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # check convergence with residuals
       # TODO: Check convergence condition for SDP case
-      ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(A*xNew,Inf), norm(zNew,Inf) )
-      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*xNew,Inf), norm(A'*μNew,Inf), norm(λNew,Inf),norm(q,Inf) )
-      if ( r_prim < ϵ_prim && r_dual < ϵ_dual)
+      ϵ_prim1 = ϵ_abs + ϵ_rel * max.(norm(A*xNew,Inf), norm(zNew,Inf) )
+      ϵ_prim2 = ϵ_abs + ϵ_rel * max.(norm(xNew,Inf), norm(sNew,Inf) )
+      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*xNew,Inf), norm(q,Inf), norm(λNew,Inf) )
+      if ( r_prim1 < ϵ_prim1 &&  r_prim2 < ϵ_prim2 && r_dual < ϵ_dual)
         if settings.verbose
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\t{5:.4e}\n", iter,cost,r_prim1,r_prim2,r_dual)
         end
         status = "solved"
         break

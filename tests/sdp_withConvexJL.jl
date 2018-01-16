@@ -53,19 +53,6 @@ settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true)
 res,dbg = solveSDP(P,q,A,b,settings)
 X = reshape(res.x,3,3)
 
-#plot debugging variables
-
-# PyPlot.figure(1,facecolor="white")
-# PyPlot.plot(1:1:100,dbg.ν[1:100],label="x", linewidth=2.0)
-# PyPlot.plot(1:1:100,dbg.μ[1:100],label="x", linewidth=2.0)
-# PyPlot.hold(true)
-# PyPlot.grid(true)
-# PyPlot.legend()
-# PyPlot.xlabel(L"i")
-# PyPlot.ylabel(L"var")
-# PyPlot.title("Primal and dual variables over time")
-# PyPlot.tight_layout()
-
 # compute smallest eigenvalue of result X
 F = eigfact(X)
 XλMin = minimum(F[:values])
