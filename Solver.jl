@@ -9,9 +9,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
   type sdpResult
     x::Array{Float64}
     s::Array{Float64}
-    z::Array{Float64}
     λ::Array{Float64}
-    μ::Array{Float64}
     cost::Float64
     iter::Int64
     status::String
@@ -21,9 +19,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
   type sdpDebug
     x::Array{Float64,2}
     s::Array{Float64,2}
-    z::Array{Float64,2}
     λ::Array{Float64,2}
-    μ::Array{Float64,2}
     ν::Array{Float64,2}
     cost::Array{Float64}
   end
@@ -108,27 +104,19 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     # n: r^2 since we are working with vectorized matrixes of size r
     n = size(q,1)
     r = Int(sqrt(n))
-
     m = size(b,1)
-    xPrev = zeros(n)
-    sPrev = zeros(n)
-    zPrev = zeros(m)
-    λPrev = zeros(n)
-    μPrev = zeros(m)
-    xNew = zeros(n)
-    sNew = zeros(n)
-    zNew = zeros(m)
-    λNew = zeros(n)
-    μNew = zeros(m)
+
+    x = zeros(n)
+    s = zeros(n)
+    λ = zeros(n)
     ν = zeros(m)
+
     cost = Inf
 
     # create debugging variables
     xArr = zeros(settings.max_iter,n)
     sArr = zeros(settings.max_iter,n)
-    zArr = zeros(settings.max_iter,m)
     λArr = zeros(settings.max_iter,n)
-    μArr = zeros(settings.max_iter,m)
     costArr = zeros(settings.max_iter)
     νArr = zeros(settings.max_iter,m)
 
@@ -149,55 +137,47 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
     for iter = 1:1:settings.max_iter
 
-      # assign previous variables
-      xPrev = xNew
-      sPrev = sNew
-      zPrev = zNew
-      λPrev = λNew
-      μPrev = μNew
+      # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> x(n)
 
-      # construct right hand side
-      RHS = [-q+σ*sPrev-λPrev; b-(1/ρ)*μPrev]
+      # construct right hand side [-q+σ*s(n)-λ(n); b-(1/ρ)*ν(n)]
+      RHS = [-q+σ*s-λ; b-(1/ρ)*ν]
 
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
 
       # The relaxation definitely has to be double checked
-      #deconstruct solution vector k = [xt_(k+1);ν_(k+1)]
-      xNew = k[1:n]
+      #deconstruct solution vector k = [x(n+1);ν(n+1)]
+      x = k[1:n]
       ν = k[n+1:end]
-      zNew = b + (1/ρ) * (ν - μPrev)
 
-      # Projection steps and relaxation
-      xRelax = α*xNew+(1-α)*sPrev
+      # Projection steps and relaxation xRelax = αx(n+1)+(1-α)s(n)
+      xRelax = α*x+(1-α)*s
 
       #TODO: SCS uses approximate projection (see Paper)
-      sNew = Projections.sdcone( xRelax + (1/σ)*λPrev,r)
+      # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
+      s = Projections.sdcone( xRelax + (1/σ)*λ,r)
 
 
-      # update dual variables
-      λNew = λPrev + σ*(xRelax - sNew)
-      μNew = μPrev + ρ*(zNew - b)
+      # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
+      λ = λ + σ*(xRelax - s)
 
       # update cost
-      cost = (1/2 * xNew'*P*xNew + q'*xNew)[1]
+      cost = (1/2 * x'*P*x + q'*x)[1]
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
 
       # primal feasibility conditions
-      r_prim1 = norm(A*xNew - zNew,Inf)
-      r_prim2 = norm( (xNew - sNew),Inf)
+      r_prim1 = norm(A*x - b,Inf)
+      r_prim2 = norm( (x - s),Inf)
 
       # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-      r_dual = norm(P*xNew + q + λNew + A'*ν,Inf)
+      r_dual = norm(P*x + q + λ + A'*ν,Inf)
 
       # complementary slackness condition
       # store variables
-      xArr[iter,:] = xNew
-      sArr[iter,:] = sNew
-      zArr[iter,:] = zNew
-      λArr[iter,:] = λNew
-      μArr[iter,:] = μNew
+      xArr[iter,:] = x
+      sArr[iter,:] = s
+      λArr[iter,:] = λ
       costArr[iter] = cost
       νArr[iter,:] = ν
 
@@ -233,9 +213,9 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # check convergence with residuals
       # TODO: Check convergence condition for SDP case
-      ϵ_prim1 = ϵ_abs + ϵ_rel * max.(norm(A*xNew,Inf), norm(zNew,Inf) )
-      ϵ_prim2 = ϵ_abs + ϵ_rel * max.(norm(xNew,Inf), norm(sNew,Inf) )
-      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*xNew,Inf), norm(q,Inf), norm(λNew,Inf) )
+      ϵ_prim1 = ϵ_abs + ϵ_rel * max.(norm(A*x,Inf), norm(b,Inf) )
+      ϵ_prim2 = ϵ_abs + ϵ_rel * max.(norm(x,Inf), norm(s,Inf) )
+      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf) )
       if ( r_prim1 < ϵ_prim1 &&  r_prim2 < ϵ_prim2 && r_dual < ϵ_dual)
         if settings.verbose
           printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\t{5:.4e}\n", iter,cost,r_prim1,r_prim2,r_dual)
@@ -251,9 +231,9 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
     # create result object
     #TODO: Change result object
-    result = sdpResult(xNew,sNew,zNew,λNew,μNew,cost,iter,status,rt);
+    result = sdpResult(x,s,λ,cost,iter,status,rt);
 
-    dbg = sdpDebug(xArr,sArr,zArr,λArr,μArr,νArr,costArr)
+    dbg = sdpDebug(xArr,sArr,λArr,νArr,costArr)
 
     return result,dbg;
 
