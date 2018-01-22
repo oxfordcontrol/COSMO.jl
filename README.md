@@ -10,11 +10,10 @@ where S+ is the cone of symmetric positive semidefinite matrices. The problem da
 min 1/2 x'Px + q'x 
 s.t. Ax = b, x in S+
 ```
-
-**Work in Progress!**
 ## Installation / Usage
+- Solver was written for Julia v0.6
 - Clone repository to local machine
-- include the ossdp.jl file into your project and load the OSSDP module.
+- Include the `Solver.jl` and `Projections.jl` files into your project and load the `OSSDP module`.
 - Consider the following example:
 
 ```julia
@@ -31,7 +30,7 @@ b1 = 11.0
 b2 = 19.0
 
 # Reformat data to fit vector matrix input style
-P = zeros(3,3)
+P = zeros(9,9)
 q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
@@ -48,7 +47,7 @@ result,dbg = solveSDP(P,q,A,b,settings)
 ```
 
 ## Tasks / Future Work
-The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues) :exclamation:
+The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
