@@ -166,9 +166,10 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
 
-      # primal feasibility conditions
-      r_prim1 = norm(A*x - b,Inf)
-      r_prim2 = norm( (x - s),Inf)
+      # primal feasibility conditions (combining the two equations Ax-b==0 and x-s==0)
+      H = [A zeros(m,n); eye(n) -eye(n)]
+      u = [x;s]
+      r_prim = norm(H*u-[b;zeros(n)],Inf)
 
       # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
       r_dual = norm(P*x + q + λ + A'*ν,Inf)
@@ -188,10 +189,10 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # print iteration steps
       if settings.verbose
         if iter == 1
-          println("Iter:\tObjective:\tPrimal Res 1:\tPrimal Res 2:\tDual Res:")
+          println("Iter:\tObjective:\tPrimal Res 1:\tDual Res:")
         end
         if mod(iter,100) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\t{5:.4e}\n", iter,cost,r_prim1,r_prim2,r_dual)
+          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
        end
       end
 
@@ -213,12 +214,11 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # check convergence with residuals
       # TODO: Check convergence condition for SDP case
-      ϵ_prim1 = ϵ_abs + ϵ_rel * max.(norm(A*x,Inf), norm(b,Inf) )
-      ϵ_prim2 = ϵ_abs + ϵ_rel * max.(norm(x,Inf), norm(s,Inf) )
-      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf) )
-      if ( r_prim1 < ϵ_prim1 &&  r_prim2 < ϵ_prim2 && r_dual < ϵ_dual)
+      ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(b,Inf),1 )
+      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf),1 )
+      if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
         if settings.verbose
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\t{5:.4e}\n", iter,cost,r_prim1,r_prim2,r_dual)
+          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
         end
         status = "solved"
         break
