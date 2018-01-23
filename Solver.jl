@@ -34,10 +34,11 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     eps_dual_inf::Float64
     max_iter::Int64
     verbose::Bool
+    checkTermination::Int64
 
     #constructor
-    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.6,eps_abs=1e-5,eps_rel=1e-5,eps_prim_inf=1e-4,eps_dual_inf=1e-4,max_iter=2500,verbose=false)
-        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose)
+    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.6,eps_abs=1e-5,eps_rel=1e-5,eps_prim_inf=1e-4,eps_dual_inf=1e-4,max_iter=2500,verbose=false,checkTermination=1)
+        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,checkTermination)
     end
   end
 
@@ -97,8 +98,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     # instantiate variables
     iter = 0
     status = "unsolved"
-    # r_prim = 100
-    # r_dual = 100
 
     # determine size of decision variables
     # n: r^2 since we are working with vectorized matrixes of size r
@@ -165,15 +164,18 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       cost = (1/2 * x'*P*x + q'*x)[1]
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
-
-      # primal feasibility conditions (combining the two equations Ax-b==0 and x-s==0)
-      H = [A zeros(m,n); eye(n) -eye(n)]
-      u = [x;s]
-      r_prim = norm(H*u-[b;zeros(n)],Inf)
-
-      # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-      r_dual = norm(P*x + q + λ + A'*ν,Inf)
-
+      # compute them every {settings.checkTermination} step
+      if mod(iter,settings.checkTermination)  == 0
+        # primal feasibility conditions (combining the two equations Ax-b==0 and x-s==0)
+        H = [A zeros(m,n); eye(n) -eye(n)]
+        u = [x;s]
+        r_prim = norm(H*u-[b;zeros(n)],Inf)
+        # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
+        r_dual = norm(P*x + q + λ + A'*ν,Inf)
+      else
+        r_prim = NaN
+        r_dual = NaN
+      end
       # complementary slackness condition
       # store variables
       xArr[iter,:] = x
@@ -212,16 +214,17 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       #     break
       # end
 
-      # check convergence with residuals
-      # TODO: Check convergence condition for SDP case
-      ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(b,Inf),1 )
-      ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf),1 )
-      if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
-        if settings.verbose
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+      # check convergence with residuals every {settings.checkIteration} step
+      if mod(iter,settings.checkTermination) == 0
+        ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(b,Inf),1 )
+        ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf),1 )
+        if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
+          if settings.verbose
+            printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          end
+          status = "solved"
+          break
         end
-        status = "solved"
-        break
       end
     end
 
@@ -230,7 +233,6 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     println("\n\n" * "-"^50 * "\nRESULT: Status: $(status)\nTotal Iterations: $(iter)\nOptimal objective: $(round.(cost,4))\nRuntime: $(round.(rt,3))s ($(round.(rt*1000,2))ms)\n" * "-"^50 )
 
     # create result object
-    #TODO: Change result object
     result = sdpResult(x,s,λ,cost,iter,status,rt);
 
     dbg = sdpDebug(xArr,sArr,λArr,νArr,costArr)

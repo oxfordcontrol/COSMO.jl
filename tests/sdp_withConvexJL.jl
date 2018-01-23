@@ -1,7 +1,7 @@
 # Test script to have an easy example solved by SCS that can be used to compare OSSDP solutions against
-workspace()
-include("../Projections.jl")
-include("../Solver.jl")
+# workspace()
+# include("../Projections.jl")
+# include("../Solver.jl")
 
 using Convex, SCS
 using Base.Test
@@ -47,7 +47,7 @@ b = [b1;b2]
 P = zeros(9,9)
 
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true)
+settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true,checkTermination=15)
 
 # solve SDP problem
 res,dbg = solveSDP(P,q,A,b,settings)
