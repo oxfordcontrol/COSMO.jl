@@ -14,6 +14,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     iter::Int64
     status::String
     solverTime::Float64
+    rPrim::Float64
+    rDual::Float64
   end
 
   type sdpDebug
@@ -82,6 +84,16 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     return false
   end
 
+  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},P::Array{Float64,2},q::Array{Float64,1})
+        n = size(q,1)
+        m = size(b,1)
+        H = [A zeros(m,n); eye(n) -eye(n)]
+        u = [x;s]
+        r_prim = norm(H*u-[b;zeros(n)],Inf)
+        # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
+        r_dual = norm(P*x + q + λ + A'*ν,Inf)
+    return r_prim,r_dual
+  end
 # SOLVER ROUTINE
 # -------------------------------------
   function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
@@ -166,12 +178,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.checkTermination} step
       if mod(iter,settings.checkTermination)  == 0
-        # primal feasibility conditions (combining the two equations Ax-b==0 and x-s==0)
-        H = [A zeros(m,n); eye(n) -eye(n)]
-        u = [x;s]
-        r_prim = norm(H*u-[b;zeros(n)],Inf)
-        # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-        r_dual = norm(P*x + q + λ + A'*ν,Inf)
+        r_prim,r_dual = calculateResiduals(x,s,λ,ν,A,b,P,q)
       else
         r_prim = NaN
         r_dual = NaN
@@ -216,6 +223,8 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # check convergence with residuals every {settings.checkIteration} step
       if mod(iter,settings.checkTermination) == 0
+        H = [A zeros(m,n); eye(n) -eye(n)]
+        u = [x;s]
         ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(b,Inf),1 )
         ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf),1 )
         if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
@@ -232,8 +241,12 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     rt = toq()
     println("\n\n" * "-"^50 * "\nRESULT: Status: $(status)\nTotal Iterations: $(iter)\nOptimal objective: $(round.(cost,4))\nRuntime: $(round.(rt,3))s ($(round.(rt*1000,2))ms)\n" * "-"^50 )
 
+    # calculate primal and dual residual
+    if iter == settings.max_iter
+      r_prim,r_dual = calculateResiduals(x,s,λ,ν,A,b,P,q)
+    end
     # create result object
-    result = sdpResult(x,s,λ,cost,iter,status,rt);
+    result = sdpResult(x,s,λ,cost,iter,status,rt,r_prim,r_dual);
 
     dbg = sdpDebug(xArr,sArr,λArr,νArr,costArr)
 
