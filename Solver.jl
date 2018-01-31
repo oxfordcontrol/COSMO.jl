@@ -1,53 +1,8 @@
 module OSSDP
 
-using Formatting, Projections
+using Formatting, Projections, Scaling, OSSDPTypes
 export solveSDP, sdpResult, sdpDebug, sdpSettings
 
-# -------------------------------------
-# TYPE DEFINITIONS
-# -------------------------------------
-  type sdpResult
-    x::Array{Float64}
-    s::Array{Float64}
-    λ::Array{Float64}
-    cost::Float64
-    iter::Int64
-    status::String
-    solverTime::Float64
-    rPrim::Float64
-    rDual::Float64
-  end
-
-  type sdpDebug
-    x::Array{Float64,2}
-    s::Array{Float64,2}
-    λ::Array{Float64,2}
-    ν::Array{Float64,2}
-    cost::Array{Float64}
-  end
-
-  type sdpSettings
-    rho::Float64
-    sigma::Float64
-    alpha::Float64
-    eps_abs::Float64
-    eps_rel::Float64
-    eps_prim_inf::Float64
-    eps_dual_inf::Float64
-    max_iter::Int64
-    verbose::Bool
-    checkTermination::Int64
-
-    #constructor
-    function sdpSettings(;rho=1.0,sigma=10e-6,alpha=1.6,eps_abs=1e-5,eps_rel=1e-5,eps_prim_inf=1e-4,eps_dual_inf=1e-4,max_iter=2500,verbose=false,checkTermination=1)
-        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,checkTermination)
-    end
-  end
-
-  # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::sdpResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\nμ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
-  end
 
   function isPrimalInfeasible(δy::Array{Float64},A,l::Array{Float64},u::Array{Float64},ϵ_prim_inf::Float64)
     norm_δy = norm(δy,Inf)
@@ -84,19 +39,19 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     return false
   end
 
-  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},P::Array{Float64,2},q::Array{Float64,1})
-        n = size(q,1)
-        m = size(b,1)
-        H = [A zeros(m,n); eye(n) -eye(n)]
+  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},p::OSSDPTypes.problem)
+        n = p.n
+        m = p.m
+        H = [p.A zeros(m,n); eye(n) -eye(n)]
         u = [x;s]
-        r_prim = norm(H*u-[b;zeros(n)],Inf)
+        r_prim = norm(H*u-[p.b;zeros(n)],Inf)
         # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-        r_dual = norm(P*x + q + λ + A'*ν,Inf)
+        r_dual = norm(p.P*x + p.q + λ + p.A'*ν,Inf)
     return r_prim,r_dual
   end
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::sdpSettings)
+  function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::OSSDPTypes.sdpSettings)
 
     #Load algorithm settings
     σ = settings.sigma
@@ -107,15 +62,19 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     ϵ_prim_inf = settings.eps_prim_inf
     ϵ_dual_inf = settings.eps_dual_inf
 
+    # populate problem type
+    p = problem(P,q,A,b,size(b,1),size(q,1))
+    sm = scaleMatrices()
+
     # instantiate variables
     iter = 0
     status = "unsolved"
 
     # determine size of decision variables
     # n: r^2 since we are working with vectorized matrixes of size r
-    n = size(q,1)
+    n = p.n
     r = Int(sqrt(n))
-    m = size(b,1)
+    m = p.m
 
     x = zeros(n)
     s = zeros(n)
@@ -131,6 +90,11 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     costArr = zeros(settings.max_iter)
     νArr = zeros(settings.max_iter,m)
 
+    # scale problem data
+    # if settings.scaling != 0
+    #   scaleProblem!(p,scaleMatrices,settings)
+    # end
+
     # TODO: Print information still true?
     # print information about settings to the screen
     println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, January 2018\n" * "-"^50 * "\n")
@@ -140,7 +104,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     tic()
 
     # KKT matrix M
-    M = [P+σ*eye(n) A';A -(1/ρ)*eye(m)]
+    M = [p.P+σ*eye(n) p.A';p.A -(1/ρ)*eye(m)]
     M = sparse(M)
 
     # Do LDLT Factorization: A = LDL^T
@@ -151,7 +115,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> x(n)
 
       # construct right hand side [-q+σ*s(n)-λ(n); b-(1/ρ)*ν(n)]
-      RHS = [-q+σ*s-λ; b-(1/ρ)*ν]
+      RHS = [-p.q+σ*s-λ; p.b-(1/ρ)*ν]
 
       #solve linear system M*k = b with help of factorization matrix
       k = F\RHS
@@ -173,12 +137,12 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       λ = λ + σ*(xRelax - s)
 
       # update cost
-      cost = (1/2 * x'*P*x + q'*x)[1]
+      cost = (1/2 * x'*p.P*x + p.q'*x)[1]
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.checkTermination} step
       if mod(iter,settings.checkTermination)  == 0
-        r_prim,r_dual = calculateResiduals(x,s,λ,ν,A,b,P,q)
+        r_prim,r_dual = calculateResiduals(x,s,λ,ν,p)
       else
         r_prim = NaN
         r_dual = NaN
@@ -223,10 +187,10 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       # check convergence with residuals every {settings.checkIteration} step
       if mod(iter,settings.checkTermination) == 0
-        H = [A zeros(m,n); eye(n) -eye(n)]
+        H = [p.A zeros(m,n); eye(n) -eye(n)]
         u = [x;s]
-        ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(b,Inf),1 )
-        ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(P*x,Inf), norm(q,Inf), norm(λ,Inf),1 )
+        ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(p.b,Inf),1 )
+        ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(p.P*x,Inf), norm(p.q,Inf), norm(λ,Inf),1 )
         if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
           if settings.verbose
             printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
@@ -243,7 +207,7 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
     # calculate primal and dual residual
     if iter == settings.max_iter
-      r_prim,r_dual = calculateResiduals(x,s,λ,ν,A,b,P,q)
+      r_prim,r_dual = calculateResiduals(x,s,λ,ν,p)
     end
     # create result object
     result = sdpResult(x,s,λ,cost,iter,status,rt,r_prim,r_dual);
