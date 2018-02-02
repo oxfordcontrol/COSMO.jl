@@ -4,22 +4,25 @@
 # the transformation should hold MNew = S*M*S
 workspace()
 include("../Scaling.jl")
+include("../Types.jl")
 include("../Projections.jl")
 include("../Solver.jl")
 
-using FactCheck, Scaling,OSSDP
+using FactCheck, Scaling, OSSDP, OSSDPTypes
 
 
 # create dummy settings object
 settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true,checkTermination=15,scaling=10)
 
-# use illconditioned example data
+# use ill-conditioned example data
 P = [1e5 0 0; 0 1e-5 0; 0 0 10]
 A = [1 2 3; 4 100 3; 1 0 0]
 m = size(A,1)
 n = size(P,1)
 q = zeros(n)
 b = zeros(m)
+p = problem(P,q,A,b,size(b,1),size(q,1))
+sm = scaleMatrices()
 
 # assemble matrix M
 M = [P A';A zeros(m,m)]
@@ -30,12 +33,11 @@ rowNorms = [norm(M[i,:],Inf) for i in 1:size(M,1)]
 deltaRowNorm = maximum(rowNorms) - minimum(rowNorms)
 
 # perform scaling
-Pn = copy(P)
-An = copy(A)
-  D,E = scaleProblem!(Pn,q,An,b,settings)
+
+  D,E = scaleProblem!(p,sm,settings)
 S = [D zeros(n,m);zeros(m,n) E]
 # reassamble scaled matrix
-MNew = [Pn An';An zeros(m,m)]
+MNew = [p.P p.A';p.A zeros(m,m)]
 
 # calculate condition number
 κNew = cond(MNew)
@@ -49,4 +51,6 @@ facts("Check matrix equilibration routine") do
   @fact maximum(abs.(MNew-(S*M*S)))--> less_than(1e-9)
   @fact κNew - κ --> less_than(0)
   @fact deltaRowNormNew - deltaRowNorm --> less_than(0)
+  @fact isposdef(D) --> true
+  @fact isposdef(E) --> true
 end

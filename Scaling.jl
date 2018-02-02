@@ -1,19 +1,19 @@
 module Scaling
 
-export scaleProblem!
+using OSSDPTypes
+export scaleProblem!,reverseScaling!
 
-  function normKKTCols(P,A)
+  function normKKTCols(P::Array{Float64,2},A::Array{Float64,2})
     normPCols = [norm(P[:,i],Inf) for i in 1:size(P,2)]
     normACols = [norm(A[:,i],Inf) for i in 1:size(A,2)]
     normLeftPart = max.(normPCols,normACols)
-    normATCols = [norm(A'[:,i],Inf) for i in 1:size(A,1)]
+    normATCols = [norm(A[i,:],Inf) for i in 1:size(A,1)]
 
     return [normLeftPart;normATCols]
   end
 
-  function limitScaling!(δVec,set)
+  function limitScaling!(δVec::Union{Float64,Array{Float64,1}},set::OSSDPTypes.sdpSettings)
 
-    # Array case
     if length(δVec) > 1
       for iii = 1:length(δVec)
         if δVec[iii] < set.MIN_SCALING
@@ -30,8 +30,7 @@ export scaleProblem!
         δVec = set.MAX_SCALING
       end
     end
-
-    return δVec
+    return nothing
   end
 
   function scaleProblem!(problem,scaleMatrices,set)
@@ -60,7 +59,7 @@ export scaleProblem!
 
       # First step Ruiz
       δVec = normKKTCols(P,A)
-      δVec = limitScaling!(δVec,set)
+      limitScaling!(δVec,set)
       δVec = sqrt(δVec)
       sTemp = 1./δVec
 
@@ -73,32 +72,48 @@ export scaleProblem!
       end
 
       # Scale data
-      P = Dtemp*(P*Dtemp)
-      A = Etemp*A*Dtemp
-      q = Dtemp*q
-      b = Etemp*b
+      P[:,:] = Dtemp*(P*Dtemp)
+      A[:,:] = Etemp*A*Dtemp
+      q[:] = Dtemp*q
+      b[:] = Etemp*b
 
       # Update equilibrium matrices D and E
       D = Dtemp*D
       E = Etemp*E
 
-      # # Second step cost normalization
-      # norm_P_cols = spla.norm(P, np.inf, axis=0).mean()
-      # inf_norm_q = np.linalg.norm(q, np.inf)
-      # inf_norm_q = self._limit_scaling(inf_norm_q)
-      # scale_cost = np.maximum(inf_norm_q, norm_P_cols)
-      # scale_cost = self._limit_scaling(scale_cost)
-      # scale_cost = 1. / scale_cost
+      # Second step cost normalization
+      norm_P_cols = mean([norm(P[:,i],Inf) for i in 1:size(P,2)])
+      inf_norm_q = norm(q,Inf)
+      limitScaling!(inf_norm_q,set)
+      scale_cost = maximum([inf_norm_q norm_P_cols])
+      limitScaling!(scale_cost,set)
+      scale_cost = 1. / scale_cost
+      c_temp = scale_cost
+
+      # Normalize cost
+      P[:,:] = c_temp * P
+      q[:] = c_temp * q
+
+      # Update scaling
+      c = c_temp * c
+
+
     end
-
-    # write scaled problem data to object
-    problem.P = P
-    problem.A = A
-    problem.b = b
-    problem.q = q
-
+    scaleMatrices.D = D
+    scaleMatrices.E = E
+    scaleMatrices.Dinv = spdiagm(1./diag(D))
+    scaleMatrices.Einv = spdiagm(1./diag(E))
+    scaleMatrices.c = c
+    scaleMatrices.cinv = 1./c
     return D,E
   end
 
+
+  function reverseScaling!(x,s,P,q,sm)
+    x[:] = sm.D*x
+    P[:,:] = sm.Dinv*P*sm.Dinv
+    q[:] = sm.Dinv*q
+    s[:] = sm.D*s
+  end
 
 end # MODULE

@@ -1,7 +1,7 @@
 module OSSDP
 
 using Formatting, Projections, Scaling, OSSDPTypes
-export solveSDP, sdpResult, sdpDebug, sdpSettings
+export solveSDP
 
 
   function isPrimalInfeasible(δy::Array{Float64},A,l::Array{Float64},u::Array{Float64},ϵ_prim_inf::Float64)
@@ -39,14 +39,21 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     return false
   end
 
-  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},p::OSSDPTypes.problem)
+  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},p::OSSDPTypes.problem,sm::OSSDPTypes.scaleMatrices,settings::OSSDPTypes.sdpSettings)
         n = p.n
         m = p.m
         H = [p.A zeros(m,n); eye(n) -eye(n)]
         u = [x;s]
-        r_prim = norm(H*u-[p.b;zeros(n)],Inf)
-        # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-        r_dual = norm(p.P*x + p.q + λ + p.A'*ν,Inf)
+        if settings.scaling != 0
+          EinvAug = [sm.Einv zeros(m,n); zeros(n,m) eye(n)]
+          r_prim = norm(EinvAug*(H*u-[p.b;zeros(n)]),Inf)
+          # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
+          r_dual = norm(sm.Dinv*(p.P*x + p.q + λ + p.A'*ν),Inf)
+        else
+          r_prim = norm(H*u-[p.b;zeros(n)],Inf)
+          r_dual = norm(p.P*x + p.q + λ + p.A'*ν,Inf)
+        end
+
     return r_prim,r_dual
   end
 # SOLVER ROUTINE
@@ -91,9 +98,9 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
     νArr = zeros(settings.max_iter,m)
 
     # scale problem data
-    # if settings.scaling != 0
-    #   scaleProblem!(p,scaleMatrices,settings)
-    # end
+    if settings.scaling != 0
+      scaleProblem!(p,sm,settings)
+    end
 
     # TODO: Print information still true?
     # print information about settings to the screen
@@ -130,19 +137,20 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
       #TODO: SCS uses approximate projection (see Paper)
       # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
-      s = Projections.sdcone( xRelax + (1/σ)*λ,r)
+      s = sm.Dinv*Projections.sdcone( sm.D*(xRelax + (1/σ)*λ),r)
 
 
       # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
       λ = λ + σ*(xRelax - s)
 
       # update cost
+      # FIXME: Remove calculation of cost at each step
       cost = (1/2 * x'*p.P*x + p.q'*x)[1]
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.checkTermination} step
       if mod(iter,settings.checkTermination)  == 0
-        r_prim,r_dual = calculateResiduals(x,s,λ,ν,p)
+        r_prim,r_dual = calculateResiduals(x,s,λ,ν,p,sm,settings)
       else
         r_prim = NaN
         r_dual = NaN
@@ -162,9 +170,9 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       # print iteration steps
       if settings.verbose
         if iter == 1
-          println("Iter:\tObjective:\tPrimal Res 1:\tDual Res:")
+          println("Iter:\tObjective:\tPrimal Res\tDual Res:")
         end
-        if mod(iter,100) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
+        if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
           printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
        end
       end
@@ -189,8 +197,14 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
       if mod(iter,settings.checkTermination) == 0
         H = [p.A zeros(m,n); eye(n) -eye(n)]
         u = [x;s]
-        ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(p.b,Inf),1 )
-        ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(p.P*x,Inf), norm(p.q,Inf), norm(λ,Inf),1 )
+        if settings.scaling != 0
+          EinvAug = [sm.Einv zeros(m,n); zeros(n,m) eye(n)]
+          ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(EinvAug*H*u,Inf), norm(sm.Einv*p.b,Inf),1 )
+          ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(sm.Dinv*p.P*x,Inf), norm(sm.Dinv*p.q,Inf), norm(sm.Dinv*λ,Inf),1 )
+        else
+          ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(p.b,Inf),1 )
+          ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(p.P*x,Inf), norm(p.q,Inf), norm(λ,Inf),1 )
+        end
         if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
           if settings.verbose
             printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
@@ -207,14 +221,23 @@ export solveSDP, sdpResult, sdpDebug, sdpSettings
 
     # calculate primal and dual residual
     if iter == settings.max_iter
-      r_prim,r_dual = calculateResiduals(x,s,λ,ν,p)
+      r_prim,r_dual = calculateResiduals(x,s,λ,ν,p,sm,settings)
     end
     # create result object
+    if settings.scaling != 0
+      xT = copy(x)
+      sT = copy(s)
+      reverseScaling!(x,s,p.P,p.q,sm)
+      # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
+      xT2 = x
+      sT2 = s
+      cost = (1/2 * x'*p.P*x + p.q'*x)[1]
+    end
     result = sdpResult(x,s,λ,cost,iter,status,rt,r_prim,r_dual);
 
     dbg = sdpDebug(xArr,sArr,λArr,νArr,costArr)
 
-    return result,dbg;
+    return result,dbg,sm,xT,sT,xT2,sT2;
 
   end
 

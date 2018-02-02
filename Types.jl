@@ -1,10 +1,10 @@
 module OSSDPTypes
 
-export sdpResult, sdpDebug, problem, sdpSettings,scaleMatrices
+export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
 # -------------------------------------
-# TYPE DEFINITIONS
+# struct DEFINITIONS
 # -------------------------------------
-  type sdpResult
+  struct sdpResult
     x::Array{Float64}
     s::Array{Float64}
     λ::Array{Float64}
@@ -16,7 +16,7 @@ export sdpResult, sdpDebug, problem, sdpSettings,scaleMatrices
     rDual::Float64
   end
 
-  type sdpDebug
+  struct sdpDebug
     x::Array{Float64,2}
     s::Array{Float64,2}
     λ::Array{Float64,2}
@@ -24,7 +24,7 @@ export sdpResult, sdpDebug, problem, sdpSettings,scaleMatrices
     cost::Array{Float64}
   end
 
-  type problem
+  mutable struct problem
     P::Array{Float64,2}
     q::Array{Float64,1}
     A::Array{Float64,2}
@@ -33,14 +33,18 @@ export sdpResult, sdpDebug, problem, sdpSettings,scaleMatrices
     n::Int64
   end
 
-  type scaleMatrices
+  mutable struct scaleMatrices
     D::Array{Float64,2}
+    Dinv::Array{Float64,2}
     E::Array{Float64,2}
-    scaleMatrices() = new()
+    Einv::Array{Float64,2}
+    c::Float64
+    cinv::Float64
+    scaleMatrices() = new(zeros(1,1),zeros(1,1),zeros(1,1),zeros(1,1),0.,0.)
   end
 
 
-  type sdpSettings
+  struct sdpSettings
     rho::Float64
     sigma::Float64
     alpha::Float64
@@ -51,7 +55,6 @@ export sdpResult, sdpDebug, problem, sdpSettings,scaleMatrices
     max_iter::Int64
     verbose::Bool
     checkTermination::Int64
-    # Scaling
     scaling::Int64
     MIN_SCALING::Float64
     MAX_SCALING::Float64
@@ -60,18 +63,18 @@ export sdpResult, sdpDebug, problem, sdpSettings,scaleMatrices
     #constructor
     function sdpSettings(;
       rho=1.0,
-      sigma=10e-6,
+      sigma=10.0,
       alpha=1.6,
-      eps_abs=1e-5,
-      eps_rel=1e-5,
+      eps_abs=1e-6,
+      eps_rel=1e-6,
       eps_prim_inf=1e-4,
       eps_dual_inf=1e-4,
       max_iter=2500,
       verbose=false,
       checkTermination=1,
       scaling=10,
-      MIN_SCALING = 1e-04,
-      MAX_SCALING = 1e+04
+      MIN_SCALING = 1e-4,
+      MAX_SCALING = 1e4
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,checkTermination,scaling,MIN_SCALING,MAX_SCALING)
     end
