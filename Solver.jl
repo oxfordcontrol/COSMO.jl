@@ -44,7 +44,7 @@ export sdpResult, sdpSettings #from the Types module
     return false
   end
 
-  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},p::OSSDPTypes.problem,sm::OSSDPTypes.scaleMatrices,settings::OSSDPTypes.sdpSettings)
+  function calculateResiduals(x,s,λ,ν,p::OSSDPTypes.problem,sm::OSSDPTypes.scaleMatrices,settings::OSSDPTypes.sdpSettings)
         n = p.n
         m = p.m
         H = [p.A spzeros(m,n); speye(n) -speye(n)]
@@ -90,10 +90,10 @@ export sdpResult, sdpSettings #from the Types module
     r = Int(sqrt(n))
     m = p.m
 
-    x = zeros(n)
-    s = zeros(n)
-    λ = zeros(n)
-    ν = zeros(m)
+    x = spzeros(n)
+    s = spzeros(n)
+    λ = spzeros(n)
+    ν = spzeros(m)
 
     cost = Inf
 
@@ -104,8 +104,8 @@ export sdpResult, sdpSettings #from the Types module
 
     # TODO: Print information still true?
     # print information about settings to the screen
-    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, January 2018\n" * "-"^50 * "\n")
-    println("Problem: variable vec(X) size: n = $(n), constraints m = $(m)")
+    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
+    println("Problem: variable X in R^{$(r)x$(r)}, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
     println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
 
     tic()
@@ -124,7 +124,8 @@ export sdpResult, sdpSettings #from the Types module
       RHS = [-p.q+σ*s-λ; p.b-(1/ρ)*ν]
 
       #solve linear system M*k = b with help of factorization matrix
-      k = F\RHS
+      # FIXME: must be a better way
+      k = sparse(F\full(RHS))
 
       # The relaxation definitely has to be double checked
       #deconstruct solution vector k = [x(n+1);ν(n+1)]
@@ -190,10 +191,10 @@ export sdpResult, sdpSettings #from the Types module
 
       # check convergence with residuals every {settings.checkIteration} step
       if mod(iter,settings.checkTermination) == 0
-        H = [p.A zeros(m,n); eye(n) -eye(n)]
+        H = [p.A spzeros(m,n); speye(n) -speye(n)]
         u = [x;s]
         if settings.scaling != 0
-          EinvAug = [sm.Einv zeros(m,n); zeros(n,m) eye(n)]
+          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) speye(n)]
           ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(EinvAug*H*u,Inf), norm(sm.Einv*p.b,Inf),1 )
           ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(sm.Dinv*p.P*x,Inf), norm(sm.Dinv*p.q,Inf), norm(sm.Dinv*λ,Inf),1 )
         else

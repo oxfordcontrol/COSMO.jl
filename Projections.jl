@@ -7,28 +7,28 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone
 # -------------------------------------
 
     # projection onto nonegative orthant R_+^n
-    function nonNegativeOrthant(x::Array{Float64,1})
+    function nonNegativeOrthant(x)
       return max.(x,0)
     end
 
     # projection onto zero cone
-    function zeroCone(x::Array{Float64,1})
+    function zeroCone(x)
       return zeros(size(x,1),1)
     end
 
       # projection onto free cone R^n
-    function freeCone(x::Array{Float64,1})
+    function freeCone(x)
       return x
     end
 
     # compute projection of x onto a box defined by l and u
-    function box(x::Array{Float64,1},l::Array{Float64,1},u::Array{Float64,1})
+    function box(x,l,u)
       return min.( max.(x,l), u)
     end
 
 
     # projection onto second-order-cone {(t,x) | ||x||_2 <= t}
-    function secondOrderCone(x::Array{Float64,1},t::Float64)
+    function secondOrderCone(x,t::Float64)
       normX = norm(x,2)
       if  normX <= -t
         return 0.0.*x,0
@@ -42,7 +42,7 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function sdcone(x::Array{Float64,1},n::Int64)
+   function sdcone(x,n::Int64)
     # handle 1D case
     if size(x,1) == 1
       return max.(x,0)

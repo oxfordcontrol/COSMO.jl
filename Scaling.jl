@@ -109,7 +109,7 @@ export scaleProblem!,reverseScaling!
   end
 
 
-  function reverseScaling!(x::Array{Float64,1},s::Array{Float64,1},P::SparseMatrixCSC{Float64,Int64},q::SparseVector{Float64,Int64},sm::OSSDPTypes.scaleMatrices)
+  function reverseScaling!(x,s,P::SparseMatrixCSC{Float64,Int64},q::SparseVector{Float64,Int64},sm::OSSDPTypes.scaleMatrices)
     x[:] = sm.D*x
     P[:,:] = sm.Dinv*P*sm.Dinv
     q[:] = sm.Dinv*q
