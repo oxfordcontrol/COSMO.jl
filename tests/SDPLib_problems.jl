@@ -4,16 +4,16 @@
 #          s.t. tr(Fi Y) = ci, for i=1,...,m
 #               Y ⪴ 0
 
-workspace()
-include("../Types.jl")
-include("../Scaling.jl")
-include("../Projections.jl")
-include("../Solver.jl")
 
-using JLD
-using Base.Test
-using OSSDP, OSSDPTypes
-using Convex, Mosek
+# workspace()
+# include("../Projections.jl")
+# include("../Solver.jl")
+
+# using JLD
+# using Base.Test
+# using OSSDP
+# using Convex, Mosek
+# using PyPlot
 
 data = JLD.load("./sdplib/truss1.jld")
 
@@ -32,7 +32,11 @@ for iii = 1:m
 end
 constraint2 = isposdef(Y)
 problem.constraints += constraint2
+<<<<<<< HEAD
 solve!(problem,SCSSolver(verbose=true))
+=======
+solve!(problem,MosekSolver())
+>>>>>>> devel
 Ys = Y.value
 
 
@@ -52,8 +56,13 @@ for iii = 1:m
   A[iii,:] = vec(F[iii+1])
 end
 
+<<<<<<< HEAD
 settings = sdpSettings(rho=10,sigma=1.0,alpha=1.6,max_iter=10000,verbose=true)
 res,dbg,sm = solveSDP(P,q,A,b,settings)
+=======
+settings = sdpSettings(rho=10,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true)
+res,dbg = solveSDP(P,q,A,b,settings)
+>>>>>>> devel
 Y = reshape(res.x,n,n)
 
 # Check if problem was solved correctly

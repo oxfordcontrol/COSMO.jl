@@ -3,7 +3,8 @@ module Scaling
 using OSSDPTypes
 export scaleProblem!,reverseScaling!
 
-  function normKKTCols(P::Array{Float64,2},A::Array{Float64,2})
+
+  function normKKTCols(P::SparseMatrixCSC{Float64,Int64},A::SparseMatrixCSC{Float64,Int64})
     normPCols = [norm(P[:,i],Inf) for i in 1:size(P,2)]
     normACols = [norm(A[:,i],Inf) for i in 1:size(A,2)]
     normLeftPart = max.(normPCols,normACols)
@@ -33,7 +34,7 @@ export scaleProblem!,reverseScaling!
     return nothing
   end
 
-  function scaleProblem!(problem,scaleMatrices,set)
+  function scaleProblem!(problem::OSSDPTypes.problem,scaleMatrices::OSSDPTypes.scaleMatrices,set::OSSDPTypes.sdpSettings)
     P = problem.P
     A = problem.A
     b = problem.b
@@ -109,7 +110,8 @@ export scaleProblem!,reverseScaling!
   end
 
 
-  function reverseScaling!(x,s,P,q,sm)
+
+  function reverseScaling!(x,s,P::SparseMatrixCSC{Float64,Int64},q::SparseVector{Float64,Int64},sm::OSSDPTypes.scaleMatrices)
     x[:] = sm.D*x
     P[:,:] = sm.Dinv*P*sm.Dinv
     q[:] = sm.Dinv*q

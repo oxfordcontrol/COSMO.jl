@@ -25,22 +25,39 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
   end
 
   mutable struct problem
-    P::Array{Float64,2}
-    q::Array{Float64,1}
-    A::Array{Float64,2}
-    b::Array{Float64,1}
+    P::SparseMatrixCSC{Float64,Int64}
+    q::SparseVector{Float64,Int64}
+    A::SparseMatrixCSC{Float64,Int64}
+    b::SparseVector{Float64,Int64}
     m::Int64
     n::Int64
+
+    #constructor
+    function problem(P,q,A,b)
+      # check dimensions
+      m = size(A,1)
+      n = size(A,2)
+      (size(P,1) != n || size(P,2) != n) && error("Dimensions of P and A dont match.")
+      (size(q,1) != n || size(q,2) != 1) && error("Dimensions of P and q dont match.")
+      (size(b,1) != m || size(b,2) != 1) && error("Dimensions of A and b dont match.")
+
+      # Make sure problem data is in sparse format
+      typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
+      typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
+      typeof(b) != SparseVector{Float64,Int64} && (b = sparse(b))
+      typeof(q) != SparseVector{Float64,Int64} && (q = sparse(q))
+      new(P,q,A,b,m,n)
+    end
   end
 
   mutable struct scaleMatrices
-    D::Array{Float64,2}
-    Dinv::Array{Float64,2}
-    E::Array{Float64,2}
-    Einv::Array{Float64,2}
+    D::SparseMatrixCSC{Float64,Int64}
+    Dinv::SparseMatrixCSC{Float64,Int64}
+    E::SparseMatrixCSC{Float64,Int64}
+    Einv::SparseMatrixCSC{Float64,Int64}
     c::Float64
     cinv::Float64
-    scaleMatrices() = new(zeros(1,1),zeros(1,1),zeros(1,1),zeros(1,1),0.,0.)
+    scaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.)
   end
 
 
@@ -82,6 +99,7 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
 
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::sdpResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nz = $(round.(obj.z,3))\nμ = $(round.(obj.μ,3))\nλ = $(round.(obj.λ,3))" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nν = $(round.(obj.ν,3))\nλ = $(round.(obj.λ,3))" )
   end
+
 end

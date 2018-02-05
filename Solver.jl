@@ -1,10 +1,15 @@
+include("./Types.jl")
+include("./Scaling.jl")
+include("./Projections.jl")
+
 module OSSDP
 
 using Formatting, Projections, Scaling, OSSDPTypes
 export solveSDP
+export sdpResult, sdpSettings #from the Types module
 
 
-  function isPrimalInfeasible(δy::Array{Float64},A,l::Array{Float64},u::Array{Float64},ϵ_prim_inf::Float64)
+  function isPrimalInfeasible(δy,A,l,u,ϵ_prim_inf)
     norm_δy = norm(δy,Inf)
     if norm_δy > ϵ_prim_inf
       δy = δy/norm_δy
@@ -20,7 +25,7 @@ export solveSDP
   end
 
 
-  function isDualInfeasible(δx::Array{Float64},P,A,q::Array{Float64},l::Array{Float64},u::Array{Float64},ϵ_dual_inf::Float64)
+  function isDualInfeasible(δx,P,A,q,l,u,ϵ_dual_inf::Float64)
     norm_δx = norm(δx,Inf)
     m = size(A,1)
     if norm_δx > ϵ_dual_inf
@@ -39,18 +44,19 @@ export solveSDP
     return false
   end
 
-  function calculateResiduals(x::Array{Float64,1},s::Array{Float64,1},λ::Array{Float64,1},ν::Array{Float64,1},p::OSSDPTypes.problem,sm::OSSDPTypes.scaleMatrices,settings::OSSDPTypes.sdpSettings)
+
+  function calculateResiduals(x,s,λ,ν,p::OSSDPTypes.problem,sm::OSSDPTypes.scaleMatrices,settings::OSSDPTypes.sdpSettings)
         n = p.n
         m = p.m
-        H = [p.A zeros(m,n); eye(n) -eye(n)]
+        H = [p.A spzeros(m,n); speye(n) -speye(n)]
         u = [x;s]
         if settings.scaling != 0
-          EinvAug = [sm.Einv zeros(m,n); zeros(n,m) eye(n)]
-          r_prim = norm(EinvAug*(H*u-[p.b;zeros(n)]),Inf)
+          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) speye(n)]
+          r_prim = norm(EinvAug*(H*u-[p.b;spzeros(n)]),Inf)
           # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
           r_dual = norm(sm.Dinv*(p.P*x + p.q + λ + p.A'*ν),Inf)
         else
-          r_prim = norm(H*u-[p.b;zeros(n)],Inf)
+          r_prim = norm(H*u-[p.b;spzeros(n)],Inf)
           r_dual = norm(p.P*x + p.q + λ + p.A'*ν,Inf)
         end
 
@@ -58,7 +64,12 @@ export solveSDP
   end
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P::Array{Float64,2},q::Array{Float64,1},A::Array{Float64,2},b::Array{Float64,1},settings::OSSDPTypes.sdpSettings)
+  function solveSDP(P,q,A,b,settings::OSSDPTypes.sdpSettings)
+
+    # populate problem type
+    p = problem(P,q,A,b)
+    sm = scaleMatrices()
+
 
     #Load algorithm settings
     σ = settings.sigma
@@ -68,10 +79,6 @@ export solveSDP
     ϵ_rel = settings.eps_rel
     ϵ_prim_inf = settings.eps_prim_inf
     ϵ_dual_inf = settings.eps_dual_inf
-
-    # populate problem type
-    p = problem(P,q,A,b,size(b,1),size(q,1))
-    sm = scaleMatrices()
 
     # instantiate variables
     iter = 0
@@ -83,19 +90,17 @@ export solveSDP
     r = Int(sqrt(n))
     m = p.m
 
-    x = zeros(n)
-    s = zeros(n)
-    λ = zeros(n)
-    ν = zeros(m)
+    x = spzeros(n)
+    s = spzeros(n)
+    λ = spzeros(n)
+    ν = spzeros(m)
 
     cost = Inf
 
-    # create debugging variables
-    xArr = zeros(settings.max_iter,n)
-    sArr = zeros(settings.max_iter,n)
-    λArr = zeros(settings.max_iter,n)
-    costArr = zeros(settings.max_iter)
-    νArr = zeros(settings.max_iter,m)
+    # scale problem data
+    if settings.scaling != 0
+      scaleProblem!(p,sm,settings)
+    end
 
     # scale problem data
     if settings.scaling != 0
@@ -104,15 +109,14 @@ export solveSDP
 
     # TODO: Print information still true?
     # print information about settings to the screen
-    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, January 2018\n" * "-"^50 * "\n")
-    println("Problem: variable vec(X) size: n = $(n), constraints m = $(m)")
+    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
+    println("Problem: variable X in R^{$(r)x$(r)}, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
     println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
 
     tic()
 
     # KKT matrix M
-    M = [p.P+σ*eye(n) p.A';p.A -(1/ρ)*eye(m)]
-    M = sparse(M)
+    M = [p.P+σ*speye(n) p.A';p.A -(1/ρ)*speye(m)]
 
     # Do LDLT Factorization: A = LDL^T
     F = ldltfact(M)
@@ -125,7 +129,8 @@ export solveSDP
       RHS = [-p.q+σ*s-λ; p.b-(1/ρ)*ν]
 
       #solve linear system M*k = b with help of factorization matrix
-      k = F\RHS
+      # FIXME: must be a better way
+      k = sparse(F\full(RHS))
 
       # The relaxation definitely has to be double checked
       #deconstruct solution vector k = [x(n+1);ν(n+1)]
@@ -137,8 +142,11 @@ export solveSDP
 
       #TODO: SCS uses approximate projection (see Paper)
       # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
-      s = sm.Dinv*Projections.sdcone( sm.D*(xRelax + (1/σ)*λ),r)
-
+      if settings.scaling != 0
+        s = Projections.sdcone( (xRelax + (1/σ)*λ),r)
+      else
+        s = Projections.sdcone(xRelax + (1/σ)*λ,r)
+      end
 
       # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
       λ = λ + σ*(xRelax - s)
@@ -155,13 +163,6 @@ export solveSDP
         r_prim = NaN
         r_dual = NaN
       end
-      # complementary slackness condition
-      # store variables
-      xArr[iter,:] = x
-      sArr[iter,:] = s
-      λArr[iter,:] = λ
-      costArr[iter] = cost
-      νArr[iter,:] = ν
 
       # compute deltas
       # δx = xNew - xPrev
@@ -195,10 +196,10 @@ export solveSDP
 
       # check convergence with residuals every {settings.checkIteration} step
       if mod(iter,settings.checkTermination) == 0
-        H = [p.A zeros(m,n); eye(n) -eye(n)]
+        H = [p.A spzeros(m,n); speye(n) -speye(n)]
         u = [x;s]
         if settings.scaling != 0
-          EinvAug = [sm.Einv zeros(m,n); zeros(n,m) eye(n)]
+          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) speye(n)]
           ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(EinvAug*H*u,Inf), norm(sm.Einv*p.b,Inf),1 )
           ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(sm.Dinv*p.P*x,Inf), norm(sm.Dinv*p.q,Inf), norm(sm.Dinv*λ,Inf),1 )
         else
@@ -231,13 +232,11 @@ export solveSDP
       # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
       xT2 = x
       sT2 = s
-      cost = (1/2 * x'*p.P*x + p.q'*x)[1]
+      cost = sm.cinv*(1/2 * x'*p.P*x + p.q'*x)[1]
     end
     result = sdpResult(x,s,λ,cost,iter,status,rt,r_prim,r_dual);
 
-    dbg = sdpDebug(xArr,sArr,λArr,νArr,costArr)
-
-    return result,dbg,sm,xT,sT,xT2,sT2;
+    return result;
 
   end
 
