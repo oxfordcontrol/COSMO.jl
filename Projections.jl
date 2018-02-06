@@ -1,10 +1,45 @@
 module Projections
-
-export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone
+using OSSDPTypes
+export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, projectCompositeCone!
 
 # -------------------------------------
 # HELPER FUNCTIONS
 # -------------------------------------
+
+    function projectCompositeCone!(x,K::OSSDPTypes.cone)
+      b = 1
+
+      if K.f  > 0
+        e = b + K.f - 1
+        x[b:e] = freeCone(x[b:e])
+        b = e + 1
+      end
+
+      if K.l > 0
+        e = b + K.l - 1
+        x[b:e] = nonNegativeOrthant(x[b:e])
+        b = e +1
+      end
+
+      if length(K.q) > 0
+        for iii = 1:length(K.q)
+          e = b + K.q[iii] - 1
+          x[b:e] = secondOrderCone(x[b:e])
+          b = e + 1
+        end
+      end
+
+      if length(K.s) > 0
+        for iii = 1:length(K.s)
+          #FIXME: Make sure they work directly on the input data, no copying
+          e = b + K.q[iii] - 1
+          x[b:e] = secondOrderCone(x[b:e])
+          b = e + 1
+        end
+      end
+      return x
+    end
+
 
     # projection onto nonegative orthant R_+^n
     function nonNegativeOrthant(x)
@@ -28,21 +63,28 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone
 
 
     # projection onto second-order-cone {(t,x) | ||x||_2 <= t}
-    function secondOrderCone(x,t::Float64)
+    function secondOrderCone(x)
+      # FIXME: make sure no weird by reference is applied here
+      t = x[1]
+      x = x[2:length(x)]
+
       normX = norm(x,2)
       if  normX <= -t
-        return 0.0.*x,0
+        return [0.;0.0.*x]
       elseif normX <= t
-        return x,t
+        return [t;x]
       else
         tNew = (normX+t)/2
         x = (normX+t)/(2*normX).*x
-        return x,tNew
+        return [tNew;x]
       end
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function sdcone(x,n::Int64)
+   function sdcone(x)
+
+    n = Int(sqrt(length(x)))
+
     # handle 1D case
     if size(x,1) == 1
       return max.(x,0)
