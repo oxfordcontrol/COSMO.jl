@@ -1,6 +1,6 @@
 module Helper
 
-export isNumericallyPosSemDef
+export isNumericallyPosSemDef, isNumericallySymmetric
 
 
 
@@ -14,6 +14,16 @@ function isNumericallyPosSemDef(X,atol)
   else
     return false
   end
+end
+
+function isNumericallySymmetric(X,atol)
+  n = size(X,2)
+  for i = 1:n-1, j = i+1:n
+    if abs(X[i,j] - X[j,i]) >= atol
+      return false
+    end
+  end
+    return true
 end
 
 
