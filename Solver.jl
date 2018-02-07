@@ -6,7 +6,7 @@ module OSSDP
 
 using Formatting, Projections, Scaling, OSSDPTypes
 export solveSDP
-export sdpResult, sdpSettings #from the Types module
+export sdpResult, sdpSettings, cone #from the Types module
 
 
   function isPrimalInfeasible(δy,A,l,u,ϵ_prim_inf)
@@ -28,7 +28,7 @@ export sdpResult, sdpSettings #from the Types module
   function isDualInfeasible(δx,P,A,q,l,u,ϵ_dual_inf::Float64)
     norm_δx = norm(δx,Inf)
     m = size(A,1)
-    if norm_δx > ϵ_dual_inf
+    if norm_δx > ϵ_dual_infw
       if (q'*δx)[1] < - ϵ_dual_inf*norm_δx
         if norm(P*δx,Inf) < ϵ_dual_inf*norm_δx
           Aδx = A * δx
@@ -63,10 +63,10 @@ export sdpResult, sdpSettings #from the Types module
   end
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P,q,A,b,settings::OSSDPTypes.sdpSettings)
+  function solveSDP(P,q,A,b,K::OSSDPTypes.cone,settings::OSSDPTypes.sdpSettings)
 
     # populate problem type
-    p = problem(P,q,A,b)
+    p = problem(P,q,A,b,K)
     sm = scaleMatrices()
 
 
@@ -87,7 +87,6 @@ export sdpResult, sdpSettings #from the Types module
     # determine size of decision variables
     # n: r^2 since we are working with vectorized matrixes of size r
     n = p.n
-    r = Int(sqrt(n))
     m = p.m
 
     x = spzeros(n)
@@ -102,10 +101,11 @@ export sdpResult, sdpSettings #from the Types module
       scaleProblem!(p,sm,settings)
     end
 
+
     # TODO: Print information still true?
     # print information about settings to the screen
     println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
-    println("Problem: variable X in R^{$(r)x$(r)}, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
+    println("Problem: variable X in ???, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
     println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
 
     tic()
@@ -137,11 +137,8 @@ export sdpResult, sdpSettings #from the Types module
 
       #TODO: SCS uses approximate projection (see Paper)
       # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
-      if settings.scaling != 0
-        s = sm.Dinv*Projections.sdcone( sm.D*(xRelax + (1/σ)*λ),r)
-      else
-        s = Projections.sdcone(xRelax + (1/σ)*λ,r)
-      end
+      s = Projections.projectCompositeCone!((xRelax + (1/σ)*λ),p.K)
+
 
       # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
       λ = λ + σ*(xRelax - s)
@@ -231,7 +228,7 @@ export sdpResult, sdpSettings #from the Types module
       sT2 = s
       cost = sm.cinv*(1/2 * x'*p.P*x + p.q'*x)[1]
     end
-    result = sdpResult(x,s,λ,cost,iter,status,rt,r_prim,r_dual);
+    result = sdpResult(x,s,λ,ν,cost,iter,status,rt,r_prim,r_dual);
 
 
     return result;

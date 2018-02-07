@@ -1,6 +1,6 @@
 module OSSDPTypes
 
-export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
+export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
 # -------------------------------------
 # struct DEFINITIONS
 # -------------------------------------
@@ -8,6 +8,7 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
     x::Array{Float64}
     s::Array{Float64}
     λ::Array{Float64}
+    ν::Array{Float64}
     cost::Float64
     iter::Int64
     status::Symbol
@@ -24,6 +25,18 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
     cost::Array{Float64}
   end
 
+  # product of cones dimensions, similar to SeDuMi
+  struct cone
+    # number of free / unrestricted components
+    f::Int64
+    # number of nonnegative components
+    l::Int64
+    # dimensions of lorentz constraints (if multiple cones than it's an array)
+    q::Array{Int64}
+    # dimension of positive semidefinite (psd) constraints
+    s::Array{Int64}
+  end
+
   mutable struct problem
     P::SparseMatrixCSC{Float64,Int64}
     q::SparseVector{Float64,Int64}
@@ -31,9 +44,10 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
     b::SparseVector{Float64,Int64}
     m::Int64
     n::Int64
+    K::OSSDPTypes.cone
 
     #constructor
-    function problem(P,q,A,b)
+    function problem(P,q,A,b,K)
       # check dimensions
       m = size(A,1)
       n = size(A,2)
@@ -46,7 +60,12 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
       typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
       typeof(b) != SparseVector{Float64,Int64} && (b = sparse(b))
       typeof(q) != SparseVector{Float64,Int64} && (q = sparse(q))
-      new(P,q,A,b,m,n)
+
+      # check that number of cone variables provided in K add up
+      isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
+      isempty(K.s) ? ns = 0 :  (ns = sum(K.s) )
+      (K.f + K.l + nq + ns ) != n && error("Problem dimension doesnt match cone sizes provided in K.")
+      new(P,q,A,b,m,n,K)
     end
   end
 

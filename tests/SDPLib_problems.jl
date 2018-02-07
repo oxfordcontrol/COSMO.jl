@@ -4,14 +4,14 @@
 #          s.t. tr(Fi Y) = ci, for i=1,...,m
 #               Y ⪴ 0
 
-# workspace()
-# include("../Projections.jl")
-# include("../Solver.jl")
 
-# using JLD
-# using Base.Test
-# using OSSDP
-# using Convex, Mosek
+
+workspace()
+include("../Solver.jl")
+using JLD
+using Base.Test
+using OSSDP
+ using Convex, Mosek
 # using PyPlot
 
 data = JLD.load("./sdplib/arch0.jld")
@@ -51,8 +51,10 @@ for iii = 1:m
   A[iii,:] = vec(F[iii+1])
 end
 
-settings = sdpSettings(rho=10,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true)
-res,dbg = solveSDP(P,q,A,b,settings)
+
+
+settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.8,max_iter=5000,verbose=true, scaling = 10)
+res, sm= solveSDP(P,q,A,b,settings)
 Y = reshape(res.x,n,n)
 
 # Check if problem was solved correctly
