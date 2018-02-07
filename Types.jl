@@ -10,7 +10,7 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices
     λ::Array{Float64}
     cost::Float64
     iter::Int64
-    status::String
+    status::Symbol
     solverTime::Float64
     rPrim::Float64
     rDual::Float64

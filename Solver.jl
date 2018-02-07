@@ -82,7 +82,7 @@ export sdpResult, sdpSettings #from the Types module
 
     # instantiate variables
     iter = 0
-    status = "unsolved"
+    status = :unsolved
 
     # determine size of decision variables
     # n: r^2 since we are working with vectorized matrixes of size r
@@ -154,9 +154,6 @@ export sdpResult, sdpSettings #from the Types module
       # compute them every {settings.checkTermination} step
       if mod(iter,settings.checkTermination)  == 0
         r_prim,r_dual = calculateResiduals(x,s,λ,ν,p,sm,settings)
-      else
-        r_prim = NaN
-        r_dual = NaN
       end
 
       # compute deltas
@@ -169,12 +166,16 @@ export sdpResult, sdpSettings #from the Types module
           println("Iter:\tObjective:\tPrimal Res\tDual Res:")
         end
         if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          if mod(iter,settings.checkTermination) == 0
+            printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          else
+            printfmt("{1:d}\t{2:.4e}\t ---\t\t\t---\n", iter,cost)
+          end
        end
       end
 
       # if isPrimalInfeasible(δy,A,l,u,ϵ_prim_inf)
-      #     status = "primal infeasible"
+      #     status = :primal infeasible
       #     cost = Inf
       #     xNew = NaN*ones(n,1)
       #     yNew = NaN*ones(m,1)
@@ -182,7 +183,7 @@ export sdpResult, sdpSettings #from the Types module
       # end
 
       # if isDualInfeasible(δx,P,A,q,l,u,ϵ_dual_inf)
-      #     status = "dual infeasible"
+      #     status = :dual_infeasible
       #     cost = -Inf
       #     xNew = NaN*ones(n,1)
       #     yNew = NaN*ones(m,1)
@@ -205,7 +206,7 @@ export sdpResult, sdpSettings #from the Types module
           if settings.verbose
             printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
           end
-          status = "solved"
+          status = :solved
           break
         end
       end
@@ -218,6 +219,7 @@ export sdpResult, sdpSettings #from the Types module
     # calculate primal and dual residual
     if iter == settings.max_iter
       r_prim,r_dual = calculateResiduals(x,s,λ,ν,p,sm,settings)
+      status = :UserLimit
     end
     # create result object
     if settings.scaling != 0
