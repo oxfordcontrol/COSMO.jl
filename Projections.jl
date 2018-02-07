@@ -32,7 +32,7 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
       if length(K.s) > 0
         for iii = 1:length(K.s)
           #FIXME: Make sure they work directly on the input data, no copying
-          e = b + K.q[iii] - 1
+          e = b + K.s[iii] - 1
           x[b:e] = sdcone(x[b:e])
           b = e + 1
         end
