@@ -101,6 +101,7 @@ export sdpResult, sdpSettings, cone #from the Types module
       scaleProblem!(p,sm,settings)
     end
 
+
     # TODO: Print information still true?
     # print information about settings to the screen
     println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
@@ -137,6 +138,7 @@ export sdpResult, sdpSettings, cone #from the Types module
       #TODO: SCS uses approximate projection (see Paper)
       # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
       s = Projections.projectCompositeCone!((xRelax + (1/σ)*λ),p.K)
+
 
       # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
       λ = λ + σ*(xRelax - s)
