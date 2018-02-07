@@ -3,9 +3,7 @@
 # the condition number κ(M)=σMax(M)/σMin(M) should decrease
 # the transformation should hold MNew = S*M*S
 workspace()
-include("../Scaling.jl")
-include("../Types.jl")
-include("../Projections.jl")
+
 include("../Solver.jl")
 
 using FactCheck, Scaling, OSSDP, OSSDPTypes
@@ -21,26 +19,27 @@ m = size(A,1)
 n = size(P,1)
 q = zeros(n)
 b = zeros(m)
-p = problem(P,q,A,b,size(b,1),size(q,1))
+p = problem(P,q,A,b)
 sm = scaleMatrices()
 
 # assemble matrix M
 M = [P A';A zeros(m,m)]
 # check condition number
-κ = cond(M)
+
+κ = cond(full(M))
 # check lp norm of rows of original matrix
 rowNorms = [norm(M[i,:],Inf) for i in 1:size(M,1)]
 deltaRowNorm = maximum(rowNorms) - minimum(rowNorms)
 
 # perform scaling
 
-  D,E = scaleProblem!(p,sm,settings)
+  D,E = scaleProblemSCS!(p,sm,settings)
 S = [D zeros(n,m);zeros(m,n) E]
 # reassamble scaled matrix
 MNew = [p.P p.A';p.A zeros(m,m)]
 
 # calculate condition number
-κNew = cond(MNew)
+κNew = cond(full(MNew))
 
 # calculate lp norm of rows of scaled matrix
 rowNormsNew = [norm(MNew[i,:],Inf) for i in 1:size(MNew,1)]

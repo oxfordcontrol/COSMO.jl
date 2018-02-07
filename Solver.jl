@@ -6,7 +6,7 @@ module OSSDP
 
 using Formatting, Projections, Scaling, OSSDPTypes
 export solveSDP
-export sdpResult, sdpSettings #from the Types module
+export sdpResult, sdpSettings, cone #from the Types module
 
 
   function isPrimalInfeasible(δy,A,l,u,ϵ_prim_inf)
@@ -28,7 +28,7 @@ export sdpResult, sdpSettings #from the Types module
   function isDualInfeasible(δx,P,A,q,l,u,ϵ_dual_inf::Float64)
     norm_δx = norm(δx,Inf)
     m = size(A,1)
-    if norm_δx > ϵ_dual_inf
+    if norm_δx > ϵ_dual_infw
       if (q'*δx)[1] < - ϵ_dual_inf*norm_δx
         if norm(P*δx,Inf) < ϵ_dual_inf*norm_δx
           Aδx = A * δx
@@ -64,10 +64,10 @@ export sdpResult, sdpSettings #from the Types module
   end
 # SOLVER ROUTINE
 # -------------------------------------
-  function solveSDP(P,q,A,b,settings::OSSDPTypes.sdpSettings)
+  function solveSDP(P,q,A,b,K::OSSDPTypes.cone,settings::OSSDPTypes.sdpSettings)
 
     # populate problem type
-    p = problem(P,q,A,b)
+    p = problem(P,q,A,b,K)
     sm = scaleMatrices()
 
 
@@ -82,12 +82,11 @@ export sdpResult, sdpSettings #from the Types module
 
     # instantiate variables
     iter = 0
-    status = "unsolved"
+    status = :unsolved
 
     # determine size of decision variables
     # n: r^2 since we are working with vectorized matrixes of size r
     n = p.n
-    r = Int(sqrt(n))
     m = p.m
 
     x = spzeros(n)
@@ -102,15 +101,10 @@ export sdpResult, sdpSettings #from the Types module
       scaleProblem!(p,sm,settings)
     end
 
-    # scale problem data
-    if settings.scaling != 0
-      scaleProblem!(p,sm,settings)
-    end
-
     # TODO: Print information still true?
     # print information about settings to the screen
     println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
-    println("Problem: variable X in R^{$(r)x$(r)}, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
+    println("Problem: variable X in ???, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
     println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
 
     tic()
@@ -142,11 +136,8 @@ export sdpResult, sdpSettings #from the Types module
 
       #TODO: SCS uses approximate projection (see Paper)
       # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
-      if settings.scaling != 0
-        s = Projections.sdcone( (xRelax + (1/σ)*λ),r)
-      else
-        s = Projections.sdcone(xRelax + (1/σ)*λ,r)
-      end
+      s = Projections.projectCompositeCone!((xRelax + (1/σ)*λ),p.K)
+
 
       # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
       λ = λ + σ*(xRelax - s)
@@ -159,9 +150,6 @@ export sdpResult, sdpSettings #from the Types module
       # compute them every {settings.checkTermination} step
       if mod(iter,settings.checkTermination)  == 0
         r_prim,r_dual = calculateResiduals(x,s,λ,ν,p,sm,settings)
-      else
-        r_prim = NaN
-        r_dual = NaN
       end
 
       # compute deltas
@@ -174,12 +162,16 @@ export sdpResult, sdpSettings #from the Types module
           println("Iter:\tObjective:\tPrimal Res\tDual Res:")
         end
         if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
-          printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          if mod(iter,settings.checkTermination) == 0
+            printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+          else
+            printfmt("{1:d}\t{2:.4e}\t ---\t\t\t---\n", iter,cost)
+          end
        end
       end
 
       # if isPrimalInfeasible(δy,A,l,u,ϵ_prim_inf)
-      #     status = "primal infeasible"
+      #     status = :primal_infeasible
       #     cost = Inf
       #     xNew = NaN*ones(n,1)
       #     yNew = NaN*ones(m,1)
@@ -187,7 +179,7 @@ export sdpResult, sdpSettings #from the Types module
       # end
 
       # if isDualInfeasible(δx,P,A,q,l,u,ϵ_dual_inf)
-      #     status = "dual infeasible"
+      #     status = :dual_infeasible
       #     cost = -Inf
       #     xNew = NaN*ones(n,1)
       #     yNew = NaN*ones(m,1)
@@ -210,7 +202,7 @@ export sdpResult, sdpSettings #from the Types module
           if settings.verbose
             printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
           end
-          status = "solved"
+          status = :solved
           break
         end
       end
@@ -223,6 +215,7 @@ export sdpResult, sdpSettings #from the Types module
     # calculate primal and dual residual
     if iter == settings.max_iter
       r_prim,r_dual = calculateResiduals(x,s,λ,ν,p,sm,settings)
+      status = :UserLimit
     end
     # create result object
     if settings.scaling != 0
@@ -234,7 +227,7 @@ export sdpResult, sdpSettings #from the Types module
       sT2 = s
       cost = sm.cinv*(1/2 * x'*p.P*x + p.q'*x)[1]
     end
-    result = sdpResult(x,s,λ,cost,iter,status,rt,r_prim,r_dual);
+    result = sdpResult(x,s,λ,ν,cost,iter,status,rt,r_prim,r_dual);
 
     return result;
 

@@ -1,7 +1,7 @@
 module Scaling
 
 using OSSDPTypes
-export scaleProblem!,reverseScaling!
+export scaleProblem!,reverseScaling!, scaleProblemSCS!
 
 
   function normKKTCols(P::SparseMatrixCSC{Float64,Int64},A::SparseMatrixCSC{Float64,Int64})
@@ -62,6 +62,7 @@ export scaleProblem!,reverseScaling!
       δVec = normKKTCols(P,A)
       limitScaling!(δVec,set)
       δVec = sqrt(δVec)
+      δVec = mean(δVec)*ones(length(δVec))
       sTemp = 1./δVec
 
       # Obtain scaling matrices
@@ -108,6 +109,47 @@ export scaleProblem!,reverseScaling!
     scaleMatrices.cinv = 1./c
     return D,E
   end
+
+function scaleProblemSCS!(problem::OSSDPTypes.problem,scaleMatrices::OSSDPTypes.scaleMatrices,set::OSSDPTypes.sdpSettings)
+    P = problem.P
+    A = problem.A
+    b = problem.b
+    q = problem.q
+    m = problem.m
+    n = problem.n
+
+
+    # scale rows of A'
+    D = [norm(A'[i,:],2) for i in 1:size(A',1)]
+    D[:] = mean(D)
+    limitScaling!(D,set)
+    D = spdiagm(1./D)
+    # scale cols of A'
+    E = [norm(A'[:,i],2) for i in 1:size(A',2)]
+    limitScaling!(E,set)
+    E = spdiagm(1./E)
+    # scale b
+
+
+    # scale c
+    c = 1.
+
+      # Scale data
+    P[:,:] = D*(P*D)
+    A[:,:] = E*A*D
+    q[:] = D*q
+    b[:] = E*b
+
+
+    scaleMatrices.D = D
+    scaleMatrices.E = E
+    scaleMatrices.Dinv = spdiagm(1./diag(D))
+    scaleMatrices.Einv = spdiagm(1./diag(E))
+    scaleMatrices.c = c
+    scaleMatrices.cinv = 1./c
+    return D,E
+  end
+
 
 
 
