@@ -1,5 +1,4 @@
 module OSSDPTypes
-
 export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
 # -------------------------------------
 # struct DEFINITIONS
@@ -35,6 +34,15 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     q::Array{Int64}
     # dimension of positive semidefinite (psd) constraints
     s::Array{Int64}
+
+    #constructor
+    function cone(f::Int64,l::Int64,q,s)
+      (length(q) == 1 && q[1] == 0) && (q = [])
+      (length(s) == 1 && s[1] == 0) && (s = [])
+      (length(q) > 1 && in(0,q)) && error("Don't specify zero-dimensional cone in K.q.")
+      (length(s) > 1 && in(0,s)) && error("Don't specify zero-dimensional cone in K.s.")
+      new(f,l,q,s)
+    end
   end
 
   mutable struct problem
@@ -74,9 +82,11 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     Dinv::SparseMatrixCSC{Float64,Int64}
     E::SparseMatrixCSC{Float64,Int64}
     Einv::SparseMatrixCSC{Float64,Int64}
+    sq::Float64
+    sb::Float64
     c::Float64
     cinv::Float64
-    scaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.)
+    scaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.,1.,1.)
   end
 
 
@@ -94,6 +104,9 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     scaling::Int64
     MIN_SCALING::Float64
     MAX_SCALING::Float64
+    avgFunc::Function
+    scaleFunc::Int64
+
 
 
     #constructor
@@ -110,9 +123,11 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
       checkTermination=1,
       scaling=10,
       MIN_SCALING = 1e-4,
-      MAX_SCALING = 1e4
+      MAX_SCALING = 1e4,
+      avgFunc = mean,
+      scaleFunc = 1
       )
-        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,checkTermination,scaling,MIN_SCALING,MAX_SCALING)
+        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc)
     end
   end
 
