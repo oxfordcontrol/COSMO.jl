@@ -37,10 +37,11 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
 
     #constructor
     function cone(f::Int64,l::Int64,q,s)
+      (f < 0 || l < 0) && error("Negative values are not allowed.")
       (length(q) == 1 && q[1] == 0) && (q = [])
       (length(s) == 1 && s[1] == 0) && (s = [])
-      (length(q) > 1 && in(0,q)) && error("Don't specify zero-dimensional cone in K.q.")
-      (length(s) > 1 && in(0,s)) && error("Don't specify zero-dimensional cone in K.s.")
+      (length(q) > 0 && minimum(q) <= 0) && error("Cone dimensions in K.q have to be positive integers.")
+      (length(s) > 0 && minimum(s) <= 0) && error("Cone dimension in K.s have to be positive integers.")
       new(f,l,q,s)
     end
   end
