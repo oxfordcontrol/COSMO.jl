@@ -51,13 +51,13 @@ export sdpResult, sdpSettings, cone #from the Types module
         H = [p.A spzeros(m,n); speye(n) -speye(n)]
         u = [x;s]
         if settings.scaling != 0
-          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) speye(n)]
-          r_prim = norm(EinvAug*(H*u-[p.b;spzeros(n)]),Inf)
+          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) sm.D]
+          r_prim = norm((EinvAug*(H*u-[p.b;spzeros(n)]))./sm.sb,2)
           # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-          r_dual = norm(sm.Dinv*(p.P*x + p.q + λ + p.A'*ν),Inf)
+          r_dual = norm((sm.cinv*sm.Dinv*(p.P*x + p.q + λ + p.A'*ν))./sm.sq,2)
         else
-          r_prim = norm(H*u-[p.b;spzeros(n)],Inf)
-          r_dual = norm(p.P*x + p.q + λ + p.A'*ν,Inf)
+          r_prim = norm(H*u-[p.b;spzeros(n)],2)
+          r_dual = norm(p.P*x + p.q + λ + p.A'*ν,2)
         end
 
     return r_prim,r_dual
@@ -68,8 +68,12 @@ export sdpResult, sdpSettings, cone #from the Types module
 
     # populate problem type
     p = problem(P,q,A,b,K)
+    P = nothing
+    q = nothing
+    A = nothing
+    b = nothing
     sm = scaleMatrices()
-
+    δν = []
 
     #Load algorithm settings
     σ = settings.sigma
@@ -98,20 +102,23 @@ export sdpResult, sdpSettings, cone #from the Types module
 
     # scale problem data
     if settings.scaling != 0
-      scaleProblem!(p,sm,settings)
+      (settings.scaleFunc == 1) && scaleSCS!(p,sm,settings,K)
+      (settings.scaleFunc == 2) && scaleRuiz!(p,sm,settings,K)
     end
-
+    println("after scaling")
+    #@show(sm)
     # TODO: Print information still true?
     # print information about settings to the screen
-    println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
-    println("Problem: variable X in ???, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
-    println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter)\n\n")
-
+    if settings.verbose
+      println("-"^50 * "\n" * " "^8 * "ADMM-SDP Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
+      println("Problem: variable X in ???, vec(X) in R^{$(n)},\n         constraints: A in R^{$(n)x$(m)}, b in R^{$(m)},\n         matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem)")
+      println("Settings: ϵ_abs = $(ϵ_abs), ϵ_rel = $(ϵ_rel),\n" * " "^10 * "ϵ_prim_inf = $(ϵ_prim_inf), ϵ_dual_inf = $(ϵ_dual_inf),\n" * " "^10 * "ρ = $(ρ), σ = $(σ), α = $(α),\n" * " "^10 * "max_iter = $(settings.max_iter), scaling = $(settings.scaling)\n\n")
+    end
     tic()
 
     # KKT matrix M
     M = [p.P+σ*speye(n) p.A';p.A -(1/ρ)*speye(m)]
-
+    #@show(M)
     # Do LDLT Factorization: A = LDL^T
     F = ldltfact(M)
 
@@ -129,6 +136,7 @@ export sdpResult, sdpSettings, cone #from the Types module
       # The relaxation definitely has to be double checked
       #deconstruct solution vector k = [x(n+1);ν(n+1)]
       x = k[1:n]
+      νPrev = ν
       ν = k[n+1:end]
 
       # Projection steps and relaxation xRelax = αx(n+1)+(1-α)s(n)
@@ -144,7 +152,7 @@ export sdpResult, sdpSettings, cone #from the Types module
 
       # update cost
       # FIXME: Remove calculation of cost at each step
-      cost = (1/2 * x'*p.P*x + p.q'*x)[1]
+      cost = sm.cinv*(1/2 * x'*p.P*x + p.q'*x)[1]
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.checkTermination} step
@@ -155,7 +163,7 @@ export sdpResult, sdpSettings, cone #from the Types module
       # compute deltas
       # δx = xNew - xPrev
       # δy = yNew - yPrev
-
+      push!(δν,norm(ν-νPrev,Inf))
       # print iteration steps
       if settings.verbose
         if iter == 1
@@ -191,17 +199,18 @@ export sdpResult, sdpSettings, cone #from the Types module
         H = [p.A spzeros(m,n); speye(n) -speye(n)]
         u = [x;s]
         if settings.scaling != 0
-          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) speye(n)]
-          ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(EinvAug*H*u,Inf), norm(sm.Einv*p.b,Inf),1 )
-          ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(sm.Dinv*p.P*x,Inf), norm(sm.Dinv*p.q,Inf), norm(sm.Dinv*λ,Inf),1 )
+          EinvAug = [sm.Einv spzeros(m,n); spzeros(n,m) sm.D]
+          ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(EinvAug*H*u./sm.sb,2), norm(sm.Einv*p.b./sm.sb,2))
+          ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(sm.cinv*sm.Dinv*p.P*x./sm.sq,2), norm(sm.cinv*sm.Dinv*p.q./sm.sq,2), norm(sm.cinv*sm.Dinv*λ./sm.sq,2), norm(sm.cinv*sm.Dinv*p.A'*ν./sm.sq,2) )
         else
-          ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,Inf), norm(p.b,Inf),1 )
-          ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(p.P*x,Inf), norm(p.q,Inf), norm(λ,Inf),1 )
+          ϵ_prim = ϵ_abs + ϵ_rel * max.(norm(H*u,2), norm(p.b,2))
+          ϵ_dual = ϵ_abs + ϵ_rel * max.(norm(p.P*x,2), norm(p.q,2), norm(λ,2) ,norm(p.A'*ν,2) )
         end
         if ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
           if settings.verbose
             printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
           end
+          @show(ϵ_prim,ϵ_dual,r_prim,r_dual)
           status = :solved
           break
         end
@@ -210,7 +219,6 @@ export sdpResult, sdpSettings, cone #from the Types module
 
     # print solution to screen
     rt = toq()
-    println("\n\n" * "-"^50 * "\nRESULT: Status: $(status)\nTotal Iterations: $(iter)\nOptimal objective: $(round.(cost,4))\nRuntime: $(round.(rt,3))s ($(round.(rt*1000,2))ms)\n" * "-"^50 )
 
     # calculate primal and dual residual
     if iter == settings.max_iter
@@ -218,18 +226,23 @@ export sdpResult, sdpSettings, cone #from the Types module
       status = :UserLimit
     end
     # create result object
+    xS = copy(x)
+    sS = copy(s)
+    νS = copy(ν)
+    λS = copy(λ)
     if settings.scaling != 0
-      xT = copy(x)
-      sT = copy(s)
-      reverseScaling!(x,s,p.P,p.q,sm)
+      reverseScaling!(x,s,ν,λ,p.P,p.q,sm)
       # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
-      xT2 = x
-      sT2 = s
-      cost = sm.cinv*(1/2 * x'*p.P*x + p.q'*x)[1]
+      cost =  (1/2 * x'*p.P*x + p.q'*x)[1] #sm.cinv * not necessary anymore since reverseScaling
     end
+
+    if settings.verbose
+      println("\n\n" * "-"^50 * "\nRESULT: Status: $(status)\nTotal Iterations: $(iter)\nOptimal objective: $(round.(cost,4))\nRuntime: $(round.(rt,3))s ($(round.(rt*1000,2))ms)\n" * "-"^50 )
+    end
+
     result = sdpResult(x,s,λ,ν,cost,iter,status,rt,r_prim,r_dual);
 
-    return result;
+    return result,sm,xS,sS,νS,λS,δν;
 
   end
 

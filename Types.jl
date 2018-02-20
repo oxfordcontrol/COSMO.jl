@@ -74,7 +74,8 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
       isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
       isempty(K.s) ? ns = 0 :  (ns = sum(K.s) )
       (K.f + K.l + nq + ns ) != n && error("Problem dimension doesnt match cone sizes provided in K.")
-      new(P,q,A,b,m,n,K)
+      new(copy(P),copy(q),copy(A),copy(b),m,n,K)
+      #new(P,q,A,b,m,n,K) using this seems to change the input data of main solveSDP function
     end
   end
 
