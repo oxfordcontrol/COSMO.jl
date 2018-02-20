@@ -45,6 +45,22 @@ result,dbg = solveSDP(P,q,A,b,settings)
 @show(reshape(result.x,3,3))
 @show(result.cost)
 ```
+## Settings
+Settings can be specified using the sdpSettings struct. The following settings are available:
+
+Argument | Description | Values (default)
+--- | --- | ---
+rho | ADMM rho step | 1.0
+sigma | ADMM sigma step | 10.0
+alpha | Relaxation parameter | 1.6
+eps_abs | Absolute residual tolerance | 1e-3
+eps_rel | Relative residual tolerance | 1e-3
+eps_prim_inf | Primal infeasibility tolerance | 1e-4
+eps_dual_inf | Dual infeasibility tolerance | 1e-4
+max_iter | Maximum number of iterations | 2500
+verbose | Verbose printing | false
+checkTermination | Check termination interval | 1
+scaling | Number of scaling iterations | 10
 
 ## Tasks / Future Work
 The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
