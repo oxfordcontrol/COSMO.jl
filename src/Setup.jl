@@ -5,8 +5,8 @@ module Setup
   function setup!(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings)
     # scale problem data
     if settings.scaling != 0
-      (settings.scaleFunc == 1) && scaleSCS!(ws,settings,K)
-      (settings.scaleFunc == 2) && scaleRuiz!(ws,settings,K)
+      (settings.scaleFunc == 1) && scaleSCS!(ws,settings)
+      (settings.scaleFunc == 2) && scaleRuiz!(ws,settings)
     end
 
     setRhoVec!(ws.p,settings)

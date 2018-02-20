@@ -27,7 +27,7 @@ module Residuals
     u = [ws.x;ws.s]
     if settings.scaling != 0
       EinvAug = [ws.sm.Einv spzeros(m,n); spzeros(n,m) ws.sm.D]
-      maxNormPrim = max.(norm(EinvAug*H*u./ws.sm.sb,2), norm(sm.Einv*ws.p.b./ws.sm.sb,2))
+      maxNormPrim = max.(norm(EinvAug*H*u./ws.sm.sb,2), norm(ws.sm.Einv*ws.p.b./ws.sm.sb,2))
       maxNormDual = max.(norm(ws.sm.cinv*ws.sm.Dinv*ws.p.P*ws.x./ws.sm.sq,2), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.q./ws.sm.sq,2), norm(ws.sm.cinv*ws.sm.Dinv*ws.λ./ws.sm.sq,2), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.A'*ws.ν./ws.sm.sq,2) )
     else
       maxNormPrim = max.(norm(H*u,2), norm(ws.p.b,2))

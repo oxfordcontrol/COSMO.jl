@@ -140,7 +140,7 @@ export solve, OSSDPSettings, Cone #from the Types module
     if settings.scaling != 0
       reverseScaling!(ws)
       # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
-      cost =  (1/2 * ws.x'*p.P*ws.x + p.q'*ws.x)[1] #sm.cinv * not necessary anymore since reverseScaling
+      cost =  (1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1] #sm.cinv * not necessary anymore since reverseScaling
     end
 
     # print solution to screen
