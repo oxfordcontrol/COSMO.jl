@@ -1,6 +1,6 @@
 # Test script to test solver for a qp
 workspace()
-include("../Solver.jl")
+include("../src/Solver.jl")
 
 using Base.Test
 using OSSDP, OSSDPTypes
@@ -21,10 +21,10 @@ qa = [q;zeros(6,1)]
 Pa = blkdiag(P,spzeros(3,3),spzeros(3,3))
 
 # define cone (x1,x2, and 6 slack variables >= 0)
-K = cone(2,6,[],[])
+K = OSSDPTypes.Cone(2,6,[],[])
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
-res = solveSDP(Pa,qa,Aa,ba,K,settings)
+settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
+res, = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
 
 @testset "QP Problem" begin
   @test isapprox(res.x[1:2],[0.3;0.7], atol=1e-3)

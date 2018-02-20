@@ -1,6 +1,6 @@
 # Test script to test solver for a Lasso problem transformed into a second-order cone problem
 workspace()
-include("../Solver.jl")
+include("../src/Solver.jl")
 
 using Base.Test, Convex
 using OSSDP, OSSDPTypes, Mosek
@@ -42,10 +42,10 @@ ca = [μ*ones(n,1);zeros(n,1);0.5;zeros(2*n+1+1+m)]
 Pa = zeros(length(ca),length(ca))
 
 # define cone (t, z and w free variables, 2*n slack variables for inequality constraints, m+2 soc variables)
-K = cone(2*n+1,2*n,[2+m],[])
+K = Cone(2*n+1,2*n,[2+m],[])
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
-res = solveSDP(Pa,ca,Aa,ba,K,settings)
+settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
+res, = OSSDP.solve(Pa,ca,Aa,ba,K,settings)
 t = res.x[1:n]
 z = res.x[n+1:n+n]
 w = res.x[2n+1]

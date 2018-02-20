@@ -6,7 +6,7 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
 # HELPER FUNCTIONS
 # -------------------------------------
 
-    function projectCompositeCone!(x,K::OSSDPTypes.cone)
+    function projectCompositeCone!(x,K::OSSDPTypes.Cone)
       b = 1
 
       if K.f  > 0

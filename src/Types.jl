@@ -1,9 +1,9 @@
 module OSSDPTypes
-export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
+export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 # -------------------------------------
 # struct DEFINITIONS
 # -------------------------------------
-  struct sdpResult
+  struct OSSDPResult
     x::Array{Float64}
     s::Array{Float64}
     λ::Array{Float64}
@@ -16,16 +16,8 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     rDual::Float64
   end
 
-  struct sdpDebug
-    x::Array{Float64,2}
-    s::Array{Float64,2}
-    λ::Array{Float64,2}
-    ν::Array{Float64,2}
-    cost::Array{Float64}
-  end
-
   # product of cones dimensions, similar to SeDuMi
-  struct cone
+  struct Cone
     # number of free / unrestricted components
     f::Int64
     # number of nonnegative components
@@ -36,7 +28,7 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     s::Array{Int64}
 
     #constructor
-    function cone(f::Int64,l::Int64,q,s)
+    function Cone(f::Int64,l::Int64,q,s)
       (f < 0 || l < 0) && error("Negative values are not allowed.")
       (length(q) == 1 && q[1] == 0) && (q = [])
       (length(s) == 1 && s[1] == 0) && (s = [])
@@ -45,18 +37,23 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
       new(f,l,q,s)
     end
   end
+ mutable struct Info
+    rho_updates::Array{Float64,1}
+  end
 
-  mutable struct problem
+  mutable struct Problem
     P::SparseMatrixCSC{Float64,Int64}
     q::SparseVector{Float64,Int64}
     A::SparseMatrixCSC{Float64,Int64}
     b::SparseVector{Float64,Int64}
     m::Int64
     n::Int64
-    K::OSSDPTypes.cone
-
+    K::OSSDPTypes.Cone
+    ρVec::Array{Float64,1}
+    Info::OSSDPTypes.Info
+    F
     #constructor
-    function problem(P,q,A,b,K)
+    function Problem(P,q,A,b,K)
       # check dimensions
       m = size(A,1)
       n = size(A,2)
@@ -74,12 +71,12 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
       isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
       isempty(K.s) ? ns = 0 :  (ns = sum(K.s) )
       (K.f + K.l + nq + ns ) != n && error("Problem dimension doesnt match cone sizes provided in K.")
-      new(copy(P),copy(q),copy(A),copy(b),m,n,K)
+      new(copy(P),copy(q),copy(A),copy(b),m,n,K,[0.],Info([0.]),0)
       #new(P,q,A,b,m,n,K) using this seems to change the input data of main solveSDP function
     end
   end
 
-  mutable struct scaleMatrices
+  mutable struct ScaleMatrices
     D::SparseMatrixCSC{Float64,Int64}
     Dinv::SparseMatrixCSC{Float64,Int64}
     E::SparseMatrixCSC{Float64,Int64}
@@ -88,11 +85,25 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     sb::Float64
     c::Float64
     cinv::Float64
-    scaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.,1.,1.)
+    ScaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.,1.,1.)
   end
 
+  mutable struct WorkSpace
+      p::OSSDPTypes.Problem
+      sm::OSSDPTypes.ScaleMatrices
+      x::SparseVector{Float64,Int64}
+      s::SparseVector{Float64,Int64}
+      ν::SparseVector{Float64,Int64}
+      λ::SparseVector{Float64,Int64}
+      #constructor
+    function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
+      m = p.m
+      n = p.n
+      new(p,sm,spzeros(n),spzeros(n),spzeros(m),spzeros(n))
+    end
+  end
 
-  struct sdpSettings
+  mutable struct OSSDPSettings
     rho::Float64
     sigma::Float64
     alpha::Float64
@@ -108,11 +119,16 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
     MAX_SCALING::Float64
     avgFunc::Function
     scaleFunc::Int64
-
+    adaptive_rho::Bool
+    adaptive_rho_interval::Int64
+    adaptive_rho_tolerance::Float64
+    RHO_MIN::Float64
+    RHO_MAX::Float64
+    RHO_TOL::Float64
 
 
     #constructor
-    function sdpSettings(;
+    function OSSDPSettings(;
       rho=1.0,
       sigma=10.0,
       alpha=1.6,
@@ -127,14 +143,22 @@ export sdpResult, sdpDebug, problem, sdpSettings, scaleMatrices, cone
       MIN_SCALING = 1e-4,
       MAX_SCALING = 1e4,
       avgFunc = mean,
-      scaleFunc = 1
+      scaleFunc = 1,
+      adaptive_rho = false,
+      adaptive_rho_interval = 40,
+      adaptive_rho_tolerance = 5,
+      RHO_MIN = 1e-6,
+      RHO_MAX = 1e6,
+      RHO_TOL = 1e-4
       )
-        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc)
+        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
+          checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
+          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL)
     end
   end
 
   # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::sdpResult)
+  function Base.show(io::IO, obj::OSSDPResult)
     println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\nx = $(round.(obj.x,3))\ns = $(round.(obj.s,3))\nν = $(round.(obj.ν,3))\nλ = $(round.(obj.λ,3))" )
   end
 

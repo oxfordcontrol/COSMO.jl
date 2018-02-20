@@ -1,7 +1,7 @@
 # Test script to test solver for combined sdp and socp problem
 workspace()
-include("../Solver.jl")
-include("../Helper.jl")
+include("../src/Solver.jl")
+include("../src/Helper.jl")
 
 using Base.Test, Convex, Helper
 using OSSDP, OSSDPTypes, Mosek, SCS
@@ -34,10 +34,10 @@ c = [5.;1;1;0;zeros(9,1)]
 P = zeros(length(c),length(c))
 
 # define cone
-K = cone(0,0,[4],[9])
+K = Cone(0,0,[4],[9])
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
-res = solveSDP(P,c,A,b,K,settings)
+settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
+res, = OSSDP.solve(P,c,A,b,K,settings)
 t = res.x[1]
 x1 = res.x[2:4]
 x2 = reshape(res.x[5:13],3,3)

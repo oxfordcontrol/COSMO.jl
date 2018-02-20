@@ -1,6 +1,6 @@
 # Test script to test solver for an lp
 workspace()
-include("../Solver.jl")
+include("../src/Solver.jl")
 
 using Base.Test
 using OSSDP, OSSDPTypes
@@ -19,10 +19,10 @@ ba = [b; ones(4,1);5;4]
 ca = [c;zeros(10,1)]
 P = zeros(size(Aa,2),size(Aa,2))
 # define cone
-K = cone(4,10,[],[])
+K = OSSDPTypes.Cone(4,10,[],[])
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
-res = solveSDP(P,ca,Aa,ba,K,settings)
+settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
+res,  = OSSDP.solve(P,ca,Aa,ba,K,settings)
 
 @testset "Linear Problem" begin
   @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-4, norm=(x -> norm(x,Inf)))

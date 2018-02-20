@@ -13,7 +13,7 @@ export scaleRuiz!,reverseScaling!, scaleSCS!
     return [normLeftPart;normATCols]
   end
 
-  function limitScaling!(δVec::Union{Float64,Array{Float64,1}},set::OSSDPTypes.sdpSettings)
+  function limitScaling!(δVec::Union{Float64,Array{Float64,1}},set::OSSDPTypes.OSSDPSettings)
     if length(δVec) > 1
       for iii = 1:length(δVec)
         if δVec[iii] < set.MIN_SCALING
@@ -33,13 +33,13 @@ export scaleRuiz!,reverseScaling!, scaleSCS!
     return nothing
   end
 
-  function scaleRuiz!(problem::OSSDPTypes.problem,scaleMatrices::OSSDPTypes.scaleMatrices,set::OSSDPTypes.sdpSettings,K::OSSDPTypes.cone)
-    P = problem.P
-    A = problem.A
-    b = problem.b
-    q = problem.q
-    m = problem.m
-    n = problem.n
+  function scaleRuiz!(ws::OSSDPTypes.WorkSpace,set::OSSDPTypes.OSSDPSettings)
+    P = ws.p.P
+    A = ws.p.A
+    b = ws.p.b
+    q = ws.p.q
+    m = ws.p.m
+    n = ws.p.n
 
     c = 1.0
     sTemp = ones(n+m)
@@ -127,24 +127,24 @@ export scaleRuiz!,reverseScaling!, scaleSCS!
     # @show(D)
     # @show(E)
     # @show(c)
-    scaleMatrices.D = D
-    scaleMatrices.E = E
-    scaleMatrices.Dinv = spdiagm(1./diag(D))
-    scaleMatrices.Einv = spdiagm(1./diag(E))
-    scaleMatrices.c = c
-    scaleMatrices.cinv = 1./c
+    ws.sm.D = D
+    ws.sm.E = E
+    ws.sm.Dinv = spdiagm(1./diag(D))
+    ws.sm.Einv = spdiagm(1./diag(E))
+    ws.sm.c = c
+    ws.sm.cinv = 1./c
     #@show(scaleMatrices)
-    return D,E
+    return nothing
   end
 
-function scaleSCS!(problem::OSSDPTypes.problem,scaleMatrices::OSSDPTypes.scaleMatrices,set::OSSDPTypes.sdpSettings,K::OSSDPTypes.cone)
-    P = problem.P
-    A = problem.A
-    b = problem.b
-    q = problem.q
-    m = problem.m
-    n = problem.n
-
+function scaleSCS!(ws::OSSDPTypes.WorkSpace,set::OSSDPTypes.OSSDPSettings)
+    P = ws.p.P
+    A = ws.p.A
+    b = ws.p.b
+    q = ws.p.q
+    m = ws.p.m
+    n = ws.p.n
+    K = ws.p.K
     # scale rows of A' to have unit norm ()
     D =  [norm(A'[i,:],2) for i in 1:size(A',1)]
     # define row index of vector x
@@ -192,38 +192,47 @@ function scaleSCS!(problem::OSSDPTypes.problem,scaleMatrices::OSSDPTypes.scaleMa
     b[:] = E*b
     nb = norm(b,2)
     scale_b = meanColNormA / maximum([nb set.MIN_SCALING])
-    @show(scale_b)
+    #@show(scale_b)
     b[:] = scale_b * b
-    @show(b)
+    #@show(b)
 
     # scale q
     q[:] = D*q
     nq = norm(q,2)
     scale_q = meanRowNormA / maximum([nq set.MIN_SCALING])
-    @show(scale_q)
+    #@show(scale_q)
     q[:] = scale_q*q
-    @show(q)
+    #@show(q)
 
-    scaleMatrices.D = D
-    scaleMatrices.E = E
-    scaleMatrices.Dinv = spdiagm(1./diag(D))
-    scaleMatrices.Einv = spdiagm(1./diag(E))
-    scaleMatrices.sq = scale_q
-    scaleMatrices.sb = scale_b
-    return D,E
+    ws.sm.D = D
+    ws.sm.E = E
+    ws.sm.Dinv = spdiagm(1./diag(D))
+    ws.sm.Einv = spdiagm(1./diag(E))
+    ws.sm.sq = scale_q
+    ws.sm.sb = scale_b
+    return nothing
   end
 
 
 
 
-  function reverseScaling!(x,s,ν,λ,P::SparseMatrixCSC{Float64,Int64},q::SparseVector{Float64,Int64},sm::OSSDPTypes.scaleMatrices)
+  function reverseScaling!(ws::OSSDPTypes.WorkSpace)
     # TODO: Double check what really is necessary to scale back (save time)
-    x[:] = (sm.D*x)./sm.sb
-    P[:,:] = sm.Dinv*P*sm.Dinv/sm.c
-    q[:] = (sm.Dinv*q)./sm.sq./sm.c
-    s[:] = (sm.D*s)./sm.sb
-    ν[:] = sm.E*ν./sm.c
-    λ[:] = sm.Dinv*λ./sm.c
+    D = ws.sm.D
+    E = ws.sm.E
+    Dinv = ws.sm.Dinv
+    Einv = ws.sm.Einv
+    c = ws.sm.c
+    sb = ws.sm.sb
+    sq = ws.sm.sq
+
+    ws.x[:] = (D*ws.x)./sb
+    ws.p.P[:,:] = Dinv*ws.p.P*Dinv/c
+    ws.p.q[:] = (Dinv*ws.p.q)./sq./c
+    ws.s[:] = (D*ws.s)./sb
+    ws.ν[:] = E*ws.ν./c
+    ws.λ[:] = Dinv*ws.λ./c
+    return nothing
   end
 
 end # MODULE
