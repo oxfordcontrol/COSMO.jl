@@ -143,7 +143,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       MIN_SCALING = 1e-4,
       MAX_SCALING = 1e4,
       avgFunc = mean,
-      scaleFunc = 1,
+      scaleFunc = 2,
       adaptive_rho = false,
       adaptive_rho_interval = 40,
       adaptive_rho_tolerance = 5,

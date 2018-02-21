@@ -10,7 +10,7 @@ include("./Setup.jl")
 
 module OSSDP
 
-using Formatting, Projections, Scaling, OSSDPTypes, Parameters, Infeasibility, Residuals, Printing, Setup
+using Projections, Scaling, OSSDPTypes, Parameters, Infeasibility, Residuals, Printing, Setup
 export solve, OSSDPSettings, Cone #from the Types module
 
 
@@ -23,16 +23,19 @@ export solve, OSSDPSettings, Cone #from the Types module
     P = q = A = b = nothing
 
     # perform preprocessing steps (scaling, initial KKT factorization)
+    tic()
     setup!(ws,settings)
-
+    setupTime = toq()
     # instantiate variables
     iter = 0
     status = :unsolved
     cost = Inf
     δν = []
+    r_prim = Inf
+    r_dual = Inf
 
     # print information about settings to the screen
-    settings.verbose && printHeader(ws,settings)
+    settings.verbose && printHeader(ws,settings,setupTime)
 
     tic()
 
@@ -75,19 +78,10 @@ export solve, OSSDPSettings, Cone #from the Types module
       # δx = xNew - xPrev
       # δy = yNew - yPrev
       push!(δν,norm(ws.ν-νPrev,Inf))
+
       # print iteration steps
-      if settings.verbose
-        if iter == 1
-          println("Iter:\tObjective:\tPrimal Res\tDual Res:")
-        end
-        if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
-          if mod(iter,settings.checkTermination) == 0
-            printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
-          else
-            printfmt("{1:d}\t{2:.4e}\t ---\t\t\t---\n", iter,cost)
-          end
-       end
-      end
+      settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
+
 
       # if isPrimalInfeasible(δy,A,l,u,settings.ϵ_prim_inf)
       #     status = :primal_infeasible
@@ -108,9 +102,6 @@ export solve, OSSDPSettings, Cone #from the Types module
       # check convergence with residuals every {settings.checkIteration} step
       if mod(iter,settings.checkTermination) == 0
         if hasConverged(ws,settings,r_prim,r_dual)
-          if settings.verbose
-            printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
-          end
           status = :solved
           break
         end
