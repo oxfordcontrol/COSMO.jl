@@ -60,7 +60,7 @@ export scaleRuiz!,reverseScaling!, scaleSCS!
       # First step Ruiz
       δVec = normKKTCols(P,A)
       limitScaling!(δVec,set)
-      δVec = sqrt(δVec)
+      δVec = sqrt.(δVec)
       sTemp = 1./δVec
       ix = 0
 

@@ -58,8 +58,11 @@ export solve, OSSDPSettings, Cone #from the Types module
       ws.ν = k[ws.p.n+1:end]
 
       # Projection steps and relaxation xRelax = αx(n+1)+(1-α)s(n)
-      xRelax = settings.alpha*ws.x+(1-settings.alpha)*ws.s
-
+      if iter == 1
+        xRelax = ws.x
+      else
+        xRelax = settings.alpha*ws.x+(1-settings.alpha)*ws.s
+      end
       # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
       ws.s = Projections.projectCompositeCone!((xRelax + (1/settings.sigma)*ws.λ),ws.p.K)
 
