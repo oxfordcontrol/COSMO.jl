@@ -60,7 +60,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       (size(P,1) != n || size(P,2) != n) && error("Dimensions of P and A dont match.")
       (size(q,1) != n || size(q,2) != 1) && error("Dimensions of P and q dont match.")
       (size(b,1) != m || size(b,2) != 1) && error("Dimensions of A and b dont match.")
-
+      (in(NaN,b) || in(Inf,b) || in(-Inf,b)) && error("Your b-vector must not contain Inf or NaN.")
       # Make sure problem data is in sparse format
       typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
       typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
