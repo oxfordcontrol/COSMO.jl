@@ -119,21 +119,13 @@ export scaleRuiz!,reverseScaling!, scaleSCS!
       # Update scaling
       c = c_temp * c
 
-#@show(D)
     end
- #   println("final D")
-  #  @show(D)
-    # @show(A)
-    # @show(D)
-    # @show(E)
-    # @show(c)
     ws.sm.D = D
     ws.sm.E = E
     ws.sm.Dinv = spdiagm(1./diag(D))
     ws.sm.Einv = spdiagm(1./diag(E))
     ws.sm.c = c
     ws.sm.cinv = 1./c
-    #@show(scaleMatrices)
     return nothing
   end
 

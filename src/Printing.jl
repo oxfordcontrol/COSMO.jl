@@ -26,7 +26,7 @@ module Printing
     nnzInM = 2*countnz(ws.p.A) + nnzInP + m
 
     println("-"^50 * "\n" * " "^8 * "ADMM-Conic Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
-    println("Problem:  x in R^{$(n)},\n          constraints: A in R^{$(n)x$(m)} ($(countnz(ws.p.A)) nnz), b in R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)\nCones:    free vars: $(ws.p.K.f)\n"*" "^10*"non-zero vars: $(ws.p.K.l)\n"*" "^10*"soc vars: $(numSOC), soc cones: $(numSOCBlk)\n"*" "^10*"sdp vars: $(numSDP), sdp cones: $(numSDPBlk)")
+    println("Problem:  x in R^{$(n)},\n          constraints: A in R^{$(m)x$(n)} ($(countnz(ws.p.A)) nnz), b in R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)\nCones:    free vars: $(ws.p.K.f)\n"*" "^10*"non-zero vars: $(ws.p.K.l)\n"*" "^10*"soc vars: $(numSOC), soc cones: $(numSOCBlk)\n"*" "^10*"sdp vars: $(numSDP), sdp cones: $(numSDPBlk)")
     println("Settings: ϵ_abs = $(settings.eps_abs), ϵ_rel = $(settings.eps_rel),\n" * " "^10 * "ϵ_prim_inf = $(settings.eps_prim_inf), ϵ_dual_inf = $(settings.eps_dual_inf),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter), scaling = $(settings.scaling) ($(scalingStatus))")
     println("Setup Time: $(round.(setupTime*1000,2))ms\n")
   end

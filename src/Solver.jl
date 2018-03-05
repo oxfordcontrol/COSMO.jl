@@ -13,7 +13,6 @@ module OSSDP
 using Projections, Scaling, OSSDPTypes, Parameters, Infeasibility, Residuals, Printing, Setup
 export solve, OSSDPSettings, Cone #from the Types module
 
-
 # SOLVER ROUTINE
 # -------------------------------------
   function solve(P,q,A,b,K::OSSDPTypes.Cone,settings::OSSDPTypes.OSSDPSettings)
@@ -38,11 +37,11 @@ export solve, OSSDPSettings, Cone #from the Types module
     settings.verbose && printHeader(ws,settings,setupTime)
 
     tic()
-
+    startTime = time()
     # MAIN ADMM LOOP
     for iter = 1:1:settings.max_iter
 
-      # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> x(n)
+      # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> s(n)
 
       # construct right hand side [-q+σ*s(n)-λ(n); b-(1/ρ)*ν(n)]
       RHS = [-ws.p.q+settings.sigma*ws.s-ws.λ; ws.p.b-diagm((1./ws.p.ρVec))*ws.ν]
@@ -51,7 +50,6 @@ export solve, OSSDPSettings, Cone #from the Types module
       # FIXME: must be a better way
       k = sparse(ws.p.F\full(RHS))
 
-      # The relaxation definitely has to be double checked
       #deconstruct solution vector k = [x(n+1);ν(n+1)]
       ws.x = k[1:ws.p.n]
       νPrev = ws.ν
@@ -115,6 +113,11 @@ export solve, OSSDPSettings, Cone #from the Types module
         adaptRhoVec!(ws,settings)
       end
 
+      if settings.timelimit !=0 &&  (time() - startTime) > settings.timelimit
+        status = :TimeLimit
+        break
+      end
+
     end #END-ADMM-MAIN-LOOP
 
     rt = toq()
@@ -124,12 +127,6 @@ export solve, OSSDPSettings, Cone #from the Types module
       r_prim,r_dual = calculateResiduals(ws,settings)
       status = :UserLimit
     end
-
-    xS = copy(ws.x)
-    sS = copy(ws.s)
-    νS = copy(ws.ν)
-    λS = copy(ws.λ)
-
 
     if settings.scaling != 0
       reverseScaling!(ws)
@@ -144,7 +141,7 @@ export solve, OSSDPSettings, Cone #from the Types module
     # create result object
     result = OSSDPResult(ws.x,ws.s,ws.λ,ws.ν,cost,iter,status,rt,r_prim,r_dual);
 
-    return result,ws,xS,sS,νS,λS,δν;
+    return result,ws;
 
   end
 

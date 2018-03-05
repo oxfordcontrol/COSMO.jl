@@ -1,6 +1,6 @@
 module Helper
 
-export isNumericallyPosSemDef, isNumericallySymmetric
+export isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent
 
 
 
@@ -27,6 +27,12 @@ function isNumericallySymmetric(X,atol)
 end
 
 
-
+function findNonSymmetricComponent(X)
+  for i = 2:size(X,1), j = 1:(i-1)
+    if abs(X[i,j] - X[j,i]) > 0.0
+      return i,j
+    end
+  end
+end
 
 end #MODULE

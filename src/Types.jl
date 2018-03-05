@@ -60,7 +60,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       (size(P,1) != n || size(P,2) != n) && error("Dimensions of P and A dont match.")
       (size(q,1) != n || size(q,2) != 1) && error("Dimensions of P and q dont match.")
       (size(b,1) != m || size(b,2) != 1) && error("Dimensions of A and b dont match.")
-      (in(NaN,b) || in(Inf,b) || in(-Inf,b)) && error("Your b-vector must not contain Inf or NaN.")
+      (in(NaN,b) || in(Inf,b) || in(-Inf,b)) && error("b must not contain Inf or NaN.")
+      (P != P') && error("P must be symmetric!")
       # Make sure problem data is in sparse format
       typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
       typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
@@ -125,7 +126,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     RHO_MIN::Float64
     RHO_MAX::Float64
     RHO_TOL::Float64
-
+    timelimit::Int64
 
     #constructor
     function OSSDPSettings(;
@@ -149,11 +150,12 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       adaptive_rho_tolerance = 5,
       RHO_MIN = 1e-6,
       RHO_MAX = 1e6,
-      RHO_TOL = 1e-4
+      RHO_TOL = 1e-4,
+      timelimit = 0
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
           checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL)
+          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit)
     end
   end
 

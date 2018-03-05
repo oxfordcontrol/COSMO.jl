@@ -8,7 +8,6 @@ module Setup
       (settings.scaleFunc == 1) && scaleSCS!(ws,settings)
       (settings.scaleFunc == 2) && scaleRuiz!(ws,settings)
     end
-
     setRhoVec!(ws.p,settings)
 
     # factor the KKT condition matrix
