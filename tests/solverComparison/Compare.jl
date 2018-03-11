@@ -16,12 +16,13 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     problemName::Array{String,1}
     problemType::String
     solverName::String
+    scalingON::Bool
     solverSettings::Array{Float64,1}
     timeStamp::String
     ind::Int64
 
      #constructor
-    function SolverResult(numProblems::Int64, problemType::String, solverName::String,timeStamp::String,solverSettings)
+    function SolverResult(numProblems::Int64, problemType::String, solverName::String,timeStamp::String,solverSettings,scalingON::Bool)
     iter = zeros(Int64,numProblems)
     status = Array{Symbol}(numProblems)
     status[1:numProblems] = :empty
@@ -37,7 +38,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     else
         settings = [solverSettings.rho;solverSettings.sigma;solverSettings.alpha;solverSettings.scaling;solverSettings.eps_abs;solverSettings.eps_rel]
     end
-    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind)
+    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,scalingON,settings,timeStamp,ind)
     end
   end
 
@@ -46,17 +47,28 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
 
 
     if contains(solver,"OSSDP")
-      r = data["r"]
+      r = 0
       P, q, A, b, K = Converter.convertProblem(data)
       return P,q,r,A,b,K
     elseif contains(solver,"OSQP")
-      P = data["P"]
+      P = data["Q"]
       A = data["A"]
-      q = data["q"]
-      u = data["u"]
-      l = data["l"]
-      r = data["r"]
-      return P, q[:],r,A,l[:], u[:]
+      q = data["c"]
+      ru = data["ru"]
+      rl = data["rl"]
+      lb = data["lb"]
+      ub = data["ub"]
+      r = 0
+      n = size(A,2)
+      Aa = [A;eye(n)]
+      if norm(rl-ru,Inf) < 1e-4
+        u = [rl;ub]
+        l = [rl;lb]
+      else
+        l = [rl;lb]
+        u = [ru;ub]
+      end
+      return P, q[:],r,Aa,l[:], u[:]
     end
   end
 
