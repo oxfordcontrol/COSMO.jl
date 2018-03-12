@@ -1,11 +1,10 @@
 # Test script to have an easy example solved by SCS that can be used to compare OSSDP solutions against
 workspace()
-include("../Projections.jl")
-include("../Solver.jl")
+include("../src/Solver.jl")
 
-using Convex, SCS
+using Convex, Mosek
 using Base.Test
-using OSSDP
+using OSSDP, OSSDPTypes
 # using PyPlot
 
 
@@ -26,7 +25,7 @@ constraint3 = isposdef(Y)
 
 problem.constraints += [constraint1,constraint2,constraint3]
 
-solve!(problem,SCSSolver(verbose=false))
+solve!(problem,MosekSolver())
 
 # print result
 # problem.status
@@ -45,12 +44,12 @@ q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
 P = zeros(9,9)
-
+K = OSSDPTypes.Cone(0,0,[],[9])
 # define example problem
-settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true,checkTermination=15)
+settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true,checkTermination=15)
 
 # solve SDP problem
-res,dbg = solveSDP(P,q,A,b,settings)
+res,dbg = OSSDP.solve(P,q,A,b,K,settings)
 X = reshape(res.x,3,3)
 
 # compute smallest eigenvalue of result X

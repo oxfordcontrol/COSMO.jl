@@ -13,13 +13,15 @@ using FactCheck, Scaling, OSSDP, OSSDPTypes
 settings = sdpSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true,checkTermination=15,scaling=10)
 
 # use ill-conditioned example data
-P = [1e5 0 0; 0 1e-5 0; 0 0 10]
-A = [1 2 3; 4 100 3; 1 0 0]
+#P = [1e5 0 0; 0 1e-5 0; 0 0 10]
+P = zeros(4,4)
+A = [1. 2 3 2; 4 100 3 0 ; 1 0 0 2]
 m = size(A,1)
 n = size(P,1)
-q = zeros(n)
-b = zeros(m)
-p = problem(P,q,A,b)
+q = [1e5;1;0;0]
+b = [100;-1;1e4]
+K = cone(0,0,[],[4])
+p = problem(P,q,A,b,K)
 sm = scaleMatrices()
 
 # assemble matrix M
@@ -28,7 +30,8 @@ M = [P A';A zeros(m,m)]
 
 κ = cond(full(M))
 # check lp norm of rows of original matrix
-rowNorms = [norm(M[i,:],Inf) for i in 1:size(M,1)]
+rowNorms = [norm(M[i,:],2) for i in 1:size(M,1)]
+colNorms = [norm(M[:,i],2) for i in 1:size(M,2)]
 deltaRowNorm = maximum(rowNorms) - minimum(rowNorms)
 
 # perform scaling

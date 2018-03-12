@@ -86,10 +86,3 @@ filename = timestamp * "_qpScalingTest.jld"
 JLD.save(filename, "resCost", resCost, "resIter",resIter)
 println(">>> Test Data successfully saved in $(filename).\n")
 
-
-# @testset "Lasso Scaling" begin
-#     @test abs(resOSSDP_unscaled.cost-resOSQP1_unscaled.info.obj_val) < 1e-2
-#     @test norm(resOSSDP_unscaled.x[1:n]-resOSQP1_unscaled.x[1:n],Inf) < 1e-2
-#     @test norm(resOSSDP_unscaled.x[1:n]-resOSQP2_unscaled.x[1:n],Inf) < 1e-2
-#     @test norm(resOSQP1_unscaled.x[1:n]-resOSQP2_unscaled.x[1:n],Inf) < 1e-2
-#   end
