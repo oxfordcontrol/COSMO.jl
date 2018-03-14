@@ -24,10 +24,9 @@ module Printing
     settings.scaling > 0 ? scalingStatus = "on" : scalingStatus = "off"
     nnzInP = countnz(ws.p.P) - countnz(diag(ws.p.P)) + n
     nnzInM = 2*countnz(ws.p.A) + nnzInP + m
-
-    println("-"^50 * "\n" * " "^8 * "ADMM-Conic Solver in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, February 2018\n" * "-"^50 * "\n")
-    println("Problem:  x in R^{$(n)},\n          constraints: A in R^{$(m)x$(n)} ($(countnz(ws.p.A)) nnz), b in R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)\nCones:    free vars: $(ws.p.K.f)\n"*" "^10*"non-zero vars: $(ws.p.K.l)\n"*" "^10*"soc vars: $(numSOC), soc cones: $(numSOCBlk)\n"*" "^10*"sdp vars: $(numSDP), sdp cones: $(numSDPBlk)")
-    println("Settings: ϵ_abs = $(settings.eps_abs), ϵ_rel = $(settings.eps_rel),\n" * " "^10 * "ϵ_prim_inf = $(settings.eps_prim_inf), ϵ_dual_inf = $(settings.eps_dual_inf),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter), scaling = $(settings.scaling) ($(scalingStatus))")
+    println("-"^50 * "\n" * " "^8 * "Quadratic Objective Conic Solver (QOCS) in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, 2017 - 2018\n" * "-"^50 * "\n")
+    println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(countnz(ws.p.A)) nnz), b ∈ R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)\nCones:    zero vars: $(ws.p.K.f)\n"*" "^10*"non-zero vars: $(ws.p.K.l)\n"*" "^10*"soc vars: $(numSOC), soc cones: $(numSOCBlk)\n"*" "^10*"sdp vars: $(numSDP), sdp cones: $(numSDPBlk)")
+    println("Settings: ϵ_abs = $(fmt(".2e",settings.eps_abs)), ϵ_rel = $(fmt(".2e",settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(fmt(".2e",settings.eps_prim_inf)), ϵ_dual_inf = $(fmt(".2e",settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling = $(settings.scaling) ($(scalingStatus)),\n" * " "^10 * "check termination every $(settings.checkTermination) iter")
     println("Setup Time: $(round.(setupTime*1000,2))ms\n")
   end
 
