@@ -6,8 +6,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
   struct OSSDPResult
     x::Array{Float64}
     s::Array{Float64}
-    λ::Array{Float64}
     ν::Array{Float64}
+    μ::Array{Float64}
     cost::Float64
     iter::Int64
     status::Symbol
@@ -16,9 +16,16 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     rDual::Float64
   end
 
+
+  # Redefinition of the show function that fires when the object is called
+  function Base.show(io::IO, obj::OSSDPResult)
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\n" )
+  end
+
+
   # product of cones dimensions, similar to SeDuMi
   struct Cone
-    # number of free / unrestricted components
+    # number of zero  components
     f::Int64
     # number of nonnegative components
     l::Int64
@@ -71,7 +78,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       # check that number of cone variables provided in K add up
       isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
       isempty(K.s) ? ns = 0 :  (ns = sum(K.s) )
-      (K.f + K.l + nq + ns ) != n && error("Problem dimension doesnt match cone sizes provided in K.")
+      (K.f + K.l + nq + ns ) != m && error("Problem dimension doesnt match cone sizes provided in K.")
+      # FIXME: prevent copying of data for better performance
       new(copy(P),copy(q),copy(A),copy(b),m,n,K,[0.],Info([0.]),0)
       #new(P,q,A,b,m,n,K) using this seems to change the input data of main solveSDP function
     end
@@ -95,12 +103,12 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       x::SparseVector{Float64,Int64}
       s::SparseVector{Float64,Int64}
       ν::SparseVector{Float64,Int64}
-      λ::SparseVector{Float64,Int64}
+      μ::SparseVector{Float64,Int64}
       #constructor
     function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
       m = p.m
       n = p.n
-      new(p,sm,spzeros(n),spzeros(n),spzeros(m),spzeros(n))
+      new(p,sm,spzeros(n),spzeros(m),spzeros(m),spzeros(m))
     end
   end
 
@@ -130,11 +138,11 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
     #constructor
     function OSSDPSettings(;
-      rho=1.0,
-      sigma=10.0,
+      rho=0.1,
+      sigma=1e-6,
       alpha=1.6,
-      eps_abs=1e-6,
-      eps_rel=1e-6,
+      eps_abs=1e-4,
+      eps_rel=1e-4,
       eps_prim_inf=1e-4,
       eps_dual_inf=1e-4,
       max_iter=2500,
@@ -157,11 +165,6 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
           checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
           adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit)
     end
-  end
-
-  # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::OSSDPResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\n" )
   end
 
 end

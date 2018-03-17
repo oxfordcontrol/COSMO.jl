@@ -32,11 +32,11 @@ module Printing
 
   function printIteration(settings::OSSDPTypes.OSSDPSettings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
     if iter == 1
-      println("Iter:\tObjective:\tPrimal Res\tDual Res:")
+      println("Iter:\tObjective:\tPrimal Res:\tDual Res:\tRho:")
     end
     if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
       if mod(iter,settings.checkTermination) == 0
-        printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\n", iter,cost,r_prim,r_dual)
+        printfmt("{1:d}\t{2:.4e}\t{3:.4e}\t{4:.4e}\t{5:.4e}\n", iter,cost,r_prim,r_dual,settings.rho)
       else
         printfmt("{1:d}\t{2:.4e}\t ---\t\t\t---\n", iter,cost)
       end

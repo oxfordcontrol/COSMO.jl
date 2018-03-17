@@ -1,3 +1,5 @@
+include("../meszaros/ConvertProblem.jl")
+
 module Compare
 
 using OSSDPTypes, JLD, Converter
@@ -20,6 +22,8 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     timeStamp::String
     ind::Int64
     scalingON::Bool
+    objTrue::Float64
+    xTrue::Array{Array{Float64}}
 
      #constructor
     function SolverResult(numProblems::Int64, problemType::String, solverName::String,timeStamp::String,solverSettings,scalingON)
@@ -33,12 +37,15 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     problemName = Array{String}(numProblems)
     problemName[1:numProblems] = "-"
     ind = 0
+    objTrue = 0.
+    xTrue = Array{Array{Float64}}(numProblems)
+
     if solverSettings == 0.
         settings = [solverSettings]
     else
         settings = [solverSettings.rho;solverSettings.sigma;solverSettings.alpha;solverSettings.scaling;solverSettings.eps_abs;solverSettings.eps_rel]
     end
-    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON)
+    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON,objTrue,xTrue)
     end
   end
 
@@ -87,11 +94,12 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     println("$(iii)/$(numProblems): $(problem) completed.")
     for jjj=1:length(resData)
       r = resData[jjj]
-      println(" "^6*"$(r.solverName): Iterations: $(r.iter[r.ind]), Cost:$(r.objVal[r.ind]), Status:$(r.status[r.ind]), Runtime: $(r.runTime[r.ind])")
+      r.scalingON ? si = " - scaled" : si = " - unscaled"
+      println(" "^6*"$(r.solverName)$(si): Iterations: $(r.iter[r.ind]), Cost:$(r.objVal[r.ind]), Status:$(r.status[r.ind]), Runtime: $(r.runTime[r.ind])")
     end
   end
 
-  function updateResults!(fn::String,resData,resArr,pDims::Array{Int64},pName::String,r,SAVE_ALWAYS::Bool)
+  function updateResults!(fn::String,resData,resArr,pDims::Array{Int64},pName::String,r::Float64,SAVE_ALWAYS::Bool)
     numSolvers = length(resArr)
     n = pDims[2]
 
@@ -100,7 +108,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
       resObj.ind+=1
       resObj.problemDim[resObj.ind,:] = pDims
       resObj.problemName[resObj.ind] = pName
-      if contains(resObj.solverName,"OSSDP")
+      if contains(resObj.solverName,"QOCS")
         resObj.iter[resObj.ind] = resArr[i].iter
         resObj.objVal[resObj.ind] = resArr[i].cost + r
         resObj.x[resObj.ind] = resArr[i].x[1:n]

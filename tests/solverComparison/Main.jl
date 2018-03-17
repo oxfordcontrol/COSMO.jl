@@ -1,6 +1,5 @@
 workspace()
 include("../../src/Solver.jl")
-include("../meszaros/ConvertProblem.jl")
 include("./Compare.jl")
 
 using OSQP, OSSDP, Compare,JLD
@@ -35,7 +34,7 @@ if RUN_MESZAROS_TEST
       #gc()
       # load problem data
       data = JLD.load("$(dirPath)"*"$(problem).jld")
-      P1, q1,r1, A1, b1, K1 = loadMeszarosData(data,"OSSDP")
+      P1, q1,r1, A1, b1, K1 = loadMeszarosData(data,"QOCS")
       P2, q2,r2, A2, l2, u2 = loadMeszarosData(data,"OSQP")
       pDims = getMeszarosDim(data)
 

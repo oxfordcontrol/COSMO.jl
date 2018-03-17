@@ -1,11 +1,14 @@
 module Parameters
-using OSSDPTypes, Residuals
+using OSSDPTypes, Residuals, KKT
 export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
 
 # set initial values of rhoVec
   function setRhoVec!(p::OSSDPTypes.Problem,settings::OSSDPTypes.OSSDPSettings)
-    p.ρVec = settings.rho*ones(p.m)
+    nEQ = p.K.f
+    nINEQ = p.m - p.K.f
+
+    p.ρVec = [1e3*settings.rho*ones(nEQ);settings.rho*ones(nINEQ)]
     p.Info.rho_updates[1] = settings.rho
     return nothing
   end
@@ -29,9 +32,12 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
     return nothing
   end
 
-  function updateRhoVec!(newRho,p::OSSDPTypes.Problem,settings::OSSDPTypes.OSSDPSettings)
+  function updateRhoVec!(newRho::Float64,p::OSSDPTypes.Problem,settings::OSSDPTypes.OSSDPSettings)
+    nEQ = p.K.f
+    nINEQ = p.m - p.K.f
+
     settings.rho = newRho
-    p.ρVec = newRho*ones(p.m)
+    p.ρVec = [1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
     # log rho updates to info variable
     push!(p.Info.rho_updates,newRho)
     factorKKT!(p,settings)

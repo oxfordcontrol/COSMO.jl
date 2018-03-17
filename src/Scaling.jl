@@ -219,11 +219,12 @@ function scaleSCS!(ws::OSSDPTypes.WorkSpace,set::OSSDPTypes.OSSDPSettings)
     sq = ws.sm.sq
 
     ws.x[:] = (D*ws.x)./sb
-    ws.p.P[:,:] = Dinv*ws.p.P*Dinv/c
+    ws.p.P[:,:] = Dinv*ws.p.P*Dinv./c
     ws.p.q[:] = (Dinv*ws.p.q)./sq./c
-    ws.s[:] = (D*ws.s)./sb
+    ws.s[:] = (Einv*ws.s)./sb
+    # FIXME: Double check what has to be multiplied by scaling factors and what not
     ws.ν[:] = E*ws.ν./c
-    ws.λ[:] = Dinv*ws.λ./c
+    ws.μ[:] = E*ws.μ./c
     return nothing
   end
 

@@ -11,7 +11,7 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
 
       if K.f  > 0
         e = b + K.f - 1
-        x[b:e] = freeCone(x[b:e])
+        x[b:e] = zeroCone(x[b:e])
         b = e + 1
       end
 

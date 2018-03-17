@@ -14,17 +14,16 @@ A = eye(4)
 b = [10; 10; 10; 10]
 
 # create augmented matrices
-Aa = [A eye(4) zeros(4,6);eye(4) zeros(4,4) -eye(4) zeros(4,2); 0 1 0 0 zeros(1,8) -1 0; 1 0 1 0 zeros(1,8) 0 -1]
-ba = [b; ones(4,1);5;4]
-ca = [c;zeros(10,1)]
-P = zeros(size(Aa,2),size(Aa,2))
+Aa = [A;-eye(4);0 -1 0 0;-1 0 -1 0]
+ba = [b; -ones(4,1);-5;-4]
+P = zeros(size(A,2),size(A,2))
 # define cone
-K = OSSDPTypes.Cone(4,10,[],[])
+K = OSSDPTypes.Cone(0,10,[],[])
 # define example problem
-settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
-res,  = OSSDP.solve(P,ca,Aa,ba,K,settings)
+settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
+res,ws  = OSSDP.solve(P,c,Aa,ba,K,settings);
 
 @testset "Linear Problem" begin
-  @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-4, norm=(x -> norm(x,Inf)))
-  @test isapprox(res.cost,20.0, atol=1e-4)
+  @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-2, norm=(x -> norm(x,Inf)))
+  @test isapprox(res.cost,20.0, atol=1e-2)
 end

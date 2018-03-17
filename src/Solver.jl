@@ -1,12 +1,12 @@
 include("./Helper.jl")
 include("./Types.jl")
+include("./KKT.jl")
 include("./Scaling.jl")
 include("./Projections.jl")
 include("./Residuals.jl")
 include("./Parameters.jl")
 include("./Infeasibility.jl")
 include("./Printing.jl")
-include("./KKT.jl")
 include("./Setup.jl")
 
 module OSSDP
@@ -30,7 +30,6 @@ export solve, OSSDPSettings, Cone #from the Types module
     iter = 0
     status = :unsolved
     cost = Inf
-    δν = []
     r_prim = Inf
     r_dual = Inf
 
@@ -39,34 +38,32 @@ export solve, OSSDPSettings, Cone #from the Types module
 
     tic()
     startTime = time()
+    xtilde = zeros(ws.p.n)
+    stilde = zeros(ws.p.m)
     # MAIN ADMM LOOP
     for iter = 1:1:settings.max_iter
 
       # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> s(n)
 
-      # construct right hand side [-q+σ*s(n)-λ(n); b-(1/ρ)*ν(n)]
-      RHS = [-ws.p.q+settings.sigma*ws.s-ws.λ; ws.p.b-diagm((1./ws.p.ρVec))*ws.ν]
+      # construct right hand side [-q+σ*x(n); b-s(n)+(1/ρ)μ(n)]
+      RHS = [-ws.p.q+settings.sigma*ws.x; ws.p.b-ws.s+diagm(1./ws.p.ρVec)*ws.μ]
 
       #solve linear system M*k = b with help of factorization matrix
       # FIXME: must be a better way
       k = sparse(ws.p.F\full(RHS))
 
       #deconstruct solution vector k = [x(n+1);ν(n+1)]
-      ws.x = k[1:ws.p.n]
-      νPrev = ws.ν
+      xtilde = k[1:ws.p.n]
       ws.ν = k[ws.p.n+1:end]
+      stilde = ws.s - diagm(1./ws.p.ρVec)*(ws.ν+ws.μ)
 
-      # Projection steps and relaxation xRelax = αx(n+1)+(1-α)s(n)
-      if iter == 1
-        xRelax = ws.x
-      else
-        xRelax = settings.alpha*ws.x+(1-settings.alpha)*ws.s
-      end
-      # s(n+1) = Proj( xRelax + (1/σ)*λ(n))
-      ws.s = Projections.projectCompositeCone!((xRelax + (1/settings.sigma)*ws.λ),ws.p.K)
+      # Projection steps
+      ws.x = settings.alpha*xtilde + (1-settings.alpha)*ws.x
+      stildeRelax = settings.alpha*stilde + (1-settings.alpha)*ws.s
+      ws.s = Projections.projectCompositeCone!(stildeRelax + diagm(1./ws.p.ρVec)*ws.μ,ws.p.K)
 
-      # update dual variables λ(n+1) = λ(n) + σ*(xRelax - s(n+1))
-      ws.λ = ws.λ + settings.sigma*(xRelax - ws.s)
+      # update dual variable μ
+      ws.μ = ws.μ + diagm(ws.p.ρVec)*(stildeRelax - ws.s)
 
       # update cost
       # FIXME: Remove calculation of cost at each step
@@ -79,7 +76,6 @@ export solve, OSSDPSettings, Cone #from the Types module
       # compute deltas
       # δx = xNew - xPrev
       # δy = yNew - yPrev
-      push!(δν,norm(ws.ν-νPrev,Inf))
 
       # print iteration steps
       settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
@@ -140,7 +136,7 @@ export solve, OSSDPSettings, Cone #from the Types module
 
 
     # create result object
-    result = OSSDPResult(ws.x,ws.s,ws.λ,ws.ν,cost,iter,status,rt,r_prim,r_dual);
+    result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,rt,r_prim,r_dual);
 
     return result,ws;
 
