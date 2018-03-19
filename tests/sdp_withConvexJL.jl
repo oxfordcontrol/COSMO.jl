@@ -22,7 +22,6 @@ problem = minimize(trace(C*Y))
 constraint1 = trace(A1*Y) ==b1
 constraint2 = trace(A2*Y) ==b2
 constraint3 = isposdef(Y)
-
 problem.constraints += [constraint1,constraint2,constraint3]
 
 solve!(problem,MosekSolver())
@@ -39,32 +38,31 @@ println("Cost: $(problem.optval)\n")
 # @test A*vec(x) == b
 
 
-############## Solution with OSSDP
+############## Solution with OSSDP v2
 q = vec(C)
-A = [vec(A1)';vec(A2)']
-b = [b1;b2]
+A = [vec(A1)';vec(A2)';-eye(9)]
+b = [b1;b2;zeros(9)]
 P = zeros(9,9)
-K = OSSDPTypes.Cone(0,0,[],[9])
+K = OSSDPTypes.Cone(2,0,[],[9])
 # define example problem
-settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=500,verbose=true,checkTermination=15)
+settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=500,verbose=true,checkTermination=15,scaling = 0)
 
 # solve SDP problem
-res,dbg = OSSDP.solve(P,q,A,b,K,settings)
-X = reshape(res.x,3,3)
+res,ws = OSSDP.solve(P,q,A,b,K,settings)
+X = reshape(res.x[1:9],3,3)
 
 # compute smallest eigenvalue of result X
 F = eigfact(X)
 XλMin = minimum(F[:values])
-F = eigfact(reshape(res.s,3,3))
+F = eigfact(reshape(res.s[3:11],3,3))
 SλMin = minimum(F[:values])
 epsEV = -1e-9
 @testset "Compare results" begin
   @test norm(X-Y.value,Inf) < 1e-3
   @test norm(res.cost-problem.optval) < 1e-3
-  @test norm(res.x-res.s,Inf)<1e-3
+  @test norm(res.x[1:9]-res.s[2:11],Inf)<1e-3
   @test XλMin > epsEV
   @test SλMin > epsEV
-
 end
 
 

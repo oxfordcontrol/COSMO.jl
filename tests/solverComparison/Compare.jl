@@ -22,11 +22,12 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     timeStamp::String
     ind::Int64
     scalingON::Bool
+    adaptionON::Bool
     objTrue::Float64
     xTrue::Array{Array{Float64}}
 
      #constructor
-    function SolverResult(numProblems::Int64, problemType::String, solverName::String,timeStamp::String,solverSettings,scalingON)
+    function SolverResult(numProblems::Int64, problemType::String, solverName::String,timeStamp::String,solverSettings,scalingON,adaptionON)
     iter = zeros(Int64,numProblems)
     status = Array{Symbol}(numProblems)
     status[1:numProblems] = :empty
@@ -45,7 +46,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     else
         settings = [solverSettings.rho;solverSettings.sigma;solverSettings.alpha;solverSettings.scaling;solverSettings.eps_abs;solverSettings.eps_rel]
     end
-    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON,objTrue,xTrue)
+    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON,adaptionON,objTrue,xTrue)
     end
   end
 

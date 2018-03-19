@@ -3,7 +3,7 @@ workspace()
 include("../src/Solver.jl")
 
 using Base.Test
-using OSSDP, OSSDPTypes, PyPlot, OSQP
+using OSSDP, OSSDPTypes, PyPlot, Helper
 
 # SVM problem as QP
 # min w'w + λ 1/n ∑ ϵ_i
@@ -13,12 +13,14 @@ rng = MersenneTwister(1234)
 
 # create problem data
 n = 2
-m = 40
+m = 200
 mHalf = Int(m/2)
-y = [ones(m/2);zeros(m/2)]
+y = [ones(mHalf);-1*ones(mHalf)]
 X = zeros(m,n)
-X[1:mHalf,:] = (1/n)*randn(rng,mHalf,2) + (1/n)
-X[mHalf+1:end,:] = (1/n)*randn(rng,mHalf,2) - (1/n)
+Xupp = (1/sqrt(n))*sprandn(rng,mHalf,n,0.5)
+Xlow = (1/sqrt(n))*sprandn(rng,mHalf,n,0.5)
+X[1:mHalf,:] = Xupp + duplicateSparsityPattern(Xupp)*(1/n)
+X[mHalf+1:end,:] = Xlow - duplicateSparsityPattern(Xlow)*(1/n)
 
 
 #  n = 2
@@ -30,29 +32,30 @@ X[mHalf+1:end,:] = (1/n)*randn(rng,mHalf,2) - (1/n)
 # # non separable example (might be stupid)
 # y=[-1.;-1;-1;-1;-1;1;1;1;1]
 # X = [-2 -2;-2 0;-2 2; -2 4; 15 0;2 -2;2 0; 2 2; 2 4]
-λ = 0.9
+λ = 1
 
 # create augmented matrices for QP problem
-A = [diagm(y)*X -y eye(m) -eye(m)]
-b = ones(m)
-q = [zeros(n+1);λ*ones(m);zeros(m)]
-P = blkdiag(2*speye(n),spzeros(2*m+1,2*m+1))
+A = [-diagm(y)*X y -eye(m);
+     zeros(m,n+1) -eye(m)]
+b = [ones(m);zeros(m)]
+q = [zeros(n+1);1/m*ones(m)]
+P = blkdiag(2*λ*speye(n),spzeros(1+m,1+m))
 
-K = OSSDPTypes.Cone(n+1,2*m,[],[])
+K = OSSDPTypes.Cone(0,2*m,[],[])
 # define example problem
-settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 10)
+settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0)
  res,nothing = OSSDP.solve(P,q,A,b,K,settings)
 
 
-# solve with osqp
-A2 = sparse([A[:,1:n+1+m];zeros(m,n+1) eye(m)])
-q2 = q[1:n+1+m]
-P2 = sparse(P[1:n+1+m,1:n+1+m])
-l = [ones(m);zeros(m)]
-u = Inf*ones(2*m)
-m2 = OSQP.Model()
-OSQP.setup!(m2; P=P2, q=q2, A=A2, l=l, u=u,scaling=10,check_termination=1,verbose=true,adaptive_rho = false,eps_abs = 1e-3,eps_rel=1e-3)
-res2 = OSQP.solve!(m2)
+# # solve with osqp
+# A2 = sparse([A[:,1:n+1+m];zeros(m,n+1) eye(m)])
+# q2 = q[1:n+1+m]
+# P2 = sparse(P[1:n+1+m,1:n+1+m])
+# l = [ones(m);zeros(m)]
+# u = Inf*ones(2*m)
+# m2 = OSQP.Model()
+# OSQP.setup!(m2; P=P2, q=q2, A=A2, l=l, u=u,scaling=10,check_termination=1,verbose=true,adaptive_rho = false,eps_abs = 1e-3,eps_rel=1e-3)
+# res2 = OSQP.solve!(m2)
 
 
 

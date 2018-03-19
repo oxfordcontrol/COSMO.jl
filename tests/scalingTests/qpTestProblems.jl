@@ -12,11 +12,9 @@ nn = 20
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
 dataFile = "./SC_" * timestamp * "LassoQP.jld"
 problemType = "QP-Lasso"
-setOFF = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
-setON = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
 
-sr1 = SolverResult(nn, problemType,"QOCS",timestamp,setOFF,false)
-sr2 = SolverResult(nn, problemType,"QOCS",timestamp,setON,true)
+sr1 = SolverResult(nn, problemType,"QOCS",timestamp,0,false)
+sr2 = SolverResult(nn, problemType,"QOCS",timestamp,0,true)
 sr3 = SolverResult(nn, problemType,"OSQP",timestamp,0,false)
 sr4 = SolverResult(nn, problemType,"OSQP",timestamp,0,true)
 resData = [sr1;sr2;sr3;sr4]
@@ -44,6 +42,9 @@ for iii =1:1:nn
 
   # define cone membership
   K = OSSDPTypes.Cone(m,2*n,[],[])
+
+  setOFF = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
+  setON = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
 
   # Solve with OSSDP
   resOSSDP_unscaled,nothing = OSSDP.solve(P,q,Aa,ba,K,setOFF);
