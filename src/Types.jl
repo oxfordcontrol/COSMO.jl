@@ -135,7 +135,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     RHO_MAX::Float64
     RHO_TOL::Float64
     timelimit::Int64
-
+    objTrue::Float64
+    objTrueTOL::Float64
     #constructor
     function OSSDPSettings(;
       rho=0.1,
@@ -159,11 +160,13 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       RHO_MIN = 1e-6,
       RHO_MAX = 1e6,
       RHO_TOL = 1e-4,
-      timelimit = 0
+      timelimit = 0,
+      objTrue = NaN,
+      objTrueTOL = 1e-3
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
           checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit)
+          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,objTrue,objTrueTOL)
     end
   end
 

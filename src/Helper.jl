@@ -1,6 +1,6 @@
 module Helper
 
-export isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent, findDifferentElements, reCreateSparseMatrix
+export isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent, findDifferentElements, reCreateSparseMatrix,duplicateSparsityPattern
 
 
 
@@ -49,7 +49,17 @@ function findDifferentElements(A,B)
   return diffEl
 end
 
+function duplicateSparsityPattern(A)
+  m,n = size(A)
+  B = zeros(m,n)
+  for iii = 1:m, jjj = 1:n
+    if A[iii,jjj] != 0
+      B[iii,jjj] = 1
+    end
+  end
+  return B
 
+end
 
 function reCreateSparseMatrix(A)
   rowInd = A.rowval

@@ -2,12 +2,13 @@ module Residuals
   using OSSDPTypes
   export calculateResiduals, maxResComponentNorm, hasConverged
 
-  function calculateResiduals(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings)
-        if settings.scaling != 0
+  function calculateResiduals(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings, IGNORESCALING_FLAG::Bool=false)
+        if (settings.scaling != 0 && !IGNORESCALING_FLAG)
           r_prim = norm((ws.sm.Einv*(ws.p.A*ws.x+ws.s-ws.p.b))./ws.sm.sb,Inf)
           # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
           r_dual = norm((ws.sm.cinv*ws.sm.Dinv*(ws.p.P*ws.x + ws.p.q -ws.p.A'*ws.μ))./ws.sm.sq,Inf)
-        else
+        end
+        if (settings.scaling == 0 || IGNORESCALING_FLAG )
           r_prim = norm(ws.p.A*ws.x+ws.s-ws.p.b,Inf)
           r_dual = norm(ws.p.P*ws.x + ws.p.q -ws.p.A'*ws.μ,Inf)
         end
@@ -30,7 +31,15 @@ module Residuals
     maxNormPrim, maxNormDual = maxResComponentNorm(ws,settings)
     ϵ_prim = settings.eps_abs + settings.eps_rel * maxNormPrim
     ϵ_dual = settings.eps_abs + settings.eps_rel * maxNormDual
-    return ( r_prim < ϵ_prim  && r_dual < ϵ_dual)
+
+    # if an optimal objective value was specified for the problem check if current solution is within specified accuracy
+    objTrueFLAG = true
+    if !isnan(settings.objTrue)
+      currentCost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+      objTrueFLAG = abs(settings.objTrue-currentCost) <= settings.objTrueTOL
+    end
+
+    return ( r_prim < ϵ_prim  && r_dual < ϵ_dual && objTrueFLAG)
   end
 
 end #MODULE

@@ -16,8 +16,8 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
   # adapt rhoVec based on residual ratio
   function adaptRhoVec!(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings)
-    # compute normalized residuals
-    r_prim, r_dual = calculateResiduals(ws,settings)
+    # compute normalized residuals based on the working variables (dont unscale)
+    r_prim, r_dual = calculateResiduals(ws,settings,true)
     maxNormPrim, maxNormDual = maxResComponentNorm(ws,settings)
     r_prim = r_prim/(maxNormPrim + 1e-10)
     r_dual = r_dual/(maxNormDual + 1e-10)
