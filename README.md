@@ -1,11 +1,11 @@
-# OSSDP Solver - Pure Julia Implementation
-This is a pure Julia implementation of the OSSDP solver. It solves semidefinite programs of the following form:
+# Quadratic Objective Conic Solver (QOCS) - Pure Julia Implementation
+This is a pure Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
 ```
 min trace(X,PX)+trace(Q,X) 
 s.t. trace(A_i*X) = b_i, i=1,...,m
-     X in S+
+     X in K
 ```
-where S+ is the cone of symmetric positive semidefinite matrices. The problem data has to be transformed into the following vector matrix description of the problem:
+where K is a composite cone. The problem data has to be transformed into the following vector matrix description of the problem:
 ```
 min 1/2 x'Px + q'x 
 s.t. Ax = b, x in S+
