@@ -100,7 +100,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     end
   end
 
-  function updateResults!(fn::String,resData,resArr,pDims::Array{Int64},pName::String,r::Float64,SAVE_ALWAYS::Bool)
+  function updateResults!(fn::String,resData,resArr,pDims::Array{Int64},pName::String,r::Union{Float64, Int64},SAVE_ALWAYS::Bool)
     numSolvers = length(resArr)
     n = pDims[2]
 

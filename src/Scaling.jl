@@ -106,18 +106,20 @@ export scaleRuiz!,reverseScaling!, scaleSCS!
       # Second step cost normalization
       norm_P_cols = mean([norm(P[:,i],Inf) for i in 1:size(P,2)])
       inf_norm_q = norm(q,Inf)
-      limitScaling!(inf_norm_q,set)
-      scale_cost = maximum([inf_norm_q norm_P_cols])
-      limitScaling!(scale_cost,set)
-      scale_cost = 1. / scale_cost
-      c_temp = scale_cost
+      if norm_P_cols != 0. && inf_norm_q != 0.
+        limitScaling!(inf_norm_q,set)
+        scale_cost = maximum([inf_norm_q norm_P_cols])
+        limitScaling!(scale_cost,set)
+        scale_cost = 1. / scale_cost
+        c_temp = scale_cost
 
-      # Normalize cost
-      P[:,:] = c_temp * P
-      q[:] = c_temp * q
+        # Normalize cost
+        P[:,:] = c_temp * P
+        q[:] = c_temp * q
 
-      # Update scaling
-      c = c_temp * c
+        # Update scaling
+        c = c_temp * c
+      end
 
     end
     ws.sm.D = D
