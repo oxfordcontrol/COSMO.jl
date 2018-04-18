@@ -1,20 +1,19 @@
-# OSSDP Solver - Pure Julia Implementation
-This is a pure Julia implementation of the OSSDP solver. It solves semidefinite programs of the following form:
+# Quadratic Objective Conic Solver (QOCS) - Pure Julia Implementation
+This is a pure Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
 ```
 min trace(X,PX)+trace(Q,X) 
 s.t. trace(A_i*X) = b_i, i=1,...,m
-     X in S+
+     X in K
 ```
-where S+ is the cone of symmetric positive semidefinite matrices. The problem data has to be transformed into the following vector matrix description of the problem:
+where K is a composite cone. The problem data has to be transformed into the following vector matrix description of the problem:
 ```
 min 1/2 x'Px + q'x 
 s.t. Ax = b, x in S+
 ```
-
-**Work in Progress!**
 ## Installation / Usage
+- Solver was written for Julia v0.6
 - Clone repository to local machine
-- include the ossdp.jl file into your project and load the OSSDP module.
+- Include the `Solver.jl` and `Projections.jl` files into your project and load the `OSSDP module`.
 - Consider the following example:
 
 ```julia
@@ -31,7 +30,7 @@ b1 = 11.0
 b2 = 19.0
 
 # Reformat data to fit vector matrix input style
-P = zeros(3,3)
+P = zeros(9,9)
 q = vec(C)
 A = [vec(A1)';vec(A2)']
 b = [b1;b2]
@@ -46,9 +45,25 @@ result,dbg = solveSDP(P,q,A,b,settings)
 @show(reshape(result.x,3,3))
 @show(result.cost)
 ```
+## Settings
+Settings can be specified using the sdpSettings struct. The following settings are available:
+
+Argument | Description | Values (default)
+--- | --- | ---
+rho | ADMM rho step | 1.0
+sigma | ADMM sigma step | 10.0
+alpha | Relaxation parameter | 1.6
+eps_abs | Absolute residual tolerance | 1e-3
+eps_rel | Relative residual tolerance | 1e-3
+eps_prim_inf | Primal infeasibility tolerance | 1e-4
+eps_dual_inf | Dual infeasibility tolerance | 1e-4
+max_iter | Maximum number of iterations | 2500
+verbose | Verbose printing | false
+checkTermination | Check termination interval | 1
+scaling | Number of scaling iterations | 10
 
 ## Tasks / Future Work
-The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues) :exclamation:
+The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
