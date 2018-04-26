@@ -90,11 +90,9 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     Dinv::SparseMatrixCSC{Float64,Int64}
     E::SparseMatrixCSC{Float64,Int64}
     Einv::SparseMatrixCSC{Float64,Int64}
-    sq::Float64
-    sb::Float64
     c::Float64
     cinv::Float64
-    ScaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.,1.,1.)
+    ScaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.)
   end
 
   mutable struct WorkSpace
