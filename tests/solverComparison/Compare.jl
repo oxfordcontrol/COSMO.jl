@@ -3,7 +3,7 @@ include("../meszaros/ConvertProblem.jl")
 module Compare
 
 using OSSDPTypes, JLD, Converter
-export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFilenames, printStatus
+export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFilenames, printStatus, SolverMetrics, ProblemMetrics
 
 
 
@@ -47,6 +47,32 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
         settings = [solverSettings.rho;solverSettings.sigma;solverSettings.alpha;solverSettings.scaling;solverSettings.eps_abs;solverSettings.eps_rel]
     end
     new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON,adaptionON,objTrue,xTrue)
+    end
+  end
+
+   function Base.show(io::IO, obj::SolverResult)
+    println(io,">>> Solver Results for: $(obj.solverName)\nTimeStamp: $(obj.timeStamp)\nProblem Type: $(obj.problemType)\nNumber of results:$(obj.ind)\nscaling ON: $(obj.scalingON)\nadaption ON: $(obj.adaptionON)" )
+  end
+
+  # define structs to hold metric data for each problem
+  mutable struct SolverMetrics
+    solverName::String
+    adaptionON::Bool
+    scalingON::Bool
+    meanIterAll::Float64
+    meanIterSolved::Float64
+    numSolved::Int64
+    percSolved::Float64
+  end
+
+  mutable struct ProblemMetrics
+    problemType::String
+    combinedData::Bool
+    numProblems::Int64
+    numSolvers::Int64
+    solverResults::Array{SolverMetrics}
+    function ProblemMetrics(problemType,combinedData,numProblems,numSolvers)
+      new(problemType,combinedData,numProblems,numSolvers,Array{SolverMetrics}(numSolvers))
     end
   end
 

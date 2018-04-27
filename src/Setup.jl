@@ -8,7 +8,7 @@ module Setup
       (settings.scaleFunc == 1) && scaleSCS!(ws,settings)
       (settings.scaleFunc == 2) && scaleRuiz!(ws,settings)
       (settings.scaleFunc == 3) && scaleSymmetric!(ws,settings)
-      (settings.scaleFunc == 4) && scaleSymmetricSCS!(ws,settings)
+      (settings.scaleFunc == 4) && scaleRuizGeometric!(ws,settings)
     end
     setRhoVec!(ws.p,settings)
 

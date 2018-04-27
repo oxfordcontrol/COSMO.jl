@@ -1,6 +1,6 @@
 module Helper
 
-export generatePosDefMatrix, isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent, findDifferentElements, reCreateSparseMatrix,duplicateSparsityPattern
+export generatePosDefMatrix, isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent, findDifferentElements, reCreateSparseMatrix,duplicateSparsityPattern, gmean
 
   # generate a random pos def matrix with eigenvalues between 0.1 and 2
   function generatePosDefMatrix(n::Int64,rng)
@@ -90,5 +90,22 @@ function reCreateSparseMatrix(A)
   p = sortperm(rowInd)
   return sparse(rowInd,colInd,val,size(A,1),size(A,2))
 
+end
+
+# Geometric mean from https://github.com/JuliaStats/StatsBase.jl
+function gmean{T<:Real}(a::AbstractArray{T})
+    s = 0.0
+    n = length(a)
+    for i in 1:n
+        tmp = a[i]
+        if tmp < 0.0
+            throw(DomainError())
+        elseif tmp == 0.0
+            return 0.0
+        else
+            s += log(tmp)
+        end
+    end
+    return exp(s / n)
 end
 end #MODULE
