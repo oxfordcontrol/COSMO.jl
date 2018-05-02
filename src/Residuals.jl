@@ -16,13 +16,14 @@ module Residuals
     return r_prim,r_dual
   end
 
-  function maxResComponentNorm(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings)
-    if settings.scaling != 0
+  function maxResComponentNorm(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings, IGNORESCALING_FLAG::Bool=false)
+    if (settings.scaling != 0 && !IGNORESCALING_FLAG)
       maxNormPrim = max.(norm(ws.sm.Einv*ws.p.A*ws.x,Inf),  norm(ws.sm.Einv*ws.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
       maxNormDual = max.(norm(ws.sm.cinv*ws.sm.Dinv*ws.p.P*ws.x,Inf), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.q,Inf), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.A'*ws.μ,Inf) )
-    else
-      maxNormPrim = max.(norm(ws.p.A*ws.x,Inf),norm(ws.s,2), norm(ws.p.b,Inf))
-      maxNormDual = max.(norm(ws.p.P*ws.x,Inf), norm(ws.p.q,2),norm(ws.p.A'*ws.μ,Inf) )
+    end
+    if (settings.scaling == 0 || IGNORESCALING_FLAG)
+      maxNormPrim = max.(norm(ws.p.A*ws.x,Inf),norm(ws.s,Inf), norm(ws.p.b,Inf))
+      maxNormDual = max.(norm(ws.p.P*ws.x,Inf), norm(ws.p.q,Inf),norm(ws.p.A'*ws.μ,Inf) )
     end
     return maxNormPrim, maxNormDual
   end

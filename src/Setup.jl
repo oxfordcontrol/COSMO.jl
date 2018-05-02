@@ -10,6 +10,7 @@ module Setup
       (settings.scaleFunc == 3) && scaleSymmetric!(ws,settings)
       (settings.scaleFunc == 4) && scaleRuizGeometric!(ws,settings)
     end
+
     setRhoVec!(ws.p,settings)
 
     # factor the KKT condition matrix
