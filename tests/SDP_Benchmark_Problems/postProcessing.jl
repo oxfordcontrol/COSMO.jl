@@ -5,8 +5,8 @@
 # using PyPlot, JLD, Compare, OSSDPTypes, Base.Test
 cc =  ["#1f77b4" "#ff7f0e" "#2ca02c" "#d62728" "#9467bd" "#8c564b"]
 
-timestamp = "182604_10-19"
-dir = "../resultDataFiles/SDP_Benchmark_Problems/"*timestamp
+folderName = "182604_10-19"
+dir = "../resultDataFiles/SDP_Benchmark_Problems/"*folderName
 results = []
 for f in filter(x -> endswith(x, ".jld"), readdir(dir))
     f = split(f,".")[1]

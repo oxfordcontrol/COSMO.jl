@@ -1,7 +1,7 @@
 module LatexExport
 
 using Compare
-export createLatexTable
+export createLatexTable, createIterLatexTable
 
 
 function createLatexTable(metricsArr::Array{Compare.ProblemMetrics},dir::String)
@@ -28,4 +28,21 @@ function createLatexTable(metricsArr::Array{Compare.ProblemMetrics},dir::String)
   return nothing
 end
 
+  function createIterLatexTable(resComp,numProblemsArr,results,dir)
+  caption1 = "Number of problems where a solver configuration with scaling performed better than the unscaled configuration (only cases with rho-adaption)."
+  open(dir*"/iterTable.tex", "w") do file
+    write(file, "\\begin{longtable}{l c c c }\n\\toprule\n")
+    for iii=1:length(numProblemsArr)
+      numProblems = numProblemsArr[iii]
+      write(file, "\\multicolumn{4}{l}{Problem Type: \\textbf{$(results[iii])}} \\\\ \n \\multicolumn{4}{l}{Number of Problems: $(numProblemsArr[iii])} \\\\ \n  \\hline\n")
+      write(file, " Mean \$ \\leq \$ Unscaled &  Geom \$ \\leq \$ Unscaled & Sym \$ \\leq \$ Unscaled &  Any Scaled \$ \\leq \$  Unscaled \\\\ [0.5ex]\n")
+      write(file, "$(resComp[iii,1]) ($(round(resComp[iii,1]/numProblems*100,2)) \\%) & $(resComp[iii,2]) ($(round(resComp[iii,2]/numProblems*100,2)) \\%) & $(resComp[iii,3]) ($(round(resComp[iii,3]/numProblems*100,2)) \\%)  & $(resComp[iii,4]) ($(round(resComp[iii,4]/numProblems*100,2)) \\%)  \\\\ \n")
+      write(file,"\\bottomrule \\\\ \n")
+    end
+        write(file, "\\bottomrule \n\\caption{$(caption1)}\n\\label{table:2}\n\\end{longtable}")
+
+  end
+  return nothing
+
+  end
 end #MODULE

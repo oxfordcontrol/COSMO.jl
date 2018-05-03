@@ -3,13 +3,15 @@
 # include("../solverComparison/Compare.jl")
 
 # using JLD, Compare, OSSDP
-timestamp = "182604_16-43"
-dir = "../resultDataFiles/SDP_Benchmark_Problems/"*timestamp
+folderName = "AfterBugFix"
+dir = "../resultDataFiles/SDP_Benchmark_Problems/"*folderName
 results = []
 for f in filter(x -> endswith(x, ".jld"), readdir(dir))
     f = split(f,".")[1]
     push!(results,String(f))
 end
+filter!(x->!in(x,["Combined"]),results)
+
 length(unique(results)) != length(results) && warn("Careful, you are trying to combine files from the same problem type.")
 
 
@@ -64,6 +66,6 @@ for iii=1:length(results)
 
 
 end
-fn = dir * "/Combined.jld"
+fn = dir * "/Combined_without_MIQO_Lovasz.jld"
 JLD.save(fn, "resData", resCombined)
 
