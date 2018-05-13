@@ -41,11 +41,14 @@ export solve, OSSDPSettings, Cone #from the Types module
     startTime = time()
     xtilde = zeros(ws.p.n)
     stilde = zeros(ws.p.m)
-
+    δx = 0
+    δμ =  0
     # MAIN ADMM LOOP
     for iter = 1:1:settings.max_iter
 
       # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> s(n)
+      xPrev = ws.x
+      μPrev = ws.μ
 
       # construct right hand side [-q+σ*x(n); b-s(n)+(1/ρ)μ(n)]
       RHS = [-ws.p.q+settings.sigma*ws.x; ws.p.b-ws.s+diagm(1./ws.p.ρVec)*ws.μ]
@@ -76,36 +79,43 @@ export solve, OSSDPSettings, Cone #from the Types module
       mod(iter,settings.checkTermination)  == 0 && ((r_prim,r_dual) = calculateResiduals(ws,settings))
 
       # compute deltas
-      # δx = xNew - xPrev
-      # δy = yNew - yPrev
-
+      δx = ws.x - xPrev
+      δμ = ws.μ - μPrev
+      δy = -δμ
       # print iteration steps
       settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
 
-
-      # if isPrimalInfeasible(δy,A,l,u,settings.ϵ_prim_inf)
-      #     status = :primal_infeasible
-      #     cost = Inf
-      #     xNew = NaN*ones(n,1)
-      #     yNew = NaN*ones(m,1)
-      #     break
-      # end
-
-      # if isDualInfeasible(δx,P,A,q,l,u,settings.ϵ_dual_inf)
-      #     status = :dual_infeasible
-      #     cost = -Inf
-      #     xNew = NaN*ones(n,1)
-      #     yNew = NaN*ones(m,1)
-      #     break
-      # end
-
-      # check convergence with residuals every {settings.checkIteration} step
+      # check convergence with residuals every {settings.checkIteration} steps
       if mod(iter,settings.checkTermination) == 0
         if hasConverged(ws,settings,r_prim,r_dual)
           status = :solved
           break
         end
       end
+
+      # check infeasibility conditions every {settings.checkInfeasibility} steps
+      if mod(iter,settings.checkInfeasibility) == 0
+        if isPrimalInfeasible(δy,ws,settings)
+            status = :primal_infeasible
+            cost = Inf
+            ws.x = sparse(NaN*ones(ws.p.n,1))
+            ws.μ = sparse(NaN*ones(ws.p.m,1))
+            ws.ν = sparse(NaN*ones(ws.p.m,1))
+            warn("Not solved to optimality, status: Infeasible")
+            break
+        end
+
+        if isDualInfeasible(δx,ws,settings)
+            status = :dual_infeasible
+            cost = -Inf
+            ws.x = sparse(NaN*ones(ws.p.n,1))
+            ws.μ = sparse(NaN*ones(ws.p.m,1))
+            ws.ν = sparse(NaN*ones(ws.p.m,1))
+            warn("Not solved to optimality, status: Infeasible")
+            break
+        end
+      end
+
 
       # adapt rhoVec if enabled
       if settings.adaptive_rho && (mod(iter,settings.adaptive_rho_interval) == 0) && (settings.adaptive_rho_interval > 0)
@@ -127,7 +137,8 @@ export solve, OSSDPSettings, Cone #from the Types module
       status = :UserLimit
     end
 
-    if settings.scaling != 0
+    # reverse scaling for scaled feasible cases
+    if settings.scaling != 0 && (cost != Inf && cost != -Inf)
       reverseScaling!(ws)
       # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
       cost =  (1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1] #sm.cinv * not necessary anymore since reverseScaling
@@ -140,7 +151,7 @@ export solve, OSSDPSettings, Cone #from the Types module
     # create result object
     result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,rt,r_prim,r_dual);
 
-    return result,ws;
+    return result,ws, δx, δμ;
 
   end
 

@@ -19,7 +19,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::OSSDPResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\n" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms" )
   end
 
 
@@ -121,6 +121,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     max_iter::Int64
     verbose::Bool
     checkTermination::Int64
+    checkInfeasibility::Int64
     scaling::Int64
     MIN_SCALING::Float64
     MAX_SCALING::Float64
@@ -147,6 +148,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       max_iter=2500,
       verbose=false,
       checkTermination=1,
+      checkInfeasibility=40,
       scaling=10,
       MIN_SCALING = 1e-4,
       MAX_SCALING = 1e4,
@@ -163,7 +165,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       objTrueTOL = 1e-3
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
-          checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
+          checkTermination,checkInfeasibility,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
           adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,objTrue,objTrueTOL)
     end
   end

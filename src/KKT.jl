@@ -4,8 +4,8 @@ export factorKKT!
 
   function factorKKT!(p::OSSDPTypes.Problem,settings::OSSDPTypes.OSSDPSettings)
      if nnz(p.P) > 0 && p.P != p.P'
-      i,j,difference = findNonSymmetricComponent(p.P)
-      warn("Scaled P is not symmetric. [$(i),$(j)] differs by $(difference). Trying to correct.")
+      # i,j,difference = findNonSymmetricComponent(p.P)
+      # warn("Scaled P is not symmetric. [$(i),$(j)] differs by $(difference). Trying to correct.")
       p.P = p.P./2+(p.P./2)'
     end
     # KKT matrix M
