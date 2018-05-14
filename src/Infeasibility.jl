@@ -4,7 +4,7 @@ export isPrimalInfeasible, isDualInfeasible
 
   # sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar
   #                                                 +∞   ,else}
-  function supportFunction(δy,ws)
+  function supportFunction(δy,ws,settings)
     K = ws.p.K
     # check if δy is in polar cone to K_tilde = dual cone of K
     inPolarCone = true
@@ -36,7 +36,7 @@ export isPrimalInfeasible, isDualInfeasible
           e = b + K.s[iii] - 1
           δy_sub = δy[b:e]
           cDim = Int(sqrt(K.s[iii]))
-          inPolarCone = ( minimum(eig(reshape(δy_sub,cDim,cDim))[1]) >= -eps_prim_inf)
+          inPolarCone = ( minimum(eig(reshape(full(δy_sub),cDim,cDim))[1]) >= -settings.eps_prim_inf)
           !inPolarCone && break
           b = e + 1
       end
@@ -91,7 +91,7 @@ export isPrimalInfeasible, isDualInfeasible
           e = b + K.s[iii] - 1
           Aδx_sub = A_δx[b:e]
           cDim = Int(sqrt(K.s[iii]))
-          inRecessionCone = ( maximum(eig(reshape(Aδx_sub,cDim,cDim))[1]) <= settings.eps_dual_inf)
+          inRecessionCone = ( maximum(eig(reshape(full(Aδx_sub),cDim,cDim))[1]) <= settings.eps_dual_inf)
           !inRecessionCone && break
           b = e + 1
       end
@@ -119,7 +119,7 @@ export isPrimalInfeasible, isDualInfeasible
 
       if norm(A_δy,Inf)/norm_δy <= settings.eps_prim_inf
         # test condition S_K(δy) < 0
-        if supportFunction(δy/norm_δy,ws) <= -settings.eps_prim_inf
+        if supportFunction(δy/norm_δy,ws,settings) <= -settings.eps_prim_inf
            return true
         end
       end
@@ -139,7 +139,6 @@ export isPrimalInfeasible, isDualInfeasible
     if norm_δx > settings.eps_dual_inf
       # test condition <q,δx> < 0
       (ws.p.q'*δx)[1]/(norm_δx*ws.sm.c) < -settings.eps_dual_inf
-
       # test condition Pδx == 0
       P_δx = ws.p.P*δx
       settings.scaling != 0 && (P_δx = ws.sm.Dinv*P_δx)
