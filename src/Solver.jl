@@ -33,6 +33,7 @@ export solve, OSSDPSettings, Cone #from the Types module
     r_prim = Inf
     r_dual = Inf
 
+
     # print information about settings to the screen
     settings.verbose && printHeader(ws,settings,setupTime)
 
@@ -40,6 +41,7 @@ export solve, OSSDPSettings, Cone #from the Types module
     startTime = time()
     xtilde = zeros(ws.p.n)
     stilde = zeros(ws.p.m)
+
     # MAIN ADMM LOOP
     for iter = 1:1:settings.max_iter
 
