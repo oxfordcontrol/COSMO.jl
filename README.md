@@ -6,8 +6,19 @@ s.t. Ax + s = b, s in K
 ```
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex cone K is a composition of the zero cone, the non-negative orthant, a set of second order cones, and a set of positive semidefinite cones. The dimension of the cones have to be specified using the `Cone` type (`K.f::Int`: number of zero cone variables, `K.l::Int`: number of nonnegative components, `K.s::Array{Int}`: number of variables in each second-order cone, `K.q::Array{Int}`: number of variables in each psd cone).
 
-## Installation / Usage
-- The Solver was written for Julia v0.6
+## Installation
+The Solver was written for Julia v0.6. Dependencies include `Formatting`, `OSQP`, `MAT` and `JLD`. The last two require the `HDF5` package.
+
+### Server Issues:
+-  It's better to install manually/enable module `HDF5` rather than let `Julia` install it. You still have to install the `Julia` interface though.
+- `Blosc` (dependecy of `HDF5`) drops a weird error on the server (`libblosc` not satisfied). To avoid this use an older version:
+ ```
+Pkg.pin("Blosc",v"0.3.0")
+Pkg.add("Blosc")
+Pkg.build("Blosc")
+```
+
+## Usage
 - Clone repository to local machine
 - Include `../src/Solver.jl` into your project and load the `OSSDP` and `OSSDPTypes` module.
 - Consider the following example:
