@@ -4,9 +4,10 @@ using JLD
 
 nameValDict = Dict()
 # extract solution for objective value from README file
-f = open("./MAT_FILES/README.txt")
+f = open("./bart_meszaros_data/README.txt")
 lines = readlines(f)
 close(f)
+print(lines)
 lines = lines[75:212]
 
 data = Array{Any}(length(lines),5)
@@ -24,6 +25,6 @@ end
 
 
   # save to JLD file
-  JLD.save("./MAT_FILES/objVals.jld", "nameValDict",nameValDict,"problemData",data)
+  JLD.save("./bart_meszaros_data/objVals.jld", "nameValDict",nameValDict,"problemData",data)
   println("Successfully saved obj name dictionary!")
 

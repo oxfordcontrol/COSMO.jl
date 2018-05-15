@@ -15,7 +15,7 @@ end
 
 
 # sort filenames by number of nnz (stored in problemData[:,4])
-readmeInfo = JLD.load("./MAT_FILES/objVals.jld")
+readmeInfo = JLD.load("./bart_meszaros_data/objVals.jld")
 problemData = readmeInfo["problemData"]
 sortedInd = sort!(collect(1:1:length(fileNames)), by=i->problemData[i,4])
 fileNames = fileNames[sortedInd]
@@ -40,7 +40,6 @@ timestamp = Dates.format(now(), "yyddmm_HH-MM")
 fn = timestamp * "meszarosComparison.jld"
 
 for file in fileNames
-
   # jump to next file if error happens
   #try
     gc()
@@ -77,7 +76,7 @@ for file in fileNames
     print(".")
 
     m2s = OSQP.Model()
-    OSQP.setup!(m2s; P=P, q=q[:], A=A, l=l[:], u=u[:],scaling=10,max_iter=1500,check_termination=1,verbose=false,adaptive_rho = false,eps_abs = 1e-3,eps_rel=1e-3)
+    OSQP.setup!(m2s; P=P, q=q[:], A=A, l=l[:], u=u[:],scaling=10,max_iter=1500,check_termination=1,verbose=true,adaptive_rho = false,eps_abs = 1e-3,eps_rel=1e-3)
     resOSQP_scaled = OSQP.solve!(m2s)
     print(".")
 
@@ -90,6 +89,9 @@ for file in fileNames
     resX[iii,3] = resOSQP_unscaled.x
     resX[iii,4] = resOSQP_scaled.x
 
+    println("Diff OSQP-QOCS (scaled): $(100*(resOSSDP_scaled.cost - resOSQP_scaled.info.obj_val)/resOSQP_scaled.info.obj_val)%")
+    println("Iter OSQP-QOCS (scaled): $(100*(resOSSDP_scaled.iter - resOSQP_scaled.info.iter)/resOSQP_scaled.info.iter)%")
+
     println("$(iii)/$(length(fileNames)) $(file) completed! (unscaled status: $(resOSSDP_unscaled.status), scaled status: $(resOSSDP_scaled.status))")
     iii +=1
     #JLD.save(fn, "resCost", resCost, "resIter",resIter,"resX",resX,"fileNames",fileNames)
@@ -98,6 +100,7 @@ for file in fileNames
   #   println("An error happened with file $(file).")
   #   continue
   # end
+  break
 end
 
 
