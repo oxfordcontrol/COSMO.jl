@@ -11,7 +11,7 @@ The Solver was written for Julia v0.6. Dependencies include `Formatting`, `OSQP`
 
 ### Server Issues:
 -  It's better to install manually/enable module `HDF5` rather than let `Julia` install it. You still have to install the `Julia` interface though.
-- `Blosc` (dependecy of `HDF5`) drops a weird error on the server (`libblosc` not satisfied). To avoid this use an older version:
+- `Blosc` (dependency of `HDF5`) drops a weird error on the server (`libblosc` not satisfied). To avoid this use an older version:
  ```
 Pkg.pin("Blosc",v"0.3.0")
 Pkg.add("Blosc")
