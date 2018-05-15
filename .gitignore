@@ -2,3 +2,4 @@
 **/*.SIF
 tests/meszaros/bart_meszaros_data/sif
 tests/meszaros/bart_meszaros_data/README.md
+tests/meszaros/bart_meszaros_data/objVals.jld
