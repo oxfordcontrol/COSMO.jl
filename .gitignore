@@ -1,1 +1,4 @@
-tests/meszaros/MAT_FILES
+**/*.mat
+**/*.SIF
+tests/meszaros/bart_meszaros_data/sif
+tests/meszaros/bart_meszaros_data/README.md
