@@ -31,18 +31,17 @@ function convertProblem(data)
   mU = length(uInd)
 
   # in this case also A has to be changed to get rid of -Inf and Inf values in
-  Aa = [A[uInd,:] speye(mU) spzeros(mU,mL); A[lInd,:] spzeros(mL,mU) -speye(mL)]
-  ba = [u[uInd];l[lInd]]
-  nSlack = mL+mU
-  K = OSSDPTypes.Cone(n,nSlack,[],[])
+  Aa = [A[uInd,:]; -A[lInd,:]]
+  ba = [u[uInd]; -l[lInd]]
+  K = OSSDPTypes.Cone(0, size(Aa)[1], [], [])
+  if typeof(Aa) == Array{Float64,2}
+    Aa = sparse(Aa)
+  end
   if typeof(P) == Array{Float64,2}
     P = sparse(P)
-    A = sparse(A)
   end
-  Pa = blkdiag(P,spzeros(nSlack,nSlack))
-  qa = [q;zeros(nSlack)]
 
-  return Pa,qa,r, Aa,ba, K
+  return P,q,r,Aa,ba,K
   end
 
 
