@@ -1,8 +1,7 @@
 # Test file to check the projections
 workspace()
-include("../Projections.jl")
-include("../Helper.jl")
-using Base.Test, Helper
+include("../src/Solver.jl")
+using Base.Test, Projections, Helper
 
 rng = MersenneTwister(1234)
 
@@ -53,11 +52,12 @@ end
         vMax = 2
         x = vMin+rand(rng,dim,1)*(vMax-vMin)
         t = rand(rng)
+        x = [x;t]
         # project matrix onto positive semidefinite cone
-        xNew,tNew = Projections.secondOrderCone(x,t)
+        xNew = Projections.secondOrderCone(x)
 
         # check if relation holds {(t,x) | ||x||_2 <= t}
-        @test (norm(xNew,2) - tNew) < 1e-14
+        @test (norm(xNew[2:end],2) - xNew[1]) < 1e-14
 
     end
 end
@@ -72,10 +72,10 @@ end
     A = full(Symmetric(A))
     # project matrix onto positive semidefinite cone
     a = vec(A)
-    X = Projections.sdcone(a,dim)
+    X = Projections.sdcone(a)
 
     # check positive semidefiniteness
-    @test isNumericallyPosSemDef(reshape(X,dim,dim),-1e-10) == true
+    @test isNumericallyPosSemDef(reshape(X,dim,dim),1e-10) == true
 
   end
 
