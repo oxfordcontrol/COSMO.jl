@@ -23,7 +23,7 @@ export isPrimalInfeasible, isDualInfeasible
         for iii = 1:length(K.q)
           e = b + K.q[iii] - 1
           δy_sub = δy[b:e]
-          inPolarCone = (δy_sub[2:end] <= δy_sub[1] )
+          inPolarCone = (norm(δy_sub[2:end],2) <= δy_sub[1] )
           !inPolarCone && break
           b = e + 1
         end
@@ -36,7 +36,9 @@ export isPrimalInfeasible, isDualInfeasible
           e = b + K.s[iii] - 1
           δy_sub = δy[b:e]
           cDim = Int(sqrt(K.s[iii]))
-          inPolarCone = ( minimum(eig(reshape(full(δy_sub),cDim,cDim))[1]) >= -settings.eps_prim_inf)
+          # FIXME: Here you might get complex eigenvalues, which causes problems with minimum(). Does it make sense that you can get complex eigenvalues in this problem type?
+          # Current Fix: Just consider the real part
+          inPolarCone = ( minimum(real(eig(reshape(full(δy_sub),cDim,cDim))[1])) >= -settings.eps_prim_inf)
           !inPolarCone && break
           b = e + 1
       end
@@ -72,12 +74,12 @@ export isPrimalInfeasible, isDualInfeasible
     end
 
     # check that relevant parts of Aδx are in recession cone of negative Lorenz cones
-    # FIXME: Does it actually work like this?
+    # i.e. check that ||x|| <= -t
     if length(K.q) > 0 && inRecessionCone
         for iii = 1:length(K.q)
           e = b + K.q[iii] - 1
           Aδx_sub = A_δx[b:e]
-          inRecessionCone = (Aδx_sub[2:end] <= -Aδx_sub[1] )
+          inRecessionCone = (norm(Aδx_sub[2:end],2) + Aδx_sub[1] <= settings.eps_dual_inf)
           !inRecessionCone && break
           b = e + 1
         end
@@ -91,7 +93,7 @@ export isPrimalInfeasible, isDualInfeasible
           e = b + K.s[iii] - 1
           Aδx_sub = A_δx[b:e]
           cDim = Int(sqrt(K.s[iii]))
-          inRecessionCone = ( maximum(eig(reshape(full(Aδx_sub),cDim,cDim))[1]) <= settings.eps_dual_inf)
+          inRecessionCone = ( maximum(real(eig(reshape(full(Aδx_sub),cDim,cDim))[1])) <= settings.eps_dual_inf)
           !inRecessionCone && break
           b = e + 1
       end
