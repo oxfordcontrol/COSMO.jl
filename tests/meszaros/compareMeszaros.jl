@@ -60,7 +60,7 @@ for file in fileNames
     m = size(A,1)
     n = size(P,1)
 
-    Pa, qa, Aa, ba, K = Converter.convertProblem(data)
+    Pa, qa, r, Aa, ba, K = Converter.convertProblem(data)
     settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 0,checkTermination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
     resOSSDP_unscaled,nothing = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
     print(".")
@@ -100,7 +100,6 @@ for file in fileNames
   #   println("An error happened with file $(file).")
   #   continue
   # end
-  break
 end
 
 
