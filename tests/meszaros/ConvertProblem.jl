@@ -22,13 +22,21 @@ function convertProblem(data)
 
   # Rewrite problem to OSSDP compatible format:
   # determine the indizes and sizes of box constraints with Inf or -Inf values
+  neq = find(u .!== l)
+  eq = find(u .== l)
+  Aeq = A[eq, :]
+  beq = u[eq]
+
+  A = A[neq, :]
+  u = u[neq]
+  l = l[neq]
   uInd = find(x->(x < 1e19 ),u)
   lInd = find(x->(x > -1e19),l)
 
   # in this case also A has to be changed to get rid of -Inf and Inf values in
-  Aa = [A[uInd,:]; -A[lInd,:]]
-  ba = [u[uInd]; -l[lInd]]
-  K = OSSDPTypes.Cone(0, size(Aa)[1], [], [])
+  Aa = [Aeq; A[uInd,:]; -A[lInd,:]]
+  ba = [beq; u[uInd]; -l[lInd]]
+  K = OSSDPTypes.Cone(size(eq)[1], size(uInd)[1] + size(lInd)[1], [], [])
   if typeof(Aa) == Array{Float64,2}
     Aa = sparse(Aa)
   end

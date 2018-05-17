@@ -40,7 +40,7 @@ iii = 1
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
 fn = timestamp * "meszarosComparison.jld"
 
-for file in ["QSCTAP2"]
+for file in fileNames
   # jump to next file if error happens
   println("----------------------------------------")
   print(file)
