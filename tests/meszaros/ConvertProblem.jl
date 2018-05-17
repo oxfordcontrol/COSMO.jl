@@ -15,8 +15,10 @@ function convertProblem(data)
   l = data["l"]
   r = data["r"]
 
-  m = size(A,1)
-  n = size(P,1)
+  # The matrix A for some reason segfaults in the QAFIRO problem.
+  # We avoid this by recreating the sparse matrix
+  I, J, V = findnz(A)
+  A = sparse(I, J, V)
 
   # Rewrite problem to OSSDP compatible format:
   # determine the indizes and sizes of box constraints with Inf or -Inf values
