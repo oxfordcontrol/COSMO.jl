@@ -47,6 +47,9 @@ res,ws  = OSSDP.solve(P,c,Aa,ba,K,settings);
   @test isapprox(res.cost,20.0, atol=1e-2)
 end
 ```
+## Test problems
+A set of benchmark problems with conic constraints has been collected and made available here:
+[https://github.com/migarstka/SDP_Benchmark_Problems](https://github.com/migarstka/SDP_Benchmark_Problems)
 ## Settings
 Settings can be specified using the `OSSDPSettings` struct. The following settings are available:
 
