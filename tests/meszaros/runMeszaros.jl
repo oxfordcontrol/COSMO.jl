@@ -79,8 +79,8 @@ for file in fileNames
     resIter[iii,:] = [res.iter]
     resStatus = Array{Symbol}(length(fileNames),1)
 
-    println("Diff OSQP-QOCS (scaled): $(100*(res.cost - resOSQP.info.obj_val)/resOSQP.info.obj_val)%")
-    println("Iter OSQP-QOCS (scaled): $(100*(res.iter - resOSQP.info.iter)/resOSQP.info.iter)%")
+    println("Diff Obj (QOCS-OSQP)/OSQP: $(100*(res.cost - resOSQP.info.obj_val)/resOSQP.info.obj_val)%")
+    println("Diff Iter (QOCS-OSQP)/OSQP: $(100*(res.iter - resOSQP.info.iter)/resOSQP.info.iter)%")
 
     println("$(iii)/$(length(fileNames)) $(file) completed! (status: $(res.status))")
     # JLD.save(fn, "resCost", resCost, "resIter",resIter, "fileNames", fileNames)
