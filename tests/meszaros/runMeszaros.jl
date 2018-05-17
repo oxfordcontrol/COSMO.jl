@@ -17,7 +17,8 @@ end
 # sort filenames by number of nnz (stored in problemData[:,4])
 readmeInfo = JLD.load("./bart_meszaros_data/objVals.jld")
 problemData = readmeInfo["problemData"]
-sortedInd = sort!(collect(1:1:length(fileNames)), by=i->problemData[i,4])
+nnzs = problemData[:,4] + problemData[:,6]
+sortedInd = sort!(collect(1:1:length(fileNames)), by=i->nnzs[i])
 fileNames = fileNames[sortedInd]
 
 # filter some problems by name
@@ -27,7 +28,7 @@ filter!(x->!in(x,excludeProbs),fileNames)
 =#
 
 # to begin with only look at first nn problems
-fileNames = fileNames[18:18]
+fileNames = fileNames[1:end]
 
 resCost = zeros(length(fileNames),2)
 resIter = zeros(length(fileNames),1)
@@ -60,12 +61,12 @@ for file in fileNames
     println("  |  nnz: $(nnz(Pa) + nnz(Aa))")
     println("----------------------------------------")
 
-    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=true)
+    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=false)
     print("Running QOCS:")
     @time res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
 
     m_ = OSQP.Model()
-    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=true)
+    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=false)
     print("Running OSQP:")
     @time resOSQP = OSQP.solve!(m_)
 
