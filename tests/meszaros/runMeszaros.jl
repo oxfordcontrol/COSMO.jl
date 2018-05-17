@@ -27,7 +27,7 @@ filter!(x->!in(x,excludeProbs),fileNames)
 =#
 
 # to begin with only look at first nn problems
-fileNames = fileNames[1:end]
+fileNames = fileNames[18:18]
 
 resCost = zeros(length(fileNames),2)
 resIter = zeros(length(fileNames),1)
@@ -42,35 +42,32 @@ fn = timestamp * "meszarosComparison.jld"
 
 for file in fileNames
   # jump to next file if error happens
-  # try
-    gc()
+  println("----------------------------------------")
+  print(file)
+  flush(STDOUT)
+  local data, Pa, Aa, res, tt
+  let data, Pa, Aa, res, tt
     data = matread("$(dirPath)"*"$(file).mat")
-    P = data["P"]
-    A = data["A"]
-    q = data["q"]
-    u = data["u"]
-    l = data["l"]
     r = data["r"]
-
     costTrue = 0.
     try
       costTrue = readmeInfo["nameValDict"][lowercase(file)]
     catch
       costTrue = NaN
     end
-    m = size(A,1)
-    n = size(P,1)
 
     Pa, qa, r, Aa, ba, K = Converter.convertProblem(data)
-    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000)
+    println("  |  nnz: $(nnz(Pa) + nnz(Aa))")
+    println("----------------------------------------")
+
+    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=true)
     print("Running QOCS:")
-    @time res, nothing = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
+    @time res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
 
     m_ = OSQP.Model()
-    OSQP.setup!(m_; P=P, q=q[:], A=A, l=l[:], u=u[:], verbose=false)
+    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=true)
     print("Running OSQP:")
     @time resOSQP = OSQP.solve!(m_)
-    print(".")
 
     # add the constant term to the solution
     resCost[iii,:] = [res.cost costTrue]
@@ -81,15 +78,9 @@ for file in fileNames
     println("Iter OSQP-QOCS (scaled): $(100*(res.iter - resOSQP.info.iter)/resOSQP.info.iter)%")
 
     println("$(iii)/$(length(fileNames)) $(file) completed! (status: $(res.status))")
-    iii +=1
     JLD.save(fn, "resCost", resCost, "resIter",resIter, "fileNames", fileNames)
-
-  #=
-  catch
-    println("An error happened with file $(file).")
-    continue
+    iii +=1
   end
-  =#
 end
 
 

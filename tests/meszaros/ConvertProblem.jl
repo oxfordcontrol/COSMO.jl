@@ -19,16 +19,9 @@ function convertProblem(data)
   n = size(P,1)
 
   # Rewrite problem to OSSDP compatible format:
-
-
-
   # determine the indizes and sizes of box constraints with Inf or -Inf values
   uInd = find(x->(x < 1e19 ),u)
   lInd = find(x->(x > -1e19),l)
-
-  # constraint l <= Ax <= u
-  mL = length(lInd)
-  mU = length(uInd)
 
   # in this case also A has to be changed to get rid of -Inf and Inf values in
   Aa = [A[uInd,:]; -A[lInd,:]]
