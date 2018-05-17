@@ -98,15 +98,15 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
   mutable struct WorkSpace
       p::OSSDPTypes.Problem
       sm::OSSDPTypes.ScaleMatrices
-      x::SparseVector{Float64,Int64}
-      s::SparseVector{Float64,Int64}
-      ν::SparseVector{Float64,Int64}
-      μ::SparseVector{Float64,Int64}
+      x::Vector{Float64}
+      s::Vector{Float64}
+      ν::Vector{Float64}
+      μ::Vector{Float64}
       #constructor
     function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
       m = p.m
       n = p.n
-      new(p,sm,spzeros(n),spzeros(m),spzeros(m),spzeros(m))
+      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m))
     end
   end
 

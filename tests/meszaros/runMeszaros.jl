@@ -1,5 +1,4 @@
 # Test routine to compare scaling for a number of QP Lasso problems (partially badly scaled)
-workspace()
 include("../../src/Solver.jl")
 include("ConvertProblem.jl")
 
@@ -41,7 +40,7 @@ iii = 1
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
 fn = timestamp * "meszarosComparison.jld"
 
-for file in fileNames
+for file in ["QSCTAP2"]
   # jump to next file if error happens
   println("----------------------------------------")
   print(file)
@@ -58,12 +57,17 @@ for file in fileNames
     end
 
     Pa, qa, r, Aa, ba, K = Converter.convertProblem(data)
+    # qa = full(qa[:, 1])
+    # ba = full(ba)
     println("  |  nnz: $(nnz(Pa) + nnz(Aa))")
     println("----------------------------------------")
 
-    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=false)
+    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=false, checkTermination=20)
     print("Running QOCS:")
     @time res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
+    # Profile.clear()
+    # @profile res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
+    # open(Profile.print, "profile.txt", "w")
 
     m_ = OSQP.Model()
     OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=false)
@@ -79,7 +83,7 @@ for file in fileNames
     println("Iter OSQP-QOCS (scaled): $(100*(res.iter - resOSQP.info.iter)/resOSQP.info.iter)%")
 
     println("$(iii)/$(length(fileNames)) $(file) completed! (status: $(res.status))")
-    JLD.save(fn, "resCost", resCost, "resIter",resIter, "fileNames", fileNames)
+    # JLD.save(fn, "resCost", resCost, "resIter",resIter, "fileNames", fileNames)
     iii +=1
   end
 end

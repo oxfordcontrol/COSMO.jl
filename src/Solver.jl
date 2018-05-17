@@ -48,24 +48,24 @@ export solve, OSSDPSettings, Cone #from the Types module
       # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> s(n)
 
       # construct right hand side [-q+σ*x(n); b-s(n)+(1/ρ)μ(n)]
-      RHS = [-ws.p.q+settings.sigma*ws.x; ws.p.b-ws.s+diagm(1./ws.p.ρVec)*ws.μ]
+      RHS = [-ws.p.q+settings.sigma*ws.x; ws.p.b-ws.s+ (1./ws.p.ρVec).*ws.μ]
 
       #solve linear system M*k = b with help of factorization matrix
       # FIXME: must be a better way
-      k = sparse(ws.p.F\full(RHS))
+      k = ws.p.F\RHS
 
       #deconstruct solution vector k = [x(n+1);ν(n+1)]
       xtilde = k[1:ws.p.n]
       ws.ν = k[ws.p.n+1:end]
-      stilde = ws.s - diagm(1./ws.p.ρVec)*(ws.ν+ws.μ)
+      stilde = ws.s - (1./ws.p.ρVec).*(ws.ν+ws.μ)
 
       # Projection steps
       ws.x = settings.alpha*xtilde + (1-settings.alpha)*ws.x
       stildeRelax = settings.alpha*stilde + (1-settings.alpha)*ws.s
-      ws.s = Projections.projectCompositeCone!(stildeRelax + diagm(1./ws.p.ρVec)*ws.μ,ws.p.K)
+      ws.s = Projections.projectCompositeCone!(stildeRelax + (1./ws.p.ρVec).*ws.μ,ws.p.K)
 
       # update dual variable μ
-      ws.μ = ws.μ + diagm(ws.p.ρVec)*(stildeRelax - ws.s)
+      ws.μ = ws.μ + (ws.p.ρVec).*(stildeRelax - ws.s)
 
       # update cost
       # FIXME: Remove calculation of cost at each step
