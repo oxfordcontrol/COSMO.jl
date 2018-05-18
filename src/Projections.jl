@@ -6,20 +6,17 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
 # HELPER FUNCTIONS
 # -------------------------------------
 
-    function projectCompositeCone!(x,K::OSSDPTypes.Cone)
-      b = 1
-
-      if K.f  > 0
-        e = b + K.f - 1
-        x[b:e] = zeroCone(x[b:e])
-        b = e + 1
+    function projectCompositeCone!(x, K)
+      #if K.f  > 0
+      for i=1:K.f
+        x[i] = 0.
       end
+      #end
 
-      if K.l > 0
-        e = b + K.l - 1
-        x[b:e] = nonNegativeOrthant(x[b:e])
-        b = e +1
-      end
+#      if K.l > 0
+        @. x[K.f+1:end] = max.(x[K.f+1:end], 0.)
+#      end
+      #=
 
       if length(K.q) > 0
         for iii = 1:length(K.q)
@@ -37,13 +34,14 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
           b = e + 1
         end
       end
+      =#
       return x
     end
 
 
     # projection onto nonegative orthant R_+^n
     function nonNegativeOrthant(x)
-      return max.(x,0)
+      return max.(x,0.0)
     end
 
     # projection onto zero cone

@@ -40,7 +40,7 @@ iii = 1
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
 fn = timestamp * "meszarosComparison.jld"
 
-for file in fileNames
+for file in ["QSCTAP2", "QSCTAP2"] # fileNames
   # jump to next file if error happens
   println("----------------------------------------")
   print(file)
@@ -57,12 +57,12 @@ for file in fileNames
     end
 
     Pa, qa, r, Aa, ba, K = Converter.convertProblem(data)
-    # qa = full(qa[:, 1])
+    qa = full(qa[:, 1])
     # ba = full(ba)
     println("  |  nnz: $(nnz(Pa) + nnz(Aa))")
     println("----------------------------------------")
 
-    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=false, checkTermination=20)
+    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=true, checkTermination=100)
     print("Running QOCS:")
     @time res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
     # Profile.clear()

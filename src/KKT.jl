@@ -12,6 +12,7 @@ export factorKKT!
     M = [p.P+settings.sigma*speye(p.n) p.A';p.A -spdiagm((1./p.ρVec))]
     # Do LDLT Factorization: A = LDL^T
     p.F = ldltfact(M)
+    # p.F = M
     return nothing
   end
 

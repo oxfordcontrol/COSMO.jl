@@ -14,13 +14,31 @@ module OSSDP
 using Projections, Scaling, OSSDPTypes, Parameters, Infeasibility, Residuals, Printing, Setup
 export solve, OSSDPSettings, Cone #from the Types module
 
+function admmStep(x, s, μ, ν, x_, s_, ls, k, F, q, b, K, ρ, α, σ, m, n)
+  @. ls[1:n] = σ.*x-q
+  @. ls[n+1:end] = b-s+μ./ρ
+  # k = cg(F, RHS - F*[x_; ν], 10) + [x_; ν]
+  ls = F \ ls
+  #deconstruct solution vector k = [x(n+1);ν(n+1)]
+  @. x_ = k[1:n]
+  @. ν = k[n+1:end]
+  # Projection steps
+  @. x = α*x_ + (1.0-α)*x
+  @. s_ = s - (ν+μ)./ρ
+  @. s_ = α*s_ + (1.0-α)*s
+  @. s = s_ + μ./ρ
+  Projections.projectCompositeCone!(s, K)
+
+  # update dual variable μ
+  @. μ = μ + ρ.*(s_ - s)
+  nothing
+end
 # SOLVER ROUTINE
 # -------------------------------------
   function solve(P,q,A,b,K::OSSDPTypes.Cone,settings::OSSDPTypes.OSSDPSettings)
 
     # create workspace variables
     ws = WorkSpace(Problem(P,q,A,b,K),ScaleMatrices())
-    P = q = A = b = nothing
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     tic()
@@ -43,33 +61,21 @@ export solve, OSSDPSettings, Cone #from the Types module
     stilde = zeros(ws.p.m)
 
     # MAIN ADMM LOOP
-    for iter = 1:1:settings.max_iter
-
-      # assign previous variables, here x(n+1) becomes the new x(n), s(n+1) -> s(n)
-
-      # construct right hand side [-q+σ*x(n); b-s(n)+(1/ρ)μ(n)]
-      RHS = [-ws.p.q+settings.sigma*ws.x; ws.p.b-ws.s+ (1./ws.p.ρVec).*ws.μ]
-
-      #solve linear system M*k = b with help of factorization matrix
-      # FIXME: must be a better way
-      k = ws.p.F\RHS
-
-      #deconstruct solution vector k = [x(n+1);ν(n+1)]
-      xtilde = k[1:ws.p.n]
-      ws.ν = k[ws.p.n+1:end]
-      stilde = ws.s - (1./ws.p.ρVec).*(ws.ν+ws.μ)
-
-      # Projection steps
-      ws.x = settings.alpha*xtilde + (1-settings.alpha)*ws.x
-      stildeRelax = settings.alpha*stilde + (1-settings.alpha)*ws.s
-      ws.s = Projections.projectCompositeCone!(stildeRelax + (1./ws.p.ρVec).*ws.μ,ws.p.K)
-
-      # update dual variable μ
-      ws.μ = ws.μ + (ws.p.ρVec).*(stildeRelax - ws.s)
-
-      # update cost
-      # FIXME: Remove calculation of cost at each step
-      cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+    # F = copy(ws.p.F)
+    x_ = similar(ws.x)
+    s_ = similar(ws.s)
+    const n = ws.p.n
+    const m = ws.p.m
+    ls = zeros(n + m)
+    k = similar()
+    for iter = 1:settings.max_iter
+      admmStep(
+        ws.x, ws.s, ws.μ, ws.ν,
+        x_, s_, ls, k,
+        ws.p.F, ws.p.q, ws.p.b, K, ws.p.ρVec,
+        settings.alpha, settings.sigma,
+        m, n
+      )
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.checkTermination} step
@@ -80,24 +86,12 @@ export solve, OSSDPSettings, Cone #from the Types module
       # δy = yNew - yPrev
 
       # print iteration steps
-      settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
+      if settings.verbose && mod(iter,settings.checkTermination)  == 0
+        # update cost
+        cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+        printIteration(settings,iter,cost,r_prim,r_dual)
+      end
 
-
-      # if isPrimalInfeasible(δy,A,l,u,settings.ϵ_prim_inf)
-      #     status = :primal_infeasible
-      #     cost = Inf
-      #     xNew = NaN*ones(n,1)
-      #     yNew = NaN*ones(m,1)
-      #     break
-      # end
-
-      # if isDualInfeasible(δx,P,A,q,l,u,settings.ϵ_dual_inf)
-      #     status = :dual_infeasible
-      #     cost = -Inf
-      #     xNew = NaN*ones(n,1)
-      #     yNew = NaN*ones(m,1)
-      #     break
-      # end
 
       # check convergence with residuals every {settings.checkIteration} step
       if mod(iter,settings.checkTermination) == 0
