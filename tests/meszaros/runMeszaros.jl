@@ -27,7 +27,7 @@ filter!(x->!in(x,excludeProbs),fileNames)
 =#
 
 # to begin with only look at first nn problems
-fileNames = fileNames[1:end]
+fileNames = fileNames[120:end]
 
 resCost = zeros(length(fileNames),2)
 resIter = zeros(length(fileNames),1)
@@ -40,13 +40,13 @@ iii = 1
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
 fn = timestamp * "meszarosComparison.jld"
 
-for file in fileNames
+for file in ["DTOC3", "DTOC3"] # ["QSCTAP2", "QSCTAP2"] # fileNames
   # jump to next file if error happens
   println("----------------------------------------")
   print(file)
   flush(STDOUT)
-  local data, Pa, Aa, res, tt
-  let data, Pa, Aa, res, tt
+  # local data, Pa, Aa, res, tt
+  # let data, Pa, Aa, res, tt
     data = matread("$(dirPath)"*"$(file).mat")
     r = data["r"]
     costTrue = 0.
@@ -57,36 +57,28 @@ for file in fileNames
     end
 
     Pa, qa, r, Aa, ba, K = Converter.convertProblem(data)
-    # qa = full(qa[:, 1])
-    # ba = full(ba)
+    qa = full(qa[:, 1])
+    ba = full(ba)
     println("  |  nnz: $(nnz(Pa) + nnz(Aa))")
     println("----------------------------------------")
 
-    settings = OSSDPSettings(adaptive_rho=true, max_iter=4000, verbose=false, checkTermination=20)
-    print("Running QOCS:")
-    @time res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
+    settings = OSSDPSettings(adaptive_rho=true, max_iter=5000, verbose=false, checkTermination=100, scaling=10)
+    # print("Running QOCS:")
+    res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
     # Profile.clear()
     # @profile res, tt = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
     # open(Profile.print, "profile.txt", "w")
 
     m_ = OSQP.Model()
-    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=false)
-    print("Running OSQP:")
-    @time resOSQP = OSQP.solve!(m_)
+    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=false, max_iter=5000, check_termination=100, adaptive_rho_interval=1)
+    # print("Running OSQP:")
+    resOSQP = OSQP.solve!(m_)
 
-    # add the constant term to the solution
-    resCost[iii,:] = [res.cost costTrue]
-    resIter[iii,:] = [res.iter]
-    resStatus = Array{Symbol}(length(fileNames),1)
-
+    println("OSQP avg iter time: $(resOSQP.info.run_time/resOSQP.info.iter)")
     println("Diff Obj (QOCS-OSQP)/OSQP: $(100*(res.cost - resOSQP.info.obj_val)/resOSQP.info.obj_val)%")
-    println("Diff Iter (QOCS-OSQP)/OSQP: $(100*(res.iter - resOSQP.info.iter)/resOSQP.info.iter)%")
+    println("QOCS iter: $(res.iter) [ratio QOCS/OSQP $(res.iter/resOSQP.info.iter)]")
 
-    println("$(iii)/$(length(fileNames)) $(file) completed! (status: $(res.status))")
-    # JLD.save(fn, "resCost", resCost, "resIter",resIter, "fileNames", fileNames)
+    println("$(iii)/$(length(fileNames)) $(file) completed! (status QOCS: $(res.status), status OSQP: $(resOSQP.info.status).)")
     iii +=1
-  end
+  # end
 end
-
-
-println(">>> Test Data successfully saved in $(fn).\n")
