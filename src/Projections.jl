@@ -52,7 +52,7 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
     # projection onto zero cone
     function zeroCone!(x, b, e)
       for i=b:e
-        x .= 0
+        x[i] = 0.
       end
       nothing
     end
