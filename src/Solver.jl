@@ -108,9 +108,9 @@ end
         if isPrimalInfeasible(δy,ws,settings)
             status = :primal_infeasible
             cost = Inf
-            ws.x = sparse(NaN*ones(ws.p.n,1))
-            ws.μ = sparse(NaN*ones(ws.p.m,1))
-            ws.ν = sparse(NaN*ones(ws.p.m,1))
+            ws.x .= NaN
+            ws.μ .= NaN
+            ws.ν .= NaN
             warn("Not solved to optimality, status: Infeasible")
             break
         end
@@ -118,9 +118,9 @@ end
         if isDualInfeasible(δx,ws,settings)
             status = :dual_infeasible
             cost = -Inf
-            ws.x = sparse(NaN*ones(ws.p.n,1))
-            ws.μ = sparse(NaN*ones(ws.p.m,1))
-            ws.ν = sparse(NaN*ones(ws.p.m,1))
+            ws.x .= NaN
+            ws.μ .= NaN
+            ws.ν .= NaN
             warn("Not solved to optimality, status: Infeasible")
             break
         end
