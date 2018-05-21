@@ -8,7 +8,8 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
       normPCols = [norm(P[:,i],Inf) for i in 1:size(P,2)]
     normACols = [norm(A[:,i],Inf) for i in 1:size(A,2)]
     normLeftPart = max.(normPCols,normACols)
-    normATCols = [norm(A[i,:],Inf) for i in 1:size(A,1)]
+    AT = A'
+    normATCols = [norm(AT[:, i],Inf) for i in 1:size(A,1)]
 
     return [normLeftPart;normATCols]
   end
