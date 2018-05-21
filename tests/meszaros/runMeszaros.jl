@@ -38,7 +38,7 @@ iii = 1
 
 
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
-fn = timestamp * "meszarosComparison.jld"
+fn = "qocs_vs_osqp_meszaros.jld"
 
 success = 0
 successOSQP = 0
@@ -98,31 +98,8 @@ for file in fileNames # ["QSCTAP2", "QSCTAP2"] # fileNames
     end
     iii +=1
   # end
+  JLD.save(fn, "iters", iters, "itersOSQP", itersOSQP,
+    "times", times, "timesOSQP", timesOSQP,
+    "success", success, "successOSQP", successOSQP,
+    "fileNames", fileNames)
 end
-
-# Discard first one (it includes compilation time)
-iters = iters[2:end]
-itersOSQP = itersOSQP[2:end]
-times = times[2:end]
-timesOSQP = timesOSQP[2:end]
-
-println("QOCS success ratio: $(success/length(fileNames))")
-println("OSQP success ratio: $(successOSQP/length(fileNames))")
-
-# Plotting
-using PyPlot
-figure(1)
-semilogy(2:length(fileNames), [iters itersOSQP], linestyle="None", marker=".")
-title("Number of Iterations in the Maros-Mescaros Dataset")
-legend(["QOCS", "OSQP"])
-xlabel("Problem index (sorted by nnz)")
-ylabel("Iterations")
-savefig("iter.pdf")
-
-figure(2)
-semilogy(2:length(fileNames), 1000*[times timesOSQP], linestyle="None", marker=".")
-title("Average per iteration time for the Maros-Mescaros Dataset")
-legend(["QOCS", "OSQP"])
-xlabel("Problem index (sorted by nnz)")
-ylabel("Time (ms)")
-savefig("timings.pdf")
