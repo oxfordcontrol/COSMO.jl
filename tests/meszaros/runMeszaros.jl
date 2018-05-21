@@ -27,7 +27,7 @@ filter!(x->!in(x,excludeProbs),fileNames)
 =#
 
 # to begin with only look at first nn problems
-fileNames = fileNames[120:end]
+fileNames = fileNames[1:end]
 
 resCost = zeros(length(fileNames),2)
 resIter = zeros(length(fileNames),1)
@@ -40,6 +40,12 @@ iii = 1
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
 fn = timestamp * "meszarosComparison.jld"
 
+success = 0
+successOSQP = 0
+iters = []
+itersOSQP = []
+times = []
+timesOSQP = []
 for file in fileNames # ["QSCTAP2", "QSCTAP2"] # fileNames
   # jump to next file if error happens
   println("----------------------------------------")
@@ -79,6 +85,44 @@ for file in fileNames # ["QSCTAP2", "QSCTAP2"] # fileNames
     println("QOCS iter: $(res.iter) [ratio QOCS/OSQP $(res.iter/resOSQP.info.iter)]")
 
     println("$(iii)/$(length(fileNames)) $(file) completed! (status QOCS: $(res.status), status OSQP: $(resOSQP.info.status).)")
+    append!(iters, res.iter)
+    append!(itersOSQP, resOSQP.info.iter)
+    append!(times, res.solverTime / res.iter)
+    append!(timesOSQP, resOSQP.info.run_time / resOSQP.info.iter)
+
+    if res.status == :solved
+      success += 1
+    end
+    if resOSQP.info.status == :Solved
+      successOSQP += 1
+    end
     iii +=1
   # end
 end
+
+# Discard first one (it includes compilation time)
+iters = iters[2:end]
+itersOSQP = itersOSQP[2:end]
+times = times[2:end]
+timesOSQP = timesOSQP[2:end]
+
+println("QOCS success ratio: $(success/length(fileNames))")
+println("OSQP success ratio: $(successOSQP/length(fileNames))")
+
+# Plotting
+using PyPlot
+figure(1)
+semilogy(2:length(fileNames), [iters itersOSQP], linestyle="None", marker=".")
+title("Number of Iterations in the Maros-Mescaros Dataset")
+legend(["QOCS", "OSQP"])
+xlabel("Problem index (sorted by nnz)")
+ylabel("Iterations")
+savefig("iter.pdf")
+
+figure(2)
+semilogy(2:length(fileNames), 1000*[times timesOSQP], linestyle="None", marker=".")
+title("Average per iteration time for the Maros-Mescaros Dataset")
+legend(["QOCS", "OSQP"])
+xlabel("Problem index (sorted by nnz)")
+ylabel("Time (ms)")
+savefig("timings.pdf")

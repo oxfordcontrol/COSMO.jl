@@ -6,3 +6,4 @@ tests/meszaros/bart_meszaros_data/objVals.jld
 *.jld
 *.txt
 *.json
+*.pdf
