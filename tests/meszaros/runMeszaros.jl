@@ -76,7 +76,7 @@ for file in fileNames # ["QSCTAP2", "QSCTAP2"] # fileNames
     # open(Profile.print, "profile.txt", "w")
 
     m_ = OSQP.Model()
-    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=false, max_iter=5000, check_termination=100, adaptive_rho_interval=1)
+    OSQP.setup!(m_; P=data["P"], q=data["q"][:], A=data["A"], l=data["l"][:], u=data["u"][:], verbose=false, max_iter=5000, check_termination=100, adaptive_rho_interval=40)
     # print("Running OSQP:")
     resOSQP = OSQP.solve!(m_)
 
