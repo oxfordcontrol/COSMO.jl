@@ -95,7 +95,7 @@ end
         # update cost
         cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
         # print iteration steps
-        settings.verbose && settings. printIteration(settings,iter,cost,r_prim,r_dual)
+        settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
 
         if hasConverged(ws,settings,r_prim,r_dual)
           status = :solved
