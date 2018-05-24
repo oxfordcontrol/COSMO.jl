@@ -50,9 +50,9 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
   mutable struct Problem
     P::SparseMatrixCSC{Float64,Int64}
-    q::SparseVector{Float64,Int64}
+    q::Vector{Float64}
     A::SparseMatrixCSC{Float64,Int64}
-    b::SparseVector{Float64,Int64}
+    b::Vector{Float64}
     m::Int64
     n::Int64
     K::OSSDPTypes.Cone
@@ -72,8 +72,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       # Make sure problem data is in sparse format
       typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
       typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
-      typeof(b) != SparseVector{Float64,Int64} && (b = sparse(b))
-      typeof(q) != SparseVector{Float64,Int64} && (q = sparse(q))
+      typeof(b) == SparseVector{Float64,Int64} && (b = full(b))
+      typeof(q) == SparseVector{Float64,Int64} && (q = full(q))
 
       # check that number of cone variables provided in K add up
       isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
@@ -98,15 +98,15 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
   mutable struct WorkSpace
       p::OSSDPTypes.Problem
       sm::OSSDPTypes.ScaleMatrices
-      x::SparseVector{Float64,Int64}
-      s::SparseVector{Float64,Int64}
-      ν::SparseVector{Float64,Int64}
-      μ::SparseVector{Float64,Int64}
+      x::Vector{Float64}
+      s::Vector{Float64}
+      ν::Vector{Float64}
+      μ::Vector{Float64}
       #constructor
     function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
       m = p.m
       n = p.n
-      new(p,sm,spzeros(n),spzeros(m),spzeros(m),spzeros(m))
+      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m))
     end
   end
 
