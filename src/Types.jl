@@ -12,6 +12,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     iter::Int64
     status::Symbol
     solverTime::Float64
+    setupTime::Float64
+    avgIterTime::Float64
     rPrim::Float64
     rDual::Float64
   end
@@ -19,7 +21,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::OSSDPResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\nSetup Time: $(round.(obj.setupTime*1000,2))ms\nAvg Iter Time: $(round.(obj.avgIterTime*1000,2))ms" )
   end
 
 
@@ -50,9 +52,9 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
   mutable struct Problem
     P::SparseMatrixCSC{Float64,Int64}
-    q::SparseVector{Float64,Int64}
+    q::Vector{Float64}
     A::SparseMatrixCSC{Float64,Int64}
-    b::SparseVector{Float64,Int64}
+    b::Vector{Float64}
     m::Int64
     n::Int64
     K::OSSDPTypes.Cone
@@ -72,8 +74,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       # Make sure problem data is in sparse format
       typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
       typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
-      typeof(b) != SparseVector{Float64,Int64} && (b = sparse(b))
-      typeof(q) != SparseVector{Float64,Int64} && (q = sparse(q))
+      typeof(b) == SparseVector{Float64,Int64} && (b = full(b))
+      typeof(q) == SparseVector{Float64,Int64} && (q = full(q))
 
       # check that number of cone variables provided in K add up
       isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
@@ -98,15 +100,15 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
   mutable struct WorkSpace
       p::OSSDPTypes.Problem
       sm::OSSDPTypes.ScaleMatrices
-      x::SparseVector{Float64,Int64}
-      s::SparseVector{Float64,Int64}
-      ν::SparseVector{Float64,Int64}
-      μ::SparseVector{Float64,Int64}
+      x::Vector{Float64}
+      s::Vector{Float64}
+      ν::Vector{Float64}
+      μ::Vector{Float64}
       #constructor
     function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
       m = p.m
       n = p.n
-      new(p,sm,spzeros(n),spzeros(m),spzeros(m),spzeros(m))
+      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m))
     end
   end
 

@@ -1,4 +1,4 @@
-include("../meszaros/ConvertProblem.jl")
+include("../Meszaros_Problems/ConvertProblem.jl")
 
 module Compare
 

@@ -98,9 +98,9 @@ export solve, OSSDPSettings, Cone #from the Types module
         if isPrimalInfeasible(δy,ws,settings)
             status = :primal_infeasible
             cost = Inf
-            ws.x = sparse(NaN*ones(ws.p.n,1))
-            ws.μ = sparse(NaN*ones(ws.p.m,1))
-            ws.ν = sparse(NaN*ones(ws.p.m,1))
+            ws.x .= NaN
+            ws.μ .= NaN
+            ws.ν .= NaN
             warn("Not solved to optimality, status: Infeasible")
             break
         end
@@ -108,9 +108,9 @@ export solve, OSSDPSettings, Cone #from the Types module
         if isDualInfeasible(δx,ws,settings)
             status = :dual_infeasible
             cost = -Inf
-            ws.x = sparse(NaN*ones(ws.p.n,1))
-            ws.μ = sparse(NaN*ones(ws.p.m,1))
-            ws.ν = sparse(NaN*ones(ws.p.m,1))
+            ws.x .= NaN
+            ws.μ .= NaN
+            ws.ν .= NaN
             warn("Not solved to optimality, status: Infeasible")
             break
         end
@@ -130,7 +130,7 @@ export solve, OSSDPSettings, Cone #from the Types module
     end #END-ADMM-MAIN-LOOP
 
     rt = toq()
-
+    avgIterTime = rt/iter
     # calculate primal and dual residuals
     if iter == settings.max_iter
       r_prim,r_dual = calculateResiduals(ws,settings)
@@ -149,7 +149,7 @@ export solve, OSSDPSettings, Cone #from the Types module
 
 
     # create result object
-    result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,rt,r_prim,r_dual);
+    result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,rt,setupTime,avgIterTime,r_prim,r_dual);
 
     return result,ws, δx, δμ;
 
