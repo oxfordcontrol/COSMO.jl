@@ -21,7 +21,7 @@ P = zeros(size(A,2),size(A,2))
 K = OSSDPTypes.Cone(0,10,[],[])
 # define example problem
 settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
-res,ws  = OSSDP.solve(P,c,Aa,ba,K,settings);
+res,ws  = OSSDP.solve(P,c[:],Aa,ba[:],K,settings);
 
 @testset "Linear Problem" begin
   @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-2, norm=(x -> norm(x,Inf)))

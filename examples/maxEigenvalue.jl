@@ -30,7 +30,7 @@ rng = MersenneTwister(7232)
     K = Cone(1,0,[],[r^2])
     P = spzeros(r^2,r^2)
     settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=false,checkTermination=1,scaling = 0,eps_abs = 1e-4,eps_rel=1e-4)
-    res,nothing = OSSDP.solve(P,c,Aa,b,K,settings)
+    res,nothing = OSSDP.solve(P,c[:],Aa,b[:],K,settings)
     println("$(iii)/$(nn) completed! Size of A: $(r), Number of Iterations $(res.iter).")
 
     # true solution
