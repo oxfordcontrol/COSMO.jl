@@ -490,7 +490,6 @@ function scaleSCS!(ws::OSSDPTypes.WorkSpace,set::OSSDPTypes.OSSDPSettings)
 
 
   function reverseScaling!(ws::OSSDPTypes.WorkSpace)
-    # TODO: Double check what really is necessary to scale back (save time)
     D = ws.sm.D
     E = ws.sm.E
     Dinv = ws.sm.Dinv
@@ -501,7 +500,7 @@ function scaleSCS!(ws::OSSDPTypes.WorkSpace,set::OSSDPTypes.OSSDPSettings)
     ws.p.P[:,:] = Dinv*ws.p.P*Dinv./c
     ws.p.q[:] = (Dinv*ws.p.q)./c
     ws.s[:] = Einv*ws.s
-    # FIXME: Double check what has to be multiplied by scaling factors and what not
+
     ws.ν[:] = E*ws.ν./c
     ws.μ[:] = E*ws.μ./c
     return nothing
