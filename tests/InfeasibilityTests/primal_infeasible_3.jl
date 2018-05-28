@@ -27,6 +27,7 @@ rng = MersenneTwister(23123)
     # enforce the t in ||x|| < t of second order cone constraint to be t < 0 --> infeasible
     A[m1+1,:] = zeros(n)
     b[m1+1] = -1
+    b = vec(b)
 
     # create dual feasible problem Px+q+A'y = 0, and y in K*
     P = Helper.generatePosDefMatrix(n,rng)

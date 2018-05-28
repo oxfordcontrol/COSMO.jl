@@ -13,7 +13,7 @@ rng = MersenneTwister(22232)
     n = rand(rng,5:50)
     m = 2*n
     A = sprand(rng,m,n,0.8)*50
-    b = -rand(rng,m,1)*50
+    b = -rand(rng,m)*50
     A = [A; -speye(n)]
     b = [b;zeros(n)]
 

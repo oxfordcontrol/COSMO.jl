@@ -19,11 +19,11 @@ nn = 100
 
   q = randn(n,1)*50
   q[end] = -1
-
+  q = vec(q)
   xtrue = randn(n,1)*50
   strue = rand(m,1)*50
   b = A*xtrue+strue
-
+  b = vec(b)
   ra = 0.
   Kf = 0
   Kl = m

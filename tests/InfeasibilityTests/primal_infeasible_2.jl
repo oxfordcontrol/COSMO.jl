@@ -23,6 +23,7 @@ rng = MersenneTwister(9912)
 
     # add the constraint x >= 0
     b = [b1;zeros(n);b2]
+    b = vec(b)
     A = [A[1:m1,:]; -speye(n);A[m1+1:end,:]]
 
     # create dual feasible problem Px+q+A'y = 0, and y in K*

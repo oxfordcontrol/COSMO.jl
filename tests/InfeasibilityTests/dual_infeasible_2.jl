@@ -37,9 +37,10 @@ sum_detected = 0
     A[m1+1,:] = [-1;zeros(n-1)]
     b = A*xtrue+s
     b[m1+1] = 0
+    b = vec(b)
 
     P = spzeros(n,n)
-    q = [-1;randn(rng,n-1)]
+    q = vec([-1;randn(rng,n-1)])
 
 
     Kf = m1

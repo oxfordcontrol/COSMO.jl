@@ -37,7 +37,7 @@ problems = ["infp1.jld";"infp2.jld";"infd1.jld";"infd2.jld"]
     # primal form
     # -----------------------
     P = zeros(m,m)
-    q = c
+    q = vec(c)
     A = zeros(n^2,m)
     for iii = 1:m
       A[:,iii] = -vec(F[iii+1])
