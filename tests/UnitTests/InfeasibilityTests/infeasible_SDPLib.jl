@@ -11,7 +11,7 @@
 # infd2 primal form --> not detected, dual form --> not detected (both forms dual inf according to MOSEK)
 
 # workspace()
-# include("../../src/Solver.jl")
+# include("../../../src/Solver.jl")
 # using JLD
 # using Base.Test
 # using OSSDP

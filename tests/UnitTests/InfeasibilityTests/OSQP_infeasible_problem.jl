@@ -1,7 +1,7 @@
 # Test routine to test the infeasibility example from the OSQP Paper
 
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 
 using OSSDP, Base.Test
 maxIter = 3000

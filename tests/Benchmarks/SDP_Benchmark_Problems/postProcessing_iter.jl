@@ -1,7 +1,7 @@
 # File to determine in how many cases a scaled solver was better than a unscaled solver (only for cases with adaptive rho)
 
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("../solverComparison/Compare.jl")
  include("./LatexExporter.jl")
 

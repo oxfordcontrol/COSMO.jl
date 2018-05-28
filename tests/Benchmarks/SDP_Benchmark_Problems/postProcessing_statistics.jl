@@ -1,5 +1,5 @@
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("../solverComparison/Compare.jl")
  include("./LatexExporter.jl")
 

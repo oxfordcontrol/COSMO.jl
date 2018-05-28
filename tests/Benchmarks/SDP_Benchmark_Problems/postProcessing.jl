@@ -1,5 +1,5 @@
 # workspace()
-# include("../../src/Solver.jl")
+# include("../../../src/Solver.jl")
 # include("../solverComparison/Compare.jl")
 
 # using PyPlot, JLD, Compare, OSSDPTypes, Base.Test

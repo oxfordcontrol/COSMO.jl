@@ -1,7 +1,7 @@
 
 
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("ConvertProblem.jl")
 using Base.Test, OSSDP, JLD, MAT, OSQP
 

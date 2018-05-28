@@ -2,7 +2,7 @@
 # uses the Compare Module
 
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("../solverComparison/Compare.jl")
 
 using OSSDP, Base.Test, Compare, JLD

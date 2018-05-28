@@ -1,5 +1,5 @@
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("./Compare.jl")
 
 using OSQP, OSSDP, Compare,JLD
