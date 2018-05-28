@@ -140,17 +140,18 @@ export isPrimalInfeasible, isDualInfeasible
 
     if norm_δx > settings.eps_dual_inf
       # test condition <q,δx> < 0
-      (ws.p.q'*δx)[1]/(norm_δx*ws.sm.c) < -settings.eps_dual_inf
-      # test condition Pδx == 0
-      P_δx = ws.p.P*δx
-      settings.scaling != 0 && (P_δx = ws.sm.Dinv*P_δx)
-      if norm(P_δx,Inf)/(norm_δx*ws.sm.c) <= settings.eps_dual_inf
+      if (ws.p.q'*δx)[1]/(norm_δx*ws.sm.c) < -settings.eps_dual_inf
+        # test condition Pδx == 0
+        P_δx = ws.p.P*δx
+        settings.scaling != 0 && (P_δx = ws.sm.Dinv*P_δx)
+        if norm(P_δx,Inf)/(norm_δx*ws.sm.c) <= settings.eps_dual_inf
 
-        # test condition Ax in Ktilde_b∞
-        A_δx = ws.p.A*δx
-        settings.scaling != 0 && (A_δx = ws.sm.Einv*A_δx)
-          if inRecessionCone(A_δx/norm_δx,ws,settings)
-            return true
+          # test condition Ax in Ktilde_b∞
+          A_δx = ws.p.A*δx
+          settings.scaling != 0 && (A_δx = ws.sm.Einv*A_δx)
+            if inRecessionCone(A_δx/norm_δx,ws,settings)
+              return true
+            end
           end
       end
     end
