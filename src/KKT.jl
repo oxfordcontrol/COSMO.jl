@@ -11,7 +11,11 @@ export factorKKT!
     # KKT matrix M
     M = [p.P+settings.sigma*speye(p.n) p.A';p.A -spdiagm((1./p.ρVec))]
     # Do LDLT Factorization: A = LDL^T
-    p.F = ldltfact(M)
+    try
+      p.F = ldltfact(M)
+    catch
+      warn("Problems performing the LDLT facorization. Matrix has one or more zero pivots. Reusing previous step matrix.")
+    end
     return nothing
   end
 
