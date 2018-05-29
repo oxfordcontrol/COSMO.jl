@@ -102,6 +102,12 @@ end
       if mod(iter,settings.checkTermination) == 0
         # update cost
         cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+
+        if abs(cost) > 1e20
+          status = :Unsolved
+          break
+        end
+
         # print iteration steps
         settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
 
