@@ -1,7 +1,7 @@
 # Test routine to compare scaling for a number of QP Lasso problems (partially badly scaled)
 workspace()
 include("../../../src/Solver.jl")
-include("../solverComparison/Compare.jl")
+include("../../Benchmarks/solverComparison/Compare.jl")
 
 using OSQP, OSSDP, Base.Test, Compare, JuMP, Mosek
 
