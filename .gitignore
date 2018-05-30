@@ -1,0 +1,10 @@
+*.mat
+*.SIF
+*.jld
+*.txt
+*.json
+*.pdf
+*.png
+*.m
+*.dylib
+*.o

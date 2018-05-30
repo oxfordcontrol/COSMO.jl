@@ -1,5 +1,5 @@
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("../meszaros/ConvertProblem.jl")
 
 include("./Compare.jl")

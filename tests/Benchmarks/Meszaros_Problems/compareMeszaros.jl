@@ -1,6 +1,6 @@
 # Test routine to compare scaling for a number of QP Lasso problems (partially badly scaled)
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("ConvertProblem.jl")
 
 using OSQP, OSSDP, Base.Test, JLD,MAT

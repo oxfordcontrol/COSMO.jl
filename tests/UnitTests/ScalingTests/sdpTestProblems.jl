@@ -1,6 +1,6 @@
 # Test routine to compare performance for a number of SDP problems (max Eigenvalue problems)
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 include("../solverComparison/Compare.jl")
 
 using OSQP, OSSDP, Base.Test, Compare

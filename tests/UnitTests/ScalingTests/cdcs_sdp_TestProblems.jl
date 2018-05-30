@@ -1,6 +1,6 @@
   # Test routine to compare scaling for a number of SDP problems (partially badly scaled)
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 
 using OSSDP, Base.Test
 

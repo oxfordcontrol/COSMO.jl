@@ -1,5 +1,5 @@
 workspace()
-include("../../src/Solver.jl")
+include("../../../src/Solver.jl")
 using JLD
 using Base.Test
 using OSSDP
