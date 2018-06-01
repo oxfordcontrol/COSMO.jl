@@ -8,3 +8,8 @@
 *.m
 *.dylib
 *.o
+*.sublime-*
+python/
+tests/latex
+tests/resultDataFiles
+tests/sdplib/
