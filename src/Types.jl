@@ -145,7 +145,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       alpha=1.6,
       eps_abs=1e-4,
       eps_rel=1e-4,
-      eps_prim_inf=1e-4,
+      eps_prim_inf=1e-6,
       eps_dual_inf=1e-4,
       max_iter=2500,
       verbose=false,

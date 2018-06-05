@@ -14,7 +14,7 @@ export isPrimalInfeasible, isDualInfeasible
     if K.l > 0
       e = b + K.l - 1
       δy_sub = δy[b:e]
-      inPolarCone = (minimum(δy_sub) >= 0)
+      inPolarCone = (minimum(δy_sub) >= -settings.eps_prim_inf)
       b = e+1
     end
 
@@ -23,7 +23,7 @@ export isPrimalInfeasible, isDualInfeasible
         for iii = 1:length(K.q)
           e = b + K.q[iii] - 1
           δy_sub = δy[b:e]
-          inPolarCone = (norm(δy_sub[2:end],2) <= δy_sub[1] )
+          inPolarCone = (norm(δy_sub[2:end],2) - δy_sub[1] <= settings.eps_prim_inf  )
           !inPolarCone && break
           b = e + 1
         end
@@ -39,6 +39,7 @@ export isPrimalInfeasible, isDualInfeasible
           # FIXME: Here you might get complex eigenvalues, which causes problems with minimum(). Does it make sense that you can get complex eigenvalues in this problem type?
           # Current Fix: Just consider the real part
           inPolarCone = ( minimum(real(eig(reshape(full(δy_sub),cDim,cDim))[1])) >= -settings.eps_prim_inf)
+
           !inPolarCone && break
           b = e + 1
       end
@@ -114,14 +115,14 @@ export isPrimalInfeasible, isDualInfeasible
 
     # make sure norm is unequal to zero before continuing
     if norm_δy > settings.eps_prim_inf
-
       # test condition A'δy = 0
       A_δy = ws.p.A'*δy
       settings.scaling != 0 && (A_δy = ws.sm.Dinv*A_δy)
 
       if norm(A_δy,Inf)/norm_δy <= settings.eps_prim_inf
         # test condition S_K(δy) < 0
-        if supportFunction(δy/norm_δy,ws,settings) <= -settings.eps_prim_inf
+        sF = supportFunction(δy/norm_δy,ws,settings)
+        if sF <= settings.eps_prim_inf
            return true
         end
       end
