@@ -13,7 +13,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     status::Symbol
     solverTime::Float64
     setupTime::Float64
-    avgIterTime::Float64
+    iterTime::Float64
     rPrim::Float64
     rDual::Float64
   end
@@ -21,7 +21,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::OSSDPResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\nSetup Time: $(round.(obj.setupTime*1000,2))ms\nAvg Iter Time: $(round.(obj.avgIterTime*1000,2))ms" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\nSetup Time: $(round.(obj.setupTime*1000,2))ms\nAvg Iter Time: $(round.((obj.iterTime/obj.iter)*1000,2))ms" )
   end
 
 

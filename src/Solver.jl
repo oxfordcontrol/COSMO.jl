@@ -43,6 +43,7 @@ end
 # SOLVER ROUTINE
 # -------------------------------------
   function solve(P,q,A,b,K::OSSDPTypes.Cone,settings::OSSDPTypes.OSSDPSettings)
+    runTime_start = time()
 
     # create workspace variables
     ws = WorkSpace(Problem(P,q,A,b,K),ScaleMatrices())
@@ -64,9 +65,7 @@ end
     # print information about settings to the screen
     settings.verbose && printHeader(ws,settings,setupTime)
 
-    tic()
-    startTime = time()
-
+    timeLimit_start = time()
     #preallocate arrays
     δx = similar(ws.x)
     δy =  similar(ws.μ)
@@ -76,6 +75,8 @@ end
     const m = ws.p.m
     ls = zeros(n + m)
     sol = zeros(n + m)
+
+    iter_start = time()
 
     for iter = 1:settings.max_iter
 
@@ -146,15 +147,14 @@ end
         adaptRhoVec!(ws,settings)
       end
 
-      if settings.timelimit !=0 &&  (time() - startTime) > settings.timelimit
+      if settings.timelimit !=0 &&  (time() - timeLimit_start) > settings.timelimit
         status = :TimeLimit
         break
       end
 
     end #END-ADMM-MAIN-LOOP
 
-    rt = toq()
-    avgIterTime = rt/iter
+    iterTime = (time()-iter_start)
 
     # calculate primal and dual residuals
     if iter == settings.max_iter
@@ -169,12 +169,15 @@ end
       cost =  (1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1] #sm.cinv * not necessary anymore since reverseScaling
     end
 
+
+    runTime = time() - runTime_start
+
     # print solution to screen
     settings.verbose && printResult(status,iter,cost,rt)
 
 
     # create result object
-    result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,rt,setupTime,avgIterTime,r_prim,r_dual);
+    result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,runTime,setupTime,iterTime,r_prim,r_dual);
 
     return result,ws, δx, -δy;
 

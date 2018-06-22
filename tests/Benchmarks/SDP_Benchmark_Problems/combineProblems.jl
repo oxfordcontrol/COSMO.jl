@@ -58,6 +58,8 @@ for iii=1:length(results)
     resTarget.iter[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.iter
     resTarget.objVal[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.objVal
     resTarget.runTime[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.runTime
+    resTarget.iterTime[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.iterTime
+    resTarget.setupTime[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.setupTime
     resTarget.status[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.status
     resTarget.problemDim[resTarget.ind+1:resTarget.ind+resSource.ind,:] = resSource.problemDim
     resTarget.problemName[resTarget.ind+1:resTarget.ind+resSource.ind] = resSource.problemName
@@ -66,6 +68,6 @@ for iii=1:length(results)
 
 
 end
-fn = dir * "/Combined_without_MIQO_Lovasz.jld"
+fn = dir * "/Combined.jld"
 JLD.save(fn, "resData", resCombined)
 

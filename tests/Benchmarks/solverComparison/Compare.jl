@@ -13,6 +13,8 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     objVal::Array{Float64,1}
     x::Array{Array{Float64}}
     runTime::Array{Float64,1}
+    iterTime::Array{Float64,1}
+    setupTime::Array{Float64,1}
     numProblems::Int64
     problemDim::Array{Int64,2}
     problemName::Array{String,1}
@@ -23,7 +25,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     ind::Int64
     scalingON::Bool
     adaptionON::Bool
-    objTrue::Float64
+    objTrue::Array{Float64,1}
     xTrue::Array{Array{Float64}}
 
      #constructor
@@ -34,11 +36,13 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     objVal = zeros(numProblems)
     x = Array{Array{Float64}}(numProblems)
     runTime = zeros(numProblems)
+    iterTime = zeros(numProblems)
+    setupTime = zeros(numProblems)
     problemDim = zeros(Int64,numProblems,3)
     problemName = Array{String}(numProblems)
     problemName[1:numProblems] = "-"
     ind = 0
-    objTrue = 0.
+    objTrue =zeros(Float64,numProblems)
     xTrue = Array{Array{Float64}}(numProblems)
 
     if solverSettings == 0.
@@ -46,7 +50,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     else
         settings = [solverSettings.rho;solverSettings.sigma;solverSettings.alpha;solverSettings.scaling;solverSettings.eps_abs;solverSettings.eps_rel]
     end
-    new(iter,status,objVal,x,runTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON,adaptionON,objTrue,xTrue)
+    new(iter,status,objVal,x,runTime,iterTime,setupTime,numProblems,problemDim,problemName,problemType,solverName,settings,timeStamp,ind,scalingON,adaptionON,objTrue,xTrue)
     end
   end
 
@@ -63,6 +67,12 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
     meanIterSolved::Float64
     numSolved::Int64
     percSolved::Float64
+    meanErr::Float64
+    meanRunTime::Float64
+    meanIterTime::Float64
+    meanAvgIterTime::Float64
+    meanSetupTime::Float64
+    meanNZ::Float64
   end
 
   mutable struct ProblemMetrics
@@ -140,6 +150,8 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
         resObj.objVal[resObj.ind] = resArr[i].cost + r
         resObj.x[resObj.ind] = resArr[i].x[1:n]
         resObj.runTime[resObj.ind] = resArr[i].solverTime
+        resObj.setupTime[resObj.ind] = resArr[i].setupTime
+        resObj.iterTime[resObj.ind] = resArr[i].iterTime
         resObj.status[resObj.ind] = resArr[i].status
       elseif contains(resObj.solverName,"OSQP")
         resObj.iter[resObj.ind] = resArr[i].info.iter

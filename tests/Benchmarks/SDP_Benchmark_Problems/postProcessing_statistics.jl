@@ -40,7 +40,13 @@ for iii=1:length(results)
     numSolved = length(solvedInd)
     percSolved = numSolved/s.ind
 
-    sm = Compare.SolverMetrics(s.solverName,s.adaptionON,s.scalingON,meanIterAll,meanIterSolved,numSolved,percSolved)
+    meanErr = mean(abs.(s.objVal - s.objTrue)[solvedInd])
+    meanRunTime = mean(s.runTime)
+    meanIterTime = mean(s.iterTime)
+    meanAvgIterTime = mean((s.iterTime./s.iter))*1000
+    meanSetupTime = mean(s.setupTime)
+    meanNZ = mean(s.problemDim[:,3])
+    sm = Compare.SolverMetrics(s.solverName,s.adaptionON,s.scalingON,meanIterAll,meanIterSolved,numSolved,percSolved,meanErr,meanRunTime,meanIterTime,meanAvgIterTime,meanSetupTime,meanNZ)
     pm.solverResults[k] = sm
     k+=1
   end
