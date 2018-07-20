@@ -1,7 +1,7 @@
 # Quadratic Objective Conic Solver (QOCS) - Pure Julia Implementation
 This is a pure Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
 ```
-min_x 1/2 x'Px + q'x 
+min 1/2 x'Px + q'x 
 s.t. Ax + s = b, s in K
 ```
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex cone K is a composition of the zero cone, the non-negative orthant, a set of second order cones, and a set of positive semidefinite cones. The dimension of the cones have to be specified using the `Cone` type (`K.f::Int`: number of zero cone variables, `K.l::Int`: number of nonnegative components, `K.s::Array{Int}`: number of variables in each second-order cone, `K.q::Array{Int}`: number of variables in each psd cone).
