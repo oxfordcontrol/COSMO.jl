@@ -1,4 +1,4 @@
-# Quadratic Objective Conic Solver (QOCS) - Pure Julia Implementation
+![QOCS Logo](https://github.com/migarstka/QOCS_assets/blob/master/QOCS_logo.png)
 This is a pure Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
 ```
 min 1/2 x'Px + q'x 
