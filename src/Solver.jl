@@ -126,7 +126,6 @@ end
             ws.x .= NaN
             ws.μ .= NaN
             ws.ν .= NaN
-            warn("Not solved to optimality, status: Infeasible")
             break
         end
 
@@ -136,7 +135,6 @@ end
             ws.x .= NaN
             ws.μ .= NaN
             ws.ν .= NaN
-            warn("Not solved to optimality, status: Infeasible")
             break
         end
       end
