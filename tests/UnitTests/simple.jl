@@ -74,7 +74,7 @@ end
 
     @testset "update_check_termination" begin
         p = simpleQP()
-        settings = QOCS.Settings(checkTermination=100000)
+        settings = QOCS.Settings(check_termination=100000)
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :UserLimit
@@ -91,7 +91,7 @@ end
 
     @testset "timelimit" begin
         p = simpleQP()
-        settings = QOCS.Settings(timelimit=1, checkTermination=100000000,max_iter=10000000)
+        settings = QOCS.Settings(timelimit=1, check_termination=100000000,max_iter=10000000)
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :TimeLimit

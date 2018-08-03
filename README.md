@@ -36,7 +36,7 @@ P = zeros(size(A,2),size(A,2))
 K = QOCS.Cone(0,10,[],[])
 
 # adjust solver settings
-settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
+settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
 
 # solve problem
 res,ws  = QOCS.solve(P,c,Aa,ba,K,settings);
@@ -64,10 +64,11 @@ eps_prim_inf | Primal infeasibility tolerance | 1e-4
 eps_dual_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
-checkTermination | Check termination interval | 1
+check_termination | Check termination interval | 40
+check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
-adaptive_rho | Automatic adaptation of step size parameter | false
-adaptive_rho_interval | Number of iterations after which rho is adapted | 40
+adaptive_rho | Automatic adaptation of step size parameter | true
+timelimit | set solver time limit in s | 0
 
 For more low-level settings, see the OSSDPSettings type definition in `/src/Types.jl`.
 

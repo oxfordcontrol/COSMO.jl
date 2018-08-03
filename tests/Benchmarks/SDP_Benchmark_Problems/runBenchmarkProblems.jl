@@ -81,15 +81,15 @@ for pType in problemTypes
 
     pDims = [size(A,1);size(A,2);nnz(A)]
     # update the true value for the QOCP solver
-    # setUnNonAdaptive =   OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 0 ,scaleFunc=1,adaptive_rho=false)
-    # setMeanNonAdaptive = OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 10,scaleFunc=2,adaptive_rho=false)
-    # setGeoNonAdaptive =  OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 10,scaleFunc=3,adaptive_rho=false)
-    # setSymNonAdaptive =  OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 10,scaleFunc=4,adaptive_rho=false)
+    # setUnNonAdaptive =   OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 0 ,scaleFunc=1,adaptive_rho=false)
+    # setMeanNonAdaptive = OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 10,scaleFunc=2,adaptive_rho=false)
+    # setGeoNonAdaptive =  OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 10,scaleFunc=3,adaptive_rho=false)
+    # setSymNonAdaptive =  OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 10,scaleFunc=4,adaptive_rho=false)
 
-    setUnAdaptive =   OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 0 ,scaleFunc=1,adaptive_rho=true)
-    setMeanAdaptive = OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 10,scaleFunc=2,adaptive_rho=true)
-    setGeoAdaptive =  OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 10,scaleFunc=3,adaptive_rho=true)
-    setSymAdaptive =  OSSDPSettings(max_iter=maxIter,checkTermination=1,scaling = 10,scaleFunc=4,adaptive_rho=true)
+    setUnAdaptive =   OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 0 ,scaleFunc=1,adaptive_rho=true)
+    setMeanAdaptive = OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 10,scaleFunc=2,adaptive_rho=true)
+    setGeoAdaptive =  OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 10,scaleFunc=3,adaptive_rho=true)
+    setSymAdaptive =  OSSDPSettings(max_iter=maxIter,check_termination=1,scaling = 10,scaleFunc=4,adaptive_rho=true)
 
     # define cone membership
     K = Cone(Kf,Kl,Kq,Ks)

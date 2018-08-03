@@ -20,7 +20,7 @@ P = zeros(size(A,2),size(A,2))
 # define cone
 K = QOCS.Cone(0,10,[],[])
 # define example problem
-settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
+settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
 res,ws  = QOCS.solve(P,c[:],Aa,ba[:],K,settings);
 
 @testset "Linear Problem" begin

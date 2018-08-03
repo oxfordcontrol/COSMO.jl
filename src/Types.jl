@@ -153,13 +153,11 @@ end
     eps_dual_inf::Float64
     max_iter::Int64
     verbose::Bool
-    checkTermination::Int64
-    checkInfeasibility::Int64
+    check_termination::Int64
+    check_infeasibility::Int64
     scaling::Int64
     MIN_SCALING::Float64
     MAX_SCALING::Float64
-    avgFunc::Function
-    scaleFunc::Int64
     adaptive_rho::Bool
     adaptive_rho_interval::Int64
     adaptive_rho_tolerance::Float64
@@ -167,8 +165,8 @@ end
     RHO_MAX::Float64
     RHO_TOL::Float64
     timelimit::Int64
-    objTrue::Float64
-    objTrueTOL::Float64
+    obj_true::Float64
+    obj_true_tol::Float64
     #constructor
     function Settings(;
       rho=0.1,
@@ -180,13 +178,11 @@ end
       eps_dual_inf=1e-4,
       max_iter=2500,
       verbose=false,
-      checkTermination=40,
-      checkInfeasibility=40,
+      check_termination=40,
+      check_infeasibility=40,
       scaling=10,
       MIN_SCALING = 1e-4,
       MAX_SCALING = 1e4,
-      avgFunc = mean,
-      scaleFunc = 2,
       adaptive_rho = true,
       adaptive_rho_interval = 40,
       adaptive_rho_tolerance = 5,
@@ -194,12 +190,12 @@ end
       RHO_MAX = 1e6,
       RHO_TOL = 1e-4,
       timelimit = 0,
-      objTrue = NaN,
-      objTrueTOL = 1e-3
+      obj_true = NaN,
+      obj_true_tol = 1e-3
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
-          checkTermination,checkInfeasibility,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,objTrue,objTrueTOL)
+          check_termination,check_infeasibility,scaling,MIN_SCALING,MAX_SCALING,adaptive_rho,
+          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,obj_true,obj_true_tol)
     end
   end
 

@@ -34,13 +34,13 @@ module Residuals
     ϵ_dual = settings.eps_abs + settings.eps_rel * maxNormDual
 
     # if an optimal objective value was specified for the problem check if current solution is within specified accuracy
-    objTrueFLAG = true
-    if !isnan(settings.objTrue)
+    obj_trueFLAG = true
+    if !isnan(settings.obj_true)
       currentCost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
-      objTrueFLAG = abs(settings.objTrue-currentCost) <= settings.objTrueTOL
+      obj_trueFLAG = abs(settings.obj_true-currentCost) <= settings.obj_true_tol
     end
 
-    return ( r_prim < ϵ_prim  && r_dual < ϵ_dual && objTrueFLAG)
+    return ( r_prim < ϵ_prim  && r_dual < ϵ_dual && obj_trueFLAG)
   end
 
 end #MODULE

@@ -32,7 +32,7 @@ rng = MersenneTwister(1313)
 
 
      K = QOCS.Cone(Kf,Kl,Kq,Ks)
-     settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,checkTermination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+     settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,check_termination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
 
      res1,nothing = QOCS.solve(P,q,A,b,K,settings);
 

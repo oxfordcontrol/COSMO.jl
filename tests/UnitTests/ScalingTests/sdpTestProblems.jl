@@ -34,10 +34,10 @@ for iii =1:1:nn
   K = Cone(0,0,[],[nA^2])
   pDims = [size(Aa,1);size(Aa,2);size(Aa,1)*size(Aa,2)]
 
-  setOFF = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=false)
-  setON = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=false)
-  setOFFAd = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
-  setONAd = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
+  setOFF = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,check_termination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=false)
+  setON = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,check_termination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=false)
+  setOFFAd = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,check_termination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
+  setONAd = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,check_termination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-3,adaptive_rho=true)
   # Solve with OSSDP
   resOSSDP_unscaled,nothing = OSSDP.solve(P,q,Aa,ba,K,setOFF);
   print("\n.")

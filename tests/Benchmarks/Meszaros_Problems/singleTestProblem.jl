@@ -26,7 +26,7 @@ n = size(Q,1)
 
 Pa, qa, Aa, ba, K, typ = Converter.convertProblem(data)
 println("Problem type: $(typ == 1 ? "Ax=b" : "l<=Ax<=u")")
-settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,scaling = 10,checkTermination = 1,eps_abs = 1e-3,eps_rel=1e-4,timelimit=10)
+settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=2500,verbose=true,scaling = 10,check_termination = 1,eps_abs = 1e-3,eps_rel=1e-4,timelimit=10)
 res,ws = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
 
 # # solve with OSQP

@@ -118,7 +118,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     if length(K.q) > 0
       for iii = 1:length(K.q)
         numConeElem = K.q[iii]
-        sTemp[ix+1:ix+numConeElem] = set.avgFunc(sTemp[ix+1:ix+numConeElem])
+        sTemp[ix+1:ix+numConeElem] = mean(sTemp[ix+1:ix+numConeElem])
         ix += numConeElem
       end
     end
@@ -127,7 +127,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     if length(K.s) > 0
       for iii = 1:length(K.s)
         numConeElem = K.s[iii]
-        sTemp[ix+1:ix+numConeElem] = set.avgFunc(sTemp[ix+1:ix+numConeElem])
+        sTemp[ix+1:ix+numConeElem] = mean(sTemp[ix+1:ix+numConeElem])
         ix += numConeElem
       end
     end

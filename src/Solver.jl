@@ -103,12 +103,12 @@ end
       @. δy = -ws.μ + δy
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
-      # compute them every {settings.checkTermination} step
-      mod(iter,settings.checkTermination)  == 0 && ((r_prim,r_dual) = calculateResiduals(ws,settings))
+      # compute them every {settings.check_termination} step
+      mod(iter,settings.check_termination)  == 0 && ((r_prim,r_dual) = calculateResiduals(ws,settings))
 
 
       # check convergence with residuals every {settings.checkIteration} steps
-      if mod(iter,settings.checkTermination) == 0
+      if mod(iter,settings.check_termination) == 0
         # update cost
         cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
 
@@ -127,7 +127,7 @@ end
       end
 
       # check infeasibility conditions every {settings.checkInfeasibility} steps
-      if mod(iter,settings.checkInfeasibility) == 0
+      if mod(iter,settings.check_infeasibility) == 0
         if isPrimalInfeasible(δy,ws,settings)
             status = :primal_infeasible
             cost = Inf

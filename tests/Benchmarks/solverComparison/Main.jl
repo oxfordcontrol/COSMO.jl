@@ -11,8 +11,8 @@ RUN_SDP_TEST = true
 RUN_SVM_TEST = true
 SAVE_ALWAYS = true
 
-setOFF = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 0,checkTermination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
-setON = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 10,checkTermination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
+setOFF = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 0,check_termination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
+setON = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 10,check_termination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
 
 
 if RUN_MESZAROS_TEST

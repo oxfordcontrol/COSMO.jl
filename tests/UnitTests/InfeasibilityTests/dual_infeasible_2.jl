@@ -49,7 +49,7 @@ sum_detected = 0
     Ks = [r^2]
 
    K = QOCS.Cone(Kf,Kl,Kq,Ks)
-   setOFF = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,checkTermination=1,scaling = 10,eps_prim_inf=1e-4,eps_dual_inf=1e-4,adaptive_rho=true)
+   setOFF = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,check_termination=1,scaling = 10,eps_prim_inf=1e-4,eps_dual_inf=1e-4,adaptive_rho=true)
    res,ws,δx,δμ = QOCS.solve(P,q,A,b,K,setOFF);
 
     @test res.status == :dual_infeasible

@@ -36,9 +36,9 @@ for iii =1:1:nn
   K = Cone(0,0,[],[n])
 
   # Solve with OSSDP
-  settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=false,checkTermination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-4)
+  settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=false,check_termination=1,scaling = 0,eps_abs = 1e-3,eps_rel=1e-4)
   resOSSDP_unscaled,nothing = OSSDP.solve(P,c,A,b,K,settings)
-  settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-4)
+  settings = OSSDPSettings(rho=1.0,sigma=1.0,alpha=1.6,max_iter=2500,verbose=false,check_termination=1,scaling = 10,eps_abs = 1e-3,eps_rel=1e-4)
   resOSSDP_scaled,nothing = OSSDP.solve(P,c,A,b,K,settings)
 
   resCost[iii,:] = [resOSSDP_unscaled.cost resOSSDP_scaled.cost]

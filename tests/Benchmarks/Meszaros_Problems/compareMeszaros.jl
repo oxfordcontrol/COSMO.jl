@@ -62,10 +62,10 @@ for file in fileNames
     n = size(P,1)
 
     Pa, qa, Aa, ba, K = Converter.convertProblem(data)
-    settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 0,checkTermination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
+    settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 0,check_termination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
     resOSSDP_unscaled,nothing = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
     print(".")
-    settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 10,checkTermination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
+    settings = OSSDPSettings(rho=100.,sigma=1.0,alpha=1.6,max_iter=1500,verbose=false,scaling = 10,check_termination = 1,eps_abs = 1e-3,eps_rel=1e-3,timelimit=60)
     resOSSDP_scaled,nothing = OSSDP.solve(Pa,qa,Aa,ba,K,settings)
     print(".")
 

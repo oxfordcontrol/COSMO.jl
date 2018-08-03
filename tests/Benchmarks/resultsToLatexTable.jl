@@ -41,7 +41,7 @@ open("./latex/table.tex", "w") do file
   write(file, "\\bottomrule\n\\caption{$(caption1)}\n\\label{table:1}\n\\end{longtable}")
   # print out the solver parameters as well
   write(file, "\n \n \\begin{table}[h]\n\\begin{tabular}{l l |l l |l l}\n")
-  write(file, " \$\\sigma\$ & $(set.sigma) & \$\\rho\$ & $(set.rho) & \$\\alpha\$ & $(set.alpha) \\\\ \n\\hline\n \$\\epsilon_{abs}\$ & $(set.eps_abs) & \$\\epsilon_{rel}\$ & $(set.eps_rel) & scale & $(set.scaling) \\\\ \n\\hline\n checkTerm & $(set.checkTermination) &  & \\\\\n\\hline\n")
+  write(file, " \$\\sigma\$ & $(set.sigma) & \$\\rho\$ & $(set.rho) & \$\\alpha\$ & $(set.alpha) \\\\ \n\\hline\n \$\\epsilon_{abs}\$ & $(set.eps_abs) & \$\\epsilon_{rel}\$ & $(set.eps_rel) & scale & $(set.scaling) \\\\ \n\\hline\n checkTerm & $(set.check_termination) &  & \\\\\n\\hline\n")
   write(file, "\n\\end{tabular}\n\\centering\n\\caption{Parameters used in OSSDP Solver}\n\\end{table}")
 
 
