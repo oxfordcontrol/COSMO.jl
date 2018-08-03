@@ -1,7 +1,7 @@
 # Test file to check the projections
 # workspace()
 # include("../src/Solver.jl")
-using Base.Test, Helper
+using Base.Test, QOCS.Helper, QOCS.Projections
 
 rng = MersenneTwister(1234)
 

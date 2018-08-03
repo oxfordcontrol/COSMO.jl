@@ -1,6 +1,6 @@
 # QP Lasso testproblem
 
-using OSSDP, Base.Test
+using QOCS, Base.Test
 
 
 
@@ -23,11 +23,11 @@ Aa = [-A zeros(m,n) eye(m,m);
 ba = [-b;zeros(2*n)]
 P = 2*diagm([zeros(2*n);ones(m)]) # times two to cancel the 1/2 in the cost function
 q = [zeros(n);λ*ones(n);zeros(m)]
-K = OSSDPTypes.Cone(m,2*n,[],[])
+K = QOCS.Cone(m,2*n,[],[])
 
-settings = OSSDPTypes.OSSDPSettings()
+settings = QOCS.Settings()
 
-res,nothing = OSSDP.solve(P,q,Aa,ba,K,settings);
+res,nothing = QOCS.solve(P,q,Aa,ba,K,settings);
 
 
 @testset "QP - Lasso" begin

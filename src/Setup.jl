@@ -1,14 +1,12 @@
 module Setup
-  using OSSDPTypes, Scaling, KKT, Parameters
+  using QOCS,..Scaling, ..KKT, ..Parameters
   export setup!
 
-  function setup!(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings)
+  function setup!(ws::QOCS.WorkSpace,settings::QOCS.Settings)
     # scale problem data
     if settings.scaling != 0
-      (settings.scaleFunc == 1) && scaleSCS!(ws,settings)
-      (settings.scaleFunc == 2) && scaleRuiz!(ws,settings)
-      (settings.scaleFunc == 3) && scaleRuizGeometric!(ws,settings)
-      (settings.scaleFunc == 4) && scaleSymmetric!(ws,settings)
+      scaleRuiz!(ws,settings)
+
     end
 
     setRhoVec!(ws.p,settings)

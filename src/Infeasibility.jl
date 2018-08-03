@@ -1,5 +1,5 @@
 module Infeasibility
-using OSSDPTypes
+using QOCS
 export isPrimalInfeasible, isDualInfeasible
 
   # sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar

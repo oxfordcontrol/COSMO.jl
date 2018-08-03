@@ -1,10 +1,10 @@
 module Parameters
-using OSSDPTypes, Residuals, KKT
+using QOCS,..Residuals, ..KKT
 export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
 
 # set initial values of rhoVec
-  function setRhoVec!(p::OSSDPTypes.Problem,settings::OSSDPTypes.OSSDPSettings)
+  function setRhoVec!(p::QOCS.Problem,settings::QOCS.Settings)
     nEQ = p.K.f
     nINEQ = p.m - p.K.f
 
@@ -15,7 +15,7 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
 
   # adapt rhoVec based on residual ratio
-  function adaptRhoVec!(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings)
+  function adaptRhoVec!(ws::QOCS.WorkSpace,settings::QOCS.Settings)
     # compute normalized residuals based on the working variables (dont unscale)
     IGNORE_SCALING = true
     r_prim, r_dual = calculateResiduals(ws,settings,IGNORE_SCALING)
@@ -33,7 +33,7 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
     return nothing
   end
 
-  function updateRhoVec!(newRho::Float64,p::OSSDPTypes.Problem,settings::OSSDPTypes.OSSDPSettings)
+  function updateRhoVec!(newRho::Float64,p::QOCS.Problem,settings::QOCS.Settings)
     nEQ = p.K.f
     nINEQ = p.m - p.K.f
 

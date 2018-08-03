@@ -1,12 +1,13 @@
 module Projections
-using OSSDPTypes
+
+using QOCS
 export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, projectCompositeCone!
 
 # -------------------------------------
 # HELPER FUNCTIONS
 # -------------------------------------
 
-    function projectCompositeCone!(x,K::OSSDPTypes.Cone)
+    function projectCompositeCone!(x,K::QOCS.Cone)
       b = 1
 
       if K.f  > 0

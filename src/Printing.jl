@@ -1,8 +1,8 @@
 module Printing
-  using OSSDPTypes, Formatting
+  using QOCS,Formatting
   export printHeader, printResult, printIteration
 
-  function printHeader(ws::OSSDPTypes.WorkSpace,settings::OSSDPTypes.OSSDPSettings,setupTime::Float64)
+  function printHeader(ws::QOCS.WorkSpace,settings::QOCS.Settings,setupTime::Float64)
     n = ws.p.n
     m = ws.p.m
     K = ws.p.K
@@ -30,7 +30,7 @@ module Printing
     println("Setup Time: $(round.(setupTime*1000,2))ms\n")
   end
 
-  function printIteration(settings::OSSDPTypes.OSSDPSettings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
+  function printIteration(settings::QOCS.Settings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
     if iter == 1
       println("Iter:\tObjective:\tPrimal Res:\tDual Res:\tRho:")
     end

@@ -1,5 +1,5 @@
 #include("../../../src/Solver.jl")
-using OSSDP, Base.Test,Helper
+using QOCS, Base.Test,QOCS.Helper
 
 @testset "Infeasibility" begin
   include("primal_infeasible_1.jl")

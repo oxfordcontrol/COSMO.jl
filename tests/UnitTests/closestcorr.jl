@@ -6,7 +6,7 @@
 # s.t.    Xii = 1
 #         X ⪴ 0
 
-using OSSDP, Base.Test
+using QOCS, Base.Test
 
 
 # this function creates a matrix A that slices out the diagonal entries Xii of a vectorized square matrix x=vec(X)
@@ -53,10 +53,10 @@ Kl = 0
 Kq = []
 Ks = [n^2]
 
-K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
-settings = OSSDPTypes.OSSDPSettings()
+K = QOCS.Cone(Kf,Kl,Kq,Ks)
+settings = QOCS.Settings()
 
-res,nothing = OSSDP.solve(P,q,Aa,b,K,settings);
+res,nothing = QOCS.solve(P,q,Aa,b,K,settings);
 Xsol = reshape(res.x,n,n)
 
 @testset "Closest Correlation Matrix - SDP Problems" begin

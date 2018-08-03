@@ -1,19 +1,12 @@
-include("./Helper.jl")
-include("./Types.jl")
-include("./KKT.jl")
-include("./Scaling.jl")
-include("./Projections.jl")
-include("./Residuals.jl")
-include("./Parameters.jl")
-include("./Infeasibility.jl")
-include("./Printing.jl")
-include("./Setup.jl")
 
-module OSSDP
-
-using Projections, Scaling, OSSDPTypes, Parameters, Infeasibility, Residuals, Printing, Setup
-export solve, OSSDPSettings, Cone #from the Types module
-
+function setModel!(model::QOCS.Model,P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::QOCS.Cone)
+  model.P = P
+  model.q = q
+  model.A = A
+  model.b = b
+  model.K = K
+  nothing
+end
 
 function admmStep!(x, s, μ, ν, x_tl, s_tl, ls, sol, F, q, b, K, ρ, α, σ, m, n)
   # Create right hand side for linear system
@@ -39,10 +32,25 @@ function admmStep!(x, s, μ, ν, x_tl, s_tl, ls, sol, F, q, b, K, ρ, α, σ, m,
   nothing
 end
 
+function solve!(model::QOCS.Model,settings::QOCS.Settings,results)
+   resSolver, nothing = solve(model.P,model.q,model.A,model.b,model.K,settings)
+   results.x = resSolver.x
+   results.ν = resSolver.ν
+   results.μ = resSolver.μ
+   results.cost = resSolver.cost
+   results.iter = resSolver.iter
+   results.status = resSolver.status
+   results.solverTime = resSolver.solverTime
+   results.setupTime = resSolver.setupTime
+   results.iterTime = resSolver.iterTime
+   results.rPrim = resSolver.rPrim
+   results.rDual = resSolver.rDual
+   nothing
+end
 
 # SOLVER ROUTINE
 # -------------------------------------
-  function solve(P,q,A,b,K::OSSDPTypes.Cone,settings::OSSDPTypes.OSSDPSettings)
+  function solve(P,q,A,b,K::QOCS.Cone,settings::QOCS.Settings)
     runTime_start = time()
 
     # create workspace variables
@@ -50,9 +58,9 @@ end
     P = q = A = b = nothing
 
     # perform preprocessing steps (scaling, initial KKT factorization)
-    tic()
+    setupTime = time()
     setup!(ws,settings)
-    setupTime = toq()
+    setupTime = time() - setupTime
 
     # instantiate variables
     iter = 0
@@ -171,17 +179,17 @@ end
     runTime = time() - runTime_start
 
     # print solution to screen
-    settings.verbose && printResult(status,iter,cost,rt)
+    settings.verbose && printResult(status,iter,cost,runTime)
 
 
     # create result object
-    result = OSSDPResult(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,runTime,setupTime,iterTime,r_prim,r_dual);
+    result = QOCS.Result(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,runTime,setupTime,iterTime,r_prim,r_dual);
 
     return result,ws, δx, -δy;
 
   end
 
-end
+
 
 
 

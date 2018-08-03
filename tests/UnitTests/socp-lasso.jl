@@ -1,6 +1,6 @@
 # SOCP Lasso Testproblem
 
-using OSSDP, Base.Test
+using QOCS, Base.Test
 
 
 
@@ -34,12 +34,12 @@ q = vec([1;zeros(n);μ*ones(n,1);zeros(m+2,1)])
 P = spzeros(length(q),length(q))
 
 # define cone membership
-K = OSSDPTypes.Cone(2+m,2*n,[m+2],[])
+K = QOCS.Cone(2+m,2*n,[m+2],[])
 
-settings = OSSDPTypes.OSSDPSettings()
+settings = QOCS.Settings()
 
 # Solve with OSSDP
-res,nothing = OSSDP.solve(P,q,Aa,ba,K,settings);
+res,nothing = QOCS.solve(P,q,Aa,ba,K,settings);
 
 
 @testset "SOCP - Lasso" begin

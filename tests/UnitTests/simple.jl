@@ -1,5 +1,5 @@
 
-using OSSDP, Base.Test, JuMP, Mosek
+using QOCS, Base.Test
 tol = 1e-3
 
 mutable struct TestProblem
@@ -18,7 +18,7 @@ function simpleQP()
     u = [1.;0.7;0.7]
     Aa = [A;-A]
     b = [u;-l]
-    K = OSSDPTypes.Cone(0,6,[],[])
+    K = QOCS.Cone(0,6,[],[])
     return TestProblem(P,q,Aa,b,K)
 end
 
@@ -28,8 +28,8 @@ end
 
     @testset "Simple QP" begin
         p = simpleQP()
-        settings = OSSDPTypes.OSSDPSettings()
-        res,nothing = OSSDP.solve(p.P,p.q,p.A,p.b,p.K,settings);
+        settings = QOCS.Settings()
+        res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :solved
         @test isapprox(norm(res.x - [0.3; 0.7]), 0., atol=tol)
@@ -41,8 +41,8 @@ end
     @testset "Update_b" begin
         p = simpleQP()
         p.b = p.b*0.9
-        settings = OSSDPTypes.OSSDPSettings()
-        res,nothing = OSSDP.solve(p.P,p.q,p.A,p.b,p.K,settings);
+        settings = QOCS.Settings()
+        res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :solved
         @test isapprox(norm(res.x - [0.27; 0.63]), 0., atol=tol)
@@ -53,8 +53,8 @@ end
     @testset "Update_q" begin
         p = simpleQP()
         p.q = [-10;10]
-        settings = OSSDPTypes.OSSDPSettings()
-        res,nothing = OSSDP.solve(p.P,p.q,p.A,p.b,p.K,settings);
+        settings = QOCS.Settings()
+        res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :solved
         @test isapprox(norm(res.x - [0.7; 0.3]), 0., atol=tol)
@@ -64,8 +64,8 @@ end
 
     @testset "update_max_iter" begin
         p = simpleQP()
-        settings = OSSDPTypes.OSSDPSettings(max_iter=20)
-        res,nothing = OSSDP.solve(p.P,p.q,p.A,p.b,p.K,settings);
+        settings = QOCS.Settings(max_iter=20)
+        res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :UserLimit
     end
@@ -74,8 +74,8 @@ end
 
     @testset "update_check_termination" begin
         p = simpleQP()
-        settings = OSSDPTypes.OSSDPSettings(checkTermination=100000)
-        res,nothing = OSSDP.solve(p.P,p.q,p.A,p.b,p.K,settings);
+        settings = QOCS.Settings(checkTermination=100000)
+        res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :UserLimit
 
@@ -91,8 +91,8 @@ end
 
     @testset "timelimit" begin
         p = simpleQP()
-        settings = OSSDPTypes.OSSDPSettings(timelimit=1, checkTermination=100000000,max_iter=10000000)
-        res,nothing = OSSDP.solve(p.P,p.q,p.A,p.b,p.K,settings);
+        settings = QOCS.Settings(timelimit=1, checkTermination=100000000,max_iter=10000000)
+        res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
         @test res.status == :TimeLimit
     end

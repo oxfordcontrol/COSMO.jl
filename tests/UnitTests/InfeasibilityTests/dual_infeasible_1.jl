@@ -30,9 +30,9 @@ nn = 1
   Kq = []
   Ks = []
 
- K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
- setOFF = OSSDPTypes.OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
- res,nothing = OSSDP.solve(P,q,A,b,K,setOFF);
+ K = QOCS.Cone(Kf,Kl,Kq,Ks)
+ setOFF = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+ res,nothing = QOCS.solve(P,q,A,b,K,setOFF);
 
 
   @test res.status == :dual_infeasible

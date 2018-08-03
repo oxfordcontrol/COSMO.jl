@@ -1,6 +1,6 @@
-include("../../src/Solver.jl")
+include("../../src/QOCS.jl")
 
-using OSSDP, OSSDPTypes, Base.Test
+using QOCS, Base.Test
 
 rng = MersenneTwister(12345)
 

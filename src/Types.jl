@@ -1,9 +1,8 @@
-module OSSDPTypes
-export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
+
 # -------------------------------------
 # struct DEFINITIONS
 # -------------------------------------
-  struct OSSDPResult
+  mutable struct Result
     x::Array{Float64}
     s::Array{Float64}
     ν::Array{Float64}
@@ -16,17 +15,26 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     iterTime::Float64
     rPrim::Float64
     rDual::Float64
+
+    function Result()
+      return new(Float64[],Float64[],Float64[],Float64[],0.,0,:unsolved,0.,0.,0.,0.,0.)
+    end
+
+    function Result(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
+      return new(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
+    end
+
   end
 
 
   # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::OSSDPResult)
+  function Base.show(io::IO, obj::Result)
     println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\nSetup Time: $(round.(obj.setupTime*1000,2))ms\nAvg Iter Time: $(round.((obj.iterTime/obj.iter)*1000,2))ms" )
   end
 
 
   # product of cones dimensions, similar to SeDuMi
-  struct Cone
+  mutable struct Cone
     # number of zero  components
     f::Int64
     # number of nonnegative components
@@ -37,6 +45,11 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     s::Array{Int64}
 
     #constructor
+
+    function Cone()
+      return new(0,0,Int64[],Int64[])
+    end
+
     function Cone(f::Int64,l::Int64,q,s)
       (f < 0 || l < 0) && error("Negative values are not allowed.")
       (length(q) == 1 && q[1] == 0) && (q = [])
@@ -57,9 +70,9 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     b::Vector{Float64}
     m::Int64
     n::Int64
-    K::OSSDPTypes.Cone
+    K::Cone
     ρVec::Array{Float64,1}
-    Info::OSSDPTypes.Info
+    Info::Info
     F
     #constructor
     function Problem(P,q,A,b,K)
@@ -98,21 +111,39 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
   end
 
   mutable struct WorkSpace
-      p::OSSDPTypes.Problem
-      sm::OSSDPTypes.ScaleMatrices
+      p::Problem
+      sm::ScaleMatrices
       x::Vector{Float64}
       s::Vector{Float64}
       ν::Vector{Float64}
       μ::Vector{Float64}
       #constructor
-    function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
+    function WorkSpace(p::Problem,sm::ScaleMatrices)
       m = p.m
       n = p.n
       new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m))
     end
   end
 
-  mutable struct OSSDPSettings
+
+mutable struct Model
+    P::SparseMatrixCSC{Float64,Int64}
+    q::Vector{Float64}
+    A::SparseMatrixCSC{Float64,Int64}
+    b::Vector{Float64}
+    K::Cone
+
+    function Model()
+        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],Cone())
+    end
+
+    function Model(P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::Cone)
+        return new(P,q,A,b,K)
+    end
+
+end
+
+  mutable struct Settings
     rho::Float64
     sigma::Float64
     alpha::Float64
@@ -139,7 +170,7 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     objTrue::Float64
     objTrueTOL::Float64
     #constructor
-    function OSSDPSettings(;
+    function Settings(;
       rho=0.1,
       sigma=1e-6,
       alpha=1.6,
@@ -172,4 +203,4 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     end
   end
 
-end
+

@@ -14,7 +14,7 @@
 # include("../../../src/Solver.jl")
 # using JLD
 # using Base.Test
-# using OSSDP
+# using QOCS
 #  using JuMP, Mosek
 using JLD
 
@@ -30,7 +30,7 @@ problems = ["infp1.jld";"infp2.jld";"infd1.jld";"infd2.jld"]
     optVal = data["optVal"]
     kkk <= 2 ? (problem_type = :primal_infeasible) : (problem_type=:dual_infeasible)
 
-    # Rewrite problem to OSSDP compatible format:
+    # Rewrite problem to QOCS compatible format:
     # min   1/2 x'Px + q'x
     # s.t.  Ax + s = b
     #       s in K
@@ -81,8 +81,8 @@ problems = ["infp1.jld";"infp2.jld";"infd1.jld";"infd2.jld"]
     # @constraint(model, A*x+s .== b)
     # status = JuMP.solve(model)
     K = Cone(Kf,Kl,Kq,Ks)
-    settings = OSSDPSettings(max_iter=3000,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10 ,scaleFunc=2,adaptive_rho=true,eps_abs=1e-4,eps_rel=1e-4)
-    res,nothing = OSSDP.solve(P,q,A,b,K,settings);
+    settings = Settings(max_iter=3000,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10 ,scaleFunc=2,adaptive_rho=true,eps_abs=1e-4,eps_rel=1e-4)
+    res,nothing = QOCS.solve(P,q,A,b,K,settings);
     @test res.status == problem_type
   end
 end

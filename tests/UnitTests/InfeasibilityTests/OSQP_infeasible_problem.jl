@@ -3,15 +3,15 @@
 # workspace()
 # include("../../../src/Solver.jl")
 
-using OSSDP, Base.Test
+using QOCS, Base.Test
 maxIter = 3000
 rng = MersenneTwister(1313)
 
-setUnNonAdaptive =   OSSDPSettings(max_iter=maxIter,verbose=true,checkTermination=1,checkInfeasibility=50,scaling = 0 ,scaleFunc=1,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
-setMeanNonAdaptive = OSSDPSettings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10,scaleFunc=2,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
+setUnNonAdaptive =   Settings(max_iter=maxIter,verbose=true,checkTermination=1,checkInfeasibility=50,scaling = 0 ,scaleFunc=1,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
+setMeanNonAdaptive = Settings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10,scaleFunc=2,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
 
-setUnAdaptive =   OSSDPSettings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 0 ,scaleFunc=1,adaptive_rho=true,eps_abs=1e-7,eps_rel=1e-7)
-setMeanAdaptive = OSSDPSettings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10,scaleFunc=2,adaptive_rho=true,eps_abs=1e-7,eps_rel=1e-7)
+setUnAdaptive =   Settings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 0 ,scaleFunc=1,adaptive_rho=true,eps_abs=1e-7,eps_rel=1e-7)
+setMeanAdaptive = Settings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10,scaleFunc=2,adaptive_rho=true,eps_abs=1e-7,eps_rel=1e-7)
 
 P = sparse([1. 0;0 0])
 q = [1.;-1]
@@ -64,17 +64,17 @@ Kl = 5
 Kq = []
 Ks = []
 # define cone membership
-K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
+K = QOCS.Cone(Kf,Kl,Kq,Ks)
 
 
-# Solve with OSSDP
-res1,ws,δx1,δμ1 = OSSDP.solve(P,q,A,b,K,setMeanAdaptive);
+# Solve with QOCS
+res1,ws,δx1,δμ1 = QOCS.solve(P,q,A,b,K,setMeanAdaptive);
 print("\n. δx1: $(δx1), δμ1: $(δμ1)")
-# res2,nothing,δx2,δμ2 = OSSDP.solve(P,q,A,b,K,setMeanNonAdaptive);
+# res2,nothing,δx2,δμ2 = QOCS.solve(P,q,A,b,K,setMeanNonAdaptive);
 # print("\n. δx2: $(δx2), δμ2: $(δμ2)")
-# res3,nothing,δx3,δμ3 = OSSDP.solve(P,q,A,b,K,setUnAdaptive);
+# res3,nothing,δx3,δμ3 = QOCS.solve(P,q,A,b,K,setUnAdaptive);
 # print("\n. δx3: $(δx3), δμ3: $(δμ3)")
-# res4,nothing,δx4,δμ4 = OSSDP.solve(P,q,A,b,K,setMeanAdaptive);
+# res4,nothing,δx4,δμ4 = QOCS.solve(P,q,A,b,K,setMeanAdaptive);
 # print("\n. δx4: $(δx4), δμ4: $(δμ4)\n")
 
 # eps_pinf = 1e-4
