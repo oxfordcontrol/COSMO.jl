@@ -16,6 +16,7 @@
 # using Base.Test
 # using OSSDP
 #  using JuMP, Mosek
+using JLD
 
 problems = ["infp1.jld";"infp2.jld";"infd1.jld";"infd2.jld"]
 

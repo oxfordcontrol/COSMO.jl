@@ -1,10 +1,11 @@
 # Test routine to test the infeasibility example from the OSQP Paper
 
-workspace()
-include("../../../src/Solver.jl")
+# workspace()
+# include("../../../src/Solver.jl")
 
 using OSSDP, Base.Test
 maxIter = 3000
+rng = MersenneTwister(1313)
 
 setUnNonAdaptive =   OSSDPSettings(max_iter=maxIter,verbose=true,checkTermination=1,checkInfeasibility=50,scaling = 0 ,scaleFunc=1,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
 setMeanNonAdaptive = OSSDPSettings(max_iter=maxIter,verbose=false,checkTermination=1,checkInfeasibility=50,scaling = 10,scaleFunc=2,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
@@ -63,7 +64,7 @@ Kl = 5
 Kq = []
 Ks = []
 # define cone membership
-K = Cone(Kf,Kl,Kq,Ks)
+K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
 
 
 # Solve with OSSDP

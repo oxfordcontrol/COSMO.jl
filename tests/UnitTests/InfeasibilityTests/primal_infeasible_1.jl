@@ -3,8 +3,8 @@
 # Primal infeasible test problems
 # x >= 0, elements in A >=0, elements in b <0 and s in R+
 
-nn = 100
-rng = MersenneTwister(22232)
+nn = 1
+rng = MersenneTwister(1313)
 
 @testset "Primal infeasible QP problems - Testset 1" begin
   for iii = 1:nn
@@ -32,7 +32,7 @@ rng = MersenneTwister(22232)
 
 
      K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
-     settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,checkTermination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+     settings = OSSDPTypes.OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,checkTermination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
 
      res1,nothing = OSSDP.solve(P,q,A,b,K,settings);
 

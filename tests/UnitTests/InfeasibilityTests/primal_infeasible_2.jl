@@ -3,8 +3,8 @@
 # x >= 0, elements in A >=0, elements in b < 0 and s=[s1,s2,s3] with s1 in {0}, s2 in {R+} and s3 in psd-cone
 # s3 cannot be found since Ax > 0 and b < 0 (Ax + s = b)
 
-nn = 100
-rng = MersenneTwister(9912)
+nn = 1
+rng = MersenneTwister(1313)
 
 @testset "Primal infeasible QP problems - Testset 2" begin
   for iii = 1:nn
@@ -40,7 +40,7 @@ rng = MersenneTwister(9912)
     Ks = [r^2]
 
      K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
-     settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=3000,verbose=false,checkTermination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+     settings = OSSDPTypes.OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=3000,verbose=false,checkTermination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
 
      res,nothing = OSSDP.solve(P,q,A,b,K,settings);
      @test res.status == :primal_infeasible

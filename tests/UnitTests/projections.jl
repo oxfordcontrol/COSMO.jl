@@ -1,24 +1,26 @@
 # Test file to check the projections
-workspace()
-include("../src/Solver.jl")
-using Base.Test, Projections, Helper
+# workspace()
+# include("../src/Solver.jl")
+using Base.Test, Helper
 
 rng = MersenneTwister(1234)
 
-nn = 1000
+nn = 1
 
 
 @testset "Test projection onto zero cone" begin
-        x = rand(rng,rand(rng,1:100),1)
-        @test Projections.zeroCone(x) == zeros(size(x,1),1)
+        x = rand(rng,rand(rng,1:100))
+        Projections.zeroCone!(x,1,length(x))
+        @test x == zeros(size(x,1))
 end
 
 
 @testset "Test projection onto nonNegativeOrthant" begin
     for iii = 1:nn
         dim = rand(rng,1:100)
-        x = rand(rng,-1:0.001:1,dim,1)
-        @test minimum(Projections.nonNegativeOrthant(x)) >= 0
+        x = rand(rng,-1:0.001:1,dim)
+        Projections.nonNegativeOrthant!(x,1,length(x))
+        @test minimum(x) >= 0
     end
 end
 
@@ -75,7 +77,7 @@ end
     X = Projections.sdcone(a)
 
     # check positive semidefiniteness
-    @test isNumericallyPosSemDef(reshape(X,dim,dim),1e-10) == true
+    @test minimum(eig(reshape(X,dim,dim))[1]) >= -1e-10
 
   end
 

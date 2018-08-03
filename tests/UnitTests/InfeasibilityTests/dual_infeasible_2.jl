@@ -3,8 +3,8 @@
 # x1 is unbounded below --> hence problem is dual infeasible
 
 
-rng = MersenneTwister(555)
-nn = 100
+nn = 1
+rng = MersenneTwister(1313)
 
 sum_detected = 0
 @testset "Dual infeasible QP problems - Testset 2" begin
@@ -49,7 +49,7 @@ sum_detected = 0
     Ks = [r^2]
 
    K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
-   setOFF = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,checkTermination=1,scaling = 10,eps_prim_inf=1e-4,eps_dual_inf=1e-4,adaptive_rho=true)
+   setOFF = OSSDPTypes.OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,checkTermination=1,scaling = 10,eps_prim_inf=1e-4,eps_dual_inf=1e-4,adaptive_rho=true)
    res,ws,δx,δμ = OSSDP.solve(P,q,A,b,K,setOFF);
 
     @test res.status == :dual_infeasible

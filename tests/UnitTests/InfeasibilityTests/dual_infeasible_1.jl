@@ -3,7 +3,7 @@
 # here the last element of x appears in the cost function with a negative sign and is unconstrained
 
 rng = MersenneTwister(555)
-nn = 100
+nn = 1
 
 
 @testset "Dual infeasible QP problems - Testset 1" begin
@@ -31,7 +31,7 @@ nn = 100
   Ks = []
 
  K = OSSDPTypes.Cone(Kf,Kl,Kq,Ks)
- setOFF = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+ setOFF = OSSDPTypes.OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,checkTermination=1,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
  res,nothing = OSSDP.solve(P,q,A,b,K,setOFF);
 
 
