@@ -51,7 +51,7 @@ end
 A set of benchmark problems with conic constraints has been collected and made available here:
 [https://github.com/migarstka/SDP_Benchmark_Problems](https://github.com/migarstka/SDP_Benchmark_Problems)
 ## Settings
-Settings can be specified using the `OSSDPSettings` struct. The following settings are available:
+Settings can be specified using the `QOCS.Settings` struct. The following settings are available:
 
 Argument | Description | Values (default)
 --- | --- | ---
@@ -74,6 +74,7 @@ For more low-level settings, see the Settings definition in `/src/Types.jl`.
 
 ## Status Codes
 After attempting to solve the problem, QOCS will return one of the following statuses:
+
 Status Code  | Description
 ---  | ---
 :Solved | A optimal solution was found
