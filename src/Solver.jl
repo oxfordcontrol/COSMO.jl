@@ -64,7 +64,7 @@ end
 
     # instantiate variables
     iter = 0
-    status = :unsolved
+    status = :Unsolved
     cost = Inf
     r_prim = Inf
     r_dual = Inf
@@ -121,7 +121,7 @@ end
         settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
 
         if hasConverged(ws,settings,r_prim,r_dual)
-          status = :solved
+          status = :Solved
           break
         end
       end
@@ -129,7 +129,7 @@ end
       # check infeasibility conditions every {settings.checkInfeasibility} steps
       if mod(iter,settings.check_infeasibility) == 0
         if isPrimalInfeasible(δy,ws,settings)
-            status = :primal_infeasible
+            status = :Primal_infeasible
             cost = Inf
             ws.x .= NaN
             ws.μ .= NaN
@@ -138,7 +138,7 @@ end
         end
 
         if isDualInfeasible(δx,ws,settings)
-            status = :dual_infeasible
+            status = :Dual_infeasible
             cost = -Inf
             ws.x .= NaN
             ws.μ .= NaN
@@ -154,7 +154,7 @@ end
       end
 
       if settings.timelimit !=0 &&  (time() - timeLimit_start) > settings.timelimit
-        status = :TimeLimit
+        status = :Time_limit_reached
         break
       end
 
@@ -165,7 +165,7 @@ end
     # calculate primal and dual residuals
     if iter == settings.max_iter
       r_prim,r_dual = calculateResiduals(ws,settings)
-      status = :UserLimit
+      status = :Max_iter_reached
     end
 
     # reverse scaling for scaled feasible cases

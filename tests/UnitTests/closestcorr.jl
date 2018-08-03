@@ -60,7 +60,7 @@ res,nothing = QOCS.solve(P,q,Aa,b,K,settings);
 Xsol = reshape(res.x,n,n)
 
 @testset "Closest Correlation Matrix - SDP Problems" begin
-  @test res.status == :solved
+  @test res.status == :Solved
   @test diagonalEqualOne(Xsol,1e-5)
   @test minimum(eig(Xsol)[1]) > -1e-3
 

@@ -31,6 +31,6 @@ res,nothing = QOCS.solve(P,q,Aa,ba,K,settings);
 
 
 @testset "QP - Lasso" begin
-  @test res.status == :solved
+  @test res.status == :Solved
   @test isapprox(res.cost, 46.40521553063313, atol=1e-3)
 end

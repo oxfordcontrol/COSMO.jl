@@ -36,7 +36,7 @@ rng = MersenneTwister(1313)
 
      res1,nothing = QOCS.solve(P,q,A,b,K,settings);
 
-     @test res1.status == :primal_infeasible
+     @test res1.status == :Primal_infeasible
   end
 end
   # # solve accurately once with mosek s

@@ -28,7 +28,7 @@ problems = ["infp1.jld";"infp2.jld";"infd1.jld";"infd2.jld"]
     m = data["m"]
     n = data["n"]
     optVal = data["optVal"]
-    kkk <= 2 ? (problem_type = :primal_infeasible) : (problem_type=:dual_infeasible)
+    kkk <= 2 ? (problem_type = :Primal_infeasible) : (problem_type=:Dual_infeasible)
 
     # Rewrite problem to QOCS compatible format:
     # min   1/2 x'Px + q'x

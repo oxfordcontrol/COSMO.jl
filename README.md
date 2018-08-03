@@ -72,6 +72,18 @@ timelimit | set solver time limit in s | 0
 
 For more low-level settings, see the Settings definition in `/src/Types.jl`.
 
+## Status Codes
+After attempting to solve the problem, QOCS will return one of the following statuses:
+Status Code  | Description
+---  | ---
+:Solved | A optimal solution was found
+:Unsolved | Default value
+:Max_iter_reached | Solver reached iteration limit (set with Settings.max_iter)
+:Time_limit_reached | Solver reached time limit (set with Settings.timelimit)
+:Primal_infeasible | Problem is primal infeasible
+:Dual_infeasible | Problem is dual infeasible
+
+
 ## Tasks / Future Work
 The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
 

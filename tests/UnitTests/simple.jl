@@ -31,7 +31,7 @@ end
         settings = QOCS.Settings()
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
-        @test res.status == :solved
+        @test res.status == :Solved
         @test isapprox(norm(res.x - [0.3; 0.7]), 0., atol=tol)
         @test isapprox(res.cost, 1.8800000298331538, atol=tol)
 
@@ -44,7 +44,7 @@ end
         settings = QOCS.Settings()
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
-        @test res.status == :solved
+        @test res.status == :Solved
         @test isapprox(norm(res.x - [0.27; 0.63]), 0., atol=tol)
         @test isapprox(res.cost, 1.6128000168085233, atol=tol)
 
@@ -56,7 +56,7 @@ end
         settings = QOCS.Settings()
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
-        @test res.status == :solved
+        @test res.status == :Solved
         @test isapprox(norm(res.x - [0.7; 0.3]), 0., atol=tol)
         @test isapprox(res.cost, -2.7199998274697608, atol=tol)
 
@@ -67,7 +67,7 @@ end
         settings = QOCS.Settings(max_iter=20)
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
-        @test res.status == :UserLimit
+        @test res.status == :Max_iter_reached
     end
 
 
@@ -77,7 +77,7 @@ end
         settings = QOCS.Settings(check_termination=100000)
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
-        @test res.status == :UserLimit
+        @test res.status == :Max_iter_reached
 
     end
 

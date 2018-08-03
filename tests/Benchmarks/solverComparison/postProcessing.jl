@@ -47,8 +47,8 @@ eTol = 1e-2
 # myind =0
 # println("Number of problems: $(nn)")
 # for s in resData
-#   indSolved = find(x->(x == :solved || x == :Solved || x == :Solved_inaccurate),s.status)
-#   indMaxIter = find(x->(x == :UserLimit || x == :Max_iter_reached),s.status)
+#   indSolved = find(x->(x == :Solved || x == :Solved || x == :Solved_inaccurate),s.status)
+#   indMaxIter = find(x->(x == :Max_iter_reached || x == :Max_iter_reached),s.status)
 #   indTimelimit = find(x->(x == :TimeLimit),s.status)
 #   indCloseToSol = find(x->abs(s.objVal[x]-optVal[s.problemName[x]]) < eTol,collect(1:s.ind))
 #   indClose = findSolvedInd(resData,iii)

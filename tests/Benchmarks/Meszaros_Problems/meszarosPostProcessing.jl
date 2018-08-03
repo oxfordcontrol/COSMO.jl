@@ -5,7 +5,7 @@ resCost = data["resCost"]
 resIter = data["resIter"]
 resX = data["resX"]
 fileNames = data["fileNames"]
-ind = find(x->x == :UserLimit,resStatus[1:129,1])
+ind = find(x->x == :Max_iter_reached,resStatus[1:129,1])
 ind = find(x->x < 1500,resIter[1:129,3])
 
 

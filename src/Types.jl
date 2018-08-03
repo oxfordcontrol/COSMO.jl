@@ -17,7 +17,7 @@
     rDual::Float64
 
     function Result()
-      return new(Float64[],Float64[],Float64[],Float64[],0.,0,:unsolved,0.,0.,0.,0.,0.)
+      return new(Float64[],Float64[],Float64[],Float64[],0.,0,:Unsolved,0.,0.,0.,0.,0.)
     end
 
     function Result(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
@@ -198,5 +198,6 @@ end
           adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,obj_true,obj_true_tol)
     end
   end
+
 
 

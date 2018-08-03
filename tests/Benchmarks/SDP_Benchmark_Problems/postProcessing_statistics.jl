@@ -32,7 +32,7 @@ for iii=1:length(results)
   # loop over solver and compute metrics
   k = 1
   for s in resData
-    solvedInd = find(x->x==:solved,s.status)
+    solvedInd = find(x->x==:Solved,s.status)
     # calculate mean
     meanIterAll = mean(s.iter)
     length(solvedInd) > 0 ? meanIterSolved = mean(s.iter[solvedInd]) : meanIterSolved = Inf

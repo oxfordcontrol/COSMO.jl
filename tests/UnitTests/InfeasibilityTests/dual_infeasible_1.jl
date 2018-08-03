@@ -35,6 +35,6 @@ nn = 1
  res,nothing = QOCS.solve(P,q,A,b,K,setOFF);
 
 
-  @test res.status == :dual_infeasible
+  @test res.status == :Dual_infeasible
   end
 end

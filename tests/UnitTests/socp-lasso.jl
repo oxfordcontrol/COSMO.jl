@@ -43,6 +43,6 @@ res,nothing = QOCS.solve(P,q,Aa,ba,K,settings);
 
 
 @testset "SOCP - Lasso" begin
-  @test res.status == :solved
+  @test res.status == :Solved
   @test isapprox(res.cost,0.4422849814458825,atol=1e-3)
 end
