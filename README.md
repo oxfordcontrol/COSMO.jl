@@ -70,7 +70,7 @@ scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
 timelimit | set solver time limit in s | 0
 
-For more low-level settings, see the OSSDPSettings type definition in `/src/Types.jl`.
+For more low-level settings, see the Settings definition in `/src/Types.jl`.
 
 ## Tasks / Future Work
 The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
