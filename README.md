@@ -79,8 +79,8 @@ Status Code  | Description
 ---  | ---
 :Solved | A optimal solution was found
 :Unsolved | Default value
-:Max_iter_reached | Solver reached iteration limit (set with Settings.max_iter)
-:Time_limit_reached | Solver reached time limit (set with Settings.timelimit)
+:Max_iter_reached | Solver reached iteration limit (set with `Settings.max_iter`)
+:Time_limit_reached | Solver reached time limit (set with `Settings.timelimit`)
 :Primal_infeasible | Problem is primal infeasible
 :Dual_infeasible | Problem is dual infeasible
 
