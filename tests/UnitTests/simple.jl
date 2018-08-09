@@ -94,7 +94,7 @@ end
         settings = QOCS.Settings(timelimit=1, check_termination=100000000,max_iter=10000000)
         res,nothing = QOCS.solve(p.P,p.q,p.A,p.b,p.K,settings);
 
-        @test res.status == :TimeLimit
+        @test res.status == :Time_limit_reached
     end
 
 end

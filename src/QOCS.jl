@@ -4,7 +4,7 @@
 module QOCS
 
 #export MathOptInterfaceQOCS
-export solve, Settings, Cone, Model
+export optimize!, reset!, assemble!, Settings, Cone, Model, Results, AbstractConvexSet
 
 include("./Helper.jl")
 include("./Types.jl")
@@ -19,6 +19,7 @@ include("./Setup.jl")
 
 using .Projections, .Scaling, .Parameters, .Infeasibility, .Residuals, .Printing, .Setup
 include("./Solver.jl")
+include("./Interface.jl")
 
 end
 

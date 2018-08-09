@@ -1,4 +1,5 @@
 
+
 function setModel!(model::QOCS.Model,P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::QOCS.Cone)
   model.P = P
   model.q = q

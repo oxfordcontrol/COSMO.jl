@@ -137,9 +137,9 @@ mutable struct Model
         return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],Cone())
     end
 
-    function Model(P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::Cone)
-        return new(P,q,A,b,K)
-    end
+    # function Model(P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::Cone)
+    #     return new(P,q,A,b,K)
+    # end
 
 end
 
@@ -199,5 +199,46 @@ end
     end
   end
 
+
+
+abstract type AbstractConvexSet end
+
+
+struct ZeroCone <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
+
+struct Box{T <: Real} <: AbstractConvexSet
+    A::AbstractMatrix{<:Real}
+    b::AbstractVector{<:Real}
+    dim::Int
+    project!::Function
+    l::T
+    u::T
+end
+
+struct NonNegativeOrthant <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
+
+struct SecondOrderCone <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
+
+struct PositiveSemidefiniteCone <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
 
 
