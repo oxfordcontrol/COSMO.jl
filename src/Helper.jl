@@ -1,5 +1,5 @@
 module Helper
-
+using LinearAlgebra, Random
 export generatePosDefMatrix, isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent, findDifferentElements, reCreateSparseMatrix,duplicateSparsityPattern, gmean
 
   # generate a random pos def matrix with eigenvalues between 0.1 and 2
@@ -7,8 +7,8 @@ export generatePosDefMatrix, isNumericallyPosSemDef, isNumericallySymmetric, fin
       X = rand(rng,n,n)
       # any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R
       Q, R = qr(X)
-      eigs = rand(rng,n).*(2.-0.1) .+ 0.1
-      X = Q*diagm(eigs)*Q'
+      eigs = rand(rng,n).*(2 .-0.1) .+ 0.1
+      X = Q*Matrix(Diagonal(eigs))*Q'
       X = 0.5*(X+X')
       return X
   end
@@ -93,7 +93,7 @@ function reCreateSparseMatrix(A)
 end
 
 # Geometric mean from https://github.com/JuliaStats/StatsBase.jl
-function gmean{T<:Real}(a::AbstractArray{T})
+function gmean(a::AbstractArray{T}) where T<:Real
     s = 0.0
     n = length(a)
     for i in 1:n

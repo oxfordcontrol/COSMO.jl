@@ -1,10 +1,9 @@
 #__precompile__()
-
-
 module QOCS
 
 #export MathOptInterfaceQOCS
 export optimize!, reset!, assemble!, Settings, Cone, Model, Results, AbstractConvexSet
+using SparseArrays
 
 include("./Helper.jl")
 include("./Types.jl")

@@ -1,6 +1,6 @@
 module Projections
 
-using QOCS
+using ..QOCS, LinearAlgebra
 export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, projectCompositeCone!
 
 # -------------------------------------
@@ -102,11 +102,11 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
       X = X+X'
 
       # compute eigenvalue decomposition
-      F = eigfact(X)
+      F = eigen(X)
 
-      ind = find(x-> x>0, F[:values])
-      Λ = diagm(F[:values])
-      UsE = F[:vectors][:,ind]*sqrt.(Λ[ind,ind])
+      ind = findall(x-> x>0, F.values)
+      Λ = Matrix(Diagonal(F.values))
+      UsE = F.vectors[:,ind]*sqrt.(Λ[ind,ind])
       Xp = UsE*UsE'
       # different method
       # Λ = diagm(F[:values])

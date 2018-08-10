@@ -1,5 +1,5 @@
 module Infeasibility
-using QOCS
+using ..QOCS, LinearAlgebra
 export isPrimalInfeasible, isDualInfeasible
 
   # sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar
@@ -38,7 +38,7 @@ export isPrimalInfeasible, isDualInfeasible
           cDim = Int(sqrt(K.s[iii]))
           # FIXME: Here you might get complex eigenvalues, which causes problems with minimum(). Does it make sense that you can get complex eigenvalues in this problem type?
           # Current Fix: Just consider the real part
-          inPolarCone = ( minimum(real(eig(reshape(full(δy_sub),cDim,cDim))[1])) >= -settings.eps_prim_inf)
+          inPolarCone = ( minimum(real(eigen(reshape(Array(δy_sub),cDim,cDim)).values)) >= -settings.eps_prim_inf)
 
           !inPolarCone && break
           b = e + 1
@@ -94,7 +94,7 @@ export isPrimalInfeasible, isDualInfeasible
           e = b + K.s[iii] - 1
           Aδx_sub = A_δx[b:e]
           cDim = Int(sqrt(K.s[iii]))
-          inRecessionCone = ( maximum(real(eig(reshape(full(Aδx_sub),cDim,cDim))[1])) <= settings.eps_dual_inf)
+          inRecessionCone = ( maximum(real(eigen(reshape(Array(Aδx_sub),cDim,cDim)).values)) <= settings.eps_dual_inf)
           !inRecessionCone && break
           b = e + 1
       end

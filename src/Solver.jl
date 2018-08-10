@@ -64,7 +64,7 @@ end
     setupTime = time() - setupTime
 
     # instantiate variables
-    iter = 0
+    numIter = 0
     status = :Unsolved
     cost = Inf
     r_prim = Inf
@@ -80,15 +80,15 @@ end
     δy =  similar(ws.μ)
     x_tl = similar(ws.x) # i.e. xTilde
     s_tl = similar(ws.s) # i.e. sTilde
-    const n = ws.p.n
-    const m = ws.p.m
+    n = ws.p.n
+    m = ws.p.m
     ls = zeros(n + m)
     sol = zeros(n + m)
 
     iter_start = time()
 
     for iter = 1:settings.max_iter
-
+      numIter+= 1
       @. δx = ws.x
       @. δy = ws.μ
       admmStep!(
@@ -164,7 +164,7 @@ end
     iterTime = (time()-iter_start)
 
     # calculate primal and dual residuals
-    if iter == settings.max_iter
+    if numIter == settings.max_iter
       r_prim,r_dual = calculateResiduals(ws,settings)
       status = :Max_iter_reached
     end
@@ -180,11 +180,11 @@ end
     runTime = time() - runTime_start
 
     # print solution to screen
-    settings.verbose && printResult(status,iter,cost,runTime)
+    settings.verbose && printResult(status,numIter,cost,runTime)
 
 
     # create result object
-    result = QOCS.Result(ws.x,ws.s,ws.ν,ws.μ,cost,iter,status,runTime,setupTime,iterTime,r_prim,r_dual);
+    result = QOCS.Result(ws.x,ws.s,ws.ν,ws.μ,cost,numIter,status,runTime,setupTime,iterTime,r_prim,r_dual);
 
     return result,ws, δx, -δy;
 

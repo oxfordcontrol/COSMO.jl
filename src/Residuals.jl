@@ -1,5 +1,5 @@
 module Residuals
-  using QOCS
+  using ..QOCS, LinearAlgebra
   export calculateResiduals, maxResComponentNorm, hasConverged
 
   function calculateResiduals(ws::QOCS.WorkSpace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)

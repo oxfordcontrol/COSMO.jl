@@ -1,5 +1,5 @@
 module Setup
-  using QOCS,..Scaling, ..KKT, ..Parameters
+  using ..QOCS,..Scaling, ..KKT, ..Parameters
   export setup!
 
   function setup!(ws::QOCS.WorkSpace,settings::QOCS.Settings)

@@ -1,6 +1,6 @@
 module Scaling
 
-using QOCS
+using ..QOCS, SparseArrays, LinearAlgebra, Statistics
 export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetric!, findCloseSymmetricScaling
 
 
@@ -54,10 +54,10 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     sTemp = ones(n+m)
 
     #initialize scaling matrices
-    D = speye(n)
-    Dtemp = speye(n)
-    E = speye(m)
-    Etemp = speye(m)
+    D = sparse(1.0I,n,n)
+    Dtemp = sparse(1.0I,n,n)
+    E = sparse(1.0I,m,m)
+    Etemp = sparse(1.0I,m,m)
     if m == 0
       E = 0
       Etemp = 0
@@ -70,14 +70,14 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
       δVec = normKKTCols(P,A)
       limitScaling!(δVec,set)
       δVec = sqrt.(δVec)
-      sTemp = 1./δVec
+      sTemp = 1.0 ./δVec
 
       # Obtain scaling matrices
-      Dtemp = spdiagm(sTemp[1:n])
+      Dtemp = sparse(Diagonal(sTemp[1:n]))
       if m == 0
         Etemp = 0
       else
-        Etemp = spdiagm(sTemp[n+1:end])
+        Etemp = sparse(Diagonal(sTemp[n+1:end]))
       end
 
       # Scale data
@@ -96,7 +96,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
         limitScaling!(inf_norm_q,set)
         scale_cost = maximum([inf_norm_q norm_P_cols])
         limitScaling!(scale_cost,set)
-        scale_cost = 1. / scale_cost
+        scale_cost = 1.0 ./ scale_cost
         c_temp = scale_cost
 
         # Normalize cost
@@ -118,7 +118,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     if length(K.q) > 0
       for iii = 1:length(K.q)
         numConeElem = K.q[iii]
-        sTemp[ix+1:ix+numConeElem] = mean(sTemp[ix+1:ix+numConeElem])
+        sTemp[ix+1:ix+numConeElem] .= mean(sTemp[ix+1:ix+numConeElem])
         ix += numConeElem
       end
     end
@@ -127,17 +127,17 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     if length(K.s) > 0
       for iii = 1:length(K.s)
         numConeElem = K.s[iii]
-        sTemp[ix+1:ix+numConeElem] = mean(sTemp[ix+1:ix+numConeElem])
+        sTemp[ix+1:ix+numConeElem] .= mean(sTemp[ix+1:ix+numConeElem])
         ix += numConeElem
       end
     end
 
     # Obtain scaling matrices
-    D = spdiagm(sTemp[1:n])
+    D = sparse(Diagonal(sTemp[1:n]))
     if m == 0
       E = 0
     else
-      E = spdiagm(sTemp[n+1:end])
+      E = sparse(Diagonal(sTemp[n+1:end]))
     end
 
 
@@ -150,10 +150,10 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
 
     ws.sm.D = D
     ws.sm.E = E
-    ws.sm.Dinv = spdiagm(1./diag(D))
-    ws.sm.Einv = spdiagm(1./diag(E))
+    ws.sm.Dinv = sparse(Diagonal(1 ./diag(D)))
+    ws.sm.Einv = sparse(Diagonal(1 ./diag(E)))
     ws.sm.c = c
-    ws.sm.cinv = 1./c
+    ws.sm.cinv = 1 ./c
     return nothing
   end
 
@@ -167,12 +167,12 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     c = ws.sm.c
 
     ws.x[:] = D*ws.x
-    ws.p.P[:,:] = Dinv*ws.p.P*Dinv./c
-    ws.p.q[:] = (Dinv*ws.p.q)./c
+    ws.p.P[:,:] = Dinv*ws.p.P*Dinv ./c
+    ws.p.q[:] = (Dinv*ws.p.q) ./c
     ws.s[:] = Einv*ws.s
 
-    ws.ν[:] = E*ws.ν./c
-    ws.μ[:] = E*ws.μ./c
+    ws.ν[:] = E*ws.ν ./c
+    ws.μ[:] = E*ws.μ ./c
     return nothing
   end
 

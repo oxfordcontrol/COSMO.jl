@@ -1,5 +1,5 @@
 module Parameters
-using QOCS,..Residuals, ..KKT
+using ..QOCS,..Residuals, ..KKT
 export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
 
@@ -27,7 +27,7 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
     newRho = minimum([maximum([newRho,settings.RHO_MIN]),settings.RHO_MAX])
     # only update rho if significantly different than current rho
     # FIXME: Should it be settings.rho or previous rho???
-    if (newRho > settings.adaptive_rho_tolerance*settings.rho) || (newRho < (1./settings.adaptive_rho_tolerance)*settings.rho)
+    if (newRho > settings.adaptive_rho_tolerance*settings.rho) || (newRho < (1 ./ settings.adaptive_rho_tolerance)*settings.rho)
       updateRhoVec!(newRho,ws.p,settings)
     end
     return nothing
