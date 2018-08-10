@@ -1,7 +1,7 @@
-# Quadratic Objective Conic Solver (QOCS) - Pure Julia Implementation
-This is a pure Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
+![QOCS Logo](https://github.com/migarstka/QOCS_assets/blob/master/QOCS_logo.png)
+This repository hosts a Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
 ```
-min_x 1/2 x'Px + q'x 
+min 1/2 x'Px + q'x
 s.t. Ax + s = b, s in K
 ```
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex cone K is a composition of the zero cone, the non-negative orthant, a set of second order cones, and a set of positive semidefinite cones. The dimension of the cones have to be specified using the `Cone` type (`K.f::Int`: number of zero cone variables, `K.l::Int`: number of nonnegative components, `K.s::Array{Int}`: number of variables in each second-order cone, `K.q::Array{Int}`: number of variables in each psd cone).
@@ -9,15 +9,15 @@ with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q �
 ## Installation / Usage
 - The Solver was written for Julia v0.6
 - Clone repository to local machine
-- Include `../src/Solver.jl` into your project and load the `OSSDP` and `OSSDPTypes` module.
+- Include `../src/QOCS.jl` into your project and load the `QOCS` module.
 - Consider the following example:
 
 ```julia
 workspace()
-include("../src/Solver.jl")
+include("../src/QOCS.jl")
 
 using Base.Test
-using OSSDP, OSSDPTypes
+using QOCS
 
 # Linear program example
 # min c'x
@@ -33,13 +33,13 @@ ba = [b; -ones(4,1);-5;-4]
 P = zeros(size(A,2),size(A,2))
 
 # define cone dimensions
-K = OSSDPTypes.Cone(0,10,[],[])
+K = QOCS.Cone(0,10,[],[])
 
 # adjust solver settings
-settings = OSSDPSettings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,checkTermination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
+settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,scaling = 0,eps_abs = 1e-6, eps_rel = 1e-6)
 
 # solve problem
-res,ws  = OSSDP.solve(P,c,Aa,ba,K,settings);
+res,ws  = QOCS.solve(P,c,Aa,ba,K,settings);
 
 # test against known solution
 @testset "Linear Problem" begin
@@ -47,8 +47,11 @@ res,ws  = OSSDP.solve(P,c,Aa,ba,K,settings);
   @test isapprox(res.cost,20.0, atol=1e-2)
 end
 ```
+## Test problems
+A set of benchmark problems with conic constraints has been collected and made available here:
+[https://github.com/migarstka/SDP_Benchmark_Problems](https://github.com/migarstka/SDP_Benchmark_Problems)
 ## Settings
-Settings can be specified using the `OSSDPSettings` struct. The following settings are available:
+Settings can be specified using the `QOCS.Settings` struct. The following settings are available:
 
 Argument | Description | Values (default)
 --- | --- | ---
@@ -61,12 +64,26 @@ eps_prim_inf | Primal infeasibility tolerance | 1e-4
 eps_dual_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
-checkTermination | Check termination interval | 1
+check_termination | Check termination interval | 40
+check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
-adaptive_rho | Automatic adaptation of step size parameter | false
-adaptive_rho_interval | Number of iterations after which rho is adapted | 40
+adaptive_rho | Automatic adaptation of step size parameter | true
+timelimit | set solver time limit in s | 0
 
-For more low-level settings, see the OSSDPSettings type definition in `/src/Types.jl`.
+For more low-level settings, see the Settings definition in `/src/Types.jl`.
+
+## Status Codes
+After attempting to solve the problem, QOCS will return one of the following statuses:
+
+Status Code  | Description
+---  | ---
+:Solved | A optimal solution was found
+:Unsolved | Default value
+:Max_iter_reached | Solver reached iteration limit (set with `Settings.max_iter`)
+:Time_limit_reached | Solver reached time limit (set with `Settings.timelimit`)
+:Primal_infeasible | Problem is primal infeasible
+:Dual_infeasible | Problem is dual infeasible
+
 
 ## Tasks / Future Work
 The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
@@ -75,4 +92,4 @@ The current tasks and future ideas are listed in [Issues](https://github.com/oxf
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ## Contact
-Send an email :email: to [Michael Garstka](mailto:michael.garstka@eng.ox.ac.uk) :rocket:!	
+Send an email :email: to [Michael Garstka](mailto:michael.garstka@eng.ox.ac.uk) :rocket:!

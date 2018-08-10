@@ -1,23 +1,24 @@
 module Projections
-using OSSDPTypes
+
+using QOCS
 export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, projectCompositeCone!
 
 # -------------------------------------
 # HELPER FUNCTIONS
 # -------------------------------------
 
-    function projectCompositeCone!(x,K::OSSDPTypes.Cone)
+    function projectCompositeCone!(x,K::QOCS.Cone)
       b = 1
 
       if K.f  > 0
         e = b + K.f - 1
-        x[b:e] = zeroCone(x[b:e])
+        zeroCone!(x, b, e)
         b = e + 1
       end
 
       if K.l > 0
         e = b + K.l - 1
-        x[b:e] = nonNegativeOrthant(x[b:e])
+        nonNegativeOrthant!(x, b, e)
         b = e +1
       end
 
@@ -42,13 +43,19 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
 
 
     # projection onto nonegative orthant R_+^n
-    function nonNegativeOrthant(x)
-      return max.(x,0)
+    function nonNegativeOrthant!(x, b, e)
+      for i=b:e
+        x[i] = max(x[i], 0.)
+      end
+      nothing
     end
 
     # projection onto zero cone
-    function zeroCone(x)
-      return zeros(size(x,1),1)
+    function zeroCone!(x, b, e)
+      for i=b:e
+        x[i] = 0.
+      end
+      nothing
     end
 
       # projection onto free cone R^n

@@ -1,9 +1,8 @@
-module OSSDPTypes
-export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
+
 # -------------------------------------
 # struct DEFINITIONS
 # -------------------------------------
-  struct OSSDPResult
+  mutable struct Result
     x::Array{Float64}
     s::Array{Float64}
     ν::Array{Float64}
@@ -12,19 +11,30 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     iter::Int64
     status::Symbol
     solverTime::Float64
+    setupTime::Float64
+    iterTime::Float64
     rPrim::Float64
     rDual::Float64
+
+    function Result()
+      return new(Float64[],Float64[],Float64[],Float64[],0.,0,:Unsolved,0.,0.,0.,0.,0.)
+    end
+
+    function Result(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
+      return new(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
+    end
+
   end
 
 
   # Redefinition of the show function that fires when the object is called
-  function Base.show(io::IO, obj::OSSDPResult)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\n\n" )
+  function Base.show(io::IO, obj::Result)
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\nSetup Time: $(round.(obj.setupTime*1000,2))ms\nAvg Iter Time: $(round.((obj.iterTime/obj.iter)*1000,2))ms" )
   end
 
 
   # product of cones dimensions, similar to SeDuMi
-  struct Cone
+  mutable struct Cone
     # number of zero  components
     f::Int64
     # number of nonnegative components
@@ -35,6 +45,11 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     s::Array{Int64}
 
     #constructor
+
+    function Cone()
+      return new(0,0,Int64[],Int64[])
+    end
+
     function Cone(f::Int64,l::Int64,q,s)
       (f < 0 || l < 0) && error("Negative values are not allowed.")
       (length(q) == 1 && q[1] == 0) && (q = [])
@@ -50,14 +65,14 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
 
   mutable struct Problem
     P::SparseMatrixCSC{Float64,Int64}
-    q::SparseVector{Float64,Int64}
+    q::Vector{Float64}
     A::SparseMatrixCSC{Float64,Int64}
-    b::SparseVector{Float64,Int64}
+    b::Vector{Float64}
     m::Int64
     n::Int64
-    K::OSSDPTypes.Cone
+    K::Cone
     ρVec::Array{Float64,1}
-    Info::OSSDPTypes.Info
+    Info::Info
     F
     #constructor
     function Problem(P,q,A,b,K)
@@ -72,8 +87,8 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
       # Make sure problem data is in sparse format
       typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
       typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
-      typeof(b) != SparseVector{Float64,Int64} && (b = sparse(b))
-      typeof(q) != SparseVector{Float64,Int64} && (q = sparse(q))
+      typeof(b) == SparseVector{Float64,Int64} && (b = full(b))
+      typeof(q) == SparseVector{Float64,Int64} && (q = full(q))
 
       # check that number of cone variables provided in K add up
       isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
@@ -96,21 +111,39 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
   end
 
   mutable struct WorkSpace
-      p::OSSDPTypes.Problem
-      sm::OSSDPTypes.ScaleMatrices
-      x::SparseVector{Float64,Int64}
-      s::SparseVector{Float64,Int64}
-      ν::SparseVector{Float64,Int64}
-      μ::SparseVector{Float64,Int64}
+      p::Problem
+      sm::ScaleMatrices
+      x::Vector{Float64}
+      s::Vector{Float64}
+      ν::Vector{Float64}
+      μ::Vector{Float64}
       #constructor
-    function WorkSpace(p::OSSDPTypes.Problem,sm::OSSDPTypes.ScaleMatrices)
+    function WorkSpace(p::Problem,sm::ScaleMatrices)
       m = p.m
       n = p.n
-      new(p,sm,spzeros(n),spzeros(m),spzeros(m),spzeros(m))
+      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m))
     end
   end
 
-  mutable struct OSSDPSettings
+
+mutable struct Model
+    P::SparseMatrixCSC{Float64,Int64}
+    q::Vector{Float64}
+    A::SparseMatrixCSC{Float64,Int64}
+    b::Vector{Float64}
+    K::Cone
+
+    function Model()
+        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],Cone())
+    end
+
+    # function Model(P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::Cone)
+    #     return new(P,q,A,b,K)
+    # end
+
+end
+
+  mutable struct Settings
     rho::Float64
     sigma::Float64
     alpha::Float64
@@ -120,12 +153,11 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     eps_dual_inf::Float64
     max_iter::Int64
     verbose::Bool
-    checkTermination::Int64
+    check_termination::Int64
+    check_infeasibility::Int64
     scaling::Int64
     MIN_SCALING::Float64
     MAX_SCALING::Float64
-    avgFunc::Function
-    scaleFunc::Int64
     adaptive_rho::Bool
     adaptive_rho_interval::Int64
     adaptive_rho_tolerance::Float64
@@ -133,39 +165,80 @@ export OSSDPResult, Problem, OSSDPSettings, ScaleMatrices, Cone, WorkSpace
     RHO_MAX::Float64
     RHO_TOL::Float64
     timelimit::Int64
-    objTrue::Float64
-    objTrueTOL::Float64
+    obj_true::Float64
+    obj_true_tol::Float64
     #constructor
-    function OSSDPSettings(;
+    function Settings(;
       rho=0.1,
       sigma=1e-6,
       alpha=1.6,
       eps_abs=1e-4,
       eps_rel=1e-4,
-      eps_prim_inf=1e-4,
+      eps_prim_inf=1e-6,
       eps_dual_inf=1e-4,
       max_iter=2500,
       verbose=false,
-      checkTermination=1,
+      check_termination=40,
+      check_infeasibility=40,
       scaling=10,
       MIN_SCALING = 1e-4,
       MAX_SCALING = 1e4,
-      avgFunc = mean,
-      scaleFunc = 2,
-      adaptive_rho = false,
+      adaptive_rho = true,
       adaptive_rho_interval = 40,
       adaptive_rho_tolerance = 5,
       RHO_MIN = 1e-6,
       RHO_MAX = 1e6,
       RHO_TOL = 1e-4,
       timelimit = 0,
-      objTrue = NaN,
-      objTrueTOL = 1e-3
+      obj_true = NaN,
+      obj_true_tol = 1e-3
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
-          checkTermination,scaling,MIN_SCALING,MAX_SCALING,avgFunc,scaleFunc,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,objTrue,objTrueTOL)
+          check_termination,check_infeasibility,scaling,MIN_SCALING,MAX_SCALING,adaptive_rho,
+          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,obj_true,obj_true_tol)
     end
   end
 
+
+
+abstract type AbstractConvexSet end
+
+
+struct ZeroCone <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
 end
+
+struct Box{T <: Real} <: AbstractConvexSet
+    A::AbstractMatrix{<:Real}
+    b::AbstractVector{<:Real}
+    dim::Int
+    project!::Function
+    l::T
+    u::T
+end
+
+struct NonNegativeOrthant <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
+
+struct SecondOrderCone <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
+
+struct PositiveSemidefiniteCone <:AbstractConvexSet
+  A::AbstractMatrix{<:Real}
+  b::AbstractVector{<:Real}
+  dim::Int
+  project!::Function
+end
+
+
