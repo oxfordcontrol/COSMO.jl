@@ -6,7 +6,7 @@
 # s.t.    Xii = 1
 #         X ⪴ 0
 
-using QOCS, Base.Test
+using QOCS, Test, LinearAlgebra, SparseArrays, Random
 
 
 # this function creates a matrix A that slices out the diagonal entries Xii of a vectorized square matrix x=vec(X)
@@ -28,7 +28,7 @@ function diagonalEqualOne(A,atol)
   return true
 end
 
-rng = MersenneTwister(12345)
+rng = Random.MersenneTwister(12345)
 xMin = -50.
 xMax = 50.
 n = 50
@@ -62,7 +62,7 @@ Xsol = reshape(res.x,n,n)
 @testset "Closest Correlation Matrix - SDP Problems" begin
   @test res.status == :Solved
   @test diagonalEqualOne(Xsol,1e-5)
-  @test minimum(eig(Xsol)[1]) > -1e-3
+  @test minimum(eigen(Xsol).values) > -1e-3
 
 end
 

@@ -5,7 +5,7 @@
 
 using QOCS, Base.Test
 maxIter = 3000
-rng = MersenneTwister(1313)
+rng = Random.MersenneTwister(1313)
 
 setUnNonAdaptive =   Settings(max_iter=maxIter,verbose=true,check_termination=1,checkInfeasibility=50,scaling = 0 ,scaleFunc=1,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)
 setMeanNonAdaptive = Settings(max_iter=maxIter,verbose=false,check_termination=1,checkInfeasibility=50,scaling = 10,scaleFunc=2,adaptive_rho=false,eps_abs=1e-7,eps_rel=1e-7)

@@ -8,7 +8,7 @@ nDense = 1000
 nSparse = 1000
 numProblems = nDense + nSparse
 
-rng = MersenneTwister(131123)
+rng = Random.MersenneTwister(131123)
 
 
 function generateSparsePosDefMatrix(rng,n::Int64,density::Float64)
@@ -24,7 +24,7 @@ function generatePosDefMatrix(rng,n::Int64)
       X = rand(rng,n,n)
       Q, R = qr(X)
       eigs = rand(rng,n).*(5 .-0.1) .+ 0.1
-      X = Q*diagm(eigs)*Q'
+      X = Q*Matrix(Diagonal(eigs))*Q'
       X = 0.5*(X+X')
       return X
   end

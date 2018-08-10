@@ -5,7 +5,7 @@ include("../solverComparison/Compare.jl")
 
 using OSQP, OSSDP, Base.Test, Compare, JuMP, Mosek
 
-rng = MersenneTwister(12345)
+rng = Random.MersenneTwister(12345)
 
 nn = 25
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
@@ -35,7 +35,7 @@ for iii =1:1:nn
   # create augmented matrices
   Aa = sparse([1 zeros(1,2*n+1) 1 zeros(1,m);
         -1 zeros(1,2*n) 1 zeros(1,m+1);
-        zeros(m,1) -2*F zeros(m,n+2) eye(m,m);
+        zeros(m,1) -2*F zeros(m,n+2) Matrix(1.0I,m,m);
         zeros(n,1) eye(n) -eye(n) zeros(n,m+2);
         zeros(n,1) -eye(n) -eye(n) zeros(n,m+2);
        zeros(1,2*n+1) -1 zeros(1,m+1);

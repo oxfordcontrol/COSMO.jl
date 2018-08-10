@@ -7,7 +7,7 @@ using QDLDL,GraphModule, Base.Test
 
 
 
-rng = MersenneTwister(131123)
+rng = Random.MersenneTwister(131123)
 
 
 

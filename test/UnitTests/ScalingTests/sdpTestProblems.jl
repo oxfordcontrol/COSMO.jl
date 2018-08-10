@@ -5,7 +5,7 @@ include("../solverComparison/Compare.jl")
 
 using OSQP, OSSDP, Base.Test, Compare
 
-rng = MersenneTwister(123734)
+rng = Random.MersenneTwister(123734)
 
 nn = 25
 timestamp = Dates.format(now(), "yyddmm_HH-MM")

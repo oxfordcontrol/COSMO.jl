@@ -3,7 +3,7 @@
 # constrain s[m1] = t of [t;x] to be -1, which makes the second-order-cone constraint infeasible
 
 nn = 1
-rng = MersenneTwister(1313)
+rng = Random.MersenneTwister(1313)
 
 @testset "Primal infeasible QP problems - Testset 3" begin
   for iii = 1:nn

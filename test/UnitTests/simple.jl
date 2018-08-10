@@ -1,5 +1,6 @@
 
-using QOCS, Base.Test
+using QOCS, Test, LinearAlgebra, Statistics, Random
+
 tol = 1e-3
 
 mutable struct TestProblem

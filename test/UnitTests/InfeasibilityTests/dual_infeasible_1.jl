@@ -2,7 +2,7 @@
 # Choose A, P and q in a way such that the problem becomes unbounded below
 # here the last element of x appears in the cost function with a negative sign and is unconstrained
 
-rng = MersenneTwister(555)
+rng = Random.MersenneTwister(555)
 nn = 1
 
 
@@ -13,7 +13,7 @@ nn = 1
   n = rand(rng,5:50)
   m = 2*n
   A = sprandn(m,n,0.7)*50
-  A[:,end] = 0
+  A[:,end] .= 0
 
   P = spzeros(n,n)
 

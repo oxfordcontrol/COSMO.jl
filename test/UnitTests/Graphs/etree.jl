@@ -11,7 +11,7 @@ A = [1 1 0 0 0; 1 1 1 0 0; 0 1 1 1 1; 0 0 1 1 1; 0 0 1 1 1]
 g = Graph(sparse(A))
 
 
-rng = MersenneTwister(123554);
+rng = Random.MersenneTwister(123554);
 # Define number of test matrices
 nn = 1000
 

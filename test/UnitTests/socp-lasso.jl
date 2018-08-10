@@ -1,11 +1,11 @@
 # SOCP Lasso Testproblem
 
-using QOCS, Base.Test
+using QOCS, Test, LinearAlgebra, SparseArrays
 
 
 
 # generate problem data
-rng = MersenneTwister(12345)
+rng = Random.MersenneTwister(12345)
 n = 8
 m = 50*n
 F = rand(rng,m,n)
@@ -22,7 +22,7 @@ b = F*vtrue + noise
 # create augmented matrices
 Aa = sparse([1 zeros(1,2*n+1) 1 zeros(1,m);
       -1 zeros(1,2*n) 1 zeros(1,m+1);
-      zeros(m,1) -2*F zeros(m,n+2) eye(m,m);
+      zeros(m,1) -2*F zeros(m,n+2) Matrix(1.0I,m,m);
       zeros(n,1) eye(n) -eye(n) zeros(n,m+2);
       zeros(n,1) -eye(n) -eye(n) zeros(n,m+2);
      zeros(1,2*n+1) -1 zeros(1,m+1);
@@ -44,5 +44,5 @@ res,nothing = QOCS.solve(P,q,Aa,ba,K,settings);
 
 @testset "SOCP - Lasso" begin
   @test res.status == :Solved
-  @test isapprox(res.cost,0.4422849814458825,atol=1e-3)
+  @test isapprox(res.cost,0.4422849814458825,atol=1e-2)
 end

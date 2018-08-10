@@ -4,7 +4,7 @@ include("../../../src/Solver.jl")
 
 using OSSDP, Base.Test
 
-rng = MersenneTwister(12345)
+rng = Random.MersenneTwister(12345)
 
 nn = 20
 

@@ -4,7 +4,7 @@
 # x >= 0, elements in A >=0, elements in b <0 and s in R+
 
 nn = 1
-rng = MersenneTwister(1313)
+rng = Random.MersenneTwister(1313)
 
 @testset "Primal infeasible QP problems - Testset 1" begin
   for iii = 1:nn
@@ -14,7 +14,7 @@ rng = MersenneTwister(1313)
     m = 2*n
     A = sprand(rng,m,n,0.8)*50
     b = -rand(rng,m)*50
-    A = [A; -speye(n)]
+    A = [A; -sparse(1.0I,n,n)]
     b = [b;zeros(n)]
 
     # create dual feasibile problem

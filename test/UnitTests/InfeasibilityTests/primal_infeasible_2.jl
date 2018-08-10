@@ -4,7 +4,7 @@
 # s3 cannot be found since Ax > 0 and b < 0 (Ax + s = b)
 
 nn = 1
-rng = MersenneTwister(1313)
+rng = Random.MersenneTwister(1313)
 
 @testset "Primal infeasible QP problems - Testset 2" begin
   for iii = 1:nn
@@ -24,7 +24,7 @@ rng = MersenneTwister(1313)
     # add the constraint x >= 0
     b = [b1;zeros(n);b2]
     b = vec(b)
-    A = [A[1:m1,:]; -speye(n);A[m1+1:end,:]]
+    A = [A[1:m1,:]; -sparse(1.0I,n,n);A[m1+1:end,:]]
 
     # create dual feasible problem Px+q+A'y = 0, and y in K*
     P = Helper.generatePosDefMatrix(n,rng)

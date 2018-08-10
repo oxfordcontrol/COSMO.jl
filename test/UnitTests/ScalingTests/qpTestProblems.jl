@@ -5,8 +5,8 @@ include("../../Benchmarks/solverComparison/Compare.jl")
 
 using OSQP, OSSDP, Base.Test, Compare, JuMP, Mosek
 
-rng = MersenneTwister(12345)
-#rng = MersenneTwister(211121)
+rng = Random.MersenneTwister(12345)
+#rng = Random.MersenneTwister(211121)
 
 nn = 20
 timestamp = Dates.format(now(), "yyddmm_HH-MM")
@@ -32,12 +32,12 @@ for iii =1:1:nn
   pDims = [m;n;nnz(A)]
 
   # define lasso problem as QP
-  Aa = [-A zeros(m,n) eye(m,m);
-         eye(n,n) -eye(n,n) zeros(n,m);
-         -eye(n,n) -eye(n,n) zeros(n,m)]
+  Aa = [-A zeros(m,n) Matrix(1.0I,m,m);
+         Matrix(1.0I,n,n) -Matrix(1.0I,n,n) zeros(n,m);
+         -Matrix(1.0I,n,n) -Matrix(1.0I,n,n) zeros(n,m)]
 
   ba = [-b;zeros(2*n)]
-  P = 2*diagm([zeros(2*n);ones(m)]) # times two to cancel the 1/2 in the cost function
+  P = 2*Matrix(Diagonal([zeros(2*n);ones(m)])) # times two to cancel the 1/2 in the cost function
   q = [zeros(n);λ*ones(n);zeros(m)]
 
   # define cone membership
@@ -56,9 +56,9 @@ for iii =1:1:nn
   # modify problem for OSQP (using inequality constraints)
   l = full([-b;-Inf*ones(n);zeros(n)][:])
   u = full([-b;zeros(n);Inf*ones(n)][:])
-  Aa2 = [-A zeros(m,n) eye(m,m);
-       eye(n,n) -eye(n,n) zeros(n,m);
-       eye(n,n) eye(n,n) zeros(n,m)]
+  Aa2 = [-A zeros(m,n) Matrix(1.0I,m,m);
+       Matrix(1.0I,n,n) -Matrix(1.0I,n,n) zeros(n,m);
+       Matrix(1.0I,n,n) Matrix(1.0I,n,n) zeros(n,m)]
 
   m1 = OSQP.Model()
   OSQP.setup!(m1; P=sparse(P), q=q, A=sparse(Aa2), l=l, u=u,scaling=0,check_termination=1,verbose=false,adaptive_rho = true,eps_abs = 1e-3,eps_rel=1e-3)

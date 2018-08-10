@@ -2,9 +2,8 @@
 # Problems with m1 equality constraints, m3-dimensional second order constraint and m4-dimensional psd constraint
 # x1 is unbounded below --> hence problem is dual infeasible
 
-
 nn = 1
-rng = MersenneTwister(1313)
+rng = Random.MersenneTwister(1313)
 
 sum_detected = 0
 @testset "Dual infeasible QP problems - Testset 2" begin
@@ -33,7 +32,7 @@ sum_detected = 0
     s = [s1;s2;s3;s4]
 
     # make problem unbounded in x1
-    A[:,1] = 0
+    A[:,1] .= 0
     A[m1+1,:] = [-1;zeros(n-1)]
     b = A*xtrue+s
     b[m1+1] = 0
