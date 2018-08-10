@@ -1,4 +1,4 @@
-include("../../src/QOCS.jl")
+include("../src/QOCS.jl")
 
 using QOCS
 
