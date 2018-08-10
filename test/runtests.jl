@@ -1,6 +1,11 @@
 include("../../src/QOCS.jl")
 
-using QOCS, Base.Test
+using QOCS
+@static if VERSION < v"0.7.0-DEV.2005"
+    using Base.Test
+else
+    using Test
+end
 
 rng = MersenneTwister(12345)
 
@@ -13,3 +18,7 @@ rng = MersenneTwister(12345)
   include("./InfeasibilityTests/runTests.jl")
 
 end
+
+
+# write your own tests here
+@test 1 == 2
