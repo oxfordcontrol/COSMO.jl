@@ -29,7 +29,7 @@
 
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::Result)
-    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,2))ms\nSetup Time: $(round.(obj.setupTime*1000,2))ms\nAvg Iter Time: $(round.((obj.iterTime/obj.iter)*1000,2))ms" )
+    println(io,"\nRESULT: \nTotal Iterations: $(obj.iter)\nCost: $(round.(obj.cost,digits=2))\nStatus: $(obj.status)\nSolve Time: $(round.(obj.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.setupTime*1000,digits=2))ms\nAvg Iter Time: $(round.((obj.iterTime/obj.iter)*1000,digits=2))ms" )
   end
 
 
