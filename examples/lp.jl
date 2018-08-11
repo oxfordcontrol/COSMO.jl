@@ -1,8 +1,6 @@
 # Test script to test solver for an lp
-workspace()
-include("../src/QOCS.jl")
 
-using Base.Test
+using Test
 using QOCS
 
 # Linear program example
@@ -10,11 +8,11 @@ using QOCS
 # s.t. Ax <= b
 #      x >= 1,  x2 =>5, x1+x3 => 4
 c = [1; 2; 3; 4]
-A = eye(4)
+A = Matrix(1.0I,4,4)
 b = [10; 10; 10; 10]
 
 # create augmented matrices
-Aa = [A;-eye(4);0 -1 0 0;-1 0 -1 0]
+Aa = [A;-Matrix(1.0I,4,4);0 -1 0 0;-1 0 -1 0]
 ba = [b; -ones(4,1);-5;-4]
 P = zeros(size(A,2),size(A,2))
 # define cone
@@ -27,3 +25,4 @@ res,ws  = QOCS.solve(P,c[:],Aa,ba[:],K,settings);
   @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-2, norm=(x -> norm(x,Inf)))
   @test isapprox(res.cost,20.0, atol=1e-2)
 end
+nothing

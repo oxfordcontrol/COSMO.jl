@@ -1,9 +1,7 @@
 # Test script to test solver for a qp
-workspace()
-include("../src/QOCS.jl")
 
-using Base.Test
-using QOCS
+using Test
+using QOCS, SparseArrays, LinearAlgebra
 
 # Quadratic program example from OSQP Doc
 # min 0.5 * x'Px +  q'x
@@ -28,4 +26,4 @@ res, ws= QOCS.solve(P,q[:],Aa,ba[:],K,settings)
   @test norm(res.x[1:2] - [0.3;0.7],Inf) < 1e-3
   @test abs(res.cost-1.88) < 1e-3
 end
-
+nothing

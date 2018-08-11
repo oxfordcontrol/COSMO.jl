@@ -6,12 +6,8 @@
 # are non-negative, and this happens for values t ≥ λ1
 # This immediately gives us that
 # λ1 = min{t | s.t. tI − A ≥ 0}
-
-workspace()
-include("../src/QOCS.jl")
-
-using Base.Test
-using QOCS
+using Test
+using QOCS, SparseArrays,LinearAlgebra, Random
 
 nn = 10
 rng = MersenneTwister(7232)
@@ -25,7 +21,7 @@ rng = MersenneTwister(7232)
 
     # solve the dual problem
     c = -vec(A)
-    Aa = [vec(speye(r))';-speye(r^2)]
+    Aa = [vec(sparse(I,r,r))';-sparse(I,r^2,r^2)]
     b = [1.;zeros(r^2)]
     K = Cone(1,0,[],[r^2])
     P = spzeros(r^2,r^2)
@@ -34,8 +30,9 @@ rng = MersenneTwister(7232)
     println("$(iii)/$(nn) completed! Size of A: $(r), Number of Iterations $(res.iter).")
 
     # true solution
-    λMaxTrue = maximum(eig(A)[1])
+    λMaxTrue = maximum(eigen(A).values)
     @test abs(res.ν[1]-λMaxTrue) < 1e-2
    end
 end
+nothing
 
