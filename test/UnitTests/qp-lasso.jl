@@ -27,10 +27,11 @@ K = QOCS.Cone(m,2*n,[],[])
 
 settings = QOCS.Settings()
 
-res,nothing = QOCS.solve(P,q,Aa,ba,K,settings);
+res, = QOCS.solve(P,q,Aa,ba,K,settings);
 
 
 @testset "QP - Lasso" begin
   @test res.status == :Solved
   @test isapprox(res.cost, 46.40521553063313, atol=1e-3)
 end
+nothing

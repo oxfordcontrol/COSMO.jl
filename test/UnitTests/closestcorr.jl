@@ -32,7 +32,7 @@ rng = Random.MersenneTwister(12345)
 xMin = -50.
 xMax = 50.
 n = 50
-C = xMin+randn(rng,n,n)*(xMax-xMin)
+C = xMin.+randn(rng,n,n)*(xMax-xMin)
 c = vec(C)
 
 isposdef(C) && warn("The perturbed correlation matrix is still pos def.")
@@ -41,12 +41,12 @@ isposdef(C) && warn("The perturbed correlation matrix is still pos def.")
 n2 = n^2
 m = n+n2
 
-P = speye(n2)
+P = sparse(1.0I,n2,n2)
 q = -vec(C)
 r = 0.5*vec(C)'*vec(C)
 b = [ones(n);zeros(n2)]
 A = createDiagonalExtractor(n)
-Aa = [A; -speye(n2)]
+Aa = [A; -sparse(1.0I,n2,n2)]
 # specify cone
 Kf = n
 Kl = 0
@@ -56,7 +56,7 @@ Ks = [n^2]
 K = QOCS.Cone(Kf,Kl,Kq,Ks)
 settings = QOCS.Settings()
 
-res,nothing = QOCS.solve(P,q,Aa,b,K,settings);
+res, = QOCS.solve(P,q,Aa,b,K,settings);
 Xsol = reshape(res.x,n,n)
 
 @testset "Closest Correlation Matrix - SDP Problems" begin
@@ -65,5 +65,5 @@ Xsol = reshape(res.x,n,n)
   @test minimum(eigen(Xsol).values) > -1e-3
 
 end
-
+nothing
 

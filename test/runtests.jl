@@ -12,9 +12,10 @@ rng = Random.MersenneTwister(12345)
 @testset "All Unit Tests" begin
 
   include("./UnitTests/simple.jl")
-  # include("./UnitTests/qp-lasso.jl")
-  # include("./UnitTests/socp-lasso.jl")
-  # include("./UnitTests/closestcorr.jl")
-  # include("./UnitTests/InfeasibilityTests/runTests.jl")
-
+  include("./UnitTests/qp-lasso.jl")
+  include("./UnitTests/socp-lasso.jl")
+  include("./UnitTests/closestcorr.jl")
+  include("./UnitTests/print.jl")
+  include("./UnitTests/InfeasibilityTests/runTests.jl")
 end
+nothing
