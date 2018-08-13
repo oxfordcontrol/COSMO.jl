@@ -1,4 +1,4 @@
-using QOCS, Test
+using QOCS, Test, Random
 
 settings = QOCS.Settings()
 iter = 10
