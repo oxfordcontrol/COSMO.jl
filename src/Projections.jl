@@ -97,12 +97,10 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
       return max.(x,0)
     else
       # recreate original matrix from input vectors
-      X = reshape(x,n,n)
-      X = X./2
-      X = X+X'
+      Xs = Symmetric(reshape(x,n,n))
 
       # compute eigenvalue decomposition
-      F = eigen(X)
+      F = eigen(Xs)
 
       ind = findall(x-> x>0, F.values)
       Λ = Matrix(Diagonal(F.values))
