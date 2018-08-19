@@ -4,12 +4,13 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
 
 # set initial values of rhoVec
-  function setRhoVec!(p::QOCS.Problem,settings::QOCS.Settings)
-    nEQ = p.K.f
-    nINEQ = p.m - p.K.f
-
-    p.ρVec = [1e3*settings.rho*ones(nEQ);settings.rho*ones(nINEQ)]
-    p.Info.rho_updates[1] = settings.rho
+  function setRhoVec!(ws::QOCS.WorkSpace,settings::QOCS.Settings)
+    p = ws.p
+    # nEQ = p.K.f
+    # nINEQ = p.m - p.K.f
+    ws.ρ = settings.rho
+    ws.ρVec = ws.ρ*ones(p.m) #[1e3*ws.ρ*ones(nEQ);ws.ρ*ones(nINEQ)]
+    push!(ws.Info.rho_updates,ws.ρ)
     return nothing
   end
 
@@ -23,25 +24,26 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
     r_prim = r_prim/(maxNormPrim + 1e-10)
     r_dual = r_dual/(maxNormDual + 1e-10)
 
-    newRho = settings.rho * sqrt(r_prim/(r_dual+1e-10))
+    newRho = ws.ρ * sqrt(r_prim/(r_dual+1e-10))
     newRho = minimum([maximum([newRho,settings.RHO_MIN]),settings.RHO_MAX])
     # only update rho if significantly different than current rho
     # FIXME: Should it be settings.rho or previous rho???
-    if (newRho > settings.adaptive_rho_tolerance*settings.rho) || (newRho < (1 ./ settings.adaptive_rho_tolerance)*settings.rho)
-      updateRhoVec!(newRho,ws.p,settings)
+    if (newRho > settings.adaptive_rho_tolerance*ws.ρ) || (newRho < (1 ./ settings.adaptive_rho_tolerance)*ws.ρ)
+      updateRhoVec!(newRho,ws,settings)
     end
     return nothing
   end
 
-  function updateRhoVec!(newRho::Float64,p::QOCS.Problem,settings::QOCS.Settings)
+  function updateRhoVec!(newRho::Float64,ws::QOCS.WorkSpace,settings::QOCS.Settings)
+    p = ws.p
     nEQ = p.K.f
     nINEQ = p.m - p.K.f
 
-    settings.rho = newRho
-    p.ρVec = [1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
+    ws.ρ = newRho
+    ws.ρVec = newRho*ones(p.m)#[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
     # log rho updates to info variable
-    push!(p.Info.rho_updates,newRho)
-    factorKKT!(p,settings)
+    push!(ws.Info.rho_updates,newRho)
+    factorKKT!(ws,settings)
     return nothing
   end
 

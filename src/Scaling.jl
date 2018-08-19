@@ -52,6 +52,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     K = ws.p.K
     c = 1.0
     sTemp = ones(n+m)
+    convexSets = ws.p.convexSets
 
     #initialize scaling matrices
     D = sparse(1.0I,n,n)
@@ -114,21 +115,10 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     K.f > 0 && (ix += K.f)
     K.l > 0 && (ix += K.l)
 
-    # variables in second order cones. Use averaging to preserve cone membership
-    if length(K.q) > 0
-      for iii = 1:length(K.q)
-        numConeElem = K.q[iii]
-        sTemp[ix+1:ix+numConeElem] .= mean(sTemp[ix+1:ix+numConeElem])
-        ix += numConeElem
-      end
-    end
-
-    # variables in sdp cones. Use averaging to preserve cone membership
-    if length(K.s) > 0
-      for iii = 1:length(K.s)
-        numConeElem = K.s[iii]
-        sTemp[ix+1:ix+numConeElem] .= mean(sTemp[ix+1:ix+numConeElem])
-        ix += numConeElem
+    for set in convexSets
+      isScaleScalar, = set.scale!(set)
+      if isScaleScalar
+        sTemp[set.indices] .= mean(sTemp[set.indices])
       end
     end
 
@@ -147,6 +137,16 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     ws.p.q = c*D*ws.p.q
     ws.p.b = E*ws.p.b
 
+    # scale set components (like u,l in a box)
+    for set in convexSets
+      scaleInfo = set.scale!(set)
+      if length(scaleInfo) > 1
+        scaleVars = scaleInfo[2:end]
+        for elem in scaleVars
+          elem[:] = E*elem
+        end
+      end
+    end
 
     ws.sm.D = D
     ws.sm.E = E

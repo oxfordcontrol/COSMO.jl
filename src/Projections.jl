@@ -1,106 +1,81 @@
 module Projections
 
 using ..QOCS, LinearAlgebra
-export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, projectCompositeCone!
+export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcone!, projectCompositeCone!
 
 # -------------------------------------
-# HELPER FUNCTIONS
+# Standard Projection Functions
 # -------------------------------------
 
-    function projectCompositeCone!(x,K::QOCS.Cone)
-      b = 1
+    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet})
 
-      if K.f  > 0
-        e = b + K.f - 1
-        zeroCone!(x, b, e)
-        b = e + 1
-      end
-
-      if K.l > 0
-        e = b + K.l - 1
-        nonNegativeOrthant!(x, b, e)
-        b = e +1
-      end
-
-      if length(K.q) > 0
-        for iii = 1:length(K.q)
-          e = b + K.q[iii] - 1
-          x[b:e] = secondOrderCone(x[b:e])
-          b = e + 1
-        end
-      end
-
-      if length(K.s) > 0
-        for iii = 1:length(K.s)
-          #FIXME: Make sure they work directly on the input data, no copying
-          e = b + K.s[iii] - 1
-          x[b:e] = sdcone(x[b:e])
-          b = e + 1
-        end
+      for convexSet in convexSets
+        xpart = view(x,convexSet.indices)
+        convexSet.project!(xpart,convexSet)
       end
       return x
     end
 
 
     # projection onto nonegative orthant R_+^n
-    function nonNegativeOrthant!(x, b, e)
-      for i=b:e
+    function nonNegativeOrthant!(x::SubArray{Float64},convexSet::QOCS.Nonnegatives)
+      for i in eachindex(x)
         x[i] = max(x[i], 0.)
       end
       nothing
     end
 
     # projection onto zero cone
-    function zeroCone!(x, b, e)
-      for i=b:e
+    function zeroCone!(x::SubArray{Float64},convexSet::QOCS.Zeros)
+      for i in eachindex(x)
         x[i] = 0.
       end
       nothing
     end
 
-      # projection onto free cone R^n
-    function freeCone(x)
-      return x
-    end
 
     # compute projection of x onto a box defined by l and u
-    function box(x,l,u)
-      return min.( max.(x,l), u)
+    function box!(x::SubArray{Float64},convexSet::QOCS.Box)
+      l = convexSet.l
+      u = convexSet.u
+      x[:] = min.( max.(x,l), u)
+      nothing
     end
 
 
     # projection onto second-order-cone {(t,x) | ||x||_2 <= t}
-    function secondOrderCone(x)
-      # FIXME: make sure no weird by reference is applied here
+    function secondOrderCone!(x::SubArray{Float64},convexSet::QOCS.SecondOrderCone)
       t = x[1]
-      x = x[2:length(x)]
+      xt = view(x,2:length(x))
 
-      normX = norm(x,2)
-      if  normX <= -t
-        return [0.;0.0.*x]
+      normX = norm(xt,2)
+      if normX <= -t
+        x[:] .= 0.
       elseif normX <= t
-        return [t;x]
+        nothing
       else
         tNew = (normX+t)/2
-        x = (normX+t)/(2*normX).*x
-        return [tNew;x]
+        xt = (normX+t)/(2*normX).*xt
+        x[:] = [tNew;xt]
       end
+      nothing
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function sdcone(x)
+   function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
 
     n = Int(sqrt(length(x)))
 
     # handle 1D case
     if size(x,1) == 1
-      return max.(x,0)
+      x = max.(x,0)
     else
       # recreate original matrix from input vectors
-      Xs = Symmetric(reshape(x,n,n))
-
+      #Xs = Symmetric(reshape(x,n,n))
+      X = reshape(x,n,n)
+      X = 0.5*(X+X')
       # compute eigenvalue decomposition
-      F = eigen(Xs)
+      F = eigen(X)
 
       ind = findall(x-> x>0, F.values)
       Λ = Matrix(Diagonal(F.values))
@@ -111,8 +86,9 @@ export nonNegativeOrthant, zeroCone,  freeCone, box, secondOrderCone, sdcone, pr
       # Q = F[:vectors]
       # # set negative eigenvalues to 0
       # Xp = Q*max.(Λ,0)*Q'
-      return vec(Xp)
+      x[:] = vec(Xp)
     end
+    nothing
   end
 
 

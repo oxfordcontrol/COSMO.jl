@@ -76,7 +76,7 @@ function reCreateSparseMatrix(A)
   colPtr = A.colptr
   val = A.nzval
 
-  #compute column indizes
+  #compute column indices
   colInd = zeros(Int64,length(rowInd))
   cval = 1
   for iii=2:length(colPtr)

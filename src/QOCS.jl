@@ -2,10 +2,11 @@
 module QOCS
 
 #export MathOptInterfaceQOCS
-export optimize!, reset!, assemble!, Settings, Cone, Model, Results, AbstractConvexSet
-using SparseArrays
+export optimize!, reset!, assemble!, Settings, Cone, Model, Results, Constrait, AbstractConvexSet
+using SparseArrays,LinearAlgebra
 
 include("./Helper.jl")
+include("./Sets.jl")
 include("./Types.jl")
 include("./KKT.jl")
 include("./Scaling.jl")

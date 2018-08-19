@@ -1,15 +1,7 @@
 
 
-function setModel!(model::QOCS.Model,P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::QOCS.Cone)
-  model.P = P
-  model.q = q
-  model.A = A
-  model.b = b
-  model.K = K
-  nothing
-end
 
-function admmStep!(x, s, μ, ν, x_tl, s_tl, ls, sol, F, q, b, K, ρ, α, σ, m, n)
+function admmStep!(x, s, μ, ν, x_tl, s_tl, ls, sol, F, q, b, K, ρ, α, σ, m, n,convexSets)
   # Create right hand side for linear system
   for i=1:n
     ls[i] = σ*x[i]-q[i]
@@ -27,36 +19,21 @@ function admmStep!(x, s, μ, ν, x_tl, s_tl, ls, sol, F, q, b, K, ρ, α, σ, m,
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ./ρ
   # Project onto cone K
-  Projections.projectCompositeCone!(s, K)
+  Projections.projectCompositeCone!(s, convexSets)
   # update dual variable μ
   @. μ = μ + ρ.*(s_tl - s)
   nothing
 end
 
-function solve!(model::QOCS.Model,settings::QOCS.Settings,results)
-   resSolver, nothing = solve(model.P,model.q,model.A,model.b,model.K,settings)
-   results.x = resSolver.x
-   results.ν = resSolver.ν
-   results.μ = resSolver.μ
-   results.cost = resSolver.cost
-   results.iter = resSolver.iter
-   results.status = resSolver.status
-   results.solverTime = resSolver.solverTime
-   results.setupTime = resSolver.setupTime
-   results.iterTime = resSolver.iterTime
-   results.rPrim = resSolver.rPrim
-   results.rDual = resSolver.rDual
-   nothing
-end
+
 
 # SOLVER ROUTINE
 # -------------------------------------
-  function solve(P,q,A,b,K::QOCS.Cone,settings::QOCS.Settings)
+  function optimize!(model::QOCS.Model,settings::QOCS.Settings)
     runTime_start = time()
 
     # create workspace variables
-    ws = WorkSpace(Problem(P,q,A,b,K),ScaleMatrices())
-    P = q = A = b = nothing
+    ws = WorkSpace(model,ScaleMatrices())
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     setupTime = time()
@@ -94,9 +71,9 @@ end
       admmStep!(
         ws.x, ws.s, ws.μ, ws.ν,
         x_tl, s_tl, ls,sol,
-        ws.p.F, ws.p.q, ws.p.b, K, ws.p.ρVec,
+        ws.p.F, ws.p.q, ws.p.b, ws.p.K, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n
+        m, n, ws.p.convexSets
       )
 
       # compute deltas for infeasibility detection

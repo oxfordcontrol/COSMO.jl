@@ -4,105 +4,39 @@ export isPrimalInfeasible, isDualInfeasible
 
   # sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar
   #                                                 +∞   ,else}
-  function supportFunction(δy,ws,settings)
-    K = ws.p.K
-    # check if δy is in polar cone to K_tilde = dual cone of K
-    inPolarCone = true
-    b = K.f + 1
 
-    # check that relevant part of δy is in dual of R+
-    if K.l > 0
-      e = b + K.l - 1
-      δy_sub = δy[b:e]
-      inPolarCone = (minimum(δy_sub) >= -settings.eps_prim_inf)
-      b = e+1
-    end
-
-    # check that relevant parts of δy is in dual of Lorenz cones
-    if length(K.q) > 0 && inPolarCone
-        for iii = 1:length(K.q)
-          e = b + K.q[iii] - 1
-          δy_sub = δy[b:e]
-          inPolarCone = (norm(δy_sub[2:end],2) - δy_sub[1] <= settings.eps_prim_inf  )
-          !inPolarCone && break
-          b = e + 1
-        end
-    end
-
-    # check that relevant parts of δy is in dual of SDP cones
-    b = K.f + K.l + sum(K.q) + 1
-    if length(K.s) > 0 && inPolarCone
-        for iii = 1:length(K.s)
-          e = b + K.s[iii] - 1
-          δy_sub = δy[b:e]
-          cDim = Int(sqrt(K.s[iii]))
-          # FIXME: Here you might get complex eigenvalues, which causes problems with minimum(). Does it make sense that you can get complex eigenvalues in this problem type?
-          # Current Fix: Just consider the real part
-          inPolarCone = ( minimum(real(eigen(reshape(Array(δy_sub),cDim,cDim)).values)) >= -settings.eps_prim_inf)
-
-          !inPolarCone && break
-          b = e + 1
+  function inDual(x,convexSets,tol)
+    for convexSet in convexSets
+      xpart = view(x,convexSet.indices)
+      if !convexSet.inDual(xpart,convexSet,tol)
+        return false
+      else
+        return true
       end
     end
+  end
 
-    if inPolarCone
+  function supportFunction(δy,ws,settings)
+
+    if inDual(δy,ws.p.convexSets,settings.eps_prim_inf)
       return (ws.p.b'*δy)[1]
     else
       return Inf
     end
+
   end
 
   function inRecessionCone(A_δx,ws,settings)
-    K = ws.p.K
-
-    inRecessionCone = true
-    b = 1
-
-    # check that relevant parts of Aδx are in recession cone of {0}
-    if K.f  > 0
-        e = b + K.f - 1
-        Aδx_sub = A_δx[b:e]
-        inRecessionCone = (norm(Aδx_sub,Inf) <= settings.eps_dual_inf)
-        b = e + 1
-    end
-
-    # check that relevant parts of Aδx are in recession cone of R-
-    if K.l > 0 && inRecessionCone
-      e = b + K.l - 1
-      Aδx_sub = A_δx[b:e]
-      inRecessionCone = (maximum(Aδx_sub) <= settings.eps_dual_inf)
-      b = e +1
-    end
-
-    # check that relevant parts of Aδx are in recession cone of negative Lorenz cones
-    # i.e. check that ||x|| <= -t
-    if length(K.q) > 0 && inRecessionCone
-        for iii = 1:length(K.q)
-          e = b + K.q[iii] - 1
-          Aδx_sub = A_δx[b:e]
-          inRecessionCone = (norm(Aδx_sub[2:end],2) + Aδx_sub[1] <= settings.eps_dual_inf)
-          !inRecessionCone && break
-          b = e + 1
+     convexSets = ws.p.convexSets
+     for convexSet in convexSets
+        A_δxpart = view(A_δx,convexSet.indices)
+        if !convexSet.inRecc(A_δxpart,convexSet,settings.eps_dual_inf)
+          return false
+        else
+          return true
         end
-    end
-
-
-    # check that relevant parts of Aδx are in recession cone of negative semidefinite cones
-    b = K.f + K.l + sum(K.q) + 1
-    if length(K.s) > 0 && inRecessionCone
-        for iii = 1:length(K.s)
-          e = b + K.s[iii] - 1
-          Aδx_sub = A_δx[b:e]
-          cDim = Int(sqrt(K.s[iii]))
-          inRecessionCone = ( maximum(real(eigen(reshape(Array(Aδx_sub),cDim,cDim)).values)) <= settings.eps_dual_inf)
-          !inRecessionCone && break
-          b = e + 1
       end
-    end
-
-    return inRecessionCone
   end
-
 
 
   function isPrimalInfeasible(δy,ws,settings)

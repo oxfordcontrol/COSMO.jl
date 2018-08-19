@@ -21,12 +21,21 @@ module Printing
       numSDP = 0
       numSDPBlk = 0
     end
+
     settings.scaling > 0 ? scalingStatus = "on" : scalingStatus = "off"
     nnzInP = count(!iszero,ws.p.P) - count(!iszero,diag(ws.p.P)) + n
     nnzInM = 2*count(!iszero,ws.p.A) + nnzInP + m
     println("-"^50 * "\n" * " "^8 * "Quadratic Objective Conic Solver (QOCS) in pure Julia\n" * " "^18 * "Michael Garstka\n"  * " "^8 * "University of Oxford, 2017 - 2018\n" * "-"^50 * "\n")
-    println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero,ws.p.A)) nnz), b ∈ R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)\nCones:    zero vars: $(ws.p.K.f)\n"*" "^10*"non-zero vars: $(ws.p.K.l)\n"*" "^10*"soc vars: $(numSOC), soc cones: $(numSOCBlk)\n"*" "^10*"sdp vars: $(numSDP), sdp cones: $(numSDPBlk)")
-    println("Settings: ϵ_abs = $(@sprintf("%.2e",settings.eps_abs)), ϵ_rel = $(@sprintf("%.2e",settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.2e",settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.2e",settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling = $(settings.scaling) ($(scalingStatus)),\n" * " "^10 * "check termination every $(settings.check_termination) iter")
+    println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero,ws.p.A)) nnz), b ∈ R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)")
+    for (iii,set) in enumerate(sort(ws.p.convexSets,by=x -> -x.dim))
+      setName = split(string(typeof(set)),".")[end]
+      iii == 1 ? println("Sets:"*" "^5*"$(setName) of dim: $(set.dim)") : println(" "^10*"$(setName) of dim: $(set.dim)")
+      if iii > 5
+        print(" "^10*"... and $(length(ws.p.convexSets)-5) more")
+        break
+      end
+    end
+    println("Settings: ϵ_abs = $(@sprintf("%.2e",settings.eps_abs)), ϵ_rel = $(@sprintf("%.2e",settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.2e",settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.2e",settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scalingStatus)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter")
     println("Setup Time: $(round.(setupTime*1000;digits=2))ms\n")
     nothing
   end

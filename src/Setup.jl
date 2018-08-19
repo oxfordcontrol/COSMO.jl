@@ -6,13 +6,12 @@ module Setup
     # scale problem data
     if settings.scaling != 0
       scaleRuiz!(ws,settings)
-
     end
 
-    setRhoVec!(ws.p,settings)
+    setRhoVec!(ws,settings)
 
     # factor the KKT condition matrix
-    factorKKT!(ws.p,settings)
+    ws.p.flags.FACTOR_LHS && factorKKT!(ws,settings)
   end
 
 

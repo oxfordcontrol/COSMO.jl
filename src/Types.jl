@@ -2,6 +2,8 @@
 # -------------------------------------
 # struct DEFINITIONS
 # -------------------------------------
+
+
   mutable struct Result
     x::Array{Float64}
     s::Array{Float64}
@@ -110,38 +112,52 @@
     ScaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.)
   end
 
-  mutable struct WorkSpace
-      p::Problem
-      sm::ScaleMatrices
-      x::Vector{Float64}
-      s::Vector{Float64}
-      ν::Vector{Float64}
-      μ::Vector{Float64}
-      #constructor
-    function WorkSpace(p::Problem,sm::ScaleMatrices)
-      m = p.m
-      n = p.n
-      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m))
-    end
-  end
+mutable struct Flags
+  FACTOR_LHS::Bool
+  INFEASIBILITY_CHECKS::Bool
 
+  Flags() = new(true,true)
+
+end
 
 mutable struct Model
     P::SparseMatrixCSC{Float64,Int64}
     q::Vector{Float64}
     A::SparseMatrixCSC{Float64,Int64}
     b::Vector{Float64}
+    convexSets::Array{AbstractConvexSet}
     K::Cone
+    x0::Vector{Float64}
+    s0::Vector{Float64}
+    μ0::Vector{Float64}
+    ν0::Vector{Float64}
+    m::Int64
+    n::Int64
+    F #LDL Factorization
+    flags::QOCS.Flags
 
     function Model()
-        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],Cone())
+        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],Float64[],Float64[],0,0,0,Flags())
     end
-
-    # function Model(P::SparseMatrixCSC{Float64,Int64},q::Vector{Float64},A::SparseMatrixCSC{Float64,Int64},b::Vector{Float64},K::Cone)
-    #     return new(P,q,A,b,K)
-    # end
-
 end
+
+  mutable struct WorkSpace
+      p::QOCS.Model
+      sm::ScaleMatrices
+      x::Vector{Float64}
+      s::Vector{Float64}
+      ν::Vector{Float64}
+      μ::Vector{Float64}
+      ρ::Float64
+      ρVec::Array{Float64,1}
+      Info::Info
+      #constructor
+    function WorkSpace(p::QOCS.Model,sm::ScaleMatrices)
+      m = p.m
+      n = p.n
+      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]))
+    end
+  end
 
   mutable struct Settings
     rho::Float64
@@ -200,45 +216,48 @@ end
   end
 
 
-
-abstract type AbstractConvexSet end
-
-
-struct ZeroCone <:AbstractConvexSet
-  A::AbstractMatrix{<:Real}
+# TODO: How to handle sparse vs. dense input data
+struct Constraint
+  A::Union{AbstractMatrix{<:Real},AbstractVector{<:Real}}
   b::AbstractVector{<:Real}
-  dim::Int
-  project!::Function
+  convexSet::AbstractConvexSet
+
+  function Constraint(A::AbstractMatrix{<:Real},b::AbstractVector{<:Real},convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0)
+    size(A,1) != length(b) && error("The dimensions of matrix A and vector b don't match.")
+    size(b,2) != 1 && error("Input b must be a vector or a scalar.")
+    if dim != 0
+      dim < 0 && error("The dimension of x has to be greater than zero.")
+    end
+
+    A = convert(Matrix{Float64},A)
+    b = convert(Vector{Float64},b)
+
+    if indices != 0:0
+      (indices.start < 1 || indices.stop < indices.start) && error("The index range for x has to be increasing and nonnegative.")
+      dim < indices.stop && error("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop).")
+      Ac = spzeros(size(A,1),dim)
+      bc = zeros(3dim)
+      Ac[:,indices] = A
+      bc[indices] = b
+      A = Ac
+      b = bc
+    end
+    convexSet.dim = size(A,1)
+    new(A,b,convexSet)
+  end
+
+  function Constraint(A::Real,b::Real,convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0)
+    Aarr = zeros(1,1)
+    bvec = Vector{Float64}(undef,1)
+    Aarr[1] = A
+    bvec[1] = b
+    Constraint(Aarr,bvec,convexSet,dim,indices)
+  end
+
+  Constraint(A::AbstractMatrix{<:Real},b::AbstractMatrix{<:Real},convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0) = Constraint(A,vec(b),convexSet,dim,indices)
+  Constraint(A::AbstractMatrix{<:Real},b::Real,convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0) = Constraint(A,[b],convexSet,dim,indices)
+
 end
 
-struct Box{T <: Real} <: AbstractConvexSet
-    A::AbstractMatrix{<:Real}
-    b::AbstractVector{<:Real}
-    dim::Int
-    project!::Function
-    l::T
-    u::T
-end
-
-struct NonNegativeOrthant <:AbstractConvexSet
-  A::AbstractMatrix{<:Real}
-  b::AbstractVector{<:Real}
-  dim::Int
-  project!::Function
-end
-
-struct SecondOrderCone <:AbstractConvexSet
-  A::AbstractMatrix{<:Real}
-  b::AbstractVector{<:Real}
-  dim::Int
-  project!::Function
-end
-
-struct PositiveSemidefiniteCone <:AbstractConvexSet
-  A::AbstractMatrix{<:Real}
-  b::AbstractVector{<:Real}
-  dim::Int
-  project!::Function
-end
 
 
