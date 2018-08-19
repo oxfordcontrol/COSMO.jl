@@ -65,43 +65,6 @@
     rho_updates::Array{Float64,1}
   end
 
-  mutable struct Problem
-    P::SparseMatrixCSC{Float64,Int64}
-    q::Vector{Float64}
-    A::SparseMatrixCSC{Float64,Int64}
-    b::Vector{Float64}
-    m::Int64
-    n::Int64
-    K::Cone
-    ρVec::Array{Float64,1}
-    Info::Info
-    F
-    #constructor
-    function Problem(P,q,A,b,K)
-      # check dimensions
-      m = size(A,1)
-      n = size(A,2)
-      (size(P,1) != n || size(P,2) != n) && error("Dimensions of P and A dont match.")
-      (size(q,1) != n || size(q,2) != 1) && error("Dimensions of P and q dont match.")
-      (size(b,1) != m || size(b,2) != 1) && error("Dimensions of A and b dont match.")
-      (in(NaN,b) || in(Inf,b) || in(-Inf,b)) && error("b must not contain Inf or NaN.")
-      (P != P') && error("P must be symmetric!")
-      # Make sure problem data is in sparse format
-      typeof(P) != SparseMatrixCSC{Float64,Int64} && (P = sparse(P))
-      typeof(A) != SparseMatrixCSC{Float64,Int64} && (A = sparse(A))
-      typeof(b) == SparseVector{Float64,Int64} && (b = full(b))
-      typeof(q) == SparseVector{Float64,Int64} && (q = full(q))
-
-      # check that number of cone variables provided in K add up
-      isempty(K.q) ? nq = 0 :  (nq = sum(K.q) )
-      isempty(K.s) ? ns = 0 :  (ns = sum(K.s) )
-      (K.f + K.l + nq + ns ) != m && error("Problem dimension doesnt match cone sizes provided in K.")
-      # FIXME: prevent copying of data for better performance
-      new(copy(P),copy(q),copy(A),copy(b),m,n,K,[0.],Info([0.]),0)
-      #new(P,q,A,b,m,n,K) using this seems to change the input data of main solveSDP function
-    end
-  end
-
   mutable struct ScaleMatrices
     D::SparseMatrixCSC{Float64,Int64}
     Dinv::SparseMatrixCSC{Float64,Int64}
