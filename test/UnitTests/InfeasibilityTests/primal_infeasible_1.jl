@@ -23,22 +23,18 @@ rng = Random.MersenneTwister(1313)
     xtrue = rand(rng,n,1)*50
     q = (-P*xtrue -  A'*ytrue)[:]
 
+    constraint = QOCS.Constraint(-A,b,QOCS.Nonnegatives())
     ra = 0.
-    Kf = 0
-    Kl = m+n
-    Kq = []
-    Ks = []
 
-
-
-     K = QOCS.Cone(Kf,Kl,Kq,Ks)
-     settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,check_termination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
-
-     res1,nothing = QOCS.solve(P,q,A,b,K,settings);
+    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    model = QOCS.Model()
+    assemble!(model,P,q,[constraint])
+    res1, = QOCS.optimize!(model,settings);
 
      @test res1.status == :Primal_infeasible
   end
 end
+nothing
   # # solve accurately once with mosek s
   # model = Model(solver=MosekSolver())
   # @variable(model, x[1:n])

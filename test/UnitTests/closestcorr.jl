@@ -29,8 +29,8 @@ function diagonalEqualOne(A,atol)
 end
 
 rng = Random.MersenneTwister(12345)
-xMin = -50.
-xMax = 50.
+xMin = -1.
+xMax = 1.
 n = 50
 C = xMin.+randn(rng,n,n)*(xMax-xMin)
 c = vec(C)
@@ -44,19 +44,34 @@ m = n+n2
 P = sparse(1.0I,n2,n2)
 q = -vec(C)
 r = 0.5*vec(C)'*vec(C)
-b = [ones(n);zeros(n2)]
-A = createDiagonalExtractor(n)
-Aa = [A; -sparse(1.0I,n2,n2)]
-# specify cone
-Kf = n
-Kl = 0
-Kq = []
-Ks = [n^2]
 
-K = QOCS.Cone(Kf,Kl,Kq,Ks)
+A1 = createDiagonalExtractor(n)
+b1 = -ones(n)
+cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+
+A2 = sparse(1.0I,n2,n2)
+b2 = zeros(n2)
+cs2 = QOCS.Constraint(A2,b2,QOCS.PositiveSemidefiniteCone())
+constraints = [cs1;cs2]
+
+
+
+# b = [ones(n);zeros(n2)]
+# A = createDiagonalExtractor(n)
+# Aa = [A; -sparse(1.0I,n2,n2)]
+# # specify cone
+# Kf = n
+# Kl = 0
+# Kq = []
+# Ks = [n^2]
+
+# K = QOCS.Cone(Kf,Kl,Kq,Ks)
 settings = QOCS.Settings()
+model = QOCS.Model()
+assemble!(model,P,q,constraints)
 
-res, = QOCS.solve(P,q,Aa,b,K,settings);
+res, = QOCS.optimize!(model,settings);
+
 Xsol = reshape(res.x,n,n)
 
 @testset "Closest Correlation Matrix - SDP Problems" begin

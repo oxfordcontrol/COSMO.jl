@@ -38,15 +38,24 @@ rng = Random.MersenneTwister(1313)
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 
-    Kf = m1
-    Kl = 0
-    Kq = [m2]
-    Ks = [r^2]
+    A1 = -A[1:m1,:]
+    A2 = -A[m1+1:m1+m2,:]
+    A3 = -A[m1+m2+1:end,:]
+    b1 = b[1:m1,:]
+    b2 = b[m1+1:m1+m2]
+    b3 = b[m1+m2+1:end]
 
-     K = QOCS.Cone(Kf,Kl,Kq,Ks)
-     settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=3000,verbose=false,check_termination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+    cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+    cs2 = QOCS.Constraint(A2,b2,QOCS.SecondOrderCone())
+    cs3 = QOCS.Constraint(A3,b3,QOCS.PositiveSemidefiniteCone())
 
-     res,nothing = QOCS.solve(P,q,A,b,K,settings);
-     @test res.status == :Primal_infeasible
+    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+
+    model = QOCS.Model()
+    assemble!(model,P,q,[cs1;cs2;cs3])
+    res, = QOCS.optimize!(model,settings);
+
+    @test res.status == :Primal_infeasible
   end
 end
+nothing

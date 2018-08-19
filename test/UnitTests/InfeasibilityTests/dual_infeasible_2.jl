@@ -41,17 +41,27 @@ sum_detected = 0
     P = spzeros(n,n)
     q = vec([-1;randn(rng,n-1)])
 
+    A1 = -A[1:m1,:]
+    A2 = -A[m1+1:m1+m2,:]
+    A3 = -A[m1+m2+1:m1+m2+m3,:]
+    A4 = -A[m1+m2+m3+1:end,:]
+    b1 = b[1:m1]
+    b2 = b[m1+1:m1+m2]
+    b3 = b[m1+m2+1:m1+m2+m3]
+    b4 = b[m1+m2+m3+1:end]
 
-    Kf = m1
-    Kl = m2
-    Kq = [m3]
-    Ks = [r^2]
+    cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+    cs2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives())
+    cs3 = QOCS.Constraint(A3,b3,QOCS.SecondOrderCone())
+    cs4 = QOCS.Constraint(A4,b4,QOCS.PositiveSemidefiniteCone())
 
-   K = QOCS.Cone(Kf,Kl,Kq,Ks)
-   setOFF = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=10000,verbose=false,check_termination=1,scaling = 10,eps_prim_inf=1e-4,eps_dual_inf=1e-4,adaptive_rho=true)
-   res,ws,δx,δμ = QOCS.solve(P,q,A,b,K,setOFF);
+    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    model = QOCS.Model()
+    assemble!(model,P,q,[cs1;cs2;cs3;cs4])
+    res, = QOCS.optimize!(model,settings);
+
 
     @test res.status == :Dual_infeasible
   end
 end
-
+nothing

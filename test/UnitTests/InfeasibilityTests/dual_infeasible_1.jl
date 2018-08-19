@@ -24,16 +24,13 @@ nn = 1
   strue = rand(m,1)*50
   b = A*xtrue+strue
   b = vec(b)
-  ra = 0.
-  Kf = 0
-  Kl = m
-  Kq = []
-  Ks = []
 
- K = QOCS.Cone(Kf,Kl,Kq,Ks)
- setOFF = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=1500,verbose=false,check_termination=1,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
- res,nothing = QOCS.solve(P,q,A,b,K,setOFF);
+  constraint = QOCS.Constraint(-A,b,QOCS.Nonnegatives())
 
+  settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+  model = QOCS.Model()
+  assemble!(model,P,q,[constraint])
+  res, = QOCS.optimize!(model,settings);
 
   @test res.status == :Dual_infeasible
   end

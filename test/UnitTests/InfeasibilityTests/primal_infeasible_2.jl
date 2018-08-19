@@ -19,13 +19,21 @@ rng = Random.MersenneTwister(1313)
     xtrue = rand(rng,n,1)*50
     s1 = zeros(m1,1)
     b1 = A[1:m1,:]*xtrue + s1 #find feasible part of b that corresponds to the equality constraints
-    b2 = -rand(m2,1) #pick vectorized matrix with all entries <= 0 --> to enforce infeasibility
+    b3 = -rand(m2,1) #pick vectorized matrix with all entries <= 0 --> to enforce infeasibility
 
     # add the constraint x >= 0
-    b = [b1;zeros(n);b2]
+    b = [b1;zeros(n);b3]
     b = vec(b)
+    A1 = -A[1:m1,:]
+    A2 = sparse(1.0I,n,n)
+    A3 = -A[m1+1:end,:]
+    b1 = b1
+    b2 = zeros(n)
+    b3 = b3
     A = [A[1:m1,:]; -sparse(1.0I,n,n);A[m1+1:end,:]]
 
+    # b2 = zeros(n)
+    # b3 =
     # create dual feasible problem Px+q+A'y = 0, and y in K*
     P = Helper.generatePosDefMatrix(n,rng)
     ytrue_1 = randn(rng,m1,1)*50
@@ -38,11 +46,17 @@ rng = Random.MersenneTwister(1313)
     Kl = n
     Kq = []
     Ks = [r^2]
+    cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+    cs2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives())
+    cs3 = QOCS.Constraint(A3,b3,QOCS.PositiveSemidefiniteCone())
 
-     K = QOCS.Cone(Kf,Kl,Kq,Ks)
-     settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=3000,verbose=false,check_termination=10,scaling = 10,eps_abs = 1e-5,eps_rel=1e-5,adaptive_rho=true)
+    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
 
-     res,nothing = QOCS.solve(P,q,A,b,K,settings);
-     @test res.status == :Primal_infeasible
+    model = QOCS.Model()
+    assemble!(model,P,q,[cs1;cs2;cs3])
+    res, = QOCS.optimize!(model,settings);
+
+    @test res.status == :Primal_infeasible
   end
 end
+nothing

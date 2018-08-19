@@ -8,6 +8,7 @@ using QOCS, Test, LinearAlgebra, SparseArrays, Random
 rng = Random.MersenneTwister(1313)
 n = 15
 m = 50*n
+
 A = sprandn(rng,m,n,0.5)
 vtrue = 1/n*sprand(rng,n,0.5)
 noise = 1/4*randn(rng,m)
@@ -16,18 +17,27 @@ b = Vector(A*vtrue + noise)
 
 
 # define lasso problem as QP
-Aa = [-A zeros(m,n) Matrix(1.0I,m,m);
-       Matrix(1.0I,n,n) -Matrix(1.0I,n,n) zeros(n,m);
-       -Matrix(1.0I,n,n) -Matrix(1.0I,n,n) zeros(n,m)]
+A1 = [A zeros(m,n) -Matrix(1.0I,m,m)]
+A2 = [-Matrix(1.0I,n,n) Matrix(1.0I,n,n) zeros(n,m);
+       Matrix(1.0I,n,n) Matrix(1.0I,n,n) zeros(n,m)]
 
-ba = [-b;zeros(2*n)]
+b1 = -b;
+b2 = zeros(2*n)
+
+
 P = 2*Matrix(Diagonal([zeros(2*n);ones(m)]))# times two to cancel the 1/2 in the cost function
 q = [zeros(n);λ*ones(n);zeros(m)]
-K = QOCS.Cone(m,2*n,[],[])
+
+
+constraint1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+constraint2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives())
+constraints = [constraint1;constraint2]
 
 settings = QOCS.Settings()
+model = QOCS.Model()
+assemble!(model,P,q,constraints)
 
-res, = QOCS.solve(P,q,Aa,ba,K,settings);
+res, = QOCS.optimize!(model,settings);
 
 
 @testset "QP - Lasso" begin
