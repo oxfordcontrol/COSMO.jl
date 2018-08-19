@@ -21,12 +21,23 @@ rng = MersenneTwister(7232)
 
     # solve the dual problem
     c = -vec(A)
-    Aa = [vec(sparse(I,r,r))';-sparse(I,r^2,r^2)]
-    b = [1.;zeros(r^2)]
-    K = Cone(1,0,[],[r^2])
+    A1 = -vec(sparse(1.0I,r,r))'
+    A2 = sparse(1.0I,r^2,r^2)
+    b1 = 1.
+    b2 = zeros(r^2)
+
+    constraint1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+    constraint2 = QOCS.Constraint(A2,b2,QOCS.PositiveSemidefiniteCone())
     P = spzeros(r^2,r^2)
-    settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=false,check_termination=1,scaling = 0,eps_abs = 1e-4,eps_rel=1e-4)
-    res,nothing = QOCS.solve(P,c[:],Aa,b[:],K,settings)
+
+    settings = QOCS.Settings(check_termination=1,scaling = 0)
+
+    model = QOCS.Model()
+    assemble!(model,P,q,[constraint1;constraint2])
+    res, = QOCS.optimize!(model,settings);
+
+
+
     println("$(iii)/$(nn) completed! Size of A: $(r), Number of Iterations $(res.iter).")
 
     # true solution

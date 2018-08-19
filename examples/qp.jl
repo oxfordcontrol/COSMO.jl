@@ -12,18 +12,32 @@ A = [1. 1; 1 0; 0 1]
 l = [1.; 0; 0]
 u = [1; 0.7; 0.7]
 
-# create augmented matrices
-Aa = [A;-A]
+# Define the constraint l <= Ax <= u with the help of a Nonnegatives set
+Aa = [-A;A]
 ba = [u; -l]
+constraint1 = QOCS.Constraint(Aa,ba,QOCS.Nonnegatives())
 
-# define cone (x1,x2, and 6 slack variables >= 0)
-K = QOCS.Cone(0,6,[],[])
 # define example problem
-settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,adaptive_rho = true, scaling = 10,eps_abs = 1e-4,eps_rel = 1e-4)
-res, ws= QOCS.solve(P,q[:],Aa,ba[:],K,settings)
+settings = QOCS.Settings(verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
+
+
+model = QOCS.Model()
+assemble!(model,P,q,[constraint1])
+res, = QOCS.optimize!(model,settings);
+
+# solve again by defining the constraints with the help of a box (disable infeasibility checks)
+constraint1 = QOCS.Constraint(A,zeros(3),QOCS.Box(l,u))
+settings = QOCS.Settings(check_infeasibility = 2500, verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
+
+model = QOCS.Model()
+assemble!(model,P,q,[constraint1])
+res_box, = QOCS.optimize!(model,settings);
+
 
 @testset "QP Problem" begin
   @test norm(res.x[1:2] - [0.3;0.7],Inf) < 1e-3
+  @test norm(res_box.x[1:2] - [0.3;0.7],Inf) < 1e-3
   @test abs(res.cost-1.88) < 1e-3
+  @test abs(res_box.cost-1.88) < 1e-3
 end
 nothing
