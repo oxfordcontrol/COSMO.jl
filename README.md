@@ -106,7 +106,7 @@ Time Name  | Description
 solverTime | Total time used to solve the problem
 setupTime | Setup time = graphTime + factorTime
 graphTime | Time used to perform chordal decomposition
-factorTime | Time used to vector the system of linear equations
+factorTime | Time used to factor the system of linear equations
 iterTime | Time spent in iteration loop
 projTime | Time spent in projection functions
 postTime | Time used for post processing
