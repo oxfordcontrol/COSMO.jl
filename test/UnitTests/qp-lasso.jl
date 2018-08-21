@@ -25,7 +25,7 @@ b1 = -b;
 b2 = zeros(2*n)
 
 
-P = 2*Matrix(Diagonal([zeros(2*n);ones(m)]))# times two to cancel the 1/2 in the cost function
+P = 2*Matrix(Diagonal([zeros(2*n);ones(m)]))# times two to cancel the 1/2 in the objVal function
 q = [zeros(n);λ*ones(n);zeros(m)]
 
 
@@ -42,6 +42,6 @@ res, = QOCS.optimize!(model,settings);
 
 @testset "QP - Lasso" begin
   @test res.status == :Solved
-  @test isapprox(res.cost, 46.40521553063313, atol=1e-3)
+  @test isapprox(res.objVal, 46.40521553063313, atol=1e-3)
 end
 nothing

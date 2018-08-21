@@ -3,35 +3,40 @@
 # struct DEFINITIONS
 # -------------------------------------
 
-
-  mutable struct Result
-    x::Array{Float64}
-    s::Array{Float64}
-    ν::Array{Float64}
-    μ::Array{Float64}
-    cost::Float64
-    iter::Int64
-    status::Symbol
+  struct ResultTimes
     solverTime::Float64
     setupTime::Float64
     iterTime::Float64
+  end
+
+  struct ResultInfo
     rPrim::Float64
     rDual::Float64
+  end
 
-    function Result()
-      return new(Float64[],Float64[],Float64[],Float64[],0.,0,:Unsolved,0.,0.,0.,0.,0.)
-    end
+  struct Result
+    x::Array{Float64}
+    y::Array{Float64}
+    s::Array{Float64}
+    objVal::Float64
+    iter::Int64
+    status::Symbol
+    info::ResultInfo
+    times::ResultTimes
 
-    function Result(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
-      return new(x,s,ν,μ,cost,iter,status,solverTime,setupTime,iterTime,rPrim,rDual)
-    end
+    # function Result()
+    #   return new(Float64[],Float64[],Float64[],0.,0,:Unsolved,ResultInfo(),ResultTimes())
+    # end
+
+    # function Result(x,y,s,objVal,iter,status,info,times)
+    #   return new(x,y,s,objVal,iter,status,info,times)
+    # end
 
   end
 
-
   # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::Result)
-    print(io,">>> QOCS - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.cost,digits=2))\nRuntime: $(round.(obj.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.setupTime*1000,digits=2))ms\nAvg Iter Time: $(round.((obj.iterTime/obj.iter)*1000,digits=2))ms")
+    print(io,">>> QOCS - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.objVal,digits=2))\nRuntime: $(round.(obj.times.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.times.setupTime*1000,digits=2))ms\nAvg Iter Time: $(round.((obj.times.iterTime/obj.iter)*1000,digits=2))ms")
   end
 
 
@@ -61,6 +66,7 @@
       new(f,l,q,s)
     end
   end
+
  mutable struct Info
     rho_updates::Array{Float64,1}
   end

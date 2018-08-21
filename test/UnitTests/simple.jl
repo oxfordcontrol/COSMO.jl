@@ -36,7 +36,7 @@ end
 
         @test res.status == :Solved
         @test isapprox(norm(res.x - [0.3; 0.7]), 0., atol=tol)
-        @test isapprox(res.cost, 1.8800000298331538, atol=tol)
+        @test isapprox(res.objVal, 1.8800000298331538, atol=tol)
 
     end
 
@@ -49,7 +49,7 @@ end
 
     #     @test res.status == :Solved
     #     @test isapprox(norm(res.x - [0.27; 0.63]), 0., atol=tol)
-    #     @test isapprox(res.cost, 1.6128000168085233, atol=tol)
+    #     @test isapprox(res.objVal, 1.6128000168085233, atol=tol)
 
     # end
 
@@ -61,7 +61,7 @@ end
 
     #     @test res.status == :Solved
     #     @test isapprox(norm(res.x - [0.7; 0.3]), 0., atol=tol)
-    #     @test isapprox(res.cost, -2.7199998274697608, atol=tol)
+    #     @test isapprox(res.objVal, -2.7199998274697608, atol=tol)
 
     # end
 
@@ -119,7 +119,7 @@ end
         n = 2
         m = 6
         x0 = res1.x + 0.01*randn(rng,n)
-        y0 = res1.μ + 0.01*randn(rng,m)
+        y0 = res1.y + 0.01*randn(rng,m)
         warmStart!(model,x0=x0,y0=y0)
         res2,nothing = QOCS.optimize!(model,settings);
 

@@ -49,6 +49,6 @@ res, = QOCS.optimize!(model,settings);
 
 @testset "SOCP - Lasso" begin
   @test res.status == :Solved
-  @test isapprox(res.cost,0.4422849814458825,atol=1e-2)
+  @test isapprox(res.objVal,0.4422849814458825,atol=1e-2)
 end
 nothing

@@ -163,8 +163,11 @@ end
 
 
     # create result object
+    resinfo = QOCS.ResultInfo(r_prim,r_dual)
+    times = QOCS.ResultTimes(runTime,setupTime,iterTime)
     y = -ws.μ
-    result = QOCS.Result(ws.x,ws.s,ws.ν,y,cost,numIter,status,runTime,setupTime,iterTime,r_prim,r_dual);
+
+    result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,times);
 
     return result, nothing;
 
