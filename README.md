@@ -111,7 +111,10 @@ iterTime | Time spent in iteration loop
 projTime | Time spent in projection functions
 postTime | Time used for post processing
 
-It holds: `solverTime` = `setupTime`+ `iterTime`, `setupTime` = `graphTime`+ `factorTime`, `projTime` subset of `iterTime`.
+It holds: 
+`solverTime` = `setupTime`+ `iterTime` + `postTime`, 
+`setupTime` = `graphTime`+ `factorTime`, 
+`projTime` subset of `iterTime`.
 
 
 ## Test problems
