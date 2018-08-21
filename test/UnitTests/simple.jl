@@ -2,7 +2,7 @@
 using QOCS, Test, LinearAlgebra, Statistics, Random
 
 tol = 1e-3
-
+rng = Random.MersenneTwister(41)
 mutable struct TestProblem
     P
     q
@@ -107,6 +107,23 @@ end
 
         res,nothing = QOCS.optimize!(model,settings);
         @test res.status == :Time_limit_reached
+    end
+
+     @testset "warm_starting" begin
+        p = simpleQP()
+        settings = QOCS.Settings(check_termination = 1)
+        model = QOCS.Model()
+        assemble!(model,p.P,p.q,p.constraints)
+
+        res1,nothing = QOCS.optimize!(model,settings);
+        n = 2
+        m = 6
+        x0 = res1.x + 0.01*randn(rng,n)
+        y0 = res1.μ + 0.01*randn(rng,m)
+        warmStart!(model,x0=x0,y0=y0)
+        res2,nothing = QOCS.optimize!(model,settings);
+
+        @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter
     end
 
 end

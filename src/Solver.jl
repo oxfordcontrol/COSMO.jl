@@ -53,10 +53,12 @@ end
 
     timeLimit_start = time()
     #preallocate arrays
-    δx = similar(ws.x)
-    δy =  similar(ws.μ)
-    x_tl = similar(ws.x) # i.e. xTilde
-    s_tl = similar(ws.s) # i.e. sTilde
+    n = ws.p.n
+    m = ws.p.m
+    δx = zeros(n)
+    δy =  zeros(m)
+    x_tl = zeros(n) # i.e. xTilde
+    s_tl = zeros(m) # i.e. sTilde
     n = ws.p.n
     m = ws.p.m
     ls = zeros(n + m)
@@ -161,9 +163,10 @@ end
 
 
     # create result object
-    result = QOCS.Result(ws.x,ws.s,ws.ν,ws.μ,cost,numIter,status,runTime,setupTime,iterTime,r_prim,r_dual);
+    y = -ws.μ
+    result = QOCS.Result(ws.x,ws.s,ws.ν,y,cost,numIter,status,runTime,setupTime,iterTime,r_prim,r_dual);
 
-    return result,ws, δx, -δy;
+    return result, nothing;
 
   end
 

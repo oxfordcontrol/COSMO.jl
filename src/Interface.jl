@@ -38,7 +38,7 @@
 #   model.m, model.n = size(A)
 # end
 
-function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},constraints::Array{QOCS.Constraint})
+function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},constraints::Array{QOCS.Constraint},x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
   q[:] = convert(Vector{Float64},q)
@@ -56,6 +56,9 @@ function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector
   model.A = spzeros(Float64,m,n)
   model.b = spzeros(Float64,m)
 
+  model.x0 = zeros(Float64,n)
+  model.y0 = zeros(Float64,m)
+
   # merge and sort the constraint sets
   sort!(constraints,by=x->sortSets(x.convexSet))
   rowNum = 1
@@ -67,7 +70,15 @@ function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector
   # save the convex sets inside the model
   model.convexSets = map(x->x.convexSet,constraints)
 
+  # if user provided warm starting variables, update model
+  warmStart!(model,x0 = x0,y0 = y0)
+
   nothing
+end
+
+function warmStart!(model::QOCS.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
+    x0 isa Vector{Float64} && (model.x0 = x0)
+    y0 isa Vector{Float64} && (model.y0 = y0)
 end
 
 function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Array{QOCS.Constraint})

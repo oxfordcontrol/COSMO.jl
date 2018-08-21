@@ -78,8 +78,8 @@
 mutable struct Flags
   FACTOR_LHS::Bool
   INFEASIBILITY_CHECKS::Bool
-
-  Flags() = new(true,true)
+  REVERSE_SCALE_PROBLEM_DATA::Bool
+  Flags() = new(true,true,true)
 
 end
 
@@ -91,16 +91,14 @@ mutable struct Model
     convexSets::Array{AbstractConvexSet}
     K::Cone
     x0::Vector{Float64}
-    s0::Vector{Float64}
-    μ0::Vector{Float64}
-    ν0::Vector{Float64}
+    y0::Vector{Float64}
     m::Int64
     n::Int64
     F #LDL Factorization
     flags::QOCS.Flags
 
     function Model()
-        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],Float64[],Float64[],0,0,0,Flags())
+        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],0,0,0,Flags())
     end
 end
 
@@ -118,7 +116,11 @@ end
     function WorkSpace(p::QOCS.Model,sm::ScaleMatrices)
       m = p.m
       n = p.n
-      new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]))
+      ws = new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]))
+      # hand over warm starting variables
+      ws.x = p.x0
+      ws.μ = -p.y0
+      return ws
     end
   end
 

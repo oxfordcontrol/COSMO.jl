@@ -130,7 +130,6 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
       E = sparse(Diagonal(sTemp[n+1:end]))
     end
 
-
     # perform final scaling
     ws.p.P = c*D*(ws.p.P*D)
     ws.p.A = E*ws.p.A*D
@@ -154,6 +153,11 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     ws.sm.Einv = sparse(Diagonal(1 ./diag(E)))
     ws.sm.c = c
     ws.sm.cinv = 1 ./c
+
+    # scale the potentially warm started variables
+    ws.x[:] = ws.sm.Dinv *ws.x
+    ws.μ[:] = ws.sm.Einv*ws.μ *c
+
     return nothing
   end
 
@@ -167,12 +171,18 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     c = ws.sm.c
 
     ws.x[:] = D*ws.x
-    ws.p.P[:,:] = Dinv*ws.p.P*Dinv ./c
-    ws.p.q[:] = (Dinv*ws.p.q) ./c
     ws.s[:] = Einv*ws.s
 
     ws.ν[:] = E*ws.ν ./c
     ws.μ[:] = E*ws.μ ./c
+
+    # reverse scaling for model data
+    if ws.p.flags.REVERSE_SCALE_PROBLEM_DATA
+      ws.p.P[:,:] = Dinv*ws.p.P*Dinv ./c
+      ws.p.q[:] = (Dinv*ws.p.q) ./c
+      ws.p.A[:,:] = Einv*ws.p.A*Dinv
+      ws.p.b[:,:] = Einv*ws.p.b
+    end
     return nothing
   end
 
