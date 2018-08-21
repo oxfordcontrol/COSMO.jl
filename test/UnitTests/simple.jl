@@ -32,7 +32,7 @@ end
         model = QOCS.Model()
         assemble!(model,p.P,p.q,p.constraints)
 
-        res,nothing = QOCS.optimize!(model,settings);
+        res = QOCS.optimize!(model,settings);
 
         @test res.status == :Solved
         @test isapprox(norm(res.x - [0.3; 0.7]), 0., atol=tol)
@@ -71,7 +71,7 @@ end
         model = QOCS.Model()
         assemble!(model,p.P,p.q,p.constraints)
 
-        res,nothing = QOCS.optimize!(model,settings);
+        res = QOCS.optimize!(model,settings);
 
 
         @test res.status == :Max_iter_reached
@@ -85,7 +85,7 @@ end
         model = QOCS.Model()
         assemble!(model,p.P,p.q,p.constraints)
 
-        res,nothing = QOCS.optimize!(model,settings);
+        res = QOCS.optimize!(model,settings);
 
         @test res.status == :Max_iter_reached
 
@@ -105,7 +105,7 @@ end
         model = QOCS.Model()
         assemble!(model,p.P,p.q,p.constraints)
 
-        res,nothing = QOCS.optimize!(model,settings);
+        res = QOCS.optimize!(model,settings);
         @test res.status == :Time_limit_reached
     end
 
@@ -115,13 +115,13 @@ end
         model = QOCS.Model()
         assemble!(model,p.P,p.q,p.constraints)
 
-        res1,nothing = QOCS.optimize!(model,settings);
+        res1 = QOCS.optimize!(model,settings);
         n = 2
         m = 6
         x0 = res1.x + 0.01*randn(rng,n)
         y0 = res1.y + 0.01*randn(rng,m)
         warmStart!(model,x0=x0,y0=y0)
-        res2,nothing = QOCS.optimize!(model,settings);
+        res2 = QOCS.optimize!(model,settings);
 
         @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter
     end

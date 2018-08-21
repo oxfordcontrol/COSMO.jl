@@ -45,7 +45,7 @@ settings = QOCS.Settings()
 # Solve with OSSDP
 model = QOCS.Model()
 assemble!(model,P,q,[cs1;cs2;cs3])
-res, = QOCS.optimize!(model,settings);
+res = QOCS.optimize!(model,settings);
 
 @testset "SOCP - Lasso" begin
   @test res.status == :Solved

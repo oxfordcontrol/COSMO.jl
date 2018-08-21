@@ -37,7 +37,7 @@ settings = QOCS.Settings()
 model = QOCS.Model()
 assemble!(model,P,q,constraints)
 
-res, = QOCS.optimize!(model,settings);
+res = QOCS.optimize!(model,settings);
 
 
 @testset "QP - Lasso" begin

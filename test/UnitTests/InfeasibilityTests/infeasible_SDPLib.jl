@@ -82,7 +82,7 @@ problems = ["infp1.jld";"infp2.jld";"infd1.jld";"infd2.jld"]
     # status = JuMP.solve(model)
     K = Cone(Kf,Kl,Kq,Ks)
     settings = Settings(max_iter=3000,verbose=false,check_termination=1,checkInfeasibility=50,scaling = 10 ,scaleFunc=2,adaptive_rho=true,eps_abs=1e-4,eps_rel=1e-4)
-    res,nothing = QOCS.solve(P,q,A,b,K,settings);
+    res = QOCS.solve(P,q,A,b,K,settings);
     @test res.status == problem_type
   end
 end

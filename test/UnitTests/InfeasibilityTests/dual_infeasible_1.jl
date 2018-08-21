@@ -30,7 +30,7 @@ nn = 1
   settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
   model = QOCS.Model()
   assemble!(model,P,q,[constraint])
-  res, = QOCS.optimize!(model,settings);
+  res = QOCS.optimize!(model,settings);
 
   @test res.status == :Dual_infeasible
   end

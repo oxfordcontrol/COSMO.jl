@@ -30,15 +30,15 @@ end
 # SOLVER ROUTINE
 # -------------------------------------
   function optimize!(model::QOCS.Model,settings::QOCS.Settings)
-    runTime_start = time()
+    solverTime_start = time()
 
     # create workspace variables
     ws = WorkSpace(model,ScaleMatrices())
 
     # perform preprocessing steps (scaling, initial KKT factorization)
-    setupTime = time()
+    settings.verboseTiming && (setupTime = time())
     setup!(ws,settings)
-    setupTime = time() - setupTime
+    settings.verboseTiming && (setupTime = time() - setupTime)
 
     # instantiate variables
     numIter = 0
@@ -64,7 +64,7 @@ end
     ls = zeros(n + m)
     sol = zeros(n + m)
 
-    iter_start = time()
+    settings.verboseTiming && (iter_start = time())
 
     for iter = 1:settings.max_iter
       numIter+= 1
@@ -140,7 +140,7 @@ end
 
     end #END-ADMM-MAIN-LOOP
 
-    iterTime = (time()-iter_start)
+    settings.verboseTiming && (iterTime = (time()-iter_start))
 
     # calculate primal and dual residuals
     if numIter == settings.max_iter
@@ -156,20 +156,23 @@ end
     end
 
 
-    runTime = time() - runTime_start
+    solverTime = time() - solverTime_start
 
     # print solution to screen
-    settings.verbose && printResult(status,numIter,cost,runTime)
+    settings.verbose && printResult(status,numIter,cost,solverTime)
 
 
     # create result object
     resinfo = QOCS.ResultInfo(r_prim,r_dual)
-    times = QOCS.ResultTimes(runTime,setupTime,iterTime)
+    if settings.verboseTiming
+      times = QOCS.ResultTimes(solverTime,setupTime,0.,0.,iterTime,0.,0.)
+    else
+      times = QOCS.ResultTimes(solverTime,NaN,NaN,NaN,NaN,NaN,NaN)
+    end
     y = -ws.μ
 
-    result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,times);
+    return result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,times);
 
-    return result, nothing;
 
   end
 

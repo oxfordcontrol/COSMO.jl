@@ -6,7 +6,11 @@
   struct ResultTimes
     solverTime::Float64
     setupTime::Float64
+    graphTime::Float64
+    factorTime::Float64
     iterTime::Float64
+    projTime::Float64
+    postTime::Float64
   end
 
   struct ResultInfo
@@ -148,6 +152,7 @@ end
     adaptive_rho::Bool
     adaptive_rho_interval::Int64
     adaptive_rho_tolerance::Float64
+    verboseTiming::Bool
     RHO_MIN::Float64
     RHO_MAX::Float64
     RHO_TOL::Float64
@@ -173,6 +178,7 @@ end
       adaptive_rho = true,
       adaptive_rho_interval = 40,
       adaptive_rho_tolerance = 5,
+      verboseTiming = false,
       RHO_MIN = 1e-6,
       RHO_MAX = 1e6,
       RHO_TOL = 1e-4,
@@ -182,7 +188,7 @@ end
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
           check_termination,check_infeasibility,scaling,MIN_SCALING,MAX_SCALING,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,obj_true,obj_true_tol)
+          adaptive_rho_interval,adaptive_rho_tolerance,verboseTiming,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,obj_true,obj_true_tol)
     end
   end
 

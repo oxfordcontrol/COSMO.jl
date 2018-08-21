@@ -53,7 +53,7 @@ rng = Random.MersenneTwister(1313)
 
     model = QOCS.Model()
     assemble!(model,P,q,[cs1;cs2;cs3])
-    res, = QOCS.optimize!(model,settings);
+    res = QOCS.optimize!(model,settings);
 
     @test res.status == :Primal_infeasible
   end

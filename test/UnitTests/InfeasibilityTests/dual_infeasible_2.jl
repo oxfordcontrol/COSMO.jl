@@ -58,7 +58,7 @@ sum_detected = 0
     settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
     model = QOCS.Model()
     assemble!(model,P,q,[cs1;cs2;cs3;cs4])
-    res, = QOCS.optimize!(model,settings);
+    res = QOCS.optimize!(model,settings);
 
 
     @test res.status == :Dual_infeasible
