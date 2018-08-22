@@ -2,7 +2,7 @@ module KKT
 using ..QOCS, LinearAlgebra, SparseArrays
 export factorKKT!
 
-  function factorKKT!(ws::QOCS.WorkSpace,settings::QOCS.Settings)
+  function factorKKT!(ws::QOCS.Workspace,settings::QOCS.Settings)
      p = ws.p
      if nnz(p.P) > 0 && p.P != p.P'
       p.P = p.P ./ 2+(p.P ./ 2)'
