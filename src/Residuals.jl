@@ -2,7 +2,7 @@ module Residuals
   using ..QOCS, LinearAlgebra
   export calculateResiduals, maxResComponentNorm, hasConverged
 
-  function calculateResiduals(ws::QOCS.WorkSpace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)
+  function calculateResiduals(ws::QOCS.Workspace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)
         if (settings.scaling != 0 && !IGNORESCALING_FLAG)
           r_prim = norm(ws.sm.Einv*(ws.p.A*ws.x+ws.s-ws.p.b),Inf)
           # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
@@ -16,7 +16,7 @@ module Residuals
     return r_prim,r_dual
   end
 
-  function maxResComponentNorm(ws::QOCS.WorkSpace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)
+  function maxResComponentNorm(ws::QOCS.Workspace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)
     if (settings.scaling != 0 && !IGNORESCALING_FLAG)
       maxNormPrim = max.(norm(ws.sm.Einv*ws.p.A*ws.x,Inf),  norm(ws.sm.Einv*ws.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
       maxNormDual = max.(norm(ws.sm.cinv*ws.sm.Dinv*ws.p.P*ws.x,Inf), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.q,Inf), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.A'*ws.μ,Inf) )
@@ -28,7 +28,7 @@ module Residuals
     return maxNormPrim, maxNormDual
   end
 
-  function hasConverged(ws::QOCS.WorkSpace,settings::QOCS.Settings,r_prim::Float64,r_dual::Float64)
+  function hasConverged(ws::QOCS.Workspace,settings::QOCS.Settings,r_prim::Float64,r_dual::Float64)
     maxNormPrim, maxNormDual = maxResComponentNorm(ws,settings)
     ϵ_prim = settings.eps_abs + settings.eps_rel * maxNormPrim
     ϵ_dual = settings.eps_abs + settings.eps_rel * maxNormDual

@@ -33,7 +33,7 @@ end
     solverTime_start = time()
 
     # create workspace variables
-    ws = WorkSpace(model,ScaleMatrices())
+    ws = Workspace(model,ScaleMatrices())
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     setupTime = time()
@@ -133,7 +133,7 @@ end
         adaptRhoVec!(ws,settings)
       end
 
-      if settings.timelimit !=0 &&  (time() - timeLimit_start) > settings.timelimit
+      if settings.time_limit !=0 &&  (time() - timeLimit_start) > settings.time_limit
         status = :Time_limit_reached
         break
       end

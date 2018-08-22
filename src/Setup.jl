@@ -2,7 +2,7 @@ module Setup
   using ..QOCS,..Scaling, ..KKT, ..Parameters
   export setup!
 
-  function setup!(ws::QOCS.WorkSpace,settings::QOCS.Settings)
+  function setup!(ws::QOCS.Workspace,settings::QOCS.Settings)
     # scale problem data
     if settings.scaling != 0
       scaleRuiz!(ws,settings)

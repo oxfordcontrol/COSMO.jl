@@ -112,7 +112,7 @@ mutable struct Model
     end
 end
 
-  mutable struct WorkSpace
+  mutable struct Workspace
       p::QOCS.Model
       sm::ScaleMatrices
       x::Vector{Float64}
@@ -123,7 +123,7 @@ end
       ρVec::Array{Float64,1}
       Info::Info
       #constructor
-    function WorkSpace(p::QOCS.Model,sm::ScaleMatrices)
+    function Workspace(p::QOCS.Model,sm::ScaleMatrices)
       m = p.m
       n = p.n
       ws = new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]))
@@ -156,7 +156,7 @@ end
     RHO_MIN::Float64
     RHO_MAX::Float64
     RHO_TOL::Float64
-    timelimit::Int64
+    time_limit::Int64
     obj_true::Float64
     obj_true_tol::Float64
     #constructor
@@ -182,13 +182,13 @@ end
       RHO_MIN = 1e-6,
       RHO_MAX = 1e6,
       RHO_TOL = 1e-4,
-      timelimit = 0,
+      time_limit = 0,
       obj_true = NaN,
       obj_true_tol = 1e-3
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
           check_termination,check_infeasibility,scaling,MIN_SCALING,MAX_SCALING,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,verboseTiming,RHO_MIN,RHO_MAX,RHO_TOL,timelimit,obj_true,obj_true_tol)
+          adaptive_rho_interval,adaptive_rho_tolerance,verboseTiming,RHO_MIN,RHO_MAX,RHO_TOL,time_limit,obj_true,obj_true_tol)
     end
   end
 

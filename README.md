@@ -67,7 +67,7 @@ check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
-timelimit | set solver time limit in s | 0
+time_limit | set solver time limit in s | 0
 
 For more low-level settings, see the Settings definition in `/src/Types.jl`.
 
@@ -111,9 +111,9 @@ iterTime | Time spent in iteration loop
 projTime | Time spent in projection functions
 postTime | Time used for post processing
 
-It holds: 
-`solverTime` = `setupTime`+ `iterTime` + `postTime`, 
-`setupTime` = `graphTime`+ `factorTime`, 
+It holds:
+`solverTime` = `setupTime`+ `iterTime` + `postTime`,
+`setupTime` = `graphTime`+ `factorTime`,
 `projTime` subset of `iterTime`.
 
 

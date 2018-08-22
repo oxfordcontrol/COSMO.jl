@@ -43,7 +43,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
     return nothing
   end
 
-  function scaleRuiz!(ws::QOCS.WorkSpace,set::QOCS.Settings)
+  function scaleRuiz!(ws::QOCS.Workspace,set::QOCS.Settings)
     P = copy(ws.p.P)
     A = copy(ws.p.A)
     q = copy(ws.p.q)
@@ -163,7 +163,7 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
 
 
 
-  function reverseScaling!(ws::QOCS.WorkSpace)
+  function reverseScaling!(ws::QOCS.Workspace)
     D = ws.sm.D
     E = ws.sm.E
     Dinv = ws.sm.Dinv

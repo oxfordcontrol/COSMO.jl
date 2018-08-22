@@ -2,7 +2,7 @@ module Printing
   using ..QOCS,Printf, LinearAlgebra
   export printHeader, printResult, printIteration
 
-  function printHeader(ws::QOCS.WorkSpace,settings::QOCS.Settings,setupTime::Float64)
+  function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings,setupTime::Float64)
     n = ws.p.n
     m = ws.p.m
     K = ws.p.K

@@ -101,7 +101,7 @@ end
 
     @testset "timelimit" begin
         p = simpleQP()
-        settings = QOCS.Settings(timelimit=1, check_termination=100000000,max_iter=10000000)
+        settings = QOCS.Settings(time_limit=1, check_termination=100000000,max_iter=10000000)
         model = QOCS.Model()
         assemble!(model,p.P,p.q,p.constraints)
 
