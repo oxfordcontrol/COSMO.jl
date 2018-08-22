@@ -36,9 +36,9 @@ end
     ws = WorkSpace(model,ScaleMatrices())
 
     # perform preprocessing steps (scaling, initial KKT factorization)
-    settings.verboseTiming && (setupTime = time())
+    setupTime = time()
     setup!(ws,settings)
-    settings.verboseTiming && (setupTime = time() - setupTime)
+    setupTime = time() - setupTime
 
     # instantiate variables
     numIter = 0

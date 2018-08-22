@@ -128,8 +128,8 @@ end
       n = p.n
       ws = new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]))
       # hand over warm starting variables
-      ws.x = p.x0
-      ws.μ = -p.y0
+      length(p.x0) == n && (ws.x = p.x0)
+      length(p.y0) == m && (ws.μ = -p.y0)
       return ws
     end
   end
