@@ -10,10 +10,9 @@ export isPrimalInfeasible, isDualInfeasible
       xpart = view(x,convexSet.indices)
       if !convexSet.inDual(xpart,convexSet,tol)
         return false
-      else
-        return true
       end
     end
+    return true
   end
 
   function supportFunction(δy,ws,settings)
@@ -32,10 +31,9 @@ export isPrimalInfeasible, isDualInfeasible
         A_δxpart = view(A_δx,convexSet.indices)
         if !convexSet.inRecc(A_δxpart,convexSet,settings.eps_dual_inf)
           return false
-        else
-          return true
         end
       end
+      return true
   end
 
 

@@ -33,8 +33,8 @@ rng = MersenneTwister(7232)
     settings = QOCS.Settings(check_termination=1,scaling = 0)
 
     model = QOCS.Model()
-    assemble!(model,P,q,[constraint1;constraint2])
-    res, = QOCS.optimize!(model,settings);
+    assemble!(model,P,c,[constraint1;constraint2])
+    res = QOCS.optimize!(model,settings);
 
 
 
@@ -42,7 +42,7 @@ rng = MersenneTwister(7232)
 
     # true solution
     λMaxTrue = maximum(eigen(A).values)
-    @test abs(res.ν[1]-λMaxTrue) < 1e-2
+    @test abs(res.y[1]-λMaxTrue) < 1e-2
    end
 end
 nothing
