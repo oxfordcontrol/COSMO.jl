@@ -38,11 +38,11 @@ settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true
 model = QOCS.Model()
 assemble!(model,P,c,[constraint1])
 
-res, = QOCS.optimize!(model,settings);
+res = QOCS.optimize!(model,settings);
 
 @testset "Linear Problem" begin
   @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-2, norm=(x -> norm(x,Inf)))
-  @test isapprox(res.cost,20.0, atol=1e-2)
+  @test isapprox(res.objVal,20.0, atol=1e-2)
 end
 nothing
 ```

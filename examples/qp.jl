@@ -12,6 +12,18 @@ A = [1. 1; 1 0; 0 1]
 l = [1.; 0; 0]
 u = [1; 0.7; 0.7]
 
+
+ # P = [4. 1;1 2]
+ #    q = [1; 1.]
+ #    A = [1. 1;1 0; 0 1]
+ #    l = [1.;0;0]
+ #    u = [1.;0.7;0.7]
+
+ #    constraint1 = QOCS.Constraint(-A,u,QOCS.Nonnegatives())
+ #    constraint2 = QOCS.Constraint(A,-l,QOCS.Nonnegatives())
+
+
+
 # Define the constraint l <= Ax <= u with the help of a Nonnegatives set
 Aa = [-A;A]
 ba = [u; -l]
@@ -23,7 +35,7 @@ settings = QOCS.Settings(verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
 
 model = QOCS.Model()
 assemble!(model,P,q,[constraint1])
-res, = QOCS.optimize!(model,settings);
+res = QOCS.optimize!(model,settings);
 
 # solve again by defining the constraints with the help of a box (disable infeasibility checks)
 constraint1 = QOCS.Constraint(A,zeros(3),QOCS.Box(l,u))
@@ -31,13 +43,13 @@ settings = QOCS.Settings(check_infeasibility = 2500, verbose=true,eps_abs = 1e-4
 
 model = QOCS.Model()
 assemble!(model,P,q,[constraint1])
-res_box, = QOCS.optimize!(model,settings);
+res_box = QOCS.optimize!(model,settings);
 
 
 @testset "QP Problem" begin
   @test norm(res.x[1:2] - [0.3;0.7],Inf) < 1e-3
   @test norm(res_box.x[1:2] - [0.3;0.7],Inf) < 1e-3
-  @test abs(res.cost-1.88) < 1e-3
-  @test abs(res_box.cost-1.88) < 1e-3
+  @test abs(res.objVal-1.88) < 1e-3
+  @test abs(res_box.objVal-1.88) < 1e-3
 end
 nothing
