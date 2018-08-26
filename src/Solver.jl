@@ -29,6 +29,13 @@ end
 
 # SOLVER ROUTINE
 # -------------------------------------
+
+
+  """
+      optimize!(model,settings)
+
+  Attempts to solve the optimization problem defined in `QOCS.Model` object with the user settings defined in `QOCS.Settings`. Returns a `QOCS.Result` object.
+  """
   function optimize!(model::QOCS.Model,settings::QOCS.Settings)
     solverTime_start = time()
 

@@ -2,7 +2,7 @@
 module QOCS
 
 #export MathOptInterfaceQOCS
-export optimize!, reset!, assemble!, warmStart!, Settings, Cone, Model, Results, Constrait, AbstractConvexSet
+export optimize!, reset!, assemble!, warmStart!, Settings, Model, Result, Constraint, AbstractConvexSet
 using SparseArrays,LinearAlgebra
 
 include("./Helper.jl")

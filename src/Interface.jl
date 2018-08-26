@@ -1,43 +1,19 @@
-# User facing functions / structs:
+"""
+    assemble!(model,P,q,constraints,[x0,y0])
 
-# ------------------------------
-# Structs: (defined in Types.jl)
-# ------------------------------
-# 1. QOCS.Model
-# 2. QOCS.Settings
-# 3. QOCS.Results
-# 4. QOCS.ConvexSet (Abstract)
-# 4a. Subtypes of ConvexSet: ZeroCone, NonNegativeOrthant, Interval (Box), SecondOrderCone, PositiveSemidefiniteCone <: QOCS.ConvexSet, User defined ones
-# Each Subtype of ConvexSet needs an associated projection function project!(set::Type{<:ConvexSet}). We'll provide the standard ones, and a isInDualCone->Bool, isInRecessionCone->Bool
+Assembles a `QOCS.Model` with a cost function defind by `P` and `q`, and an array of `constraints`.
 
-# ------------------------------
-# Functions: (defined in Interface.jl)
-# ------------------------------
+The positive semidefinite matrix `P` and vector `q` are used to specify the cost function of the optimization problem:
 
-# 1. assemble!() --> To copy problem data and warm start data into the model
-# Idea: two assemble! functions:
-# 1a. Low level: Pass the problem data exactly in the current problem format(A,q,A,b,K) with K sedumi style
-# 1b. High Level: Pass P,q directly, pass constraints as an array of ConvexSet Subtypes
+```
+min   1/2 x'Px + q'x
+s.t.  Ax + b ∈ C
+```
+`constraints` is an array of `QOCS.Constraint` objects that are used to describe the constraints on `x`.
 
-# 2. optimize!(model::QOCS.Model,settings::QOCS.settings) --> Calls the solver based on the model data and returns a QOCS.Results object
-# 3. reset!() --> Empty functions to reset each struct QOCS.Model, QOCS.Settings, QOCS.Results objects
-
-# ------------------------------
-# Open questions:
-# ------------------------------
-# 1. How best handle warm starting?
-# 2. How best handle update of problem data without re-assambling the whole model?
-# 3. Ideally work directly on the QOCS.Model data without copying anything (that means that matrixes will be changed through scaling) --> Problem?
-
-# function assemble!(model::QOCS.Model,P,q,A,b,K)
-#   model.P = P
-#   model.q = q
-#   model.A = A
-#   model.b = b
-#   model.K = K
-#   model.m, model.n = size(A)
-# end
-
+---
+The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
+"""
 function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},constraints::Array{QOCS.Constraint},x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
@@ -76,11 +52,6 @@ function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector
   nothing
 end
 
-function warmStart!(model::QOCS.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
-    x0 isa Vector{Float64} && (model.x0 = x0)
-    y0 isa Vector{Float64} && (model.y0 = y0)
-end
-
 function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Array{QOCS.Constraint})
   Pm = spzeros(1,1)
   qm = zeros(1)
@@ -92,6 +63,27 @@ end
 assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractMatrix{<:Real},constraints::Array{QOCS.Constraint}) = assemble!(model,P,vec(q),constraints)
 assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::Real,constraints::Array{QOCS.Constraint}) = assemble!(model,P,[q],constraints)
 
+"""
+    warmStart!(model,[x0,y0])
+
+Provides the `QOCS.Model` with warm starting values for the primal variable `x` and/or the dual variable `y`.
+"""
+function warmStart!(model::QOCS.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
+    if x0 isa Vector{Float64}
+      if size(model.A,2) == length(x0)
+        model.x0 = x0
+      else
+        error("Dimension of x0 doesn't match the dimension of A.")
+      end
+    end
+    if y0 isa Vector{Float64}
+      if length(model.b) == length(y0)
+        model.y0 = y0
+      else
+        error("Dimension of y0 doesn't match the dimensions of the constraint variables A,b.")
+      end
+    end
+end
 
 # merge zeros sets and nonnegative sets
 function mergeConstraints!(constraints::Array{QOCS.Constraint})

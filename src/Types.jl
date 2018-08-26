@@ -17,7 +17,23 @@
     rPrim::Float64
     rDual::Float64
   end
+  """
+      Result
 
+  Object returned by the QOCS solver after calling `optimize!(model,settings)`. It has the following fields:
+
+
+  Fieldname | Type | Description
+  ---  | --- | ---
+  x | Vector{Float64}| Primal variable
+  y | Vector{Float64}| Dual variable
+  s | Vector{Float64}| (Primal) set variable
+  objVal | Float64 | Objective value
+  iter | Int64 | Number of iterations
+  status | Symbol | Solution status
+  info | QOCS.ResultInfo | Struct with more information
+  times | QOCS.ResultTimes | Struct with several measured times
+  """
   struct Result
     x::Array{Float64}
     y::Array{Float64}
@@ -38,7 +54,6 @@
 
   end
 
-  # Redefinition of the show function that fires when the object is called
   function Base.show(io::IO, obj::Result)
     print(io,">>> QOCS - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.objVal,digits=2))\nRuntime: $(round.(obj.times.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.times.setupTime*1000,digits=2))ms\nAvg Iter Time: $(round.((obj.times.iterTime/obj.iter)*1000,digits=2))ms")
   end
@@ -93,6 +108,13 @@ mutable struct Flags
 
 end
 
+
+
+"""
+    Model()
+
+Initializes an empty QOCS model that can be filled with problem data using `assemble!(model,P,q,constraints)`.
+"""
 mutable struct Model
     P::SparseMatrixCSC{Float64,Int64}
     q::Vector{Float64}
@@ -134,6 +156,29 @@ end
     end
   end
 
+  """
+      Settings(;arg=val)
+
+  Creates a QOCS settings object that is used to pass user settings to the solver.
+
+  Argument | Description | Values (default)
+  --- | --- | ---
+  rho | ADMM rho step | 0.1
+  sigma | ADMM sigma step | 1e-6.
+  alpha | Relaxation parameter | 1.6
+  eps_abs | Absolute residual tolerance | 1e-4
+  eps_rel | Relative residual tolerance | 1e-4
+  eps_prim_inf | Primal infeasibility tolerance | 1e-4
+  eps_dual_inf | Dual infeasibility tolerance | 1e-4
+  max_iter | Maximum number of iterations | 2500
+  verbose | Verbose printing | false
+  verboseTiming | Verbose timing | false
+  check_termination | Check termination interval | 40
+  check_infeasibility | Check infeasibility interval | 40
+  scaling | Number of scaling iterations | 10
+  adaptive_rho | Automatic adaptation of step size parameter | true
+  time_limit | set solver time limit in s | 0
+  """
   mutable struct Settings
     rho::Float64
     sigma::Float64
@@ -192,8 +237,41 @@ end
     end
   end
 
+"""
+    Constraint(A,b,convexSet,dim=0,indices=0:0)
 
-# TODO: How to handle sparse vs. dense input data
+Creates a QOCS constraint: `Ax + b ∈ convexSet`.
+
+By default the following convex sets are supported: `Zeros`, `Nonnegatives`, `SecondOrderCone`, `PositiveSemidefiniteCone`.
+
+# Examples
+```jldoctest
+julia> Constraint([1 0;0 1],zeros(2),QOCS.PositiveSemidefiniteCone())
+Constraint
+Size of A: (2, 2)
+ConvexSet: QOCS.PositiveSemidefiniteCone
+```
+
+---
+The optinal arguments `dim` and `indices` can be used to specify A and b for subparts of variable `x`. If `x` has dimension `dim=4`,
+then x[2] and x[3] can be constrained to the zero cone in the following way:
+
+
+# Examples
+```jldoctest
+julia> c = Constraint([1 0;0 1],zeros(2),QOCS.Zeros(),4,2:3)
+Constraint
+Size of A: (2, 4)
+ConvexSet: QOCS.Zeros
+```
+Notice that extra columns of A have been added automatically.
+```
+julia>Matrix(c.A)
+2×4 Array{Float64,2}:
+ 0.0  1.0  0.0  0.0
+ 0.0  0.0  1.0  0.0
+```
+"""
 struct Constraint
   A::Union{AbstractMatrix{<:Real},AbstractVector{<:Real}}
   b::AbstractVector{<:Real}
@@ -213,7 +291,7 @@ struct Constraint
       (indices.start < 1 || indices.stop < indices.start) && error("The index range for x has to be increasing and nonnegative.")
       dim < indices.stop && error("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop).")
       Ac = spzeros(size(A,1),dim)
-      bc = zeros(3dim)
+      bc = zeros(dim)
       Ac[:,indices] = A
       bc[indices] = b
       A = Ac
@@ -236,5 +314,7 @@ struct Constraint
 
 end
 
-
+ function Base.show(io::IO, obj::QOCS.Constraint)
+    print(io,"Constraint\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convexSet))")
+  end
 
