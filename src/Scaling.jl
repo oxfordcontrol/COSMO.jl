@@ -1,8 +1,7 @@
 module Scaling
 
 using ..QOCS, SparseArrays, LinearAlgebra, Statistics
-export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetric!, findCloseSymmetricScaling
-
+export scaleRuiz!,reverseScaling!
 
   function normKKTCols(P::SparseMatrixCSC{Float64,Int64},A::SparseMatrixCSC{Float64,Int64})
       normPCols = [norm(P[:,i],Inf) for i in 1:size(P,2)]
@@ -111,14 +110,13 @@ export scaleRuiz!, scaleRuizGeometric!,reverseScaling!, scaleSCS!, scaleSymmetri
 
     # make sure cone membership is preserved
     sTemp = [diag(D);diag(E)]
-    ix = n
-    K.f > 0 && (ix += K.f)
-    K.l > 0 && (ix += K.l)
+
 
     for set in convexSets
       isScaleScalar, = set.scale!(set)
       if isScaleScalar
-        sTemp[set.indices] .= mean(sTemp[set.indices])
+        ind = set.indices .+ n
+        sTemp[ind] .= mean(sTemp[ind])
       end
     end
 
