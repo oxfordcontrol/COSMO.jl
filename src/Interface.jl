@@ -1,7 +1,7 @@
 """
-    assemble!(model,P,q,constraints,[x0,y0])
+    assemble!(model,P,q,constraint(s),[x0,y0])
 
-Assembles a `QOCS.Model` with a cost function defind by `P` and `q`, and an array of `constraints`.
+Assembles a `QOCS.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
 
 The positive semidefinite matrix `P` and vector `q` are used to specify the cost function of the optimization problem:
 
@@ -9,16 +9,17 @@ The positive semidefinite matrix `P` and vector `q` are used to specify the cost
 min   1/2 x'Px + q'x
 s.t.  Ax + b ∈ C
 ```
-`constraints` is an array of `QOCS.Constraint` objects that are used to describe the constraints on `x`.
+`constraints` is a `QOCS.Constraint` or an array of `QOCS.Constraint` objects that are used to describe the constraints on `x`.
 
 ---
 The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
 """
-function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},constraints::Array{QOCS.Constraint},x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
+function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},constraints::Union{QOCS.Constraint,Array{QOCS.Constraint,1}},x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
   q[:] = convert(Vector{Float64},q)
 
+  !isa(constraints, Array) && (constraints = [constraints])
   # model.Flags.INFEASIBILITY_CHECKS = checkConstraintFunctions(constraints)
 
   mergeConstraints!(constraints)
@@ -52,7 +53,7 @@ function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector
   nothing
 end
 
-function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Array{QOCS.Constraint})
+function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Union{QOCS.Constraint,Array{QOCS.Constraint}})
   Pm = spzeros(1,1)
   qm = zeros(1)
   Pm[1,1] = convert(Float64,P)
@@ -60,8 +61,8 @@ function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Array{QOCS.Con
   assemble!(model,Pm,qm,constraints)
 end
 
-assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractMatrix{<:Real},constraints::Array{QOCS.Constraint}) = assemble!(model,P,vec(q),constraints)
-assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::Real,constraints::Array{QOCS.Constraint}) = assemble!(model,P,[q],constraints)
+assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractMatrix{<:Real},constraints::Union{QOCS.Constraint,Array{QOCS.Constraint}}) = assemble!(model,P,vec(q),constraints)
+assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::Real,constraints::Union{QOCS.Constraint,Array{QOCS.Constraint}}) = assemble!(model,P,[q],constraints)
 
 """
     warmStart!(model,[x0,y0])
