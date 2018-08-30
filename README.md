@@ -62,7 +62,7 @@ eps_prim_inf | Primal infeasibility tolerance | 1e-4
 eps_dual_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
-verboseTiming | Verbose timing | false
+verbose_timing | Verbose timing | false
 check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10

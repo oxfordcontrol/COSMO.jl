@@ -2,7 +2,7 @@ module Printing
   using ..QOCS,Printf, LinearAlgebra
   export printHeader, printResult, printIteration
 
-  function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings,setupTime::Float64)
+  function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings)
     n = ws.p.n
     m = ws.p.m
     K = ws.p.K
@@ -36,7 +36,7 @@ module Printing
       end
     end
     println("Settings: ϵ_abs = $(@sprintf("%.1e",settings.eps_abs)), ϵ_rel = $(@sprintf("%.1e",settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.1e",settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.1e",settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scalingStatus)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter")
-    println("Setup Time: $(round.(setupTime*1000;digits=2))ms\n")
+    println("Setup Time: $(round.(ws.times.setupTime*1000;digits=2))ms\n")
     println("Iter:\tObjective:\tPrimal Res:\tDual Res:\tRho:")
     nothing
   end

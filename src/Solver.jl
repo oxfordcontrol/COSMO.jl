@@ -3,6 +3,7 @@
 
 function admmStep!(x, s, μ, ν, x_tl, s_tl, ls, sol, F, q, b, K, ρ, α, σ, m, n,convexSets)
   # Create right hand side for linear system
+  ls = zeros(n+m)
   for i=1:n
     ls[i] = σ*x[i]-q[i]
   end
@@ -43,11 +44,10 @@ end
     ws = Workspace(model,ScaleMatrices())
 
     # perform preprocessing steps (scaling, initial KKT factorization)
-    setupTime = time()
-    setup!(ws,settings)
-    setupTime = time() - setupTime
+    ws.times.setupTime = @elapsed setup!(ws,settings);
 
     # instantiate variables
+    projTime = 0.
     numIter = 0
     status = :Unsolved
     cost = Inf
@@ -56,7 +56,7 @@ end
 
 
     # print information about settings to the screen
-    settings.verbose && printHeader(ws,settings,setupTime)
+    settings.verbose && printHeader(ws,settings)
 
     timeLimit_start = time()
     #preallocate arrays
@@ -71,19 +71,19 @@ end
     ls = zeros(n + m)
     sol = zeros(n + m)
 
-    settings.verboseTiming && (iter_start = time())
+    settings.verbose_timing && (iter_start = time())
 
     for iter = 1:settings.max_iter
       numIter+= 1
       @. δx = ws.x
       @. δy = ws.μ
-      admmStep!(
+      projTime += @elapsed admmStep!(
         ws.x, ws.s, ws.μ, ws.ν,
         x_tl, s_tl, ls,sol,
         ws.p.F, ws.p.q, ws.p.b, ws.p.K, ws.ρVec,
         settings.alpha, settings.sigma,
         m, n, ws.p.convexSets
-      )
+      );
 
       # compute deltas for infeasibility detection
       @. δx = ws.x - δx
@@ -147,7 +147,8 @@ end
 
     end #END-ADMM-MAIN-LOOP
 
-    settings.verboseTiming && (iterTime = (time()-iter_start))
+    settings.verbose_timing && (ws.times.iterTime = (time()-iter_start))
+    settings.verbose_timing && (ws.times.postTime = time())
 
     # calculate primal and dual residuals
     if numIter == settings.max_iter
@@ -163,22 +164,20 @@ end
     end
 
 
-    solverTime = time() - solverTime_start
-
     # print solution to screen
-    settings.verbose && printResult(status,numIter,cost,solverTime)
+    settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
+
+
+    ws.times.projTime = projTime
+    ws.times.solverTime = time() - solverTime_start
+    settings.verbose_timing && (ws.times.postTime = time()-ws.times.postTime)
 
     # create result object
     resinfo = QOCS.ResultInfo(r_prim,r_dual)
-    if settings.verboseTiming
-      times = QOCS.ResultTimes(solverTime,setupTime,0.,0.,iterTime,0.,0.)
-    else
-      times = QOCS.ResultTimes(solverTime,NaN,NaN,NaN,NaN,NaN,NaN)
-    end
     y = -ws.μ
 
-    return result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,times);
+    return result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,ws.times);
 
 
   end

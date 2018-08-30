@@ -3,7 +3,7 @@
 # struct DEFINITIONS
 # -------------------------------------
 
-  struct ResultTimes
+  mutable struct ResultTimes
     solverTime::Float64
     setupTime::Float64
     graphTime::Float64
@@ -11,6 +11,15 @@
     iterTime::Float64
     projTime::Float64
     postTime::Float64
+
+    function ResultTimes()
+      return new(NaN,NaN,NaN,NaN,NaN,NaN,NaN)
+    end
+
+    function ResultTimes(sT::Float64,seT::Float64,gT::Float64,fT::Float64,iT::Float64,pT::Float64,poT::Float64)
+      return new(sT,seT,gT,fT,iT,pT,poT)
+    end
+
   end
 
   struct ResultInfo
@@ -55,7 +64,8 @@
   end
 
   function Base.show(io::IO, obj::Result)
-    print(io,">>> QOCS - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.objVal,digits=2))\nRuntime: $(round.(obj.times.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.times.setupTime*1000,digits=2))ms\nAvg Iter Time: $(round.((obj.times.iterTime/obj.iter)*1000,digits=2))ms")
+    print(io,">>> QOCS - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.objVal,digits=2))\nRuntime: $(round.(obj.times.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.times.setupTime*1000,digits=2))ms\n")
+    obj.times.iterTime != NaN && print("Avg Iter Time: $(round.((obj.times.iterTime/obj.iter)*1000,digits=2))ms")
   end
 
 
@@ -144,11 +154,12 @@ end
       ρ::Float64
       ρVec::Array{Float64,1}
       Info::Info
+      times::ResultTimes
       #constructor
     function Workspace(p::QOCS.Model,sm::ScaleMatrices)
       m = p.m
       n = p.n
-      ws = new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]))
+      ws = new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]),ResultTimes())
       # hand over warm starting variables
       length(p.x0) == n && (ws.x = p.x0)
       length(p.y0) == m && (ws.μ = -p.y0)
@@ -172,7 +183,7 @@ end
   eps_dual_inf | Dual infeasibility tolerance | 1e-4
   max_iter | Maximum number of iterations | 2500
   verbose | Verbose printing | false
-  verboseTiming | Verbose timing | false
+  verbose_timing | Verbose timing | false
   check_termination | Check termination interval | 40
   check_infeasibility | Check infeasibility interval | 40
   scaling | Number of scaling iterations | 10
@@ -197,7 +208,7 @@ end
     adaptive_rho::Bool
     adaptive_rho_interval::Int64
     adaptive_rho_tolerance::Float64
-    verboseTiming::Bool
+    verbose_timing::Bool
     RHO_MIN::Float64
     RHO_MAX::Float64
     RHO_TOL::Float64
@@ -223,7 +234,7 @@ end
       adaptive_rho = true,
       adaptive_rho_interval = 40,
       adaptive_rho_tolerance = 5,
-      verboseTiming = false,
+      verbose_timing = false,
       RHO_MIN = 1e-6,
       RHO_MAX = 1e6,
       RHO_TOL = 1e-4,
@@ -233,7 +244,7 @@ end
       )
         new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
           check_termination,check_infeasibility,scaling,MIN_SCALING,MAX_SCALING,adaptive_rho,
-          adaptive_rho_interval,adaptive_rho_tolerance,verboseTiming,RHO_MIN,RHO_MAX,RHO_TOL,time_limit,obj_true,obj_true_tol)
+          adaptive_rho_interval,adaptive_rho_tolerance,verbose_timing,RHO_MIN,RHO_MAX,RHO_TOL,time_limit,obj_true,obj_true_tol)
     end
   end
 
