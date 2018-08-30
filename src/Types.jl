@@ -13,7 +13,7 @@
     postTime::Float64
 
     function ResultTimes()
-      return new(NaN,NaN,NaN,NaN,NaN,NaN,NaN)
+      return new(0.,0.,NaN,NaN,NaN,0.,NaN)
     end
 
     function ResultTimes(sT::Float64,seT::Float64,gT::Float64,fT::Float64,iT::Float64,pT::Float64,poT::Float64)
