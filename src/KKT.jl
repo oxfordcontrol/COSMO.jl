@@ -12,7 +12,7 @@ export factorKKT!
     # Do LDLT Factorization: A = LDL^T
     #try
     if settings.verbose_timing
-      ws.times.factorTime = @elapsed ws.p.F = ldlt(M)
+      ws.times.factorTime += @elapsed ws.p.F = ldlt(M)
     else
       ws.p.F = ldlt(M)
     end

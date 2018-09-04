@@ -86,6 +86,28 @@ function warmStart!(model::QOCS.Model; x0::Union{Vector{Float64}, Nothing} = not
     end
 end
 
+
+"""
+    set!(model,P,q,A,b,convexSets)
+
+Sets model data directly based on provided fields.
+"""
+function set!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},A::AbstractMatrix{<:Real},b::AbstractVector{<:Real},convexSets::Array{QOCS.AbstractConvexSet})
+  # convert inputs
+  P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
+  A[:,:] = convert(SparseMatrixCSC{Float64,Int64},A)
+  q[:] = convert(Vector{Float64},q)
+  b[:] = convert(Vector{Float64},b)
+
+  model.P = P
+  model.q = q
+  model.A = A
+  model.b = b
+  model.m = length(b)
+  model.n = length(q)
+  model.convexSets = convexSets
+  nothing
+end
 # merge zeros sets and nonnegative sets
 function mergeConstraints!(constraints::Array{QOCS.Constraint})
   # handle zeros sets
