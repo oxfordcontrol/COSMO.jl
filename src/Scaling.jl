@@ -1,10 +1,45 @@
 module Scaling
 
 using ..QOCS, SparseArrays, LinearAlgebra, Statistics
+import LinearAlgebra: lmul!, rmul!
 export scaleRuiz!,reverseScaling!
 
+function lmul!(L::Diagonal, M::SparseMatrixCSC)
+
+    #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
+    #but this way allocates no memory at all and
+    #is marginally faster
+    for i = 1:(M.colptr[end]-1)
+        M.nzval[i] *= L.diag[M.rowval[i]]
+    end
+    M
+end
+
+function rmul!(M::SparseMatrixCSC,R::Diagonal)
+    for i = 1:M.n
+        for j = M.colptr[i]:(M.colptr[i+1]-1)
+            M.nzval[j] *= R.diag[i]
+        end
+    end
+    M
+end
+
+function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
+    for i = 1:M.n
+        for j = M.colptr[i]:(M.colptr[i+1]-1)
+            M.nzval[j] *= L.diag[M.rowval[j]]*R.diag[i]
+        end
+    end
+    M
+end
+
+function lrmul!(L::Diagonal, M::AbstractMatrix, R::Diagonal)
+    lmul!(L,rmul!(M,R))
+end
+
+
   function normKKTCols(P::SparseMatrixCSC{Float64,Int64},A::SparseMatrixCSC{Float64,Int64})
-      normPCols = [norm(P[:,i],Inf) for i in 1:size(P,2)]
+    normPCols = [norm(P[:,i],Inf) for i in 1:size(P,2)]
     normACols = [norm(A[:,i],Inf) for i in 1:size(A,2)]
     normLeftPart = max.(normPCols,normACols)
     AT = A'
