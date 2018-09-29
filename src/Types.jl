@@ -91,13 +91,13 @@
   end
 
   mutable struct ScaleMatrices
-    D::SparseMatrixCSC{Float64,Int64}
-    Dinv::SparseMatrixCSC{Float64,Int64}
-    E::SparseMatrixCSC{Float64,Int64}
-    Einv::SparseMatrixCSC{Float64,Int64}
-    c::Float64
-    cinv::Float64
-    ScaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.)
+    D::Diagonal
+    Dinv::Diagonal
+    E::Diagonal
+    Einv::Diagonal
+    c::Real
+    cinv::Real
+    ScaleMatrices() = new([1.],[1.],[1.],[1.],1.,1.)
   end
 
 mutable struct Flags
@@ -317,4 +317,3 @@ end
  function Base.show(io::IO, obj::QOCS.Constraint)
     print(io,"Constraint\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convexSet))")
   end
-

@@ -12,159 +12,174 @@ export scaleRuiz!,reverseScaling!
     return nothing
   end
 
-  @inline function limitScaling!(s::Number,minval,maxval)
+  @inline function limitScaling!(s::Number,minval::Number,maxval::Number)
       s = s < minval ? 1  : (s > maxval ? maxval : s)
   end
 
   function limitScaling!(s::Array,minval,maxval)
-      s .= mylimitScaling!.(s,minval,maxval)
+      s .= limitScaling!.(s,minval,maxval)
+  end
+
+  function limitScaling!(s,set::QOCS.Settings)
+      limitScaling!(s,set.MIN_SCALING,set.MAX_SCALING)
   end
 
 
   function scaleRuiz!(ws::QOCS.Workspace,set::QOCS.Settings)
-    P = copy(ws.p.P)
-    A = copy(ws.p.A)
-    q = copy(ws.p.q)
-    m = ws.p.m
-    n = ws.p.n
-    AT = spzeros(n,m)
-    c = 1.0
-    sTemp = ones(n+m)
-    δVec = zeros(m+n)
-    convexSets = ws.p.convexSets
 
-    #initialize scaling matrices
-    D = sparse(1.0I,n,n)
-    Dtemp = sparse(1.0I,n,n)
-    E = sparse(1.0I,m,m)
-    Etemp = sparse(1.0I,m,m)
-    if m == 0
-      E = 0
-      Etemp = 0
-    end
-    normPCols = zeros(n)
-    normPCols2 = zeros(n)
-    normACols = zeros(n)
-    normATCols = zeros(m)
+      #references to scaling matrices from workspace
+      D    = ws.sm.D
+      E    = ws.sm.E
+      DInv = ws.sm.Dinv
+      EInv = ws.sm.Dinv
 
-    for iii = 1:set.scaling
+      #unit scaling to start
+      D.diag .= 1.
+      E.diag .= 1.
+      c       = 1.
 
-      # First step Ruiz
-      QOCS.Scaling.normKKTCols!(δVec,P,A,AT,normPCols,normACols,normATCols,m,n)
-      QOCS.Scaling.limitScaling!(δVec,set)
-      δVec = sqrt.(δVec)
-      sTemp = 1.0 ./δVec
+      #use the inverse scalings as intermediate
+      #work vectors as well, since we don't
+      #compute the inverse scaling until the
+      #final step
+      Dwork = Dinv
+      Ework = Einv
 
-      # Obtain scaling matrices
-      Dtemp = sparse(Diagonal(sTemp[1:n]))
-      if m == 0
-        Etemp = 0
-      else
-        Etemp = sparse(Diagonal(sTemp[n+1:n+m]))
+      #references to QP data matrices
+      P = ws.p.P
+      A = ws.p.A
+      q = ws.p.q
+      b = ws.p.b
+
+      #perform scaling operations for a fixed
+      #number of steps, i.e. no tolerance or
+      #convergence check
+      for i = 1:set.scaling
+
+          kktColNorms!(P,A,Dwork.diag,Ework.diag)
+          limitScaling!(Dwork.diag,set)
+          limitScaling!(Ework.diag,set)
+
+          @. Dwork.diag = 1 / sqrt(Dwork.diag)
+          @. Ework.diag = 1 / sqrt(Ework.diag)
+
+          # Scale the problem data and update the
+          # equilibration matrices
+          scaleData(P,A,q,b,Dwork,Ework,1.)
+
+          # Update equilibrium matrices D and E
+          lmul!(Dwork,D)        #D[:,:] = Dtemp*D
+          lmul!(Ework,E)        #D[:,:] = Dtemp*D
+
+          # now use the Dwork array to hold the
+          # column norms of the newly scaled P
+          # so that we can compute the mean
+          colNorms!(Dwork.diag,P)
+          mean_col_norm_P = mean(Dwork.diag)
+          inf_norm_q      = norm(q,Inf)
+
+          if norm_P_cols != 0. && inf_norm_q != 0.
+
+            limitScaling!(inf_norm_q,set)
+            scale_cost = max(inf_norm_q,mean_col_norm_P)
+            limitScaling!(scale_cost,set)
+            c_tmp = 1.0 / scale_cost
+
+            # scale the penalty terms and overall scaling
+            P .*= c_temp
+            q .*= c_temp
+            c .*= c_temp
+          end
+
+      end #end Ruiz scaling loop
+
+      # for certain cones we can only use a
+      # a single scalar value.  In these cases
+      # compute an adjustment to the overall scaling
+      # so that the aggregate scaling on the cone
+      # in questions turns out to be component-wise eq
+      # NB : we should actually provide each cone
+      # with the opportunity to provide its row
+      # (possibly non-scalar) rectification
+
+      anyScalarBlocks = false
+
+      for set in convexSets
+          isScalar, = set.scale!(set)
+
+          if isScalar
+              #at least one block was scalar
+              anyScalarBlocks = true
+
+              #NB: memory being allocated for ind here?
+              ind = set.indices .+ n
+              tmp = mean(D.diag[ind])
+              Dwork.diag[ind] .= tmp./D.diag[ind]
+          end
+
       end
 
-      # Scale data
-      P[:,:] = Dtemp*(P*Dtemp)
-      A[:,:] = Etemp*A*Dtemp
-      q[:] = Dtemp*q
-
-      # Update equilibrium matrices D and E
-      D[:,:] = Dtemp*D
-      E[:,:] = Etemp*E
-      # Second step cost normalization
-      #colNorms!(normPCols2,P,n)
-      #norm_P_cols = mean(normPCols2)
-      norm_P_cols = mean([norm(P[:,i],Inf) for i in 1:size(P,2)])
-      inf_norm_q = norm(q,Inf)
-      if norm_P_cols != 0. && inf_norm_q != 0.
-        QOCS.Scaling.limitScaling!(inf_norm_q,set)
-        scale_cost = maximum([inf_norm_q norm_P_cols])
-        QOCS.Scaling.limitScaling!(scale_cost,set)
-        scale_cost = 1.0 ./ scale_cost
-        c_temp = scale_cost
-
-        # Normalize cost
-        P[:,:] = c_temp * P
-        q[:] = c_temp * q
-
-        # Update scaling
-        c = c_temp * c
+      #if any adjustments were made, tweak the
+      #scaling appropriately
+      if anyScalarBlocks
+          scaleData(P,A,q,b,Dwork,Ework,1.)
+          # Update equilibrium matrices D and E
+          lmul!(Dwork,D)        #D[:,:] = Dtemp*D
+          lmul!(Ework,E)        #D[:,:] = Dtemp*D
       end
-    end #END-Ruiz-Loop
 
-    # make sure cone membership is preserved
-    sTemp = [diag(D);diag(E)]
-
-
-    for set in convexSets
-      isScaleScalar, = set.scale!(set)
-      if isScaleScalar
-        ind = set.indices .+n
-
-        sTemp[ind] .= mean(sTemp[ind])
-      end
-    end
-
-    # Obtain scaling matrices
-    D = sparse(Diagonal(sTemp[1:n]))
-    if m == 0
-      E = 0
-    else
-      E = sparse(Diagonal(sTemp[n+1:end]))
-    end
-
-    # perform final scaling
-    ws.p.P = c*D*(ws.p.P*D)
-    ws.p.A = E*ws.p.A*D
-    ws.p.q = c*D*ws.p.q
-    ws.p.b = E*ws.p.b
-
-    # scale set components (like u,l in a box)
-    for set in convexSets
-      scaleInfo = set.scale!(set)
-      if length(scaleInfo) > 1
-        scaleVars = scaleInfo[2:end]
-        for elem in scaleVars
-          elem[:] = E*elem
+      #scale set components
+      # scale set components (like u,l in a box)
+      for set in convexSets
+        scaleInfo = set.scale!(set)
+        if length(scaleInfo) > 1
+          #NB : Memory allocated here?
+          scaleVars = scaleInfo[2:end]
+          for elem in scaleVars
+            elem[:] = E*elem
+          end
         end
       end
-    end
 
-    ws.sm.D = D
-    ws.sm.E = E
-    ws.sm.Dinv = sparse(Diagonal(1 ./diag(D)))
-    ws.sm.Einv = sparse(Diagonal(1 ./diag(E)))
-    ws.sm.c = c
-    ws.sm.cinv = 1 ./c
+      #update the inverse scaling data, c and c_inv
+      ws.sm.Dinv.diag .= 1. ./ D.diag
+      ws.sm.Einv.diag .= 1. ./ E.diag
+      ws.sm.c          = c
+      ws.sm.cinv       = 1. ./ c
 
-    # scale the potentially warm started variables
-    ws.x[:] = ws.sm.Dinv *ws.x
-    ws.μ[:] = ws.sm.Einv*ws.μ *c
+      # scale the potentially warm started variables
+      ws.x[:] = ws.sm.Dinv *ws.x
+      ws.μ[:] = ws.sm.Einv*ws.μ *c
 
-    return nothing
   end
 
 
+  function scaleData!(P,A,q,b,Ds,Es,cs=1.)
+
+      lrmul!(Ds,P,Ds) # P[:,:] = Ds*P*Ds
+      lrmul!(Es,A,Ds) # A[:,:] = Es*A*Ds
+      q[:] = Ds*q
+      b[:] = Es*b
+
+      if cs != 1.
+          P .*= cs
+          q .*= cs
+      end
+      return nothing
+  end
+
 
   function reverseScaling!(ws::QOCS.Workspace)
-    D = ws.sm.D
-    E = ws.sm.E
-    Dinv = ws.sm.Dinv
-    Einv = ws.sm.Einv
-    c = ws.sm.c
 
-    ws.x[:] = D*ws.x
-    ws.s[:] = Einv*ws.s
-
-    ws.ν[:] = E*ws.ν ./c
-    ws.μ[:] = E*ws.μ ./c
+    ws.x[:] = ws.sm.D*ws.x
+    ws.s[:] = ws.sm.Einv*ws.s
+    ws.ν[:] = ws.sm.E*ws.ν*ws.sm.cinv
+    ws.μ[:] = ws.sm.E*ws.μ*ws.sm.cinv
 
     # reverse scaling for model data
     if ws.p.flags.REVERSE_SCALE_PROBLEM_DATA
-      ws.p.P[:,:] = (Dinv*ws.p.P*Dinv) ./c
-      ws.p.q[:]   = (Dinv*ws.p.q) ./c
-      ws.p.A[:,:] = Einv*ws.p.A*Dinv
-      ws.p.b[:,:] = Einv*ws.p.b
+        scaleData!(ws.p.P,ws.p.A,ws.p.q,ws.p.b,
+                   ws.sm.Dinv,ws.sm.Einv,ws.sm.cinv)
     end
     return nothing
   end
