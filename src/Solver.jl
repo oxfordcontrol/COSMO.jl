@@ -39,8 +39,13 @@ end
   function optimize!(model::QOCS.Model,settings::QOCS.Settings)
     solverTime_start = time()
 
-    # create workspace variables
-    ws = Workspace(model,ScaleMatrices())
+    # create scaling variables
+    # with scaling    -> uses mutable diagonal scaling matrices
+    # without scaling -> uses identity matrices
+    sm = (settings.scaling > 0) ? ScaleMatrices(model.m,model.n) : ScaleMatrices()
+
+    # create workspace
+    ws = Workspace(model,sm)
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     setupTime = time()
@@ -182,9 +187,3 @@ end
 
 
   end
-
-
-
-
-
-

@@ -91,13 +91,28 @@
   end
 
   mutable struct ScaleMatrices
-    D::Diagonal
-    Dinv::Diagonal
-    E::Diagonal
-    Einv::Diagonal
+    D::Union{UniformScaling{Bool},Diagonal}
+    Dinv::Union{UniformScaling{Bool},Diagonal}
+    E::Union{UniformScaling{Bool},Diagonal}
+    Einv::Union{UniformScaling{Bool},Diagonal}
     c::Real
     cinv::Real
-    ScaleMatrices() = new([1.],[1.],[1.],[1.],1.,1.)
+  end
+
+  function ScaleMatrices()
+      ScaleMatrices(I,I,I,I,1.,1.)
+  end
+
+  function ScaleMatrices(m,n)
+    ScaleMatrices(Float64,m,n)
+  end
+
+  function ScaleMatrices(T::Type,m,n)
+    D    = Diagonal(ones(T,n))
+    Dinv = Diagonal(ones(T,n))
+    E    = Diagonal(ones(T,m))
+    Einv = Diagonal(ones(T,m))
+    ScaleMatrices(D,Dinv,E,Einv,1.,1.)
   end
 
 mutable struct Flags

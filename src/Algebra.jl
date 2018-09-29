@@ -1,4 +1,4 @@
-
+import LinearAlgebra
 
 function colNorms!(v::Array{Tf,1},
                    A::Matrix{Tf};
@@ -35,7 +35,7 @@ function rowNorms!(v::Array{Tf,1},
                    A::SparseMatrixCSC{Tf,Ti};
                    reset::Bool = true) where{Tf<:AbstractFloat,Ti<:Integer}
 
-  startFromZero && v.= 0 
+  startFromZero && v.= 0
   for i=1:(A.colptr[end]-1)
      v[A.rowval[i]] = max(v[A.rowval[i]],abs(A.nzval[i]))
   end

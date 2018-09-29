@@ -30,8 +30,6 @@ export scaleRuiz!,reverseScaling!
       #references to scaling matrices from workspace
       D    = ws.sm.D
       E    = ws.sm.E
-      DInv = ws.sm.Dinv
-      EInv = ws.sm.Dinv
 
       #unit scaling to start
       D.diag .= 1.
@@ -42,8 +40,8 @@ export scaleRuiz!,reverseScaling!
       #work vectors as well, since we don't
       #compute the inverse scaling until the
       #final step
-      Dwork = Dinv
-      Ework = Einv
+      Dwork = ws.sm.Dinv
+      Ework = ws.sm.Dinv
 
       #references to QP data matrices
       P = ws.p.P
