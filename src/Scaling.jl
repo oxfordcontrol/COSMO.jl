@@ -1,47 +1,25 @@
 module Scaling
 
 using ..QOCS, SparseArrays, LinearAlgebra, Statistics
-import LinearAlgebra: lmul!, rmul!
 export scaleRuiz!,reverseScaling!
 
-  function colNorms!(normArr::Array{Float64,1},A::SparseMatrixCSC{Float64,Int64},N::Int64)
-    for i=1:N
-      normArr[i] = norm(view(A,:,i),Inf)
-    end
-  end
 
-  function normKKTCols!(δVec::Array{Float64,1},P::SparseMatrixCSC{Float64,Int64},A::SparseMatrixCSC{Float64,Int64},AT::SparseMatrixCSC{Float64,Int64},normPCols::Array{Float64,1},normACols::Array{Float64,1},normATCols::Array{Float64,1},m::Int64,n::Int64)
-    colNorms!(normPCols,P,n)
-    colNorms!(normACols,A,n)
-    normLeftPart = max.(normPCols,normACols)
-    AT[:,:] = permutedims(A)
-    colNorms!(normATCols,AT,m)
+  function kktColNorms!(P,A,normLHS,normRHS)
 
-    δVec[:] = [normLeftPart;normATCols]
-    nothing
-  end
-
-
-
-  function limitScaling!(δVec::Union{Float64,Array{Float64,1}},set::QOCS.Settings)
-    if length(δVec) > 1
-      for iii = 1:length(δVec)
-        if δVec[iii] < set.MIN_SCALING
-          δVec[iii] = 1.0
-        elseif δVec[iii] > set.MAX_SCALING
-          δVec[iii] = set.MAX_SCALING
-        end
-      end
-    # scalar case
-    else
-      if δVec < set.MIN_SCALING
-        δVec = 1.0
-      elseif δVec > set.MAX_SCALING
-        δVec = set.MAX_SCALING
-      end
-    end
+    colNorms!(normLHS,P,reset = true);   #start from zero
+    colNorms!(normLHS,A,reset = false);  #incrementally from P norms
+    rowNorms!(normRHS,A)                 #same as column norms of A'
     return nothing
   end
+
+  @inline function limitScaling!(s::Number,minval,maxval)
+      s = s < minval ? 1  : (s > maxval ? maxval : s)
+  end
+
+  function limitScaling!(s::Array,minval,maxval)
+      s .= mylimitScaling!.(s,minval,maxval)
+  end
+
 
   function scaleRuiz!(ws::QOCS.Workspace,set::QOCS.Settings)
     P = copy(ws.p.P)
@@ -183,8 +161,8 @@ export scaleRuiz!,reverseScaling!
 
     # reverse scaling for model data
     if ws.p.flags.REVERSE_SCALE_PROBLEM_DATA
-      ws.p.P[:,:] = Dinv*ws.p.P*Dinv ./c
-      ws.p.q[:] = (Dinv*ws.p.q) ./c
+      ws.p.P[:,:] = (Dinv*ws.p.P*Dinv) ./c
+      ws.p.q[:]   = (Dinv*ws.p.q) ./c
       ws.p.A[:,:] = Einv*ws.p.A*Dinv
       ws.p.b[:,:] = Einv*ws.p.b
     end
@@ -192,38 +170,3 @@ export scaleRuiz!,reverseScaling!
   end
 
 end # MODULE
-
-
-
-function lmul!(L::Diagonal, M::SparseMatrixCSC)
-
-    #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
-    #but this way allocates no memory at all and
-    #is marginally faster
-    for i = 1:(M.colptr[end]-1)
-        M.nzval[i] *= L.diag[M.rowval[i]]
-    end
-    M
-end
-
-function rmul!(M::SparseMatrixCSC,R::Diagonal)
-    for i = 1:M.n
-        for j = M.colptr[i]:(M.colptr[i+1]-1)
-            M.nzval[j] *= R.diag[i]
-        end
-    end
-    M
-end
-
-function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
-    for i = 1:M.n
-        for j = M.colptr[i]:(M.colptr[i+1]-1)
-            M.nzval[j] *= L.diag[M.rowval[j]]*R.diag[i]
-        end
-    end
-    M
-end
-
-function lrmul!(L::Diagonal, M::AbstractMatrix, R::Diagonal)
-    lmul!(L,rmul!(M,R))
-end
