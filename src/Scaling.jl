@@ -41,7 +41,7 @@ export scaleRuiz!,reverseScaling!
       #compute the inverse scaling until the
       #final step
       Dwork = ws.sm.Dinv
-      Ework = ws.sm.Dinv
+      Ework = ws.sm.Einv
 
       #references to QP data matrices
       P = ws.p.P
@@ -63,7 +63,7 @@ export scaleRuiz!,reverseScaling!
 
           # Scale the problem data and update the
           # equilibration matrices
-          scaleData(P,A,q,b,Dwork,Ework,1.)
+          scaleData!(P,A,q,b,Dwork,Ework,1.)
 
           # Update equilibrium matrices D and E
           lmul!(Dwork,D)        #D[:,:] = Dtemp*D
@@ -76,17 +76,17 @@ export scaleRuiz!,reverseScaling!
           mean_col_norm_P = mean(Dwork.diag)
           inf_norm_q      = norm(q,Inf)
 
-          if norm_P_cols != 0. && inf_norm_q != 0.
+          if mean_col_norm_P  != 0. && inf_norm_q != 0.
 
             limitScaling!(inf_norm_q,set)
             scale_cost = max(inf_norm_q,mean_col_norm_P)
             limitScaling!(scale_cost,set)
-            c_tmp = 1.0 / scale_cost
+            ctmp = 1.0 / scale_cost
 
             # scale the penalty terms and overall scaling
-            P .*= c_temp
-            q .*= c_temp
-            c .*= c_temp
+            P .*= ctmp
+            q .*= ctmp
+            c  *= ctmp
           end
 
       end #end Ruiz scaling loop
@@ -97,22 +97,21 @@ export scaleRuiz!,reverseScaling!
       # so that the aggregate scaling on the cone
       # in questions turns out to be component-wise eq
       # NB : we should actually provide each cone
-      # with the opportunity to provide its row
+      # with the opportunity to provide its own
       # (possibly non-scalar) rectification
 
       anyScalarBlocks = false
+      Ework.diag .= 1
 
-      for set in convexSets
+      for set in ws.p.convexSets
           isScalar, = set.scale!(set)
 
           if isScalar
               #at least one block was scalar
               anyScalarBlocks = true
-
-              #NB: memory being allocated for ind here?
-              ind = set.indices .+ n
-              tmp = mean(D.diag[ind])
-              Dwork.diag[ind] .= tmp./D.diag[ind]
+              ind = set.indices
+              tmp = mean(E.diag[ind])
+              Ework.diag[ind] .= tmp./E.diag[ind]
           end
 
       end
@@ -120,20 +119,18 @@ export scaleRuiz!,reverseScaling!
       #if any adjustments were made, tweak the
       #scaling appropriately
       if anyScalarBlocks
-          scaleData(P,A,q,b,Dwork,Ework,1.)
-          # Update equilibrium matrices D and E
-          lmul!(Dwork,D)        #D[:,:] = Dtemp*D
+          scaleData!(P,A,q,b,I,Ework,1.)
+          # Update equilibrium matrix E
           lmul!(Ework,E)        #D[:,:] = Dtemp*D
       end
 
       #scale set components
       # scale set components (like u,l in a box)
-      for set in convexSets
+      for set in ws.p.convexSets
         scaleInfo = set.scale!(set)
         if length(scaleInfo) > 1
           #NB : Memory allocated here?
-          scaleVars = scaleInfo[2:end]
-          for elem in scaleVars
+          for elem in scaleInfo[2:end]
             elem[:] = E*elem
           end
         end
