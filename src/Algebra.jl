@@ -20,13 +20,13 @@ function scalednorm(E::Diagonal,v::Array{T},p::Real=2) where{T}
     end
 end
 
-function scalednorm2(E::Diagonal,v::Array)
+function scalednorm2(E::Diagonal,v::Array{T}) where{T}
 
-    sumsq  = zero(v[1])
+    sumsq  = zero(T)
     for i = 1:length(v)
         sumsq += (E.diag[i]*v[i])^2
     end
-    return sqrt(sumsq)
+    return sqrt(sumsq)::T
 end
 
 function scalednormInf(E::Diagonal,v::Array{T}) where{T}
@@ -37,12 +37,12 @@ function scalednormInf(E::Diagonal,v::Array{T}) where{T}
     return norm::T
 end
 
-function scalednorm1(E::Diagonal,v::Array)
-    norm  = zero(v[1])
+function scalednorm1(E::Diagonal,v::Array{T}) where{T}
+    norm  = zero(T)
     for i = 1:length(v)
         norm += abs(E.diag[i]*v[i])
     end
-    return norm
+    return norm::T
 end
 
 
