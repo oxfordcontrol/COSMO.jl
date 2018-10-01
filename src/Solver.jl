@@ -102,7 +102,7 @@ end
       # check convergence with residuals every {settings.checkIteration} steps
       if mod(iter,settings.check_termination) == 0
         # update cost
-        cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+        cost = ws.sm.cinv[]*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
 
         if abs(cost) > 1e20
           status = :Unsolved

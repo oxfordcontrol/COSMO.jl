@@ -73,11 +73,11 @@ export isPrimalInfeasible, isDualInfeasible
 
     if norm_δx > settings.eps_dual_inf
       # test condition <q,δx> < 0
-      if (ws.p.q'*δx)[1]/(norm_δx*ws.sm.c) < -settings.eps_dual_inf
+      if (ws.p.q'*δx)[1]/(norm_δx*ws.sm.c[]) < -settings.eps_dual_inf
         # test condition Pδx == 0
         P_δx = ws.p.P*δx
         settings.scaling != 0 && (P_δx = ws.sm.Dinv*P_δx)
-        if norm(P_δx,Inf)/(norm_δx*ws.sm.c) <= settings.eps_dual_inf
+        if norm(P_δx,Inf)/(norm_δx*ws.sm.c[]) <= settings.eps_dual_inf
 
           # test condition Ax in Ktilde_b∞
           A_δx = ws.p.A*δx

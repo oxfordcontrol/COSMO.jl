@@ -30,6 +30,7 @@ export scaleRuiz!,reverseScaling!
       #references to scaling matrices from workspace
       D    = ws.sm.D
       E    = ws.sm.E
+      c    = ws.sm.c[]
 
       #unit scaling to start
       D.diag .= 1.
@@ -58,8 +59,8 @@ export scaleRuiz!,reverseScaling!
           limitScaling!(Dwork.diag,set)
           limitScaling!(Ework.diag,set)
 
-          @. Dwork.diag = 1 / sqrt(Dwork.diag)
-          @. Ework.diag = 1 / sqrt(Ework.diag)
+          invsqrt!(Dwork.diag)
+          invsqrt!(Ework.diag)
 
           # Scale the problem data and update the
           # equilibration matrices
@@ -82,14 +83,12 @@ export scaleRuiz!,reverseScaling!
             ctmp = 1.0 / scale_cost
 
             # scale the penalty terms and overall scaling
-            P .*= ctmp
-            q .*= ctmp
-            c  *= ctmp
+            P[:]  *= ctmp
+            q    .*= ctmp
+            c     *= ctmp
           end
 
       end #end Ruiz scaling loop
-
-
 
       # for certain cones we can only use a
       # a single scalar value.  In these cases
@@ -109,19 +108,28 @@ export scaleRuiz!,reverseScaling!
       #update the inverse scaling data, c and c_inv
       ws.sm.Dinv.diag .= 1. ./ D.diag
       ws.sm.Einv.diag .= 1. ./ E.diag
-      ws.sm.c          = c
-      ws.sm.cinv       = 1. ./ c
+
+      #These are Base.RefValue type so that
+      #scaling can remain an immutable
+      ws.sm.c[]        = c
+      ws.sm.cinv[]     = 1. ./ c
 
       # scale the potentially warm started variables
-      ws.x[:] = ws.sm.Dinv *ws.x
-      ws.μ[:] = ws.sm.Einv*ws.μ *c
+      ws.x[:] = ws.sm.Dinv * ws.x
+      ws.μ[:] = ws.sm.Einv * ws.μ
+      ws.μ  .*= c
 
+      return nothing
+  end
+
+  function invsqrt!(A::Array{T}) where{T}
+      @. A = oneunit(T) / sqrt(A)
   end
 
   function rectifySetScalings!(E,Ework,sets)
 
-      anyRectifiedBlocks = false
-      Ework.diag        .= 1
+      anyRectifiedBlocks  = false
+      Ework.diag         .= 1.
 
       # NB : we should actually provide each cone
       # with the opportunity to provide its own
@@ -130,12 +138,11 @@ export scaleRuiz!,reverseScaling!
       for set in sets
           isScalar, = set.scale!(set)
 
-          if isScalar
+          @views if isScalar
               #at least one block was scalar
               anyRectifiedBlocks = true
-              ind = set.indices
-              tmp = mean(E.diag[ind])
-              Ework.diag[ind] .= tmp./E.diag[ind]
+              tmp = mean(E.diag[set.indices])
+              Ework.diag[set.indices] .= tmp./E.diag[set.indices]
           end
       end
       return anyRectifiedBlocks
@@ -174,15 +181,19 @@ export scaleRuiz!,reverseScaling!
 
   function reverseScaling!(ws::QOCS.Workspace)
 
+    cinv = ws.sm.cinv[] #from the Base.RefValue type
+
     ws.x[:] = ws.sm.D*ws.x
     ws.s[:] = ws.sm.Einv*ws.s
-    ws.ν[:] = ws.sm.E*ws.ν*ws.sm.cinv
-    ws.μ[:] = ws.sm.E*ws.μ*ws.sm.cinv
+    ws.ν[:] = ws.sm.E*ws.ν
+    ws.μ[:] = ws.sm.E*ws.μ
+    ws.ν  .*= cinv
+    ws.μ  .*= cinv
 
     # reverse scaling for model data
     if ws.p.flags.REVERSE_SCALE_PROBLEM_DATA
         scaleData!(ws.p.P,ws.p.A,ws.p.q,ws.p.b,
-                   ws.sm.Dinv,ws.sm.Einv,ws.sm.cinv)
+                   ws.sm.Dinv,ws.sm.Einv,cinv)
     end
     return nothing
   end
