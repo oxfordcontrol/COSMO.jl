@@ -1,7 +1,7 @@
 using LinearAlgebra
 import LinearAlgebra; lmul!, rmul!
 export colNorms!, rowNorms!, lrmul!
-IdentityMatrix = UniformScaling{Bool}
+const IdentityMatrix = UniformScaling{Bool}
 
 function colNorms!(v::Array{Tf,1},
     A::Matrix{Tf};
