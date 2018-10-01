@@ -1,7 +1,50 @@
 using LinearAlgebra
 import LinearAlgebra; lmul!, rmul!
-export colNorms!, rowNorms!, lrmul!
+export colNorms!, rowNorms!, lrmul!, scalednorm
 const IdentityMatrix = UniformScaling{Bool}
+
+
+function scalednorm(E::IdentityMatrix,v::Array,p::Real=2)
+    return norm(v,p)
+end
+
+function scalednorm(E::Diagonal,v::Array{T},p::Real=2) where{T}
+    if p == 2
+        return scalednorm2(E,v)::T
+    elseif p == Inf
+        return scalednormInf(E,v)::T
+    elseif p == 1
+        return scaledNorm1(E,v)::T
+    else
+        throw(ArgumentError("bad norm specified"))
+    end
+end
+
+function scalednorm2(E::Diagonal,v::Array)
+
+    sumsq  = zero(v[1])
+    for i = 1:length(v)
+        sumsq += (E.diag[i]*v[i])^2
+    end
+    return sqrt(sumsq)
+end
+
+function scalednormInf(E::Diagonal,v::Array{T}) where{T}
+    norm  = zero(T)
+    for i = 1:length(v)
+        norm = max(norm,(E.diag[i]*v[i]))
+    end
+    return norm::T
+end
+
+function scalednorm1(E::Diagonal,v::Array)
+    norm  = zero(v[1])
+    for i = 1:length(v)
+        norm += abs(E.diag[i]*v[i])
+    end
+    return norm
+end
+
 
 function colNorms!(v::Array{Tf,1},
     A::Matrix{Tf};
@@ -52,14 +95,6 @@ function rowNorms!(v::Array{Tf,1},
 end
 
 
-function LinearAlgebra.lmul!(L::IdentityMatrix, M)
-    return M
-end
-
-function LinearAlgebra.rmul!(M,R::IdentityMatrix)
-    return M
-end
-
 function LinearAlgebra.lmul!(L::Diagonal, M::SparseMatrixCSC)
 
     #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
@@ -71,6 +106,8 @@ function LinearAlgebra.lmul!(L::Diagonal, M::SparseMatrixCSC)
     M
 end
 
+LinearAlgebra.lmul!(L::IdentityMatrix, M) =  M
+
 function LinearAlgebra.rmul!(M::SparseMatrixCSC,R::Diagonal)
     for i = 1:M.n
         for j = M.colptr[i]:(M.colptr[i+1]-1)
@@ -80,21 +117,7 @@ function LinearAlgebra.rmul!(M::SparseMatrixCSC,R::Diagonal)
     M
 end
 
-function lrmul!(L::IdentityMatrix, M::AbstractMatrix, R::IdentityMatrix)
-    return M
-end
-
-function lrmul!(L::Diagonal, M::AbstractMatrix, R::Diagonal)
-    lmul!(L,rmul!(M,R))
-end
-
-function lrmul!(L::Diagonal, M::AbstractMatrix, R::IdentityMatrix)
-    lmul!(L,M)
-end
-
-function lrmul!(L::IdentityMatrix, M::AbstractMatrix, R::Diagonal)
-    rmul!(M,R)
-end
+LinearAlgebra.rmul!(M,R::IdentityMatrix) = M
 
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
     for i = 1:M.n
@@ -104,3 +127,8 @@ function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
     end
     M
 end
+
+lrmul!(L::IdentityMatrix, M::AbstractMatrix, R::IdentityMatrix) = M
+lrmul!(L::Diagonal, M::AbstractMatrix, R::Diagonal) = lmul!(L,rmul!(M,R))
+lrmul!(L::Diagonal, M::AbstractMatrix, R::IdentityMatrix) = lmul!(L,M)
+lrmul!(L::IdentityMatrix, M::AbstractMatrix, R::Diagonal) = rmul!(M,R)
