@@ -38,8 +38,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     function box!(x::SubArray{Float64},convexSet::QOCS.Box)
       l = convexSet.l
       u = convexSet.u
-      x[:] = min.( max.(x,l), u)
-      nothing
+      @.x = min( max(x,l), u)
     end
 
 
@@ -54,9 +53,9 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
       elseif normX <= t
         nothing
       else
-        tNew = (normX+t)/2
-        xt = (normX+t)/(2*normX).*xt
-        x[:] = [tNew;xt]
+        x[1] = (normX+t)/2
+        #x(2:end) assigned via view
+        @. xt   = (normX+t)/(2*normX)*xt
       end
       nothing
     end
@@ -68,29 +67,24 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
     # handle 1D case
     if size(x,1) == 1
-      x = max.(x,0)
+      x = max.(x,0.)
     else
-      # recreate original matrix from input vectors
-      #Xs = Symmetric(reshape(x,n,n))
-      X = reshape(x,n,n)
-      X = 0.5*(X+X')
+      # symmetrized square view of x
+      X    = reshape(x,n,n)
+      X[:] = 0.5*(X+X')
       # compute eigenvalue decomposition
-      F = eigen(X)
-
-      ind = findall(x-> x>0, F.values)
-      Λ = Matrix(Diagonal(F.values))
-      UsE = F.vectors[:,ind]*sqrt.(Λ[ind,ind])
-      Xp = UsE*UsE'
-      # different method
-      # Λ = diagm(F[:values])
-      # Q = F[:vectors]
-      # # set negative eigenvalues to 0
-      # Xp = Q*max.(Λ,0)*Q'
-      x[:] = vec(Xp)
+      # then round eigs up and rebuild
+      s,U  = eigen(X)
+      floorsqrt!(s,0.)
+      rmul!(U,Diagonal(s))
+      mul!(X, U, U')
     end
     nothing
   end
 
+function floorsqrt!(s::Array,floor::AbstractFloat)
+    @.s  = sqrt(max(floor,s))
+end
 
 
 end #module
