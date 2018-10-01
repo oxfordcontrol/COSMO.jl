@@ -64,8 +64,6 @@ export scaleRuiz!,reverseScaling!
           # Scale the problem data and update the
           # equilibration matrices
           scaleData!(P,A,q,b,Dwork,Ework,1.)
-
-          # Update equilibrium matrices D and E
           lmul!(Dwork,D)        #D[:,:] = Dtemp*D
           lmul!(Ework,E)        #D[:,:] = Dtemp*D
 
@@ -91,50 +89,22 @@ export scaleRuiz!,reverseScaling!
 
       end #end Ruiz scaling loop
 
+
+
       # for certain cones we can only use a
       # a single scalar value.  In these cases
       # compute an adjustment to the overall scaling
       # so that the aggregate scaling on the cone
       # in questions turns out to be component-wise eq
-      # NB : we should actually provide each cone
-      # with the opportunity to provide its own
-      # (possibly non-scalar) rectification
-
-      anyScalarBlocks = false
-      Ework.diag .= 1
-
-      for set in ws.p.convexSets
-          isScalar, = set.scale!(set)
-
-          if isScalar
-              #at least one block was scalar
-              anyScalarBlocks = true
-              ind = set.indices
-              tmp = mean(E.diag[ind])
-              Ework.diag[ind] .= tmp./E.diag[ind]
-          end
-
-      end
-
-      #if any adjustments were made, tweak the
-      #scaling appropriately
-      if anyScalarBlocks
+      if rectifySetScalings!(E,Ework,ws.p.convexSets)
+          #only rescale if the above returns true,
+          #i.e. some cone scalings were rectified
           scaleData!(P,A,q,b,I,Ework,1.)
-          # Update equilibrium matrix E
-          lmul!(Ework,E)        #D[:,:] = Dtemp*D
-      end
+-         lmul!(Ework,E)
+     end
 
       #scale set components
-      # scale set components (like u,l in a box)
-      for set in ws.p.convexSets
-        scaleInfo = set.scale!(set)
-        if length(scaleInfo) > 1
-          #NB : Memory allocated here?
-          for elem in scaleInfo[2:end]
-            elem[:] = E*elem
-          end
-        end
-      end
+      scaleSets!(E,ws.p.convexSets)
 
       #update the inverse scaling data, c and c_inv
       ws.sm.Dinv.diag .= 1. ./ D.diag
@@ -146,6 +116,44 @@ export scaleRuiz!,reverseScaling!
       ws.x[:] = ws.sm.Dinv *ws.x
       ws.μ[:] = ws.sm.Einv*ws.μ *c
 
+  end
+
+  function rectifySetScalings!(E,Ework,sets)
+
+      anyRectifiedBlocks = false
+      Ework.diag        .= 1
+
+      # NB : we should actually provide each cone
+      # with the opportunity to provide its own
+      # (possibly non-scalar) rectification
+
+      for set in sets
+          isScalar, = set.scale!(set)
+
+          if isScalar
+              #at least one block was scalar
+              anyRectifiedBlocks = true
+              ind = set.indices
+              tmp = mean(E.diag[ind])
+              Ework.diag[ind] .= tmp./E.diag[ind]
+          end
+      end
+      return anyRectifiedBlocks
+  end
+
+
+  function scaleSets!(E,sets)
+
+      # scale set components (like u,l in a box)
+      for set in sets
+          scaleInfo = set.scale!(set)
+          if length(scaleInfo) > 1
+              #NB : Memory allocated here?
+              for elem in scaleInfo[2:end]
+                  elem[:] = E*elem
+              end
+          end
+      end
   end
 
 
