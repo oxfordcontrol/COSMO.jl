@@ -36,9 +36,9 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
     # compute projection of x onto a box defined by l and u
     function box!(x::SubArray{Float64},convexSet::QOCS.Box)
-      l = convexSet.l
-      u = convexSet.u
-      @.x = min( max(x,l), u)
+      l  = convexSet.l
+      u  = convexSet.u
+      x .= clip.(x,l,u)
     end
 
 
@@ -74,7 +74,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
       X[:] = 0.5*(X+X')
       # compute eigenvalue decomposition
       # then round eigs up and rebuild
-      s,U  = eigen(X)
+      s,U  = eigen!(X)
       floorsqrt!(s,0.)
       rmul!(U,Diagonal(s))
       mul!(X, U, U')
