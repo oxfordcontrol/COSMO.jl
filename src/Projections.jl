@@ -18,19 +18,13 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
 
     # projection onto nonegative orthant R_+^n
-    function nonNegativeOrthant!(x::SubArray{Float64},convexSet::QOCS.Nonnegatives)
-      for i in eachindex(x)
-        x[i] = max(x[i], 0.)
-      end
-      nothing
+    function nonNegativeOrthant!(x::SubArray{T},convexSet::QOCS.Nonnegatives) where{T}
+      @.x = max(x,zero(T))
     end
 
     # projection onto zero cone
-    function zeroCone!(x::SubArray{Float64},convexSet::QOCS.Zeros)
-      for i in eachindex(x)
-        x[i] = 0.
-      end
-      nothing
+    function zeroCone!(x::SubArray{T},convexSet::QOCS.Zeros) where{T}
+      x .= zero(T)
     end
 
 
