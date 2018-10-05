@@ -1,8 +1,13 @@
 using LinearAlgebra
 import LinearAlgebra; lmul!, rmul!
-export colNorms!, rowNorms!, lrmul!, scalednorm
+export colNorms!, rowNorms!, lrmul!, scalednorm, clip
 const IdentityMatrix = UniformScaling{Bool}
 
+
+#array case
+function clip(s,minThresh,maxThresh,minNew = minThresh,maxNew = maxThresh)
+    s = ifelse(s < minThresh,minNew,ifelse(s > maxThresh,maxNew,s))
+end
 
 function scalednorm(E::IdentityMatrix,v::Array,p::Real=2)
     return norm(v,p)
