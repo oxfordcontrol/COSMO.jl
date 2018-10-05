@@ -7,11 +7,15 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 # Standard Projection Functions
 # -------------------------------------
 
-    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet})
+    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet},xprevious,k,sign)
 
       for convexSet in convexSets
         xpart = view(x,convexSet.indices)
-        convexSet.project!(xpart,convexSet)
+        if isa(convexSet, QOCS.PositiveSemidefiniteCone)
+          convexSet.project!(xpart, convexSet,xprevious,k,sign)
+        else
+          convexSet.project!(xpart,convexSet)
+        end
       end
       return x
     end
@@ -90,6 +94,36 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     end
     nothing
   end
+
+    # compute projection of X=mat(x) onto the positive semidefinite cone
+    function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone,xprevious,k,sign)
+
+      n = Int(sqrt(length(x)))
+  
+      # handle 1D case
+      if size(x,1) == 1
+        x = max.(x,0)
+      else
+        # recreate original matrix from input vectors
+        #Xs = Symmetric(reshape(x,n,n))
+        X = reshape(x,n,n)
+        X = 0.5*(X+X')
+        # compute eigenvalue decomposition
+        F = eigen(X)
+  
+        ind = findall(x-> x>0, F.values)
+        Λ = Matrix(Diagonal(F.values))
+        UsE = F.vectors[:,ind]*sqrt.(Λ[ind,ind])
+        Xp = UsE*UsE'
+        # different method
+        # Λ = diagm(F[:values])
+        # Q = F[:vectors]
+        # # set negative eigenvalues to 0
+        # Xp = Q*max.(Λ,0)*Q'
+        x[:] = vec(Xp)
+      end
+      nothing
+    end
 
 
 
