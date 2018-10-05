@@ -2,6 +2,7 @@ using LinearAlgebra
 import LinearAlgebra; lmul!, rmul!
 export colNorms!, rowNorms!, lrmul!, scalednorm, clip
 const IdentityMatrix = UniformScaling{Bool}
+const LA = LinearAlgebra
 
 
 #array case
@@ -10,7 +11,7 @@ function clip(s,minThresh,maxThresh,minNew = minThresh,maxNew = maxThresh)
 end
 
 function scalednorm(E::IdentityMatrix,v::Array,p::Real=2)
-    return norm(v,p)
+    E.λ ? norm(v,p) : zero(eltype(v))
 end
 
 function scalednorm(E::Diagonal,v::Array{T},p::Real=2) where{T}
@@ -25,29 +26,29 @@ function scalednorm(E::Diagonal,v::Array{T},p::Real=2) where{T}
     end
 end
 
-function scalednorm2(E::Diagonal,v::Array{T}) where{T}
+function scalednorm2(E::Diagonal,v::Array)
 
-    sumsq  = zero(T)
+    sumsq  = zero(eltype(v))
     for i = 1:length(v)
         sumsq += (E.diag[i]*v[i])^2
     end
-    return sqrt(sumsq)::T
+    return sqrt(sumsq)::eltype(v)
 end
 
-function scalednormInf(E::Diagonal,v::Array{T}) where{T}
-    norm  = zero(T)
+function scalednormInf(E::Diagonal,v::Array)
+    norm  = zero(eltype(v))
     for i = 1:length(v)
         norm = max(norm,(E.diag[i]*v[i]))
     end
-    return norm::T
+    return norm::eltype(v)
 end
 
-function scalednorm1(E::Diagonal,v::Array{T}) where{T}
-    norm  = zero(T)
+function scalednorm1(E::Diagonal,v::Array)
+    norm  = zero(eltype(v))
     for i = 1:length(v)
         norm += abs(E.diag[i]*v[i])
     end
-    return norm::T
+    return norm::eltype(v)
 end
 
 
@@ -60,6 +61,7 @@ function colNorms!(v::Array{Tf,1},
     for i=1:size(A,2)
         v[i] = max(v[i],norm(view(A,:,i),Inf))
     end
+    return v
 end
 
 function colNorms!(v::Array{Tf,1},
@@ -72,6 +74,7 @@ function colNorms!(v::Array{Tf,1},
             v[i] = max(v[i],abs(A.nzval[j]))
         end
     end
+    return v
 end
 
 function rowNorms!(v::Array{Tf,1},
@@ -83,6 +86,7 @@ function rowNorms!(v::Array{Tf,1},
     for i=1:size(A,1)
         v[i] = max(v[i],norm(view(A,i,:),Inf))
     end
+    return v
 end
 
 
@@ -96,11 +100,11 @@ function rowNorms!(v::Array{Tf,1},
     for i=1:(A.colptr[end]-1)
         v[A.rowval[i]] = max(v[A.rowval[i]],abs(A.nzval[i]))
     end
-
+    return v
 end
 
 
-function LinearAlgebra.lmul!(L::Diagonal, M::SparseMatrixCSC)
+function LA.lmul!(L::Diagonal, M::SparseMatrixCSC)
 
     #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
     #but this way allocates no memory at all and
@@ -108,21 +112,23 @@ function LinearAlgebra.lmul!(L::Diagonal, M::SparseMatrixCSC)
     for i = 1:(M.colptr[end]-1)
         M.nzval[i] *= L.diag[M.rowval[i]]
     end
-    M
+    return M
 end
 
-LinearAlgebra.lmul!(L::IdentityMatrix, M) =  M
+LA.lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
 
-function LinearAlgebra.rmul!(M::SparseMatrixCSC,R::Diagonal)
+
+function LA.rmul!(M::SparseMatrixCSC,R::Diagonal)
     for i = 1:M.n
         for j = M.colptr[i]:(M.colptr[i+1]-1)
             M.nzval[j] *= R.diag[i]
         end
     end
-    M
+    return M
 end
 
-LinearAlgebra.rmul!(M,R::IdentityMatrix) = M
+LA.rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
+
 
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
     for i = 1:M.n
@@ -130,10 +136,21 @@ function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
             M.nzval[j] *= L.diag[M.rowval[j]]*R.diag[i]
         end
     end
-    M
+    return M
 end
 
-lrmul!(L::IdentityMatrix, M::AbstractMatrix, R::IdentityMatrix) = M
-lrmul!(L::Diagonal, M::AbstractMatrix, R::Diagonal) = lmul!(L,rmul!(M,R))
-lrmul!(L::Diagonal, M::AbstractMatrix, R::IdentityMatrix) = lmul!(L,M)
-lrmul!(L::IdentityMatrix, M::AbstractMatrix, R::Diagonal) = rmul!(M,R)
+lrmul!(L::IdentityMatrix,
+       M::AbstractMatrix,
+       R::IdentityMatrix) = (L.λ && R.λ) ? M : M .= zero(eltype(M))
+
+lrmul!(L::Diagonal,
+       M::AbstractMatrix,
+       R::Diagonal) = lmul!(L,rmul!(M,R))
+
+lrmul!(L::Diagonal,
+       M::AbstractMatrix,
+       R::IdentityMatrix) = R.λ ? lmul!(L,M) : M .= zero(eltype(M))
+
+lrmul!(L::IdentityMatrix,
+       M::AbstractMatrix,
+       R::Diagonal      ) = L.λ ? rmul!(M,R) ? M .= zero(eltype(M))

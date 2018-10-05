@@ -39,7 +39,7 @@ export isPrimalInfeasible, isDualInfeasible
 
   function isPrimalInfeasible(δy,ws,settings::Settings)
     # calculate unscaled norm of δy
-    norm_δy = scalednorm(ws.sm.E,δy,Inf)::typeof(δy[1])
+    norm_δy = scalednorm(ws.sm.E,δy,Inf)::eltype(δy)
 
     # make sure norm is unequal to zero before continuing
     if norm_δy > settings.eps_prim_inf
@@ -63,7 +63,7 @@ export isPrimalInfeasible, isDualInfeasible
   function isDualInfeasible(δx,ws,settings)
 
     # calculate unscaled norm of δx
-    norm_δx = scalednorm(ws.sm.D,δx,Inf)::typeof(δx[1])
+    norm_δx = scalednorm(ws.sm.D,δx,Inf)::eltype(δx)
 
     if norm_δx > settings.eps_dual_inf
       # test condition <q,δx> < 0
