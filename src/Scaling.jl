@@ -155,7 +155,7 @@ export scaleRuiz!,reverseScaling!
           if length(scaleInfo) > 1
               #NB : Memory allocated here?
               for elem in scaleInfo[2:end]
-                  elem[:] = E*elem
+                  elem[set.indices] .*= E.diag[set.indices]
               end
           end
       end
