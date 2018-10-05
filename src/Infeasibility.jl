@@ -37,19 +37,16 @@ export isPrimalInfeasible, isDualInfeasible
   end
 
 
-  function isPrimalInfeasible(δy,ws,settings)
+  function isPrimalInfeasible(δy,ws,settings::Settings)
     # calculate unscaled norm of δy
-    if settings.scaling != 0
-      norm_δy = norm(ws.sm.E*δy,Inf)
-    else
-      norm_δy = norm(δy,Inf)
-    end
+    norm_δy = scalednorm(ws.sm.E,δy,Inf)::typeof(δy[1])
 
     # make sure norm is unequal to zero before continuing
     if norm_δy > settings.eps_prim_inf
+
       # test condition A'δy = 0
       A_δy = ws.p.A'*δy
-      settings.scaling != 0 && (A_δy = ws.sm.Dinv*A_δy)
+      A_δy = ws.sm.Dinv*A_δy
 
       if norm(A_δy,Inf)/norm_δy <= settings.eps_prim_inf
         # test condition S_K(δy) < 0
@@ -64,24 +61,21 @@ export isPrimalInfeasible, isDualInfeasible
 
 
   function isDualInfeasible(δx,ws,settings)
+
     # calculate unscaled norm of δx
-    if settings.scaling != 0
-      norm_δx = norm(ws.sm.D*δx,Inf)
-    else
-      norm_δx = norm(δx,Inf)
-    end
+    norm_δx = scalednorm(ws.sm.D,δx,Inf)::typeof(δx[1])
 
     if norm_δx > settings.eps_dual_inf
       # test condition <q,δx> < 0
-      if (ws.p.q'*δx)[1]/(norm_δx*ws.sm.c) < -settings.eps_dual_inf
+      if  dot(ws.p.q,δx) / (norm_δx*ws.sm.c[]) < -settings.eps_dual_inf
         # test condition Pδx == 0
         P_δx = ws.p.P*δx
-        settings.scaling != 0 && (P_δx = ws.sm.Dinv*P_δx)
-        if norm(P_δx,Inf)/(norm_δx*ws.sm.c) <= settings.eps_dual_inf
+        P_δx = ws.sm.Dinv*P_δx
+        if norm(P_δx,Inf)/(norm_δx*ws.sm.c[]) <= settings.eps_dual_inf
 
           # test condition Ax in Ktilde_b∞
           A_δx = ws.p.A*δx
-          settings.scaling != 0 && (A_δx = ws.sm.Einv*A_δx)
+          A_δx = ws.sm.Einv*A_δx
             if inRecessionCone(A_δx/norm_δx,ws,settings)
               return true
             end

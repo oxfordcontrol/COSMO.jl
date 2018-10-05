@@ -19,13 +19,14 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
   function adaptRhoVec!(ws::QOCS.Workspace,settings::QOCS.Settings)
     # compute normalized residuals based on the working variables (dont unscale)
     IGNORE_SCALING = true
-    r_prim, r_dual = calculateResiduals(ws,settings,IGNORE_SCALING)
-    maxNormPrim, maxNormDual = maxResComponentNorm(ws,settings,IGNORE_SCALING)
+    r_prim::Float64, r_dual::Float64 = calculateResiduals(ws,settings,IGNORE_SCALING)
+    maxNormPrim::Float64, maxNormDual::Float64  = maxResComponentNorm(ws,settings,IGNORE_SCALING)
+
     r_prim = r_prim/(maxNormPrim + 1e-10)
     r_dual = r_dual/(maxNormDual + 1e-10)
 
     newRho = ws.ρ * sqrt(r_prim/(r_dual+1e-10))
-    newRho = minimum([maximum([newRho,settings.RHO_MIN]),settings.RHO_MAX])
+    newRho = min(max(newRho,settings.RHO_MIN),settings.RHO_MAX)
     # only update rho if significantly different than current rho
     # FIXME: Should it be settings.rho or previous rho???
     if (newRho > settings.adaptive_rho_tolerance*ws.ρ) || (newRho < (1 ./ settings.adaptive_rho_tolerance)*ws.ρ)

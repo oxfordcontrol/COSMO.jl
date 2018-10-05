@@ -5,6 +5,7 @@ module QOCS
 export optimize!, reset!, assemble!, warmStart!, Settings, Model, Result, Constraint, AbstractConvexSet
 using SparseArrays,LinearAlgebra
 
+include("./Algebra.jl")
 include("./Helper.jl")
 include("./Sets.jl")
 include("./Types.jl")
@@ -22,4 +23,3 @@ include("./Solver.jl")
 include("./Interface.jl")
 
 end
-
