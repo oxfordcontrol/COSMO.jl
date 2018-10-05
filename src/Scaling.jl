@@ -12,17 +12,15 @@ export scaleRuiz!,reverseScaling!
     return nothing
   end
 
-  @inline function limitScaling!(s::Number,minval::Number,maxval::Number)
-      s = s < minval ? 1  : (s > maxval ? maxval : s)
+  function limitScaling!(s::Array,set::QOCS.Settings)
+      @.s = clip(s,set.MIN_SCALING,set.MAX_SCALING,1.)
+      return nothing
+  end
+  function limitScaling(s::Number,set::QOCS.Settings)
+      s = clip(s,set.MIN_SCALING,set.MAX_SCALING,1.)
+      return s
   end
 
-  function limitScaling!(s::Array,minval,maxval)
-      s .= limitScaling!.(s,minval,maxval)
-  end
-
-  function limitScaling!(s,set::QOCS.Settings)
-      limitScaling!(s,set.MIN_SCALING,set.MAX_SCALING)
-  end
 
 
   function scaleRuiz!(ws::QOCS.Workspace,set::QOCS.Settings)
@@ -77,9 +75,9 @@ export scaleRuiz!,reverseScaling!
 
           if mean_col_norm_P  != 0. && inf_norm_q != 0.
 
-            limitScaling!(inf_norm_q,set)
+            inf_norm_q = limitScaling(inf_norm_q,set)
             scale_cost = max(inf_norm_q,mean_col_norm_P)
-            limitScaling!(scale_cost,set)
+            scale_cost = limitScaling(scale_cost,set)
             ctmp = 1.0 / scale_cost
 
             # scale the penalty terms and overall scaling
