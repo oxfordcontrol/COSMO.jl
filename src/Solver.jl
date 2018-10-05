@@ -79,9 +79,9 @@ end
 
     settings.verbose_timing && (iter_start = time())
 
-    xprevious = NaN
-    k = NaN
-    sign = NaN
+    xprevious = similar(ws.x)
+    k = [-1]
+    sign = [1]
     for iter = 1:settings.max_iter
       numIter+= 1
       @. δx = ws.x

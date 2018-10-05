@@ -97,31 +97,42 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
     # compute projection of X=mat(x) onto the positive semidefinite cone
     function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone,xprevious,k,sign)
-
       n = Int(sqrt(length(x)))
-  
-      # handle 1D case
-      if size(x,1) == 1
-        x = max.(x,0)
+      X = reshape(x,n,n)
+      X = (X+X')/2
+
+      if k[1] <= 0
+        # First iteration
+        E = eigen(X)
+        if sum(E.values .> 0.0) > sum(E.values .< 0.0)
+          sign[1] = -1.0;
+        else
+          sign[1] = 1.0;
+        end
+        ind = findall(x-> x>0, E.values)
+        Z = E.vectors[:, ind]*Diagonal(E.values[ind])
+        Xp = Z*E.vectors[:,ind]'
       else
-        # recreate original matrix from input vectors
-        #Xs = Symmetric(reshape(x,n,n))
-        X = reshape(x,n,n)
-        X = 0.5*(X+X')
-        # compute eigenvalue decomposition
-        F = eigen(X)
-  
-        ind = findall(x-> x>0, F.values)
-        Λ = Matrix(Diagonal(F.values))
-        UsE = F.vectors[:,ind]*sqrt.(Λ[ind,ind])
-        Xp = UsE*UsE'
-        # different method
-        # Λ = diagm(F[:values])
-        # Q = F[:vectors]
-        # # set negative eigenvalues to 0
-        # Xp = Q*max.(Λ,0)*Q'
-        x[:] = vec(Xp)
+        Z = reshape(xprevious[1:n*k[1]], n, k[1]);
+        sX = sign[1]*X;
+        # Just three steps of block-Lanczos
+        Q = Array(qr([Z sX*Z sX*(sX*Z)]).Q)
+        QXQ = Q'*sX*Q; QXQ = (QXQ+QXQ')/2;
+        E = eigen(QXQ);
+        ind = findall(x-> x>0, E.values)
+        Z = Q*E.vectors[:, max(minimum(ind.-2),1):maximum(ind)]
+
+        Xp = Q*E.vectors*max.(Diagonal(E.values),0)*E.vectors'*Q';
+        Xp = (Xp+Xp')/2;
+
+        if sign[1] == -1.0
+            Xp = X + Xp;
+        end
       end
+      x[:] .= vec(Xp)
+      k .= size(Z)[2]
+      xprevious[1:k[1]*n] = vec(Z)
+
       nothing
     end
 
