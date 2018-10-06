@@ -6,7 +6,7 @@ module Residuals
         if (settings.scaling != 0 && !IGNORESCALING_FLAG)
           r_prim = norm(ws.sm.Einv*(ws.p.A*ws.x+ws.s-ws.p.b),Inf)
           # ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-          r_dual = norm(ws.sm.cinv*ws.sm.Dinv*(ws.p.P*ws.x + ws.p.q -ws.p.A'*ws.μ),Inf)
+          r_dual = norm(ws.sm.cinv[]*ws.sm.Dinv*(ws.p.P*ws.x + ws.p.q -ws.p.A'*ws.μ),Inf)
         end
         if (settings.scaling == 0 || IGNORESCALING_FLAG )
           r_prim = norm(ws.p.A*ws.x+ws.s-ws.p.b,Inf)
@@ -19,7 +19,7 @@ module Residuals
   function maxResComponentNorm(ws::QOCS.Workspace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)
     if (settings.scaling != 0 && !IGNORESCALING_FLAG)
       maxNormPrim = max.(norm(ws.sm.Einv*ws.p.A*ws.x,Inf),  norm(ws.sm.Einv*ws.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
-      maxNormDual = max.(norm(ws.sm.cinv*ws.sm.Dinv*ws.p.P*ws.x,Inf), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.q,Inf), norm(ws.sm.cinv*ws.sm.Dinv*ws.p.A'*ws.μ,Inf) )
+      maxNormDual = max.(norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.P*ws.x,Inf), norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.q,Inf), norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.A'*ws.μ,Inf) )
     end
     if (settings.scaling == 0 || IGNORESCALING_FLAG)
       maxNormPrim = max.(norm(ws.p.A*ws.x,Inf),norm(ws.s,Inf), norm(ws.p.b,Inf))
@@ -36,7 +36,7 @@ module Residuals
     # if an optimal objective value was specified for the problem check if current solution is within specified accuracy
     obj_trueFLAG = true
     if !isnan(settings.obj_true)
-      currentCost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+      currentCost = ws.sm.cinv[]*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
       obj_trueFLAG = abs(settings.obj_true-currentCost) <= settings.obj_true_tol
     end
 

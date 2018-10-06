@@ -46,8 +46,13 @@ end
   function optimize!(model::QOCS.Model,settings::QOCS.Settings)
     solverTime_start = time()
 
-    # create workspace variables
-    ws = Workspace(model,ScaleMatrices())
+    # create scaling variables
+    # with scaling    -> uses mutable diagonal scaling matrices
+    # without scaling -> uses identity matrices
+    sm = (settings.scaling > 0) ? ScaleMatrices(model.m,model.n) : ScaleMatrices()
+
+    # create workspace
+    ws = Workspace(model,sm)
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     ws.times.setupTime = @elapsed setup!(ws,settings);
@@ -107,7 +112,7 @@ end
       # check convergence with residuals every {settings.checkIteration} steps
       if mod(iter,settings.check_termination) == 0
         # update cost
-        cost = ws.sm.cinv*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+        cost = ws.sm.cinv[]*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
 
         if abs(cost) > 1e20
           status = :Unsolved
@@ -191,9 +196,3 @@ end
 
 
   end
-
-
-
-
-
-

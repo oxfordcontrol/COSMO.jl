@@ -22,28 +22,21 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
 
     # projection onto nonegative orthant R_+^n
-    function nonNegativeOrthant!(x::SubArray{Float64},convexSet::QOCS.Nonnegatives)
-      for i in eachindex(x)
-        x[i] = max(x[i], 0.)
-      end
-      nothing
+    function nonNegativeOrthant!(x::SubArray{T},convexSet::QOCS.Nonnegatives) where{T}
+      @.x = max(x,zero(T))
     end
 
     # projection onto zero cone
-    function zeroCone!(x::SubArray{Float64},convexSet::QOCS.Zeros)
-      for i in eachindex(x)
-        x[i] = 0.
-      end
-      nothing
+    function zeroCone!(x::SubArray{T},convexSet::QOCS.Zeros) where{T}
+      x .= zero(T)
     end
 
 
     # compute projection of x onto a box defined by l and u
     function box!(x::SubArray{Float64},convexSet::QOCS.Box)
-      l = convexSet.l
-      u = convexSet.u
-      x[:] = min.( max.(x,l), u)
-      nothing
+      l  = convexSet.l
+      u  = convexSet.u
+      x .= clip.(x,l,u)
     end
 
 
@@ -58,9 +51,9 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
       elseif normX <= t
         nothing
       else
-        tNew = (normX+t)/2
-        xt = (normX+t)/(2*normX).*xt
-        x[:] = [tNew;xt]
+        x[1] = (normX+t)/2
+        #x(2:end) assigned via view
+        @. xt   = (normX+t)/(2*normX)*xt
       end
       nothing
     end
@@ -72,70 +65,65 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
     # handle 1D case
     if size(x,1) == 1
-      x = max.(x,0)
+      x = max.(x,0.)
     else
-      # recreate original matrix from input vectors
-      #Xs = Symmetric(reshape(x,n,n))
-      X = reshape(x,n,n)
-      X = 0.5*(X+X')
+      # symmetrized square view of x
+      X    = reshape(x,n,n)
+      X[:] = 0.5*(X+X')
       # compute eigenvalue decomposition
-      F = eigen(X)
-
-      ind = findall(x-> x>0, F.values)
-      Λ = Matrix(Diagonal(F.values))
-      UsE = F.vectors[:,ind]*sqrt.(Λ[ind,ind])
-      Xp = UsE*UsE'
-      # different method
-      # Λ = diagm(F[:values])
-      # Q = F[:vectors]
-      # # set negative eigenvalues to 0
-      # Xp = Q*max.(Λ,0)*Q'
-      x[:] = vec(Xp)
+      # then round eigs up and rebuild
+      s,U  = eigen!(X)
+      floorsqrt!(s,0.)
+      rmul!(U,Diagonal(s))
+      mul!(X, U, U')
     end
     nothing
   end
 
-    # compute projection of X=mat(x) onto the positive semidefinite cone
-    function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone,xprevious,k,sign)
-      n = Int(sqrt(length(x)))
-      X = reshape(x,n,n)
-      X = (X+X')/2
+  # compute projection of X=mat(x) onto the positive semidefinite cone
+  function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone,xprevious,k,sign)
+    n = Int(sqrt(length(x)))
+    X = reshape(x,n,n)
+    X = (X+X')/2
 
-      if k[1] <= 0
-        # First iteration
-        E = eigen(X)
-        if sum(E.values .> 0.0) > sum(E.values .< 0.0)
-          sign[1] = -1.0;
-        else
-          sign[1] = 1.0;
-        end
-        ind = findall(x-> x>0, E.values)
-        Z = E.vectors[:, ind]*Diagonal(E.values[ind])
-        Xp = Z*E.vectors[:,ind]'
+    if k[1] <= 0
+      # First iteration
+      E = eigen(X)
+      if sum(E.values .> 0.0) > sum(E.values .< 0.0)
+        sign[1] = -1.0;
       else
-        Z = reshape(xprevious[1:n*k[1]], n, k[1]);
-        sX = sign[1]*X;
-        # Just three steps of block-Lanczos
-        Q = Array(qr([Z sX*Z sX*(sX*Z)]).Q)
-        QXQ = Q'*sX*Q; QXQ = (QXQ+QXQ')/2;
-        E = eigen(QXQ);
-        ind = findall(x-> x>0, E.values)
-        Z = Q*E.vectors[:, max(minimum(ind.-2),1):maximum(ind)]
-
-        Xp = Q*E.vectors*max.(Diagonal(E.values),0)*E.vectors'*Q';
-        Xp = (Xp+Xp')/2;
-
-        if sign[1] == -1.0
-            Xp = X + Xp;
-        end
+        sign[1] = 1.0;
       end
-      x[:] .= vec(Xp)
-      k .= size(Z)[2]
-      xprevious[1:k[1]*n] = vec(Z)
+      ind = findall(x-> x>0, E.values)
+      Z = E.vectors[:, ind]*Diagonal(E.values[ind])
+      Xp = Z*E.vectors[:,ind]'
+    else
+      Z = reshape(xprevious[1:n*k[1]], n, k[1]);
+      sX = sign[1]*X;
+      # Just three steps of block-Lanczos
+      Q = Array(qr([Z sX*Z sX*(sX*Z)]).Q)
+      QXQ = Q'*sX*Q; QXQ = (QXQ+QXQ')/2;
+      E = eigen(QXQ);
+      ind = findall(x-> x>0, E.values)
+      Z = Q*E.vectors[:, max(minimum(ind.-2),1):maximum(ind)]
 
-      nothing
+      Xp = Q*E.vectors*max.(Diagonal(E.values),0)*E.vectors'*Q';
+      Xp = (Xp+Xp')/2;
+
+      if sign[1] == -1.0
+          Xp = X + Xp;
+      end
     end
+    x[:] .= vec(Xp)
+    k .= size(Z)[2]
+    xprevious[1:k[1]*n] = vec(Z)
 
+    nothing
+  end
+
+function floorsqrt!(s::Array,floor::AbstractFloat)
+    @.s  = sqrt(max(floor,s))
+end
 
 
 end #module

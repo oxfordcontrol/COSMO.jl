@@ -100,14 +100,31 @@
     rho_updates::Array{Float64,1}
   end
 
-  mutable struct ScaleMatrices
-    D::SparseMatrixCSC{Float64,Int64}
-    Dinv::SparseMatrixCSC{Float64,Int64}
-    E::SparseMatrixCSC{Float64,Int64}
-    Einv::SparseMatrixCSC{Float64,Int64}
-    c::Float64
-    cinv::Float64
-    ScaleMatrices() = new(spzeros(1,1),spzeros(1,1),spzeros(1,1),spzeros(1,1),1.,1.)
+  struct ScaleMatrices{Tf}
+    D::Union{ UniformScaling{Bool}, Diagonal{Tf,Array{Tf,1}}}
+    Dinv::Union{UniformScaling{Bool},Diagonal{Tf,Array{Tf,1}} }
+    E::Union{UniformScaling{Bool},Diagonal{Tf,Array{Tf,1}} }
+    Einv::Union{UniformScaling{Bool},Diagonal{Tf,Array{Tf,1}} }
+    c::Base.RefValue{Tf}
+    cinv::Base.RefValue{Tf}
+  end
+
+  ScaleMatrices()    = ScaleMatrices(Float64)
+  ScaleMatrices(m,n) = ScaleMatrices(Float64,m,n)
+
+  function ScaleMatrices(T::Type)
+      ScaleMatrices(I,I,I,I,Base.RefValue{T}(one(T)),Base.RefValue{T}(one(T)))
+  end
+
+  function ScaleMatrices(T::Type,m,n)
+    @assert T <: AbstractFloat
+    D    = Diagonal(ones(T,n))
+    Dinv = Diagonal(ones(T,n))
+    E    = Diagonal(ones(T,m))
+    Einv = Diagonal(ones(T,m))
+    c    = Base.RefValue{T}(one(T))
+    cinv = Base.RefValue{T}(one(T))
+    ScaleMatrices(D,Dinv,E,Einv,c,cinv)
   end
 
 mutable struct Flags
@@ -328,4 +345,3 @@ end
  function Base.show(io::IO, obj::QOCS.Constraint)
     print(io,"Constraint\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convexSet))")
   end
-
