@@ -1,2 +1,4 @@
 *.mem
 *.cov
+*.mat
+*.jld
