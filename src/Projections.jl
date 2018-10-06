@@ -7,17 +7,10 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 # Standard Projection Functions
 # -------------------------------------
 
-    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet},xprevious,k,sign)
-
-      i = 1;
+    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet})
       for convexSet in convexSets
         xpart = view(x,convexSet.indices)
-        if isa(convexSet, QOCS.PositiveSemidefiniteCone)
-          convexSet.project!(xpart, convexSet,xprevious[i],k[i],sign[i])
-          i += 1;
-        else
-          convexSet.project!(xpart,convexSet)
-        end
+        convexSet.project!(xpart,convexSet)
       end
       return x
     end
@@ -83,28 +76,32 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
   end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-  function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone,xprevious,k,sign)
+  function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
     n = Int(sqrt(length(x)))
+    m = convexSet.subspace_dimension
     X = reshape(x,n,n)
     X = (X+X')/2
 
-    if k[1] <= 0
+    if m <= 0
       # First iteration
       E = eigen(X)
       if sum(E.values .> 0.0) > sum(E.values .< 0.0)
-        sign[1] = -1.0;
+        convexSet.positive_subspace = false
       else
-        sign[1] = 1.0;
+        convexSet.positive_subspace = true
       end
       ind = findall(x-> x>0, E.values)
       Z = E.vectors[:, ind]*Diagonal(E.values[ind])
       Xp = Z*E.vectors[:,ind]'
     else
-      Z = reshape(xprevious[1:n*k[1]], n, k[1]);
-      sX = sign[1]*X;
+      z = view(convexSet.subspace, 1:m*n)
+      Z = reshape(z, n, m)
+      if !convexSet.positive_subspace
+        X .= -X;
+      end
       # Just three steps of block-Lanczos
-      Q = Array(qr([Z sX*Z sX*(sX*Z)]).Q)
-      QXQ = Q'*sX*Q; QXQ = (QXQ+QXQ')/2;
+      Q = Array(qr([Z X*Z X*(X*Z)]).Q)
+      QXQ = Q'*X*Q; QXQ = (QXQ+QXQ')/2;
       E = eigen(QXQ);
       ind = findall(x-> x>0, E.values)
       Z = Q*E.vectors[:, max(minimum(ind.-2),1):maximum(ind)]
@@ -112,13 +109,13 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
       Xp = Q*E.vectors*max.(Diagonal(E.values),0)*E.vectors'*Q';
       Xp = (Xp+Xp')/2;
 
-      if sign[1] == -1.0
-          Xp = X + Xp;
+      if !convexSet.positive_subspace
+          Xp .= -X .+ Xp;
       end
     end
-    x[:] .= vec(Xp)
-    k .= size(Z)[2]
-    xprevious[1:k[1]*n] = vec(Z)
+    x[:] = vec(Xp)
+    convexSet.subspace_dimension = size(Z)[2]
+    convexSet.subspace[1:convexSet.subspace_dimension*n] = vec(Z)
 
     nothing
   end

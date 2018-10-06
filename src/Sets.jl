@@ -70,9 +70,13 @@ mutable struct PositiveSemidefiniteCone <:AbstractConvexSet
   scale!::Function
   inDual::Function
   inRecc::Function
+  # Block-Lanczos data
+  subspace::Array{Float64,2}
+  subspace_dimension::Int
+  positive_subspace::Bool
 
-   function PositiveSemidefiniteCone()
-    return new(0,0:0,QOCS.Projections.sdcone!,QOCS.scale!,QOCS.inPSD,QOCS.inPolRecPSD)
+  function PositiveSemidefiniteCone()
+    return new(0,0:0,QOCS.Projections.sdcone!,QOCS.scale!,QOCS.inPSD,QOCS.inPolRecPSD,zeros(0, 0),-1,true)
   end
 end
 

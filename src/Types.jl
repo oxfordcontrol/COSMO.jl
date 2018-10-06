@@ -326,6 +326,10 @@ struct Constraint
       b = bc
     end
     convexSet.dim = size(A,1)
+    #TODO: Change this. I don't think the dimensions of the convex set should be set here, but in their constructor.
+    if isa(convexSet, QOCS.PositiveSemidefiniteCone)
+      convexSet.subspace = zeros(convexSet.dim, convexSet.dim)
+    end
     new(A,b,convexSet)
   end
 
