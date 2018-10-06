@@ -54,7 +54,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+   function _sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
 
     n = Int(sqrt(length(x)))
 
