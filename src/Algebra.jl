@@ -153,4 +153,4 @@ lrmul!(L::Diagonal,
 
 lrmul!(L::IdentityMatrix,
        M::AbstractMatrix,
-       R::Diagonal      ) = L.λ ? rmul!(M,R) ? M .= zero(eltype(M))
+       R::Diagonal      ) = L.λ ? rmul!(M,R) : M .= zero(eltype(M))

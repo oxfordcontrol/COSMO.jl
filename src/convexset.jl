@@ -171,8 +171,8 @@ struct Box{T} <:AbstractConvexSet{T}
     u::Vector{T}
     function Box{T}(dim::Int) where{T}
         dim >= 0 || throw(DomainError(dim, "dimension must be nonnegative"))
-        l = fill!(Vector{T}(undef,10),-Inf)
-        u = fill!(Vector{T}(undef,10),+Inf)
+        l = fill!(Vector{T}(undef,dim),-Inf)
+        u = fill!(Vector{T}(undef,dim),+Inf)
         new(dim,l,u)
     end
     function Box{T}(l::Vector{T},u::Vector{T}) where{T}
@@ -209,7 +209,6 @@ end
 # ----------------------------------------------------
 # Composite Set
 # ----------------------------------------------------
-
 struct CompositeConvexSet{T} <:AbstractConvexSet{T}
     dim::Int
     sets::Vector{AbstractConvexSet{T}}
@@ -247,7 +246,7 @@ function inrecc(x::AbstractVector{T},C::CompositeConvexSet{T},tol::T) where{T}
 end
 
 function scale!(C::CompositeConvexSet{T}) where{T}
-    nothing
+    error("PG: I don't know how to do this yet.")
 end
 
 #-------------------------
