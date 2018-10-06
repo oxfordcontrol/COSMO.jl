@@ -1,6 +1,6 @@
 using LinearAlgebra
 import LinearAlgebra; lmul!, rmul!
-export colNorms!, rowNorms!, lrmul!, scalednorm, clip
+export colnorms!, rownorms!, lrmul!, scalednorm, clip
 const IdentityMatrix = UniformScaling{Bool}
 const LA = LinearAlgebra
 
@@ -52,7 +52,7 @@ function scalednorm1(E::Diagonal,v::Array)
 end
 
 
-function colNorms!(v::Array{Tf,1},
+function colnorms!(v::Array{Tf,1},
     A::Matrix{Tf};
     reset::Bool = true) where{Tf<:AbstractFloat}
 
@@ -64,7 +64,7 @@ function colNorms!(v::Array{Tf,1},
     return v
 end
 
-function colNorms!(v::Array{Tf,1},
+function colnorms!(v::Array{Tf,1},
     A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where{Tf<:AbstractFloat,Ti<:Integer}
 
     if(reset) v.= 0 end
@@ -77,7 +77,7 @@ function colNorms!(v::Array{Tf,1},
     return v
 end
 
-function rowNorms!(v::Array{Tf,1},
+function rownorms!(v::Array{Tf,1},
     A::Matrix{Tf};
     reset::Bool = true) where{Tf<:AbstractFloat}
 
@@ -91,7 +91,7 @@ end
 
 
 
-function rowNorms!(v::Array{Tf,1},
+function rownorms!(v::Array{Tf,1},
     A::SparseMatrixCSC{Tf,Ti};
     reset::Bool = true) where{Tf<:AbstractFloat,Ti<:Integer}
 
