@@ -2,7 +2,7 @@ using Base: @propagate_inbounds
 
 abstract type AbstractConvexSet{T<:AbstractFloat} end
 
-struct ProjectableVector{T<:AbstractFloat} <: AbstractVector{T}
+struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
 
     #contiguous array of source data
     data::Vector{T}
@@ -12,7 +12,7 @@ struct ProjectableVector{T<:AbstractFloat} <: AbstractVector{T}
     projectsto::AbstractConvexSet{T}   #sets that generated the views
 
     #constructor (composite set)
-    function ProjectableVector{T}(x::Vector{T},C::CompositeConvexSet{T}) where{T}
+    function SplitVector{T}(x::Vector{T},C::CompositeConvexSet{T}) where{T}
 
         #check for compatibility of vector to be split
         #and sum of all of the cone sizes
@@ -35,23 +35,23 @@ struct ProjectableVector{T<:AbstractFloat} <: AbstractVector{T}
         return new(x,views,C)
     end
     #constructor (non-composite)
-    function ProjectableVector{T}(x::Vector{T},C::AbstractConvexSet{T}) where{T}
+    function SplitVector{T}(x::Vector{T},C::AbstractConvexSet{T}) where{T}
         views = [view(x,:)]
         return new(x,views,C)
     end
 end
 
-ProjectableVector(x::Vector{T},C) where{T} = ProjectableVector{T}(x,C)
+SplitVector(x::Vector{T},C) where{T} = SplitVector{T}(x,C)
 
-Base.size(A::ProjectableVector) = size(A.data)
-Base.length(A::ProjectableVector) = length(A.data)
-Base.IndexStyle(::Type{<:ProjectableVector}) = IndexLinear()
-@propagate_inbounds Base.getindex(A::ProjectableVector, idx::Int) = getindex(A.data,idx)
-@propagate_inbounds Base.setindex!(A::ProjectableVector, val, idx::Int) = setindex!(A.data,val,idx)
+Base.size(A::SplitVector) = size(A.data)
+Base.length(A::SplitVector) = length(A.data)
+Base.IndexStyle(::Type{<:SplitVector}) = IndexLinear()
+@propagate_inbounds Base.getindex(A::SplitVector, idx::Int) = getindex(A.data,idx)
+@propagate_inbounds Base.setindex!(A::SplitVector, val, idx::Int) = setindex!(A.data,val,idx)
 
-Base.iterate(A::ProjectableVector) = iterate(A.data)
-Base.iterate(A::ProjectableVector,state) = iterate(A.data,state)
-Base.firstindex(A::ProjectableVector) = 1
-Base.lastindex(A::ProjectableVector)  = length(A.data)
+Base.iterate(A::SplitVector) = iterate(A.data)
+Base.iterate(A::SplitVector,state) = iterate(A.data,state)
+Base.firstindex(A::SplitVector) = 1
+Base.lastindex(A::SplitVector)  = length(A.data)
 
-Base.showarg(io::IO, A::ProjectableVector, toplevel) = print(io, typeof(A))
+Base.showarg(io::IO, A::SplitVector, toplevel) = print(io, typeof(A))

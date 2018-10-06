@@ -226,8 +226,8 @@ end
 CompositeConvexSet(sets::Vector{AbstractConvexSet{T}}) where{T} = CompositeConvexSet{T}(sets)
 
 # Functions w.r.t. CompositeConvexSets should only ever
-# operate on vectors of type ProjectableVector.  Use
-# AbstractVector{T} here instead, b/c ProjectableVector
+# operate on vectors of type SplitVector.  Use
+# AbstractVector{T} here instead, b/c SplitVector
 # is not defined yet.
 # See https://github.com/JuliaLang/julia/issues/269
 
@@ -239,11 +239,11 @@ function project!(x::AbstractVector{T},C::CompositeConvexSet{T}) where{T}
 end
 
 function indual(x::AbstractVector{T},C::CompositeConvexSet{T},tol::T) where{T}
-    nothing
+    all(xC -> indual(xC[1],xC[2],tol),zip(x,C))
 end
 
 function inrecc(x::AbstractVector{T},C::CompositeConvexSet{T},tol::T) where{T}
-    nothing
+    all(xC -> inrecc(xC[1],xC[2],tol),zip(x,C))
 end
 
 function scale!(C::CompositeConvexSet{T}) where{T}
