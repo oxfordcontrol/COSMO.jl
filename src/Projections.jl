@@ -9,10 +9,12 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
     function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet},xprevious,k,sign)
 
+      i = 1;
       for convexSet in convexSets
         xpart = view(x,convexSet.indices)
         if isa(convexSet, QOCS.PositiveSemidefiniteCone)
-          convexSet.project!(xpart, convexSet,xprevious,k,sign)
+          convexSet.project!(xpart, convexSet,xprevious[i],k[i],sign[i])
+          i += 1;
         else
           convexSet.project!(xpart,convexSet)
         end

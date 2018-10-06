@@ -5,7 +5,7 @@ function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, 
   x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, 
   F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64},
   α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},projTime::Float64,
-  x_previous, k, sign
+  lanczos_subspaces, lanczos_dimensions, lanczos_signs
   )
   # Create right hand side for linear system
   ls = zeros(n+m)
@@ -25,7 +25,7 @@ function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, 
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ./ρ
   # Project onto cone K
-  pTime = @elapsed Projections.projectCompositeCone!(s, convexSets, x_previous, k, sign)
+  pTime = @elapsed Projections.projectCompositeCone!(s, convexSets, lanczos_subspaces, lanczos_dimensions, lanczos_signs)
   projTime += pTime
   # update dual variable μ
   @. μ = μ + ρ.*(s_tl - s)
@@ -84,9 +84,18 @@ end
 
     settings.verbose_timing && (iter_start = time())
 
-    xprevious = similar(ws.x)
-    k = [-1]
-    sign = [1]
+    lanczos_subspaces = ()
+    lanczos_dimensions = ()
+    lanczos_signs = ()
+
+    for convexSet in ws.p.convexSets
+      if isa(convexSet, QOCS.PositiveSemidefiniteCone)
+        lanczos_subspaces = (lanczos_subspaces..., zeros(convexSet.dim))
+        lanczos_dimensions = (lanczos_dimensions..., [-1])
+        lanczos_signs = (lanczos_signs..., [-1])
+      end
+    end
+
     for iter = 1:settings.max_iter
       numIter+= 1
       @. δx = ws.x
@@ -97,7 +106,7 @@ end
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
         m, n, ws.p.convexSets,ws.times.projTime,
-        xprevious, k, sign
+        lanczos_subspaces, lanczos_dimensions, lanczos_signs
       );
 
       # compute deltas for infeasibility detection
