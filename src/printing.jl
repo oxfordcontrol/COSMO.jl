@@ -1,5 +1,5 @@
 module Printing
-  using ..QOCS,Printf, LinearAlgebra
+  using ..QOCS, Printf, LinearAlgebra
   export printHeader, printResult, printIteration
 
   function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings)

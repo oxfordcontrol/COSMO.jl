@@ -5,8 +5,6 @@ import Base: showarg, eltype
 # -------------------------------------
 abstract type AbstractConvexSet{T<:AbstractFloat} end
 abstract type AbstractConvexCone{T} <: AbstractConvexSet{T} end
-const DefaultFloat = Float64
-
 
 # ----------------------------------------------------
 # Zero cone

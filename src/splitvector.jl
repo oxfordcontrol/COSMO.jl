@@ -1,7 +1,5 @@
 using Base: @propagate_inbounds
 
-abstract type AbstractConvexSet{T<:AbstractFloat} end
-
 struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
 
     #contiguous array of source data

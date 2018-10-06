@@ -4,15 +4,15 @@ using ..QOCS, SparseArrays, LinearAlgebra, Statistics
 export scaleRuiz!,reverseScaling!
 
 
-  function kktColNorms!(P,A,normLHS,normRHS)
+  function kktcolnorms!(P,A,normLHS,normRHS)
 
-    colNorms!(normLHS,P,reset = true);   #start from zero
-    colNorms!(normLHS,A,reset = false);  #incrementally from P norms
-    rowNorms!(normRHS,A)                 #same as column norms of A'
+    colnorms!(normLHS,P,reset = true);   #start from zero
+    colnorms!(normLHS,A,reset = false);  #incrementally from P norms
+    rownorms!(normRHS,A)                 #same as column norms of A'
     return nothing
   end
 
-  function limitScaling!(s::Array,set::QOCS.Settings)
+  function limitScaling!(s::Vector,set::QOCS.Settings)
       @.s = clip(s,set.MIN_SCALING,set.MAX_SCALING,1.)
       return nothing
   end
@@ -53,7 +53,7 @@ export scaleRuiz!,reverseScaling!
       #convergence check
       for i = 1:set.scaling
 
-          kktColNorms!(P,A,Dwork.diag,Ework.diag)
+          kktcolnorms!(P,A,Dwork.diag,Ework.diag)
           limitScaling!(Dwork.diag,set)
           limitScaling!(Ework.diag,set)
 
@@ -69,7 +69,7 @@ export scaleRuiz!,reverseScaling!
           # now use the Dwork array to hold the
           # column norms of the newly scaled P
           # so that we can compute the mean
-          colNorms!(Dwork.diag,P)
+          colnorms!(Dwork.diag,P)
           mean_col_norm_P = mean(Dwork.diag)
           inf_norm_q      = norm(q,Inf)
 
@@ -120,7 +120,7 @@ export scaleRuiz!,reverseScaling!
       return nothing
   end
 
-  function invsqrt!(A::Array{T}) where{T}
+  function invsqrt!(A::Vector{T}) where{T}
       @. A = oneunit(T) / sqrt(A)
   end
 

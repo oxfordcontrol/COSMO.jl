@@ -1,11 +1,8 @@
-using LinearAlgebra
-import LinearAlgebra; lmul!, rmul!
-export colnorms!, rownorms!, lrmul!, scalednorm, clip
-const IdentityMatrix = UniformScaling{Bool}
-const LA = LinearAlgebra
+using  LinearAlgebra
+import LinearAlgebra: lmul!, rmul!
+const  IdentityMatrix = UniformScaling{Bool}
 
 
-#array case
 function clip(s,minThresh,maxThresh,minNew = minThresh,maxNew = maxThresh)
     s = ifelse(s < minThresh,minNew,ifelse(s > maxThresh,maxNew,s))
 end
@@ -52,6 +49,7 @@ function scalednorm1(E::Diagonal,v::Array)
 end
 
 
+
 function colnorms!(v::Array{Tf,1},
     A::Matrix{Tf};
     reset::Bool = true) where{Tf<:AbstractFloat}
@@ -89,8 +87,6 @@ function rownorms!(v::Array{Tf,1},
     return v
 end
 
-
-
 function rownorms!(v::Array{Tf,1},
     A::SparseMatrixCSC{Tf,Ti};
     reset::Bool = true) where{Tf<:AbstractFloat,Ti<:Integer}
@@ -103,8 +99,7 @@ function rownorms!(v::Array{Tf,1},
     return v
 end
 
-
-function LA.lmul!(L::Diagonal, M::SparseMatrixCSC)
+function lmul!(L::Diagonal, M::SparseMatrixCSC)
 
     #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
     #but this way allocates no memory at all and
@@ -115,10 +110,9 @@ function LA.lmul!(L::Diagonal, M::SparseMatrixCSC)
     return M
 end
 
-LA.lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
+lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
 
-
-function LA.rmul!(M::SparseMatrixCSC,R::Diagonal)
+function rmul!(M::SparseMatrixCSC,R::Diagonal)
     for i = 1:M.n
         for j = M.colptr[i]:(M.colptr[i+1]-1)
             M.nzval[j] *= R.diag[i]
@@ -127,8 +121,7 @@ function LA.rmul!(M::SparseMatrixCSC,R::Diagonal)
     return M
 end
 
-LA.rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
-
+rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
 
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
     for i = 1:M.n
