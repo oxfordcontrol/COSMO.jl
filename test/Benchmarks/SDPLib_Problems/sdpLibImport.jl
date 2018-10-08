@@ -15,10 +15,10 @@
 # January 2017
 
 
-workspace()
-using JLD
+using JLD2
+using SparseArrays
 # Specify path to .dat-s files
-dirPath = "./sdplib/"
+dirPath = "../sdplib/"
 
 # create array of all relevant filenames that contain problems
 fileNames = []
@@ -58,7 +58,7 @@ for file in fileNames
       if counter == 1
         m = parse(Int64,strip(ln)) + 1
         # now that m is known, initalize the array that holds all the constraint matrices F
-        F = Array{SparseMatrixCSC}(m)
+        F = ()
 
       # nblocks: number of blocks in the diagonal structure of the matrices
       elseif counter == 2
@@ -67,17 +67,17 @@ for file in fileNames
       # vector of numbers that give the sizes on the individual blocks
       # negative number indicates diagonal submatrix
       elseif counter == 3
-      bvec = split(replace(strip(ln,['{','}','(',')']),"+",""))
+      bvec = split(replace(strip(ln,['{','}','(',')']),"+" => ""))
        blockvec = [parse(Float64, ss) for ss in bvec]
        n = Int(sum(abs.(blockvec)))
 
        # objective function vector c
       elseif counter == 4
         # try first to split by whitespace as delimiter (also remove certain trailing, ending characters)
-        cvec = split(replace(strip(ln,['{','}','(',')']),"+",""))
+        cvec = split(replace(strip(ln,['{','}','(',')']),"+" => ""))
         # otherwise try comma as delimiter
         if length(cvec) == 1
-          cvec = split(replace(strip(ln,['{','}','(',')']),"+",""),",")
+          cvec = split(replace(strip(ln,['{','}','(',')']),"+" => ""),",")
         end
         c = [parse(Float64, ss) for ss in cvec]
 
@@ -95,7 +95,7 @@ for file in fileNames
         if matno > currentM
           # save previously generated matrix in sparse format
           if currentM >= 0
-            F[currentM+1] = sparse(Fm)
+            F = (F..., sparse(Fm))
           end
           # create new temporary matrix that is filled
           Fm = zeros(n,n)
@@ -120,28 +120,33 @@ for file in fileNames
     end
   end
   # after last line has reached save the last F matrix
-  F[currentM+1] = sparse(Fm)
+  F = (F..., sparse(Fm))
 
   # extract solution for objective value from README file
   f = open(dirPath*"README")
   lines = readlines(f)
   close(f)
   lines = lines[20:113]
-  ln = filter(s -> contains(s,file) ,lines)
+  ln = filter(s -> !isa(match(Regex(file), s), Nothing), lines)
   if length(ln) == 0
     optVal = "Not provided"
   else
     str = split(ln[1])[4]
-    if contains(str,"primal")
+    if !isa(match(Regex(str),"primal"), Nothing)
       optVal = Inf
-    elseif contains(str, "dual")
+    elseif !isa(match(Regex(str),"dual"), Nothing)
       optVal = -Inf
     else
     optVal = parse(Float64, str)
     end
   end
 
+  F = [f for f in F]  # For some JLD2 fails when passing tuples that contain very large Sparse Arrays
+  # possibly related to https://github.com/JuliaIO/JLD2.jl/issues/31
+
   # save to JLD file
-  JLD.save(dirPath*file*".jld", "m", m-1,"n",n,"nblocks",nblocks,"blockvec",blockvec,"c",c,"F",F,"optVal",optVal)
+  m = m - 1;
+  filepath = dirPath*file*".jld"
+  @save filepath m n nblocks blockvec c F optVal
   println("Saved problem: $(file) to "*dirPath*file*".jld, Optimal Value: $(optVal)")
 end
