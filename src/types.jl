@@ -149,37 +149,40 @@ struct Variables{T}
     ν::Vector{T}
     μ::Vector{T}
 
-    function Variables{T}(m::Int, n::Int, set::AbstractConvexSet{T}) where{T}
+    function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where{T}
+        m == C.dim || throw(DimensionMismatch("set dimension is not m"))
         x = zeros(T,n)
-        s = zeros(T,m)
-        μ = SplitVector(zeros(T,m),sets)
+        s = SplitVector(zeros(T,m),C)
+        μ = zeros(T,m)
         ν = zeros(T,m)
         new(x,s,μ,ν)
     end
 end
 
-Variables(args...) = Variables{DefaultFloat}()
+Variables(args...) = Variables{DefaultFloat}(args...)
 
 
 # -------------------------------------
 # Top level container for all solver data
 # -------------------------------------
 
-mutable struct Workspace
-    p::Model
-    sm::ScaleMatrices
-    vars::Variables
-    ρ::Float64
-    ρVec::Vector{Float64}
+mutable struct Workspace{T}
+    p::Model{T}
+    sm::ScaleMatrices{T}
+    vars::Variables{T}
+    ρ::T
+    ρVec::Vector{T}
     Info::Info
-    times::ResultTimes
+    times::ResultTimes{Float64} #Always 64 bit regardless of data type?
     #constructor
-    function Workspace(p::COSMO.Model,sm::ScaleMatrices)
-        vars = Variables(Float64,p.m,p.n,p.C)
-        ws = new(p,sm,vars,0.,Float64[],Info([0.]),ResultTimes())
+    function Workspace{T}(p::COSMO.Model{T},sm::ScaleMatrices{T}) where{T}
+        vars = Variables{T}(p.m,p.n,p.C)
+        ws = new(p,sm,vars,zero(T),T[],Info([zero(T)]),ResultTimes())
         # hand over warm starting variables
-        length(p.x0) == n && (ws.vars.x = p.x0)
-        length(p.y0) == m && (ws.vars.μ = -p.y0)
+        length(p.x0) == p.n && (ws.vars.x[:] = p.x0[:])
+        length(p.y0) == p.m && (ws.vars.μ[:] = -p.y0[:])
         return ws
     end
 end
+
+Workspace(args...) = Workspace{DefaultFloat}(args...)

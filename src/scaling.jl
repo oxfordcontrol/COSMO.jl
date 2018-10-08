@@ -89,7 +89,7 @@ function scaleRuiz!(ws::COSMO.Workspace,set::COSMO.Settings)
     # compute an adjustment to the overall scaling
     # so that the aggregate scaling on the cone
     # in questions turns out to be component-wise eq
-    if rectifySetScalings!(E,Ework,ws.p.convexSets)
+    if rectifySetScalings!(E,Ework,ws.p.C)
         #only rescale if the above returns true,
         #i.e. some cone scalings were rectified
         scaleData!(P,A,q,b,I,Ework,1.)
@@ -97,7 +97,7 @@ function scaleRuiz!(ws::COSMO.Workspace,set::COSMO.Settings)
     end
 
     #scale set components
-    scaleSets!(E,ws.p.convexSets)
+    scaleSets!(E,ws.p.C)
 
     #update the inverse scaling data, c and c_inv
     ws.sm.Dinv.diag .= 1. ./ D.diag
@@ -120,23 +120,31 @@ function invsqrt!(A::Vector{T}) where{T}
     @. A = oneunit(T) / sqrt(A)
 end
 
-function rectifySetScalings!(E,Ework,sets)
+function rectifySetScalings!(E,Ework,C::AbstractConvexSet)
 
     anyRectifiedBlocks  = false
     Ework.diag         .= 1.
+
+    # FIX ME: split the vector Ework.diag over the sets.
+    # This should NOT be done here.  Instead, the
+    # splitting should happen at the time the scaling
+    # structure is allocated, so that E is a Diagonal
+    # of a SplitVector type.
+    esplit = SplitVector(Ework.diag,C)
 
     # NB : we should actually provide each cone
     # with the opportunity to provide its own
     # (possibly non-scalar) rectification
 
-    for set in sets
-        isScalar, = set.scale!(set)
+    for i = 1:C.num_subsets()
 
-        @views if isScalar
+        isScalar, = set.scale!(C)
+
+        if isScalar
             #at least one block was scalar
             anyRectifiedBlocks = true
-            tmp = mean(E.diag[set.indices])
-            Ework.diag[set.indices] .= tmp./E.diag[set.indices]
+            tmp = mean(esplit.views[i])
+            esplit.views[i][:] .= tmp./esplit.views[i][:]
         end
     end
     return anyRectifiedBlocks
