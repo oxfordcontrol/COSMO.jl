@@ -1,4 +1,4 @@
-function setup!(ws::QOCS.Workspace,settings::QOCS.Settings)
+function setup!(ws::COSMO.Workspace,settings::COSMO.Settings)
     # scale problem data
     if settings.scaling != 0
         scaleRuiz!(ws,settings)

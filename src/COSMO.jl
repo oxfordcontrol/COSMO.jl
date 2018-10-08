@@ -1,10 +1,10 @@
 #__precompile__()
-module QOCS
+module COSMO
 
 const DefaultFloat = Float64
 const DefaultInt   = Int64
 
-#export MathOptInterfaceQOCS
+#export MathOptInterfaceCOSMO
 export  assemble!
 #         reset!,
 #         optimize!,

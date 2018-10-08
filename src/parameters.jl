@@ -1,5 +1,5 @@
 # set initial values of rhoVec
-function setRhoVec!(ws::QOCS.Workspace,settings::QOCS.Settings)
+function setRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
     p = ws.p
     # nEQ = p.K.f
     # nINEQ = p.m - p.K.f
@@ -11,7 +11,7 @@ end
 
 
 # adapt rhoVec based on residual ratio
-function adaptRhoVec!(ws::QOCS.Workspace,settings::QOCS.Settings)
+function adaptRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
     # compute normalized residuals based on the working variables (dont unscale)
     IGNORE_SCALING = true
     r_prim::Float64, r_dual::Float64 = calculateResiduals(ws,settings,IGNORE_SCALING)
@@ -30,7 +30,7 @@ function adaptRhoVec!(ws::QOCS.Workspace,settings::QOCS.Settings)
     return nothing
 end
 
-function updateRhoVec!(newRho::Float64,ws::QOCS.Workspace,settings::QOCS.Settings)
+function updateRhoVec!(newRho::Float64,ws::COSMO.Workspace,settings::COSMO.Settings)
     p = ws.p
     nEQ = p.K.f
     nINEQ = p.m - p.K.f

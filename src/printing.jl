@@ -1,6 +1,6 @@
 using Printf
 
-function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings)
+function printHeader(ws::COSMO.Workspace,settings::COSMO.Settings)
     n = ws.p.n
     m = ws.p.m
     K = ws.p.K
@@ -23,7 +23,7 @@ function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings)
     settings.scaling > 0 ? scalingStatus = "on" : scalingStatus = "off"
     nnzInP = count(!iszero,ws.p.P) - count(!iszero,diag(ws.p.P)) + n
     nnzInM = 2*count(!iszero,ws.p.A) + nnzInP + m
-    println("-"^66 * "\n" * " "^13 * "Quadratic Objective Conic Solver (QOCS)\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2018\n" * "-"^66 * "\n")
+    println("-"^66 * "\n" * " "^13 * "Quadratic Objective Conic Solver (COSMO)\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2018\n" * "-"^66 * "\n")
     println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero,ws.p.A)) nnz), b ∈ R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)")
     for (iii,set) in enumerate(sort(ws.p.convexSets,by=x -> -x.dim))
         setName = split(string(typeof(set)),".")[end]
@@ -39,7 +39,7 @@ function printHeader(ws::QOCS.Workspace,settings::QOCS.Settings)
     nothing
 end
 
-function printIteration(settings::QOCS.Settings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
+function printIteration(settings::COSMO.Settings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
 
     if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
         if mod(iter,settings.check_termination) == 0

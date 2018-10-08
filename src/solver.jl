@@ -34,9 +34,9 @@ end
   """
       optimize!(model,settings)
 
-  Attempts to solve the optimization problem defined in `QOCS.Model` object with the user settings defined in `QOCS.Settings`. Returns a `QOCS.Result` object.
+  Attempts to solve the optimization problem defined in `COSMO.Model` object with the user settings defined in `COSMO.Settings`. Returns a `COSMO.Result` object.
   """
-  function optimize!(model::QOCS.Model,settings::QOCS.Settings)
+  function optimize!(model::COSMO.Model,settings::COSMO.Settings)
     solverTime_start = time()
 
     # create scaling variables
@@ -178,10 +178,10 @@ end
     settings.verbose_timing && (ws.times.postTime = time()-ws.times.postTime)
 
     # create result object
-    resinfo = QOCS.ResultInfo(r_prim,r_dual)
+    resinfo = COSMO.ResultInfo(r_prim,r_dual)
     y = -ws.μ
 
-    return result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,ws.times);
+    return result = COSMO.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,ws.times);
 
 
   end

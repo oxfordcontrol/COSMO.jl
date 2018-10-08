@@ -2,16 +2,16 @@
 """
 Constraint(A,b,convexSet,dim=0,indices=0:0)
 
-Creates a QOCS constraint: `Ax + b ∈ convexSet`.
+Creates a COSMO constraint: `Ax + b ∈ convexSet`.
 
 By default the following convex sets are supported: `Zeros`, `Nonnegatives`, `SecondOrderCone`, `PositiveSemidefiniteCone`.
 
 # Examples
 ```jldoctest
-julia> Constraint([1 0;0 1],zeros(2),QOCS.PositiveSemidefiniteCone())
+julia> Constraint([1 0;0 1],zeros(2),COSMO.PositiveSemidefiniteCone())
 Constraint
 Size of A: (2, 2)
-ConvexSet: QOCS.PositiveSemidefiniteCone
+ConvexSet: COSMO.PositiveSemidefiniteCone
 ```
 
 ---
@@ -21,10 +21,10 @@ then x[2] and x[3] can be constrained to the zero cone in the following way:
 
 # Examples
 ```jldoctest
-julia> c = Constraint([1 0;0 1],zeros(2),QOCS.Zeros(),4,2:3)
+julia> c = Constraint([1 0;0 1],zeros(2),COSMO.Zeros(),4,2:3)
 Constraint
 Size of A: (2, 4)
-ConvexSet: QOCS.Zeros
+ConvexSet: COSMO.Zeros
 ```
 Notice that extra columns of A have been added automatically.
 ```
@@ -90,6 +90,6 @@ struct Constraint{T <: AbstractFloat}
 
 end
 
-function Base.show(io::IO, obj::QOCS.Constraint)
+function Base.show(io::IO, obj::COSMO.Constraint)
     print(io,"Constraint\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convexSet))")
 end

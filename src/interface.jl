@@ -1,7 +1,7 @@
 """
     assemble!(model,P,q,constraint(s),[x0,y0])
 
-Assembles a `QOCS.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
+Assembles a `COSMO.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
 
 The positive semidefinite matrix `P` and vector `q` are used to specify the cost function of the optimization problem:
 
@@ -9,15 +9,15 @@ The positive semidefinite matrix `P` and vector `q` are used to specify the cost
 min   1/2 x'Px + q'x
 s.t.  Ax + b ∈ C
 ```
-`constraints` is a `QOCS.Constraint` or an array of `QOCS.Constraint` objects that are used to describe the constraints on `x`.
+`constraints` is a `COSMO.Constraint` or an array of `COSMO.Constraint` objects that are used to describe the constraints on `x`.
 
 ---
 The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
 """
-function assemble!(model::QOCS.Model{T},
+function assemble!(model::COSMO.Model{T},
                    P::AbstractMatrix{T},
                    q::AbstractVector{T},
-                   constraints::Union{QOCS.Constraint{T},Array{QOCS.Constraint{T},1}},
+                   constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T},1}},
                    x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing) where{T<:AbstractFloat}
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
@@ -61,7 +61,7 @@ function assemble!(model::QOCS.Model{T},
   nothing
 end
 
-function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Union{QOCS.Constraint,Array{QOCS.Constraint}})
+function assemble!(model::COSMO.Model,P::Real,q::Real,constraints::Union{COSMO.Constraint,Array{COSMO.Constraint}})
   Pm = spzeros(1,1)
   qm = zeros(1)
   Pm[1,1] = convert(Float64,P)
@@ -69,15 +69,15 @@ function assemble!(model::QOCS.Model,P::Real,q::Real,constraints::Union{QOCS.Con
   assemble!(model,Pm,qm,constraints)
 end
 
-assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractMatrix{<:Real},constraints::Union{QOCS.Constraint,Array{QOCS.Constraint}}) = assemble!(model,P,vec(q),constraints)
-assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::Real,constraints::Union{QOCS.Constraint,Array{QOCS.Constraint}}) = assemble!(model,P,[q],constraints)
+assemble!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::AbstractMatrix{<:Real},constraints::Union{COSMO.Constraint,Array{COSMO.Constraint}}) = assemble!(model,P,vec(q),constraints)
+assemble!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::Real,constraints::Union{COSMO.Constraint,Array{COSMO.Constraint}}) = assemble!(model,P,[q],constraints)
 
 """
     warmStart!(model,[x0,y0])
 
-Provides the `QOCS.Model` with warm starting values for the primal variable `x` and/or the dual variable `y`.
+Provides the `COSMO.Model` with warm starting values for the primal variable `x` and/or the dual variable `y`.
 """
-function warmStart!(model::QOCS.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
+function warmStart!(model::COSMO.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
     if x0 isa Vector{Float64}
       if size(model.A,2) == length(x0)
         model.x0 = x0
@@ -100,7 +100,7 @@ end
 
 Sets model data directly based on provided fields.
 """
-function set!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},A::AbstractMatrix{<:Real},b::AbstractVector{<:Real},convexSets::Array{QOCS.AbstractConvexSet})
+function set!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},A::AbstractMatrix{<:Real},b::AbstractVector{<:Real},convexSets::Array{COSMO.AbstractConvexSet})
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
   A[:,:] = convert(SparseMatrixCSC{Float64,Int64},A)
@@ -117,7 +117,7 @@ function set!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Re
   nothing
 end
 # merge zeros sets and nonnegative sets
-function mergeConstraints!(constraints::Array{QOCS.Constraint{T}}) where{T}
+function mergeConstraints!(constraints::Array{COSMO.Constraint{T}}) where{T}
   # handle zeros sets
   ind = findall(set->typeof(set) == ZeroSet,map(x->x.convexSet,constraints))
   if length(ind) > 1
@@ -136,7 +136,7 @@ function mergeConstraints!(constraints::Array{QOCS.Constraint{T}}) where{T}
   nothing
 end
 
-function mergeZeros(constraints::Array{QOCS.Constraint})
+function mergeZeros(constraints::Array{COSMO.Constraint})
   m = sum(x->x.dim,map(x->x.convexSet,constraints))
   n = size(constraints[1].A,2)
   A = spzeros(m,n)
@@ -151,10 +151,10 @@ function mergeZeros(constraints::Array{QOCS.Constraint})
     s = e + 1
   end
 
-  return M = QOCS.Constraint(A,b,Zeros())
+  return M = COSMO.Constraint(A,b,Zeros())
 end
 
-function mergeNonnegatives(constraints::Array{QOCS.Constraint})
+function mergeNonnegatives(constraints::Array{COSMO.Constraint})
   m = sum(x->x.dim,map(x->x.convexSet,constraints))
   n = size(constraints[1].A,2)
   A = spzeros(m,n)
@@ -169,7 +169,7 @@ function mergeNonnegatives(constraints::Array{QOCS.Constraint})
     s = e + 1
   end
 
-  return M = QOCS.Constraint(A,b,Nonnegatives())
+  return M = COSMO.Constraint(A,b,Nonnegatives())
 end
 
 
@@ -184,7 +184,7 @@ function sortSets(C::AbstractConvexSet)
 end
 
 # transform A*x + b in {0}, to A*x + s == b, s in {0}
-function processConstraint!(model::QOCS.Model,rowNum::Int64,A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}},b::AbstractVector{<:Real},C::AbstractConvexSet)
+function processConstraint!(model::COSMO.Model,rowNum::Int64,A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}},b::AbstractVector{<:Real},C::AbstractConvexSet)
   s = rowNum
   e = rowNum + C.dim - 1
   model.A[s:e,:] = -A

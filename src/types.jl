@@ -25,7 +25,7 @@ ResultInfo(rp,rd) = ResultInfo{DefaultFloat}(rp,rd)
 """
 Result{T <: AbstractFloat}
 
-Object returned by the QOCS solver after calling `optimize!(model,settings)`. It has the following fields:
+Object returned by the COSMO solver after calling `optimize!(model,settings)`. It has the following fields:
 
 
 Fieldname | Type | Description
@@ -36,8 +36,8 @@ s | Vector{T}| (Primal) set variable
 objVal | T | Objective value
 iter | Int64 | Number of iterations
 status | Symbol | Solution status
-info | QOCS.ResultInfo | Struct with more information
-times | QOCS.ResultTimes | Struct with several measured times
+info | COSMO.ResultInfo | Struct with more information
+times | COSMO.ResultTimes | Struct with several measured times
 """
 struct Result{T<:AbstractFloat}
     x::Vector{T}
@@ -52,7 +52,7 @@ struct Result{T<:AbstractFloat}
 end
 
 function Base.show(io::IO, obj::Result)
-    print(io,">>> QOCS - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.objVal,digits=2))\nRuntime: $(round.(obj.times.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.times.setupTime*1000,digits=2))ms\n")
+    print(io,">>> COSMO - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.objVal,digits=2))\nRuntime: $(round.(obj.times.solverTime*1000,digits=2))ms\nSetup Time: $(round.(obj.times.setupTime*1000,digits=2))ms\n")
     obj.times.iterTime != NaN && print("Avg Iter Time: $(round.((obj.times.iterTime/obj.iter)*1000,digits=2))ms")
 end
 
@@ -106,7 +106,7 @@ end
 """
 Model()
 
-Initializes an empty QOCS model that can be filled with problem data using `assemble!(model,P,q,constraints)`.
+Initializes an empty COSMO model that can be filled with problem data using `assemble!(model,P,q,constraints)`.
 """
 mutable struct Model{T<:AbstractFloat}
     P::AbstractMatrix{T}
@@ -174,7 +174,7 @@ mutable struct Workspace
     Info::Info
     times::ResultTimes
     #constructor
-    function Workspace(p::QOCS.Model,sm::ScaleMatrices)
+    function Workspace(p::COSMO.Model,sm::ScaleMatrices)
         vars = Variables(Float64,p.m,p.n,p.C)
         ws = new(p,sm,vars,0.,Float64[],Info([0.]),ResultTimes())
         # hand over warm starting variables

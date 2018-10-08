@@ -1,7 +1,7 @@
 """
 Settings(;arg=val)
 
-Creates a QOCS settings object that is used to pass user settings to the solver.
+Creates a COSMO settings object that is used to pass user settings to the solver.
 
 Argument | Description | Values (default)
 --- | --- | ---

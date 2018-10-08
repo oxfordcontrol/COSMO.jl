@@ -8,18 +8,18 @@ function kktcolnorms!(P,A,normLHS,normRHS)
     return nothing
 end
 
-function limitScaling!(s::Vector,set::QOCS.Settings)
+function limitScaling!(s::Vector,set::COSMO.Settings)
     @.s = clip(s,set.MIN_SCALING,set.MAX_SCALING,1.)
     return nothing
 end
 
-function limitScaling(s::Number,set::QOCS.Settings)
+function limitScaling(s::Number,set::COSMO.Settings)
     s = clip(s,set.MIN_SCALING,set.MAX_SCALING,1.)
     return s
 end
 
 
-function scaleRuiz!(ws::QOCS.Workspace,set::QOCS.Settings)
+function scaleRuiz!(ws::COSMO.Workspace,set::COSMO.Settings)
 
     #references to scaling matrices from workspace
     D    = ws.sm.D
@@ -173,7 +173,7 @@ function scaleData!(P,A,q,b,Ds,Es,cs=1.)
 end
 
 
-function reverseScaling!(ws::QOCS.Workspace)
+function reverseScaling!(ws::COSMO.Workspace)
 
     cinv = ws.sm.cinv[] #from the Base.RefValue type
 
