@@ -73,8 +73,6 @@ mutable struct Settings
         obj_true = NaN,
         obj_true_tol = 1e-3
         )
-        new(rho,sigma,alpha,eps_abs,eps_rel,eps_prim_inf,eps_dual_inf,max_iter,verbose,
-        check_termination,check_infeasibility,scaling,MIN_SCALING,MAX_SCALING,adaptive_rho,
-        adaptive_rho_interval,adaptive_rho_tolerance,verbose_timing,RHO_MIN,RHO_MAX,RHO_TOL,time_limit,obj_true,obj_true_tol)
+        new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose,  check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, time_limit, obj_true, obj_true_tol)
     end
 end

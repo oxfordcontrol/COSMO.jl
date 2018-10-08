@@ -34,24 +34,26 @@ julia>Matrix(c.A)
 0.0  0.0  1.0  0.0
 ```
 """
-struct Constraint
-    A::Union{AbstractMatrix{<:Real},AbstractVector{<:Real}}
-    b::AbstractVector{<:Real}
-    convexSet::AbstractConvexSet
+struct Constraint{T <: AbstractFloat}
+    A::Union{AbstractMatrix{T},AbstractVector{T}}
+    b::AbstractVector{T}
+    convexSet::AbstractConvexSet{T}
 
-    function Constraint(A::AbstractMatrix{<:Real},b::AbstractVector{<:Real},convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0)
-        size(A,1) != length(b) && error("The dimensions of matrix A and vector b don't match.")
-        size(b,2) != 1 && error("Input b must be a vector or a scalar.")
-        if dim != 0
-            dim < 0 && error("The dimension of x has to be greater than zero.")
-        end
+    # constructor
+    function Constraint{T}(
+        A::AbstractMatrix{T},
+        b::AbstractVector{T},
+        settype::Type,
+        indices::UnitRange=0:0) where{T}
 
-        A = convert(Matrix{Float64},A)
-        b = convert(Vector{Float64},b)
+        settype <: AbstractConvexSet && error("AbstractConvexSet type must be specified")
+
+        size(A,1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
+        size(b,2) != 1 && throw(DimensionMismatch("Input b must be a vector or a scalar."))
 
         if indices != 0:0
-            (indices.start < 1 || indices.stop < indices.start) && error("The index range for x has to be increasing and nonnegative.")
-            dim < indices.stop && error("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop).")
+            (indices.start < 1 || indices.stop < indices.start) && throw(DomainError("The index range for x has to be increasing and nonnegative."))
+            dim < indices.stop && throw(DomainError("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop)."))
             Ac = spzeros(size(A,1),dim)
             bc = zeros(dim)
             Ac[:,indices] = A
@@ -59,20 +61,32 @@ struct Constraint
             A = Ac
             b = bc
         end
-        convexSet.dim = size(A,1)
+        dim = size(A,1)
+        # call the appropriate set constructor
+        convexSet = settype{T}(dim)
         new(A,b,convexSet)
     end
 
-    function Constraint(A::Real,b::Real,convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0)
+    function Constraint{T}(
+        A::T,b::T,
+        settype::Type,
+        indices::UnitRange=0:0) where{T}
+
         Aarr = zeros(1,1)
-        bvec = Vector{Float64}(undef,1)
         Aarr[1] = A
-        bvec[1] = b
-        Constraint(Aarr,bvec,convexSet,dim,indices)
+        bvec = [b]::Vector
+        Constraint(Aarr,bvec,settype,indices)
     end
 
-    Constraint(A::AbstractMatrix{<:Real},b::AbstractMatrix{<:Real},convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0) = Constraint(A,vec(b),convexSet,dim,indices)
-    Constraint(A::AbstractMatrix{<:Real},b::Real,convexSet::AbstractConvexSet,dim::Int64=0,indices::UnitRange{Int64}=0:0) = Constraint(A,[b],convexSet,dim,indices)
+    Constraint{T}(A::AbstractMatrix{T},
+                  b::AbstractMatrix{T},
+                  settype,
+                  indices::UnitRange=0:0) where {T} = Constraint{T}(A,vec(b),settype,indices)
+
+    Constraint{T}(A::AbstractMatrix{T},b::T,settype,indices::UnitRange=0:0) where{T} = Constraint{T}(A,[b],settype,indices)
+
+    #default all contructors to the default float type
+    Constraint(args...) = Constraint{DefaultFloat}(args...)
 
 end
 

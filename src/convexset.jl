@@ -9,28 +9,28 @@ abstract type AbstractConvexCone{T} <: AbstractConvexSet{T} end
 # ----------------------------------------------------
 # Zero cone
 # ----------------------------------------------------
-struct ZeroCone{T} <: AbstractConvexCone{T}
+struct ZeroSet{T} <: AbstractConvexCone{T}
     dim::Int
-    function ZeroCone{T}(dim::Int) where {T}
+    function ZeroSet{T}(dim::Int) where {T}
         dim >= 0 ? new(dim) : throw(DomainError(dim, "dimension must be nonnegative"))
     end
 end
-ZeroCone(dim) = ZeroCone{DefaultFloat}(dim)
+ZeroSet(dim) = ZeroSet{DefaultFloat}(dim)
 
 
-function project!(x::AbstractVector{T},::ZeroCone{T}) where{T}
+function project!(x::AbstractVector{T},::ZeroSet{T}) where{T}
     x .= zero(T)
 end
 
-function indual(x::AbstractVector{T},::ZeroCone{T},tol::T) where{T}
+function indual(x::AbstractVector{T},::ZeroSet{T},tol::T) where{T}
     true
 end
 
-function inrecc(x::AbstractVector{T},::ZeroCone{T},tol::T) where{T}
+function inrecc(x::AbstractVector{T},::ZeroSet{T},tol::T) where{T}
     !any(x->(abs(x) > tol),x)
 end
 
-function scale!(::ZeroCone{T}) where{T}
+function scale!(::ZeroSet{T}) where{T}
     false
 end
 
@@ -38,27 +38,27 @@ end
 # ----------------------------------------------------
 # Nonnegative orthant
 # ----------------------------------------------------
-struct NonnegativeOrthant{T} <: AbstractConvexCone{T}
+struct Nonnegatives{T} <: AbstractConvexCone{T}
     dim::Int
-    function NonnegativeOrthant{T}(dim::Int) where {T}
+    function Nonnegatives{T}(dim::Int) where {T}
         dim >= 0 ? new(dim) : throw(DomainError(dim, "dimension must be nonnegative"))
     end
 end
-NonnegativeOrthant(dim) = NonnegativeOrthant{DefaultFloat}(dim)
+Nonnegatives(dim) = Nonnegatives{DefaultFloat}(dim)
 
-function project!(x::AbstractVector{T},::NonnegativeOrthant{T}) where{T}
+function project!(x::AbstractVector{T},::Nonnegatives{T}) where{T}
     @. x = max(x,zero(T))
 end
 
-function indual(x::AbstractVector{T},::NonnegativeOrthant{T},tol::T) where{T}
+function indual(x::AbstractVector{T},::Nonnegatives{T},tol::T) where{T}
     !any(x->(x < -tol),x)
 end
 
-function inrecc(x::AbstractVector{T},::NonnegativeOrthant{T},tol::T) where{T}
+function inrecc(x::AbstractVector{T},::Nonnegatives{T},tol::T) where{T}
     !any(x->(x < tol),x)
 end
 
-function scale!(cone::NonnegativeOrthant{T}) where{T}
+function scale!(cone::Nonnegatives{T}) where{T}
     false
 end
 
@@ -210,7 +210,7 @@ end
 struct CompositeConvexSet{T} <:AbstractConvexSet{T}
     dim::Int
     sets::Vector{AbstractConvexSet{T}}
-    function CompositeConvexSet{T}(sets::Vector{AbstractConvexSet{T}}) where{T}
+    function CompositeConvexSet{T}(sets::Vector{<:AbstractConvexSet{T}}) where{T}
 
         # do not allow nesting of composite sets
         if any(set->isa(set,CompositeConvexSet),sets)
@@ -220,7 +220,7 @@ struct CompositeConvexSet{T} <:AbstractConvexSet{T}
         new(dim,sets)
     end
 end
-CompositeConvexSet(sets::Vector{AbstractConvexSet{T}}) where{T} = CompositeConvexSet{T}(sets)
+CompositeConvexSet(args...) = CompositeConvexSet{DefaultFloat}(args...)
 
 # Functions w.r.t. CompositeConvexSets should only ever
 # operate on vectors of type SplitVector.  Use

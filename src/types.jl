@@ -73,14 +73,11 @@ struct ScaleMatrices{Tf <: AbstractFloat}
     cinv::Base.RefValue{Tf}
 end
 
-ScaleMatrices()    = ScaleMatrices(DefaultFloat)
-ScaleMatrices(m,n) = ScaleMatrices(DefaultFloat,m,n)
+ScaleMatrices(args...) = ScaleMatrices{DefaultFloat}(args...)
 
-function ScaleMatrices(T::Type)
-    ScaleMatrices(I,I,I,I,Base.RefValue{T}(one(T)),Base.RefValue{T}(one(T)))
-end
+ScaleMatrices{T}() where {T} = ScaleMatrices(I,I,I,I,Base.RefValue{T}(one(T)),Base.RefValue{T}(one(T)))
 
-function ScaleMatrices(T::Type,m,n)
+function ScaleMatrices{T}(m,n) where{T}
     D    = Diagonal(ones(T,n))
     Dinv = Diagonal(ones(T,n))
     E    = Diagonal(ones(T,m))
@@ -120,12 +117,27 @@ mutable struct Model{T<:AbstractFloat}
     x0::Vector{T}
     y0::Vector{T}
     F #LDL Factorization
+    m::Integer
+    n::Integer
     flags::Flags
 
-    #function Model()
-    #    return new(spzeros(Float64,1,1), Float64[], #spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],0,0,0,F#lags())
-    #end
+    function Model{T}() where{T}
+        return new(
+        spzeros(T,1,1),             #P
+        T[],                        #q
+        spzeros(T,1,1),             #A
+        T[],                        #b
+        ZeroSet{T}(1),              #C
+        T[],                        #x0
+        T[],                        #y0
+        nothing,                    #F
+        0,                          #m
+        0,                          #n
+        Flags())                    #Flags
+    end
 end
+
+Model(args...) = Model{DefaultFloat}(args...)
 
 # -------------------------------------
 # Structure of internal iterate variables
@@ -146,6 +158,8 @@ struct Variables{T}
     end
 end
 
+Variables(args...) = Variables{DefaultFloat}()
+
 
 # -------------------------------------
 # Top level container for all solver data
@@ -156,12 +170,12 @@ mutable struct Workspace
     sm::ScaleMatrices
     vars::Variables
     ρ::Float64
-    ρVec::Array{Float64,1}
+    ρVec::Vector{Float64}
     Info::Info
     times::ResultTimes
     #constructor
     function Workspace(p::QOCS.Model,sm::ScaleMatrices)
-        vars = Variables(Float64,p.m,p.n,p.sets)
+        vars = Variables(Float64,p.m,p.n,p.C)
         ws = new(p,sm,vars,0.,Float64[],Info([0.]),ResultTimes())
         # hand over warm starting variables
         length(p.x0) == n && (ws.vars.x = p.x0)

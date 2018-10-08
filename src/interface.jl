@@ -14,7 +14,11 @@ s.t.  Ax + b ∈ C
 ---
 The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
 """
-function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},constraints::Union{QOCS.Constraint,Array{QOCS.Constraint,1}},x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
+function assemble!(model::QOCS.Model{T},
+                   P::AbstractMatrix{T},
+                   q::AbstractVector{T},
+                   constraints::Union{QOCS.Constraint{T},Array{QOCS.Constraint{T},1}},
+                   x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing) where{T<:AbstractFloat}
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
   q[:] = convert(Vector{Float64},q)
@@ -45,7 +49,11 @@ function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector
   end
 
   # save the convex sets inside the model
-  model.convexSets = map(x->x.convexSet,constraints)
+  if length(constraints) == 1
+      model.C = constraints[1].convexSet
+  else
+      model.C = CompositeConvexSet(map(x->x.convexSet,constraints))
+  end
 
   # if user provided warm starting variables, update model
   warmStart!(model,x0 = x0,y0 = y0)
@@ -109,9 +117,9 @@ function set!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Re
   nothing
 end
 # merge zeros sets and nonnegative sets
-function mergeConstraints!(constraints::Array{QOCS.Constraint})
+function mergeConstraints!(constraints::Array{QOCS.Constraint{T}}) where{T}
   # handle zeros sets
-  ind = findall(set->typeof(set) == Zeros,map(x->x.convexSet,constraints))
+  ind = findall(set->typeof(set) == ZeroSet,map(x->x.convexSet,constraints))
   if length(ind) > 1
     M = mergeZeros(constraints[ind])
     deleteat!(constraints,ind)
@@ -167,11 +175,11 @@ end
 
 function sortSets(C::AbstractConvexSet)
   C = typeof(C)
-  (C <: Zeros) && return 1
+  (C <: ZeroSet) && return 1
   (C <: Nonnegatives) && return 2
   (C <: Box) && return 3
   (C <: SecondOrderCone) && return 4
-  (C <: PositiveSemidefiniteCone) && return 5
+  (C <: PsdCone) && return 5
   return 6
 end
 
@@ -181,5 +189,4 @@ function processConstraint!(model::QOCS.Model,rowNum::Int64,A::Union{AbstractVec
   e = rowNum + C.dim - 1
   model.A[s:e,:] = -A
   model.b[s:e,:] = b
-  C.indices = s:e
 end
