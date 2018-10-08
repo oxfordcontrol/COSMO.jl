@@ -5,8 +5,8 @@ using Main.QOCS
 using SparseArrays
 using JuMP, SCS
 
-filename = "../sdplib/truss1.jld"
-# filename = "../sdplib/arch0.jld"
+# filename = "../sdplib/truss1.jld"
+filename = "../sdplib/arch0.jld"
 @load filename m n nblocks blockvec c F optVal
 
 # Rewrite problem to OSSDP compatible format:
@@ -28,10 +28,13 @@ b = Array(-vec(F[1]))  # Make dense
 
 # solve with QOCS
 constraint1 = QOCS.Constraint(-A,b,QOCS.PositiveSemidefiniteCone())
-settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=false,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)
+# settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=false,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)
+settings = QOCS.Settings(verbose=true, use_lanczos=false)
 model = QOCS.Model()
 assemble!(model,P,q,(constraint1))
-res = QOCS.optimize!(model,settings);
+@time res = QOCS.optimize!(model,settings);
+@time res = QOCS.optimize!(model,settings);
+print(res)
 
 # solve with MOSEK
 mosek_model = JuMP.Model()

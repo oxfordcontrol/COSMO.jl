@@ -1,7 +1,8 @@
 
 
 
-function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},projTime::Float64)
+function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},projTime::Float64,
+  use_lanczos::Bool)
   # Create right hand side for linear system
   ls = zeros(n+m)
   for i=1:n
@@ -20,11 +21,11 @@ function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, 
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ./ρ
   # Project onto cone K
-  pTime = @elapsed Projections.projectCompositeCone!(s, convexSets)
+  pTime = @elapsed Projections.projectCompositeCone!(s, convexSets, use_lanczos)
   projTime += pTime
   # update dual variable μ
   @. μ = μ + ρ.*(s_tl - s)
-  nothing
+  return pTime
 end
 
 
@@ -83,13 +84,16 @@ end
       numIter+= 1
       @. δx = ws.x
       @. δy = ws.μ
-      admmStep!(
+      pTime = admmStep!(
         ws.x, ws.s, ws.μ, ws.ν,
         x_tl, s_tl, ls,sol,
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n, ws.p.convexSets,ws.times.projTime
+        m, n, ws.p.convexSets,ws.times.projTime, settings.use_lanczos
       );
+      if mod(iter, 50) == 0
+        println("Projection Time:", pTime)
+      end
 
       # compute deltas for infeasibility detection
       @. δx = ws.x - δx

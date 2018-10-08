@@ -7,11 +7,15 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 # Standard Projection Functions
 # -------------------------------------
 
-    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet})
+    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet}, use_lanczos::Bool)
 
       for convexSet in convexSets
         xpart = view(x,convexSet.indices)
-        convexSet.project!(xpart,convexSet)
+        if use_lanczos && isa(convexSet, QOCS.PositiveSemidefiniteCone)
+          sdcone_lanczos!(xpart,convexSet)
+        else
+          convexSet.project!(xpart,convexSet)
+        end
       end
       return x
     end
@@ -55,8 +59,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function _sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
-
+   function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
     n = Int(sqrt(length(x)))
 
     # handle 1D case
@@ -76,7 +79,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     nothing
   end
 
-  function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+  function sdcone_lanczos!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
     n = Int(sqrt(length(x)))
     m = convexSet.subspace_dimension
     X = reshape(x,n,n)
@@ -94,13 +97,12 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
       Z = E.vectors[:, ind]*Diagonal(E.values[ind])
       Xp = Z*E.vectors[:,ind]'
     else
-      print(m, " ")
       z = view(convexSet.subspace, 1:m*n)
       Z = reshape(z, n, m)
       if !convexSet.positive_subspace
         X .= -X;
       end
-      # Just three steps of block-Lanczos
+      # Just two steps of block-Lanczos
       Q = Array(qr([Z X*Z]).Q)
       QXQ = Q'*X*Q; QXQ = (QXQ+QXQ')/2;
       E = eigen(QXQ);
