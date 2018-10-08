@@ -2,3 +2,4 @@
 *.cov
 *.mat
 *.jld
+test/Benchmarks/sdplib

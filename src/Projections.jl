@@ -8,6 +8,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 # -------------------------------------
 
     function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet})
+
       for convexSet in convexSets
         xpart = view(x,convexSet.indices)
         convexSet.project!(xpart,convexSet)
@@ -54,7 +55,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function _sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+   function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
 
     n = Int(sqrt(length(x)))
 
@@ -75,8 +76,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     nothing
   end
 
-  # compute projection of X=mat(x) onto the positive semidefinite cone
-  function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+  function _sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
     n = Int(sqrt(length(x)))
     m = convexSet.subspace_dimension
     X = reshape(x,n,n)
