@@ -1,5 +1,5 @@
 #include("../../../src/Solver.jl")
-using QOCS, Test,QOCS.Helper, LinearAlgebra, SparseArrays, Random
+using COSMO, Test,COSMO.Helper, LinearAlgebra, SparseArrays, Random
 
 @testset "Infeasibility" begin
   include("primal_infeasible_1.jl")

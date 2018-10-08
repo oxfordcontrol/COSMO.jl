@@ -1,6 +1,6 @@
-using QOCS, Test, Random
+using COSMO, Test, Random
 
-settings = QOCS.Settings()
+settings = COSMO.Settings()
 iter = 10
 cost = 20.
 r_prim = 1.5e-3
@@ -10,8 +10,8 @@ rt = 0.7
 
 
 @testset "Printing" begin
-   @test QOCS.Printing.printIteration(settings,iter,cost,r_prim,r_dual) == nothing
-   @test QOCS.Printing.printIteration(settings,settings.check_termination,cost,r_prim,r_dual) == nothing
-   @test QOCS.Printing.printResult(status,iter,cost,rt) == nothing
+   @test COSMO.Printing.printIteration(settings,iter,cost,r_prim,r_dual) == nothing
+   @test COSMO.Printing.printIteration(settings,settings.check_termination,cost,r_prim,r_dual) == nothing
+   @test COSMO.Printing.printResult(status,iter,cost,rt) == nothing
 end
 nothing

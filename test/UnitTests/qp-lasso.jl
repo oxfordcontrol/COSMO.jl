@@ -1,7 +1,7 @@
 # QP Lasso testproblem
 
 using Test, LinearAlgebra, SparseArrays, Random
-using QOCS
+using COSMO
 
 # generate problem data
 rng = Random.MersenneTwister(1313)
@@ -28,15 +28,15 @@ P = 2*Matrix(Diagonal([zeros(2*n);ones(m)]))# times two to cancel the 1/2 in the
 q = [zeros(n);λ*ones(n);zeros(m)]
 
 
-constraint1 = QOCS.Constraint(A1,b1,QOCS.ZeroSet)
-constraint2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives)
+constraint1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+constraint2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
 constraints = [constraint1;constraint2]
 
-settings = QOCS.Settings()
-model = QOCS.Model()
+settings = COSMO.Settings()
+model = COSMO.Model()
 assemble!(model,P,q,constraints)
 
-res = QOCS.optimize!(model,settings);
+res = COSMO.optimize!(model,settings);
 
 
 @testset "QP - Lasso" begin

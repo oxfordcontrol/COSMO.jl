@@ -31,8 +31,8 @@ for iii=1:length(results)
     !s.scalingON ? ls = "--" : ls="-"
     s.adaptionON ? ad = "- adapt" : ad =""
     # s.scalingON ? (si = "scaled") : (si = "unscaled")
-    # contains(s.solverName,"QOCS") && !s.adaptionON && (c = cc[1])
-    # contains(s.solverName,"QOCS") && s.adaptionON && (c = cc[2])
+    # contains(s.solverName,"COSMO") && !s.adaptionON && (c = cc[1])
+    # contains(s.solverName,"COSMO") && s.adaptionON && (c = cc[2])
     if kkk == 1
       c = cc[1]
       si = "unscaled"

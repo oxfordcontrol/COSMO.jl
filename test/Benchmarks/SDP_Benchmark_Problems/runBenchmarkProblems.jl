@@ -46,14 +46,14 @@ for pType in problemTypes
 
 
   problemType = JLD.load("$(dirPath)"*"$(problems[1]).jld","problemType")
-  # sr1 = SolverResult(nn, problemType,"QOCS - Un",timestamp,0,false,false)
-  # sr2 = SolverResult(nn, problemType,"QOCS - Avg",timestamp,0,true,false)
-  # sr3 = SolverResult(nn, problemType,"QOCS - Geom",timestamp,0,true,false)
-  # sr4 = SolverResult(nn, problemType,"QOCS - Sym",timestamp,0,true,false)
-  sr5 = SolverResult(nn, problemType,"QOCS - Un",timestamp,0,false,true)
-  sr6 = SolverResult(nn, problemType,"QOCS - Avg",timestamp,0,true,true)
-  sr7 = SolverResult(nn, problemType,"QOCS - Geo",timestamp,0,true,true)
-  sr8 = SolverResult(nn, problemType,"QOCS - Sym",timestamp,0,true,true)
+  # sr1 = SolverResult(nn, problemType,"COSMO - Un",timestamp,0,false,false)
+  # sr2 = SolverResult(nn, problemType,"COSMO - Avg",timestamp,0,true,false)
+  # sr3 = SolverResult(nn, problemType,"COSMO - Geom",timestamp,0,true,false)
+  # sr4 = SolverResult(nn, problemType,"COSMO - Sym",timestamp,0,true,false)
+  sr5 = SolverResult(nn, problemType,"COSMO - Un",timestamp,0,false,true)
+  sr6 = SolverResult(nn, problemType,"COSMO - Avg",timestamp,0,true,true)
+  sr7 = SolverResult(nn, problemType,"COSMO - Geo",timestamp,0,true,true)
+  sr8 = SolverResult(nn, problemType,"COSMO - Sym",timestamp,0,true,true)
   # resData = [sr1;sr2;sr3;sr4;sr5;sr6;sr7;sr8]
   resData = [sr5;sr6;sr7;sr8]
 

@@ -13,8 +13,8 @@ timestamp = Dates.format(now(), "yyddmm_HH-MM")
 dataFile = "./SC_" * timestamp * "LassoQP.jld"
 problemType = "QP-Lasso"
 
-sr1 = SolverResult(nn, problemType,"QOCS",timestamp,0,false)
-sr2 = SolverResult(nn, problemType,"QOCS",timestamp,0,true)
+sr1 = SolverResult(nn, problemType,"COSMO",timestamp,0,false)
+sr2 = SolverResult(nn, problemType,"COSMO",timestamp,0,true)
 sr3 = SolverResult(nn, problemType,"OSQP",timestamp,0,false)
 sr4 = SolverResult(nn, problemType,"OSQP",timestamp,0,true)
 resData = [sr1;sr2;sr3;sr4]

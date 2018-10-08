@@ -3,7 +3,7 @@
 # workspace()
 # include("../../../src/Solver.jl")
 
-using QOCS, Base.Test
+using COSMO, Base.Test
 maxIter = 3000
 rng = Random.MersenneTwister(1313)
 
@@ -64,17 +64,17 @@ Kl = 5
 Kq = []
 Ks = []
 # define cone membership
-K = QOCS.Cone(Kf,Kl,Kq,Ks)
+K = COSMO.Cone(Kf,Kl,Kq,Ks)
 
 
-# Solve with QOCS
-res1,ws,δx1,δμ1 = QOCS.solve(P,q,A,b,K,setMeanAdaptive);
+# Solve with COSMO
+res1,ws,δx1,δμ1 = COSMO.solve(P,q,A,b,K,setMeanAdaptive);
 print("\n. δx1: $(δx1), δμ1: $(δμ1)")
-# res2,nothing,δx2,δμ2 = QOCS.solve(P,q,A,b,K,setMeanNonAdaptive);
+# res2,nothing,δx2,δμ2 = COSMO.solve(P,q,A,b,K,setMeanNonAdaptive);
 # print("\n. δx2: $(δx2), δμ2: $(δμ2)")
-# res3,nothing,δx3,δμ3 = QOCS.solve(P,q,A,b,K,setUnAdaptive);
+# res3,nothing,δx3,δμ3 = COSMO.solve(P,q,A,b,K,setUnAdaptive);
 # print("\n. δx3: $(δx3), δμ3: $(δμ3)")
-# res4,nothing,δx4,δμ4 = QOCS.solve(P,q,A,b,K,setMeanAdaptive);
+# res4,nothing,δx4,δμ4 = COSMO.solve(P,q,A,b,K,setMeanAdaptive);
 # print("\n. δx4: $(δx4), δμ4: $(δμ4)\n")
 
 # eps_pinf = 1e-4

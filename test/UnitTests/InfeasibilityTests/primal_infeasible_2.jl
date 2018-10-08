@@ -46,15 +46,15 @@ rng = Random.MersenneTwister(1313)
     Kl = n
     Kq = []
     Ks = [r^2]
-    cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
-    cs2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives())
-    cs3 = QOCS.Constraint(A3,b3,QOCS.PositiveSemidefiniteCone())
+    cs1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
+    cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives())
+    cs3 = COSMO.Constraint(A3,b3,COSMO.PositiveSemidefiniteCone())
 
-    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     assemble!(model,P,q,[cs1;cs2;cs3])
-    res = QOCS.optimize!(model,settings);
+    res = COSMO.optimize!(model,settings);
 
     @test res.status == :Primal_infeasible
   end

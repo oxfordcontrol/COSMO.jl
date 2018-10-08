@@ -91,8 +91,8 @@ for s in resData
   !s.scalingON ? ls = "--" : ls="-"
   s.adaptionON ? ad = "- adapt" : ad =""
   s.scalingON ? (si = "scaled") : (si = "unscaled")
-  contains(s.solverName,"QOCS") && !s.adaptionON && (c = cc[1])
-  contains(s.solverName,"QOCS") && s.adaptionON && (c = cc[2])
+  contains(s.solverName,"COSMO") && !s.adaptionON && (c = cc[1])
+  contains(s.solverName,"COSMO") && s.adaptionON && (c = cc[2])
   contains(s.solverName,"OSQP") && !s.adaptionON && (c = cc[3])
   contains(s.solverName,"OSQP") && s.adaptionON && (c = cc[4])
   PyPlot.plot(1:1:s.ind,s.iter[1:s.ind], ls,color=c,label=s.solverName*" - $(si)$(ad)")

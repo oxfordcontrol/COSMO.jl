@@ -1,5 +1,5 @@
 # Unit Test for by default supported convex sets and their functions
-using QOCS, Test, Random,LinearAlgebra
+using COSMO, Test, Random,LinearAlgebra
 
 rng = Random.MersenneTwister(13131)
 
@@ -10,14 +10,14 @@ tol = 1e-4
     @testset "Create and project" begin
 
     # Zero Cone
-    zeros = QOCS.Zeros()
+    zeros = COSMO.Zeros()
     zeros.dim = 10
     x = randn(rng,10)
     zeros.project!(view(x,1:length(x)),zeros)
     @test norm(x,Inf) == 0.
 
     # Positive Orthant R+
-    nonnegatives = QOCS.Nonnegatives()
+    nonnegatives = COSMO.Nonnegatives()
     nonnegatives.dim = 10
     x = randn(rng,10)
     nonnegatives.project!(view(x,1:length(x)),nonnegatives)
@@ -26,14 +26,14 @@ tol = 1e-4
     # Box
     l = -1*ones(10)
     u = 1*ones(10)
-    box = QOCS.Box(l,u)
+    box = COSMO.Box(l,u)
     box.dim = 10
     x = 100*randn(rng,10)
     box.project!(view(x,1:length(x)),box)
     @test minimum(x) >= -1. && maximum(x) <= 1.
 
     # Second Order (Lorentz) cones
-    soc = QOCS.SecondOrderCone()
+    soc = COSMO.SecondOrderCone()
     soc.dim = 10
     x = 10*randn(rng,9)
     t = norm(x,2) - 0.5
@@ -43,7 +43,7 @@ tol = 1e-4
     @test norm(x[2:10],2) <= x[1]
 
     # Positive Semidefinite cones
-    psd = QOCS.PositiveSemidefiniteCone()
+    psd = COSMO.PositiveSemidefiniteCone()
     psd.dim = 16
     X = randn(rng,4,4)
     X = X*X' - 4*Matrix(1.0I,4,4)
@@ -57,14 +57,14 @@ tol = 1e-4
 
     # Dual of zero cone
     x = randn(rng,10)
-    convexSet = QOCS.Zeros()
+    convexSet = COSMO.Zeros()
     @test convexSet.inDual(view(x,:),convexSet,tol)
 
     # Dual of Positive Orthant R+ (self-dual)
     xpos = rand(rng,10)
     xneg = -rand(rng,10)
     xzeros = zeros(10)
-    convexSet = QOCS.Nonnegatives()
+    convexSet = COSMO.Nonnegatives()
     @test convexSet.inDual(view(xpos,:),convexSet,tol)
     @test !convexSet.inDual(view(xneg,:),convexSet,tol)
     @test convexSet.inDual(view(xzeros,:),convexSet,tol)
@@ -77,7 +77,7 @@ tol = 1e-4
     t = norm(x,2)
     xpos = [t+0.5;x]
     xneg = [t-0.5;x]
-    convexSet = QOCS.SecondOrderCone()
+    convexSet = COSMO.SecondOrderCone()
     @test convexSet.inDual(view(xpos,:),convexSet,tol)
     @test !convexSet.inDual(view(xneg,:),convexSet,tol)
 
@@ -90,7 +90,7 @@ tol = 1e-4
     Xneg = X*X' - 4*Matrix(1.0I,4,4)
     xpos = vec(Xpos)
     xneg = vec(Xneg)
-    convexSet = QOCS.PositiveSemidefiniteCone()
+    convexSet = COSMO.PositiveSemidefiniteCone()
     @test convexSet.inDual(view(xpos,:),convexSet,tol)
     @test !convexSet.inDual(view(xneg,:),convexSet,tol)
 
@@ -101,14 +101,14 @@ tol = 1e-4
     # Polar Recession cone of zero cone
     xpos = zeros(10)
     xneg = randn(rng,10)
-    convexSet = QOCS.Zeros()
+    convexSet = COSMO.Zeros()
     @test convexSet.inRecc(view(xpos,:),convexSet,tol)
     @test !convexSet.inRecc(view(xneg,:),convexSet,tol)
 
     # Polar Recession cone of Positive Orthant R+
     xpos = -rand(rng,10)
     xneg = rand(rng,10)
-    convexSet = QOCS.Nonnegatives()
+    convexSet = COSMO.Nonnegatives()
     @test convexSet.inRecc(view(xpos,:),convexSet,tol)
     @test !convexSet.inRecc(view(xneg,:),convexSet,tol)
 
@@ -120,7 +120,7 @@ tol = 1e-4
     t = norm(x,2)
     xpos = [-t-0.5;x]
     xneg = [-t+0.5;x]
-    convexSet = QOCS.SecondOrderCone()
+    convexSet = COSMO.SecondOrderCone()
     @test convexSet.inRecc(view(xpos,:),convexSet,tol)
     @test !convexSet.inRecc(view(xneg,:),convexSet,tol)
 
@@ -133,7 +133,7 @@ tol = 1e-4
     Xneg = X*X' + 4*Matrix(1.0I,4,4)
     xpos = vec(Xpos)
     xneg = vec(Xneg)
-    convexSet = QOCS.PositiveSemidefiniteCone()
+    convexSet = COSMO.PositiveSemidefiniteCone()
     @test convexSet.inRecc(view(xpos,:),convexSet,tol)
     @test !convexSet.inRecc(view(xneg,:),convexSet,tol)
 

@@ -6,7 +6,7 @@
 # s.t.    Xii = 1
 #         X ⪴ 0
 
-using QOCS, Test, LinearAlgebra, SparseArrays, Random
+using COSMO, Test, LinearAlgebra, SparseArrays, Random
 
 
 # this function creates a matrix A that slices out the diagonal entries Xii of a vectorized square matrix x=vec(X)
@@ -47,11 +47,11 @@ r = 0.5*vec(C)'*vec(C)
 
 A1 = createDiagonalExtractor(n)
 b1 = -ones(n)
-cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
+cs1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
 
 A2 = sparse(1.0I,n2,n2)
 b2 = zeros(n2)
-cs2 = QOCS.Constraint(A2,b2,QOCS.PositiveSemidefiniteCone())
+cs2 = COSMO.Constraint(A2,b2,COSMO.PositiveSemidefiniteCone())
 constraints = [cs1;cs2]
 
 
@@ -65,12 +65,12 @@ constraints = [cs1;cs2]
 # Kq = []
 # Ks = [n^2]
 
-# K = QOCS.Cone(Kf,Kl,Kq,Ks)
-settings = QOCS.Settings()
-model = QOCS.Model()
+# K = COSMO.Cone(Kf,Kl,Kq,Ks)
+settings = COSMO.Settings()
+model = COSMO.Model()
 assemble!(model,P,q,constraints)
 
-res = QOCS.optimize!(model,settings);
+res = COSMO.optimize!(model,settings);
 
 Xsol = reshape(res.x,n,n)
 

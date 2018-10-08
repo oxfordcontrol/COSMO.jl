@@ -1,5 +1,5 @@
 
-using QOCS, Test, SparseArrays, Random, LinearAlgebra
+using COSMO, Test, SparseArrays, Random, LinearAlgebra
 
 
 rng = Random.MersenneTwister(1872381)
@@ -25,24 +25,24 @@ b_vec = 1
 
 # A_mat = rand(rng,10,10)
 # b_mat = sparse(rand(rng,10,1))
-scalar_c = QOCS.Constraint(1,2,QOCS.Zeros())
-constr = QOCS.Constraint(Matrix(1.0I,10,10),rand(rng,10),QOCS.Zeros())
+scalar_c = COSMO.Constraint(1,2,COSMO.Zeros())
+constr = COSMO.Constraint(Matrix(1.0I,10,10),rand(rng,10),COSMO.Zeros())
 
 
 @testset "Model" begin
-    model = QOCS.Model()
+    model = COSMO.Model()
     @test assemble!(model,P_int,q_int,[scalar_c]) == nothing
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     @test assemble!(model,P_Float,q_Float,[scalar_c]) == nothing
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     @test assemble!(model,P_UInt,q_UInt,[scalar_c]) == nothing
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     @test assemble!(model,P_mat,q_mat,[constr]) == nothing
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     @test assemble!(model,P_sparse,q_sparse,[constr]) == nothing
 
 end

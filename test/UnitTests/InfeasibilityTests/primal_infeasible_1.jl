@@ -23,13 +23,13 @@ rng = Random.MersenneTwister(1313)
     xtrue = rand(rng,n,1)*50
     q = (-P*xtrue -  A'*ytrue)[:]
 
-    constraint = QOCS.Constraint(-A,b,QOCS.Nonnegatives())
+    constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives())
     ra = 0.
 
-    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
-    model = QOCS.Model()
+    settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    model = COSMO.Model()
     assemble!(model,P,q,[constraint])
-    res1 = QOCS.optimize!(model,settings);
+    res1 = COSMO.optimize!(model,settings);
 
      @test res1.status == :Primal_infeasible
   end
