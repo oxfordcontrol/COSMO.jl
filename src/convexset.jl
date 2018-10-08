@@ -257,3 +257,9 @@ end
 Base.eltype(::AbstractConvexSet{T}) where{T} = T
 num_subsets(C::AbstractConvexSet)  = 1
 num_subsets(C::CompositeConvexSet) = length(C.sets)
+
+function getsubset(C::AbstractConvexSet,idx::Int)
+    idx == 1 || throw(DimensionMismatch("Input only has 1 subset (itself)"))
+    return C
+end
+getsubset(C::CompositeConvexSet,idx::Int) = C.sets[idx]

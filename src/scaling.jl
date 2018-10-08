@@ -136,9 +136,9 @@ function rectifySetScalings!(E,Ework,C::AbstractConvexSet)
     # with the opportunity to provide its own
     # (possibly non-scalar) rectification
 
-    for i = 1:C.num_subsets()
+    for i = 1:num_subsets(C)
 
-        isScalar, = set.scale!(C)
+        isScalar, = scale!(getsubset(C,i))
 
         if isScalar
             #at least one block was scalar
@@ -151,11 +151,18 @@ function rectifySetScalings!(E,Ework,C::AbstractConvexSet)
 end
 
 
-function scaleSets!(E,sets)
+function scaleSets!(E,C)
+
+    # FIX ME: split the vector Ework.diag over the sets.
+    # This should NOT be done here.  Instead, the
+    # splitting should happen at the time the scaling
+    # structure is allocated, so that E is a Diagonal
+    # of a SplitVector type.
+    esplit = SplitVector(Ework.diag,C)
 
     # scale set components (like u,l in a box)
-    for set in sets
-        scaleInfo = set.scale!(set)
+    for i = 1:num_subsets(E,C)
+        scaleInfo = set.scale!(get_subset(C,i))
         if length(scaleInfo) > 1
             #NB : Memory allocated here?
             for elem in scaleInfo[2:end]
