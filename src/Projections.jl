@@ -55,7 +55,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+   function _sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
 
     n = Int(sqrt(length(x)))
 
@@ -76,31 +76,32 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     nothing
   end
 
-  function _sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+  function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
     n = Int(sqrt(length(x)))
     m = convexSet.subspace_dimension
     X = reshape(x,n,n)
     X = (X+X')/2
 
-    if m <= 0
+    if m < 0 || m > n/2  # should be m >= n/k where k is number of lanczos steps
       # First iteration
       E = eigen(X)
-      if sum(E.values .> 0.0) > sum(E.values .< 0.0)
-        convexSet.positive_subspace = false
-      else
+      if sum(E.values .> 0.0) >= sum(E.values .< 0.0)
         convexSet.positive_subspace = true
+      else
+        convexSet.positive_subspace = false
       end
       ind = findall(x-> x>0, E.values)
       Z = E.vectors[:, ind]*Diagonal(E.values[ind])
       Xp = Z*E.vectors[:,ind]'
     else
+      print(m, " ")
       z = view(convexSet.subspace, 1:m*n)
       Z = reshape(z, n, m)
       if !convexSet.positive_subspace
         X .= -X;
       end
       # Just three steps of block-Lanczos
-      Q = Array(qr([Z X*Z X*(X*Z)]).Q)
+      Q = Array(qr([Z X*Z]).Q)
       QXQ = Q'*X*Q; QXQ = (QXQ+QXQ')/2;
       E = eigen(QXQ);
       ind = findall(x-> x>0, E.values)
