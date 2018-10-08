@@ -27,7 +27,7 @@ b = -vec(F[1])
 ######
 
 # solve with QOCS
-constraint1 = QOCS.Constraint(A,b,QOCS.PositiveSemidefiniteCone())
+constraint1 = QOCS.Constraint(-A,b,QOCS.PositiveSemidefiniteCone())
 settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)
 model = QOCS.Model()
 assemble!(model,P,q,(constraint1))
