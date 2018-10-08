@@ -141,7 +141,7 @@ for file in fileNames
     end
   end
 
-  F = [f for f in F]  # For some JLD2 fails when passing tuples that contain very large Sparse Arrays
+  F = [f for f in F]  # For some reason JLD2 fails when passing tuples that contain very large Sparse Arrays
   # possibly related to https://github.com/JuliaIO/JLD2.jl/issues/31
 
   # save to JLD file
