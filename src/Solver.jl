@@ -91,9 +91,11 @@ end
         settings.alpha, settings.sigma,
         m, n, ws.p.convexSets,ws.times.projTime, settings.use_lanczos
       );
+      #=
       if mod(iter, 50) == 0
-        println("Projection Time:", pTime)
+        # println("Projection Time:", pTime)
       end
+      =#
 
       # compute deltas for infeasibility detection
       @. δx = ws.x - δx
@@ -115,7 +117,7 @@ end
         end
 
         # print iteration steps
-        settings.verbose && printIteration(settings,iter,cost,r_prim,r_dual)
+        settings.verbose && printIteration(ws,settings,iter,cost,r_prim,r_dual)
 
         if hasConverged(ws,settings,r_prim,r_dual)
           status = :Solved

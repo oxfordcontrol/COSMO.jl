@@ -41,11 +41,11 @@ module Printing
     nothing
   end
 
-  function printIteration(settings::QOCS.Settings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
+  function printIteration(ws::QOCS.Workspace,settings::QOCS.Settings,iter::Int64,cost::Float64,r_prim::Float64,r_dual::Float64)
 
     if mod(iter,1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
       if mod(iter,settings.check_termination) == 0
-        @printf("%d\t%.4e\t%.4e\t%.4e\t%.4e\n", iter,cost,r_prim,r_dual,settings.rho)
+        @printf("%d\t%.4e\t%.4e\t%.4e\t%.4e\n", iter,cost,r_prim,r_dual,ws.ρ)
       else
         @printf("%d\t%.4e\t ---\t\t\t---\n", iter,cost)
       end

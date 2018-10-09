@@ -44,7 +44,7 @@ for file in fileNames
   nblocks = Inf
   blockvec = zeros(1)
   c = zeros(1)
-  F = zeros(1)
+  F = []
   currentM = -1
   Fm = zeros(1)
 
@@ -57,8 +57,6 @@ for file in fileNames
       # m: number of constraint matrices (in SDPA it starts from 0 -> +1)
       if counter == 1
         m = parse(Int64,strip(ln)) + 1
-        # now that m is known, initalize the array that holds all the constraint matrices F
-        F = ()
 
       # nblocks: number of blocks in the diagonal structure of the matrices
       elseif counter == 2
@@ -95,10 +93,10 @@ for file in fileNames
         if matno > currentM
           # save previously generated matrix in sparse format
           if currentM >= 0
-            F = (F..., sparse(Fm))
+            push!(F, Fm)
           end
           # create new temporary matrix that is filled
-          Fm = zeros(n,n)
+          Fm = spzeros(n,n)
           currentM = matno
         end
 
@@ -120,7 +118,7 @@ for file in fileNames
     end
   end
   # after last line has reached save the last F matrix
-  F = (F..., sparse(Fm))
+  push!(F, Fm)
 
   # extract solution for objective value from README file
   f = open(dirPath*"README")
@@ -140,9 +138,6 @@ for file in fileNames
     optVal = parse(Float64, str)
     end
   end
-
-  F = [f for f in F]  # For some reason JLD2 fails when passing tuples that contain very large Sparse Arrays
-  # possibly related to https://github.com/JuliaIO/JLD2.jl/issues/31
 
   # save to JLD file
   m = m - 1;
