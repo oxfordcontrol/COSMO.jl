@@ -13,6 +13,7 @@ export factorKKT!
     #try
     if settings.verbose_timing
       ws.times.factorTime += @elapsed ws.p.F = ldlt(M)
+      @show ws.times.factorTime
     else
       ws.p.F = ldlt(M)
     end

@@ -91,11 +91,9 @@ end
         settings.alpha, settings.sigma,
         m, n, ws.p.convexSets,ws.times.projTime, settings.use_lanczos
       );
-      #=
       if mod(iter, 50) == 0
-        # println("Projection Time:", pTime)
+        println("Projection Time:", pTime)
       end
-      =#
 
       # compute deltas for infeasibility detection
       @. δx = ws.x - δx
