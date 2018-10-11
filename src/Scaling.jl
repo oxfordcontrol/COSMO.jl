@@ -81,7 +81,7 @@ export scaleRuiz!,reverseScaling!
             ctmp = 1.0 / scale_cost
 
             # scale the penalty terms and overall scaling
-            P     *= ctmp
+            P    .*= ctmp
             q    .*= ctmp
             c     *= ctmp
           end
