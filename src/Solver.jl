@@ -164,10 +164,10 @@ end
 
 
     # print solution to screen
-    settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
     ws.times.solverTime = time() - solverTime_start
     settings.verbose_timing && (ws.times.postTime = time()-ws.times.postTime)
+    settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
     # create result object
     resinfo = QOCS.ResultInfo(r_prim,r_dual)
