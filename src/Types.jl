@@ -151,13 +151,13 @@ mutable struct Model
     K::Cone
     x0::Vector{Float64}
     y0::Vector{Float64}
-    m::Int64
-    n::Int64
-    F #LDL Factorization
+    model_size::Array{Int64,1}
+    F::SuiteSparse.CHOLMOD.Factor{Float64}
     flags::QOCS.Flags
 
     function Model()
-        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],0,0,0,Flags())
+        F = ldlt(sparse(1.0I,1,1))
+        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],[0;0],F,Flags())
     end
 end
 
@@ -166,7 +166,6 @@ end
       sm::ScaleMatrices
       x::Vector{Float64}
       s::Vector{Float64}
-      ν::Vector{Float64}
       μ::Vector{Float64}
       ρ::Float64
       ρVec::Array{Float64,1}
@@ -174,9 +173,8 @@ end
       times::ResultTimes
       #constructor
     function Workspace(p::QOCS.Model,sm::ScaleMatrices)
-      m = p.m
-      n = p.n
-      ws = new(p,sm,zeros(n),zeros(m),zeros(m),zeros(m),0.,Float64[],Info([0.]),ResultTimes())
+      m, n  = p.model_size
+      ws = new(p,sm,zeros(n),zeros(m),zeros(m),0.,Float64[],Info([0.]),ResultTimes())
       # hand over warm starting variables
       length(p.x0) == n && (ws.x = p.x0)
       length(p.y0) == m && (ws.μ = -p.y0)

@@ -38,7 +38,7 @@ end
     # create scaling variables
     # with scaling    -> uses mutable diagonal scaling matrices
     # without scaling -> uses identity matrices
-    sm = (settings.scaling > 0) ? ScaleMatrices(model.m,model.n) : ScaleMatrices()
+    sm = (settings.scaling > 0) ? ScaleMatrices(model.model_size[1],model.model_size[2]) : ScaleMatrices()
 
     # create workspace
     ws = Workspace(model,sm)
@@ -59,13 +59,10 @@ end
 
     timeLimit_start = time()
     #preallocate arrays
-    n = ws.p.n
-    m = ws.p.m
+    m,n = ws.p.model_size
     δx = zeros(n)
     δy =  zeros(m)
     s_tl = zeros(m) # i.e. sTilde
-    n = ws.p.n
-    m = ws.p.m
     ls = zeros(n + m)
     sol = zeros(n + m)
     x_tl = view(sol,1:n) # i.e. xTilde
@@ -119,7 +116,6 @@ end
             cost = Inf
             ws.x .= NaN
             ws.μ .= NaN
-            ws.ν .= NaN
             break
         end
 
@@ -128,7 +124,6 @@ end
             cost = -Inf
             ws.x .= NaN
             ws.μ .= NaN
-            ws.ν .= NaN
             break
         end
       end

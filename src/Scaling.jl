@@ -183,9 +183,7 @@ export scaleRuiz!,reverseScaling!
 
     ws.x[:] = ws.sm.D*ws.x
     ws.s[:] = ws.sm.Einv*ws.s
-    ws.ν[:] = ws.sm.E*ws.ν
     ws.μ[:] = ws.sm.E*ws.μ
-    ws.ν  .*= cinv
     ws.μ  .*= cinv
 
     # reverse scaling for model data

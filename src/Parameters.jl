@@ -5,11 +5,11 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
 
 # set initial values of rhoVec
   function setRhoVec!(ws::QOCS.Workspace,settings::QOCS.Settings)
-    p = ws.p
+    m = ws.p.model_size[1]
     # nEQ = p.K.f
     # nINEQ = p.m - p.K.f
     ws.ρ = settings.rho
-    ws.ρVec = ws.ρ*ones(p.m) #[1e3*ws.ρ*ones(nEQ);ws.ρ*ones(nINEQ)]
+    ws.ρVec = ws.ρ*ones(m) #[1e3*ws.ρ*ones(nEQ);ws.ρ*ones(nINEQ)]
     push!(ws.Info.rho_updates,ws.ρ)
     return nothing
   end
@@ -36,12 +36,12 @@ export setRhoVec!, adaptRhoVec!, updateRhoVec!
   end
 
   function updateRhoVec!(newRho::Float64,ws::QOCS.Workspace,settings::QOCS.Settings)
-    p = ws.p
-    nEQ = p.K.f
-    nINEQ = p.m - p.K.f
+    m = ws.p.model_size[1]
+    # nEQ = p.K.f
+    # nINEQ = p.m - p.K.f
 
     ws.ρ = newRho
-    ws.ρVec = newRho*ones(p.m)#[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
+    ws.ρVec = newRho*ones(m)#[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
     # log rho updates to info variable
     push!(ws.Info.rho_updates,newRho)
     factorKKT!(ws,settings)

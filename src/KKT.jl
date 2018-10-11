@@ -3,9 +3,9 @@ using ..QOCS, LinearAlgebra, SparseArrays
 export factorKKT!
 
   function factorKKT!(ws::QOCS.Workspace,settings::QOCS.Settings)
-     p = ws.p
+    p = ws.p
     # KKT matrix M
-    M = [p.P+settings.sigma*I SparseMatrixCSC(p.A'); p.A -spdiagm(0=> (1.0./ws.ρVec))]
+     M = [p.P+settings.sigma*I SparseMatrixCSC(p.A'); p.A -spdiagm(0=> (1.0./ws.ρVec))]
     # Do LDLT Factorization: A = LDL^T
     #try
     if settings.verbose_timing

@@ -28,8 +28,7 @@ function assemble!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector
   n = length(q)
   m = sum(map(x->x.dim,map(x->x.convexSet,constraints)))
 
-  model.m = m
-  model.n = n
+  model.model_size = [m;n]
   model.A = spzeros(Float64,m,n)
   model.b = spzeros(Float64,m)
 
@@ -103,8 +102,7 @@ function set!(model::QOCS.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Re
   model.q = q
   model.A = A
   model.b = b
-  model.m = length(b)
-  model.n = length(q)
+  model.model_size = [length(b);length(q)]
   model.convexSets = convexSets
   nothing
 end
