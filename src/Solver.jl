@@ -1,30 +1,24 @@
 
 
 
-function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},projTime::Float64)
+function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::SubArray, x_tl::SubArray, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet})
   # Create right hand side for linear system
-  ls = zeros(n+m)
-  for i=1:n
-    ls[i] = σ*x[i]-q[i]
-  end
-  for i=1:m
-    ls[n+i] = b[i]-s[i]+μ[i]/ρ[i]
-  end
-    sol = F \ ls
+   @. ls[1:n] = σ*x-q
+   @. ls[(n+1):end] = b-s+μ/ρ
+  sol .= F \ ls
   # deconstruct solution vector ls = [x_tl(n+1);ν(n+1)]
-  @. x_tl = sol[1:n]
-  @. ν = sol[n+1:end]
+  # x_tl and ν are automatically updated, since they are views on sol
+
   # Over relaxation
   @. x = α*x_tl + (1.0-α)*x
-  @. s_tl = s - (ν+μ)./ρ
+  @. s_tl = s - (ν+μ)/ρ
   @. s_tl = α*s_tl + (1.0-α)*s
-  @. s = s_tl + μ./ρ
+  @. s = s_tl + μ/ρ
   # Project onto cone K
   pTime = @elapsed Projections.projectCompositeCone!(s, convexSets)
-  projTime += pTime
   # update dual variable μ
-  @. μ = μ + ρ.*(s_tl - s)
-  nothing
+  @. μ = μ + ρ*(s_tl - s)
+  return pTime
 end
 
 
@@ -53,7 +47,6 @@ end
     ws.times.setupTime = @elapsed setup!(ws,settings);
 
     # instantiate variables
-    projTime = 0.
     numIter = 0
     status = :Unsolved
     cost = Inf
@@ -70,12 +63,13 @@ end
     m = ws.p.m
     δx = zeros(n)
     δy =  zeros(m)
-    x_tl = zeros(n) # i.e. xTilde
     s_tl = zeros(m) # i.e. sTilde
     n = ws.p.n
     m = ws.p.m
     ls = zeros(n + m)
     sol = zeros(n + m)
+    x_tl = view(sol,1:n) # i.e. xTilde
+    ν = view(sol,(n+1):(n+m))
 
     settings.verbose_timing && (iter_start = time())
 
@@ -83,13 +77,12 @@ end
       numIter+= 1
       @. δx = ws.x
       @. δy = ws.μ
-      admmStep!(
-        ws.x, ws.s, ws.μ, ws.ν,
+      ws.times.projTime += admmStep!(
+        ws.x, ws.s, ws.μ, ν,
         x_tl, s_tl, ls,sol,
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n, ws.p.convexSets,ws.times.projTime
-      );
+        m, n, ws.p.convexSets);
 
       # compute deltas for infeasibility detection
       @. δx = ws.x - δx
@@ -173,9 +166,6 @@ end
     # print solution to screen
     settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
-
-
-    ws.times.projTime = projTime
     ws.times.solverTime = time() - solverTime_start
     settings.verbose_timing && (ws.times.postTime = time()-ws.times.postTime)
 
