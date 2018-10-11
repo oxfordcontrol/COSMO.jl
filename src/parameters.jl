@@ -32,11 +32,15 @@ end
 
 function updateRhoVec!(newRho::Float64,ws::COSMO.Workspace,settings::COSMO.Settings)
     p = ws.p
-    nEQ = p.K.f
-    nINEQ = p.m - p.K.f
 
-    ws.ρ = newRho
-    ws.ρVec = newRho*ones(p.m)#[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
+    # FIX ME : We don't use K anymore, but it's also unclear
+    # how the EQ and INEQ values should be used for general
+    # conic programs
+    #nEQ = p.K.f
+    #nINEQ = p.m - p.K.f
+
+    ws.ρ     = newRho
+    ws.ρVec .= newRho #[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
     # log rho updates to info variable
     push!(ws.Info.rho_updates,newRho)
     factorKKT!(ws,settings)

@@ -1,14 +1,9 @@
 
-function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},projTime::Float64)
-  # Create right hand side for linear system
-  ls = zeros(n+m)
-  for i=1:n
-    ls[i] = σ*x[i]-q[i]
-  end
-  for i=1:m
-    ls[n+i] = b[i]-s[i]+μ[i]/ρ[i]
-  end
-    sol = F \ ls
+function admmStep!(x::Vector{Float64}, s::SplitVector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,set::AbstractConvexSet,projTime::Float64)
+  #linear solve
+  @. ls[1:n] = σ*x-q
+  @. ls[(n+1):end] = b-s+μ/ρ
+  sol = F \ ls
   # deconstruct solution vector ls = [x_tl(n+1);ν(n+1)]
   @. x_tl = sol[1:n]
   @. ν = sol[n+1:end]
@@ -18,7 +13,7 @@ function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, 
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ./ρ
   # Project onto cone K
-  pTime = @elapsed Projections.projectCompositeCone!(s, convexSets)
+  pTime = @elapsed project!(s, set)
   projTime += pTime
   # update dual variable μ
   @. μ = μ + ρ.*(s_tl - s)
@@ -70,8 +65,6 @@ end
     δy =  zeros(m)
     x_tl = zeros(n) # i.e. xTilde
     s_tl = zeros(m) # i.e. sTilde
-    n = ws.p.n
-    m = ws.p.m
     ls = zeros(n + m)
     sol = zeros(n + m)
 
@@ -79,19 +72,19 @@ end
 
     for iter = 1:settings.max_iter
       numIter+= 1
-      @. δx = ws.x
-      @. δy = ws.μ
+      @. δx = ws.vars.x
+      @. δy = ws.vars.μ
       admmStep!(
         ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.ν,
         x_tl, s_tl, ls,sol,
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n, ws.p.convexSets,ws.times.projTime
+        m, n, ws.p.C,ws.times.projTime
       );
 
       # compute deltas for infeasibility detection
-      @. δx = ws.x - δx
-      @. δy = -ws.μ + δy
+      @. δx = ws.vars.x - δx
+      @. δy = -ws.vars.μ + δy
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.check_termination} step
@@ -101,7 +94,7 @@ end
       # check convergence with residuals every {settings.checkIteration} steps
       if mod(iter,settings.check_termination) == 0
         # update cost
-        cost = ws.sm.cinv[]*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+        cost = ws.sm.cinv[]*(1/2 * ws.vars.x'*ws.p.P*ws.vars.x + ws.p.q'*ws.vars.x)[1]
 
         if abs(cost) > 1e20
           status = :Unsolved
@@ -122,18 +115,18 @@ end
         if isPrimalInfeasible(δy,ws,settings)
             status = :Primal_infeasible
             cost = Inf
-            ws.x .= NaN
-            ws.μ .= NaN
-            ws.ν .= NaN
+            ws.vars.x .= NaN
+            ws.vars.μ .= NaN
+            ws.vars.ν .= NaN
             break
         end
 
         if isDualInfeasible(δx,ws,settings)
             status = :Dual_infeasible
             cost = -Inf
-            ws.x .= NaN
-            ws.μ .= NaN
-            ws.ν .= NaN
+            ws.vars.x .= NaN
+            ws.vars.μ .= NaN
+            ws.vars.ν .= NaN
             break
         end
       end
@@ -164,7 +157,7 @@ end
     if settings.scaling != 0 && (cost != Inf && cost != -Inf)
       reverseScaling!(ws)
       # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
-      cost =  (1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1] #sm.cinv * not necessary anymore since reverseScaling
+      cost =  (1/2 * ws.vars.x'*ws.p.P*ws.vars.x + ws.p.q'*ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
     end
 
 
@@ -179,9 +172,9 @@ end
 
     # create result object
     resinfo = COSMO.ResultInfo(r_prim,r_dual)
-    y = -ws.μ
+    y = -ws.vars.μ
 
-    return result = COSMO.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,ws.times);
+    return result = COSMO.Result(ws.vars.x,y,ws.vars.s,cost,numIter,status,resinfo,ws.times);
 
 
   end

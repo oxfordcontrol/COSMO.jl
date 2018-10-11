@@ -16,7 +16,7 @@ Aa = -[A;-Matrix(1.0I,4,4);0 -1 0 0;-1 0 -1 0]
 ba = vec([b; -ones(4,1);-5;-4])
 P = zeros(size(A,2),size(A,2))
 
-constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives())
+constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives)
 
 # define example problem
 settings = COSMO.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)

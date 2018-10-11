@@ -14,14 +14,18 @@ s.t.  Ax + b ∈ C
 ---
 The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
 """
-function assemble!(model::COSMO.Model{T},
+function assemble!(model::Model{T},
                    P::AbstractMatrix{T},
                    q::AbstractVector{T},
-                   constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T},1}},
+                   constraints::Union{Constraint{T},Vector{Constraint{T}}},
                    x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing) where{T<:AbstractFloat}
+
   # convert inputs
-  P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
-  q[:] = convert(Vector{Float64},q)
+  #FIX ME : It should not be necessary to force sparsity,
+  #since maybe we would like a dense solver.  Sparse for
+  #now until we get a dense LDL option
+  P = convert(SparseMatrixCSC{Float64,Int64},P)
+  q = convert(Vector{Float64},q)
 
   !isa(constraints, Array) && (constraints = [constraints])
   # model.Flags.INFEASIBILITY_CHECKS = checkConstraintFunctions(constraints)
@@ -61,15 +65,25 @@ function assemble!(model::COSMO.Model{T},
   nothing
 end
 
-function assemble!(model::COSMO.Model,P::Real,q::Real,constraints::Union{COSMO.Constraint,Array{COSMO.Constraint}})
-  Pm = spzeros(1,1)
-  qm = zeros(1)
-  Pm[1,1] = convert(Float64,P)
-  qm[1] = convert(Float64,q)
+function assemble!(model::COSMO.Model,
+                   P::Real,q::Real,
+                   constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where{T}
+  Pm = spzeros(T,1,1)
+  qm = zeros(T,1)
+  Pm[1,1] = convert(T,P)
+  qm[1] = convert(T,q)
   assemble!(model,Pm,qm,constraints)
 end
 
-assemble!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::AbstractMatrix{<:Real},constraints::Union{COSMO.Constraint,Array{COSMO.Constraint}}) = assemble!(model,P,vec(q),constraints)
+function  assemble!(model::COSMO.Model,
+                    P::AbstractMatrix{T},
+                    q::AbstractMatrix{T},
+                    constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where{T}
+
+   assemble!(model,P,vec(q),constraints)
+
+end
+
 assemble!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::Real,constraints::Union{COSMO.Constraint,Array{COSMO.Constraint}}) = assemble!(model,P,[q],constraints)
 
 """
@@ -100,7 +114,12 @@ end
 
 Sets model data directly based on provided fields.
 """
-function set!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:Real},A::AbstractMatrix{<:Real},b::AbstractVector{<:Real},convexSets::Array{COSMO.AbstractConvexSet})
+function set!(model::COSMO.Model,
+              P::AbstractMatrix{<:Real},
+              q::AbstractVector{<:Real},
+              A::AbstractMatrix{<:Real},
+              b::AbstractVector{<:Real},
+              convexSets::Array{COSMO.AbstractConvexSet})
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
   A[:,:] = convert(SparseMatrixCSC{Float64,Int64},A)
@@ -113,13 +132,14 @@ function set!(model::COSMO.Model,P::AbstractMatrix{<:Real},q::AbstractVector{<:R
   model.b = b
   model.m = length(b)
   model.n = length(q)
-  model.convexSets = convexSets
+  model.C = CompositeConvexSet(convexSets)
   nothing
 end
+
 # merge zeros sets and nonnegative sets
 function mergeConstraints!(constraints::Array{COSMO.Constraint{T}}) where{T}
   # handle zeros sets
-  ind = findall(set->typeof(set) == ZeroSet,map(x->x.convexSet,constraints))
+  ind = findall(set->typeof(set) == ZeroSet{T},map(x->x.convexSet,constraints))
   if length(ind) > 1
     M = mergeZeros(constraints[ind])
     deleteat!(constraints,ind)
@@ -127,7 +147,7 @@ function mergeConstraints!(constraints::Array{COSMO.Constraint{T}}) where{T}
   end
 
   # handle nonnegative sets
-  ind = findall(set->typeof(set) == Nonnegatives,map(x->x.convexSet,constraints))
+  ind = findall(set->typeof(set) == Nonnegatives{T},map(x->x.convexSet,constraints))
   if length(ind) > 1
     M = mergeNonnegatives(constraints[ind])
     deleteat!(constraints,ind)
@@ -136,7 +156,7 @@ function mergeConstraints!(constraints::Array{COSMO.Constraint{T}}) where{T}
   nothing
 end
 
-function mergeZeros(constraints::Array{COSMO.Constraint})
+function mergeZeros(constraints::Array{COSMO.Constraint{T}}) where{T}
   m = sum(x->x.dim,map(x->x.convexSet,constraints))
   n = size(constraints[1].A,2)
   A = spzeros(m,n)
@@ -151,10 +171,10 @@ function mergeZeros(constraints::Array{COSMO.Constraint})
     s = e + 1
   end
 
-  return M = COSMO.Constraint(A,b,Zeros())
+  return M = COSMO.Constraint(A,b,ZeroSet)
 end
 
-function mergeNonnegatives(constraints::Array{COSMO.Constraint})
+function mergeNonnegatives(constraints::Array{COSMO.Constraint{T}}) where{T}
   m = sum(x->x.dim,map(x->x.convexSet,constraints))
   n = size(constraints[1].A,2)
   A = spzeros(m,n)
@@ -169,7 +189,7 @@ function mergeNonnegatives(constraints::Array{COSMO.Constraint})
     s = e + 1
   end
 
-  return M = COSMO.Constraint(A,b,Nonnegatives())
+  return M = COSMO.Constraint(A,b,Nonnegatives)
 end
 
 

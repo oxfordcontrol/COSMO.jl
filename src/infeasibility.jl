@@ -1,37 +1,15 @@
 # sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar
 #                                                 +∞   ,else}
 
-function inDual(x,convexSets,tol)
-    for convexSet in convexSets
-        xpart = view(x,convexSet.indices)
-        if !convexSet.inDual(xpart,convexSet,tol)
-            return false
-        end
-    end
-    return true
-end
+function supportFunction(y,ws,settings)
 
-function supportFunction(δy,ws,settings)
-
-    if inDual(δy,ws.p.convexSets,settings.eps_prim_inf)
-        return (ws.p.b'*δy)[1]
+    if indual(y,ws.p.C,settings.eps_prim_inf)
+        return dot(y,ws.p.b)
     else
         return Inf
     end
 
 end
-
-function inRecessionCone(A_δx,ws,settings)
-    convexSets = ws.p.convexSets
-    for convexSet in convexSets
-        A_δxpart = view(A_δx,convexSet.indices)
-        if !convexSet.inRecc(A_δxpart,convexSet,settings.eps_dual_inf)
-            return false
-        end
-    end
-    return true
-end
-
 
 function isPrimalInfeasible(δy,ws,settings::Settings)
     # calculate unscaled norm of δy
@@ -46,7 +24,8 @@ function isPrimalInfeasible(δy,ws,settings::Settings)
 
         if norm(A_δy,Inf)/norm_δy <= settings.eps_prim_inf
             # test condition S_K(δy) < 0
-            sF = supportFunction(δy/norm_δy,ws,settings)
+            unit_δy_split = SplitVector(δy/norm_δy,ws.p.C)
+            sF = supportFunction(unit_δy_split,ws,settings)
             if sF <= settings.eps_prim_inf
                 return true
             end
@@ -72,7 +51,8 @@ function isDualInfeasible(δx,ws,settings)
                 # test condition Ax in Ktilde_b∞
                 A_δx = ws.p.A*δx
                 A_δx = ws.sm.Einv*A_δx
-                if inRecessionCone(A_δx/norm_δx,ws,settings)
+                A_δx_split = SplitVector(A_δx/norm_δx,ws.p.C)
+                if inrecc(A_δx_split,ws.p.C,settings.eps_dual_inf)
                     return true
                 end
             end

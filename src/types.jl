@@ -108,7 +108,7 @@ Model()
 
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model,P,q,constraints)`.
 """
-mutable struct Model{T<:AbstractFloat}
+mutable struct Model{T<:Real}
     P::AbstractMatrix{T}
     q::Vector{T}
     A::AbstractMatrix{T}

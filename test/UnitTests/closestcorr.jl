@@ -47,11 +47,11 @@ r = 0.5*vec(C)'*vec(C)
 
 A1 = createDiagonalExtractor(n)
 b1 = -ones(n)
-cs1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
+cs1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
 
 A2 = sparse(1.0I,n2,n2)
 b2 = zeros(n2)
-cs2 = COSMO.Constraint(A2,b2,COSMO.PositiveSemidefiniteCone())
+cs2 = COSMO.Constraint(A2,b2,COSMO.PsdCone)
 constraints = [cs1;cs2]
 
 
@@ -81,4 +81,3 @@ Xsol = reshape(res.x,n,n)
 
 end
 nothing
-

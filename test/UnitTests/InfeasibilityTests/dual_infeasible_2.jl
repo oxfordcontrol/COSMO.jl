@@ -28,7 +28,7 @@ sum_detected = 0
     s2 = rand(rng)
     s3 = randn(rng,m3-1,1)
     s3 = [norm(s3,2)+1;s3]
-    s4 = vec(Helper.generatePosDefMatrix(r,rng))
+    s4 = vec(COSMOTestUtils.generatePosDefMatrix(r,rng))
     s = [s1;s2;s3;s4]
 
     # make problem unbounded in x1
@@ -50,10 +50,10 @@ sum_detected = 0
     b3 = b[m1+m2+1:m1+m2+m3]
     b4 = b[m1+m2+m3+1:end]
 
-    cs1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
-    cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives())
-    cs3 = COSMO.Constraint(A3,b3,COSMO.SecondOrderCone())
-    cs4 = COSMO.Constraint(A4,b4,COSMO.PositiveSemidefiniteCone())
+    cs1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
+    cs3 = COSMO.Constraint(A3,b3,COSMO.SecondOrderCone)
+    cs4 = COSMO.Constraint(A4,b4,COSMO.PsdCone)
 
     settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
     model = COSMO.Model()

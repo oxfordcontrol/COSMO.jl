@@ -26,8 +26,8 @@ rng = MersenneTwister(7232)
     b1 = 1.
     b2 = zeros(r^2)
 
-    constraint1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
-    constraint2 = COSMO.Constraint(A2,b2,COSMO.PositiveSemidefiniteCone())
+    constraint1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    constraint2 = COSMO.Constraint(A2,b2,COSMO.PsdCone)
     P = spzeros(r^2,r^2)
 
     settings = COSMO.Settings(check_termination=1,scaling = 0)
@@ -46,4 +46,3 @@ rng = MersenneTwister(7232)
    end
 end
 nothing
-

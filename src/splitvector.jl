@@ -14,7 +14,7 @@ struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
 
         #check for compatibility of vector to be split
         #and sum of all of the cone sizes
-        @assert sum(set->set.dim,C.sets) == length(x)
+        @assert C.dim == length(x)
 
         #I want an array of views. The actual type
         #of a view is convoluted, so just make one
@@ -34,7 +34,7 @@ struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
     end
     #constructor (non-composite)
     function SplitVector{T}(x::Vector{T},C::AbstractConvexSet{T}) where{T}
-        views = [view(x,:)]
+        views = [view(x,1:length(x))]
         return new(x,views,C)
     end
 end

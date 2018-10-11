@@ -1,11 +1,5 @@
 import Base: showarg, eltype
 
-# -------------------------------------
-# abstract type defs
-# -------------------------------------
-abstract type AbstractConvexSet{T<:AbstractFloat} end
-abstract type AbstractConvexCone{T} <: AbstractConvexSet{T} end
-
 # ----------------------------------------------------
 # Zero cone
 # ----------------------------------------------------
@@ -30,8 +24,12 @@ function inrecc(x::AbstractVector{T},::ZeroSet{T},tol::T) where{T}
     !any(x->(abs(x) > tol),x)
 end
 
-function scale!(::ZeroSet{T}) where{T}
-    false
+function scale!(::ZeroSet{T},::AbstractVector{T}) where{T}
+    return nothing
+end
+
+function rectify_scaling!(E,work,set::ZeroSet{T}) where{T}
+    return false
 end
 
 
@@ -55,11 +53,15 @@ function indual(x::AbstractVector{T},::Nonnegatives{T},tol::T) where{T}
 end
 
 function inrecc(x::AbstractVector{T},::Nonnegatives{T},tol::T) where{T}
-    !any(x->(x < tol),x)
+    !any(x->(x > tol),x)
 end
 
-function scale!(cone::Nonnegatives{T}) where{T}
-    false
+function scale!(cone::Nonnegatives{T},::AbstractVector{T}) where{T}
+    return nothing
+end
+
+function rectify_scaling!(E,work,set::Nonnegatives{T}) where{T}
+    return false
 end
 
 
@@ -99,10 +101,13 @@ function inrecc(x::AbstractVector{T},::SecondOrderCone,tol::T) where{T}
     @views norm(x[2:end]) <= (tol - x[1]) #self dual
 end
 
-function scale!(cone::SecondOrderCone{T}) where{T}
-    true
+function scale!(cone::SecondOrderCone{T},::AbstractVector{T}) where{T}
+    return nothing
 end
 
+function rectify_scaling!(E,work,set::SecondOrderCone{T}) where{T}
+    return rectify_scalar_scaling!(E,work)
+end
 
 
 
@@ -135,7 +140,7 @@ function project!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
         # compute eigenvalue decomposition
         # then round eigs up and rebuild
         s,U  = eigen!(X)
-        s  = sqrt(max(zero(T),s))
+        floorsqrt!(s,0.)
         rmul!(U,Diagonal(s))
         mul!(X, U, U')
     end
@@ -154,10 +159,17 @@ function inrecc(x::AbstractVector{T},cone::PsdCone{T},tol::T) where{T}
     return ( maximum(real(eigvals(X))) <= +tol )
 end
 
-function scale!(cone::PsdCone{T}) where{T}
-    true
+function scale!(cone::PsdCone{T},::AbstractVector{T}) where{T}
+    return nothing
 end
 
+function rectify_scaling!(E,work,set::PsdCone{T}) where{T}
+    return rectify_scalar_scaling!(E,work)
+end
+
+function floorsqrt!(s::Array,floor::Real)
+    @.s  = sqrt(max(floor,s))
+end
 
 
 # ----------------------------------------------------
@@ -200,51 +212,59 @@ function inrecc(x::AbstractVector{T},::Box{T},tol::T) where{T}
     true
 end
 
-function scale!(box::Box{T}) where{T}
-    false,box.l,box.u
+function scale!(box::Box{T},e::AbstractVector{T}) where{T}
+    @. box.l = box.l * e
+    @. box.u = box.u * e
+    return nothing
 end
+
+function rectify_scaling!(E,work,box::Box{T}) where{T}
+    return false #no correction needed
+end
+
 
 # ----------------------------------------------------
 # Composite Set
 # ----------------------------------------------------
-struct CompositeConvexSet{T} <:AbstractConvexSet{T}
-    dim::Int
-    sets::Vector{AbstractConvexSet{T}}
-    function CompositeConvexSet{T}(sets::Vector{<:AbstractConvexSet{T}}) where{T}
 
-        # do not allow nesting of composite sets
-        if any(set->isa(set,CompositeConvexSet),sets)
-            throw("Nesting of CompositeConvexSets not supported")
-        end
-        dim = sum(x->x.dim,sets)
-        new(dim,sets)
-    end
-end
+#struct definition is provided in projections.jl, since it
+#must be available to SplitVector, which in turn must be
+#available for most of the methods here.
+
 CompositeConvexSet(args...) = CompositeConvexSet{DefaultFloat}(args...)
 
-# Functions w.r.t. CompositeConvexSets should only ever
-# operate on vectors of type SplitVector.  Use
-# AbstractVector{T} here instead, b/c SplitVector
-# is not defined yet.
-# See https://github.com/JuliaLang/julia/issues/269
-
-function project!(x::AbstractVector{T},C::CompositeConvexSet{T}) where{T}
-    @assert x.projectsto == C
-    for i = eachindex(C.sets)
+function project!(x::SplitVector{T},C::CompositeConvexSet{T}) where{T}
+    # @assert x.projectsto == C
+    for i = 1:num_subsets(C)
         project!(x.views[i],C.sets[i])
     end
 end
 
-function indual(x::AbstractVector{T},C::CompositeConvexSet{T},tol::T) where{T}
-    all(xC -> indual(xC[1],xC[2],tol),zip(x,C))
+function indual(x::SplitVector{T},C::CompositeConvexSet{T},tol::T) where{T}
+    all(xC -> indual(xC[1],xC[2],tol),zip(x.views,C.sets))
 end
 
-function inrecc(x::AbstractVector{T},C::CompositeConvexSet{T},tol::T) where{T}
-    all(xC -> inrecc(xC[1],xC[2],tol),zip(x,C))
+function inrecc(x::SplitVector{T},C::CompositeConvexSet{T},tol::T) where{T}
+    all(xC -> inrecc(xC[1],xC[2],tol),zip(x.views,C.sets))
 end
 
-function scale!(C::CompositeConvexSet{T}) where{T}
-    error("PG: I don't know how to do this yet.")
+function scale!(C::CompositeConvexSet{T},e::SplitVector{T}) where{T}
+    @assert e.projectsto == C
+    for i = eachindex(C.sets)
+        scale!(C.sets[i],e.views[i])
+    end
+end
+
+function rectify_scaling!(E::AbstractVector{T},
+                          work::AbstractVector{T},
+                          C::CompositeConvexSet{T}) where {T}
+    @assert E.projectsto == C
+    @assert work.projectsto == C
+    any_changed = false
+    for i = eachindex(C.sets)
+        any_changed |= rectify_scaling!(E.views[i],work.views[i],C.sets[i])
+    end
+    return any_changed
 end
 
 #-------------------------
@@ -254,7 +274,7 @@ end
 #    print(io, typeof(C), " in dimension '", A.dim, "'")
 # end
 
-Base.eltype(::AbstractConvexSet{T}) where{T} = T
+eltype(::AbstractConvexSet{T}) where{T} = T
 num_subsets(C::AbstractConvexSet)  = 1
 num_subsets(C::CompositeConvexSet) = length(C.sets)
 
@@ -263,3 +283,9 @@ function getsubset(C::AbstractConvexSet,idx::Int)
     return C
 end
 getsubset(C::CompositeConvexSet,idx::Int) = C.sets[idx]
+
+function rectify_scalar_scaling!(E,work)
+    tmp = mean(E)
+    work .= tmp./E
+    return true
+end

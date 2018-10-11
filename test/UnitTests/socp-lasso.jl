@@ -35,9 +35,9 @@ b3 = zeros(m+2)
 q = vec([1;zeros(n);μ*ones(n,1);zeros(m+2,1)])
 P = spzeros(length(q),length(q))
 
-cs1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
-cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives())
-cs3 = COSMO.Constraint(A3,b3,COSMO.SecondOrderCone())
+cs1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
+cs3 = COSMO.Constraint(A3,b3,COSMO.SecondOrderCone)
 
 
 settings = COSMO.Settings()

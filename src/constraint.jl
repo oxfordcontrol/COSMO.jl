@@ -8,7 +8,7 @@ By default the following convex sets are supported: `Zeros`, `Nonnegatives`, `Se
 
 # Examples
 ```jldoctest
-julia> Constraint([1 0;0 1],zeros(2),COSMO.PositiveSemidefiniteCone())
+julia> Constraint([1 0;0 1],zeros(2),COSMO.PsdCone)
 Constraint
 Size of A: (2, 2)
 ConvexSet: COSMO.PositiveSemidefiniteCone
@@ -21,7 +21,7 @@ then x[2] and x[3] can be constrained to the zero cone in the following way:
 
 # Examples
 ```jldoctest
-julia> c = Constraint([1 0;0 1],zeros(2),COSMO.Zeros(),4,2:3)
+julia> c = Constraint([1 0;0 1],zeros(2),COSMO.ZeroSet,4,2:3)
 Constraint
 Size of A: (2, 4)
 ConvexSet: COSMO.Zeros
@@ -43,10 +43,9 @@ struct Constraint{T <: AbstractFloat}
     function Constraint{T}(
         A::AbstractMatrix{T},
         b::AbstractVector{T},
-        settype::Type,
+        settype::Type{<:AbstractConvexSet},
+        dim::Integer=0,
         indices::UnitRange=0:0) where{T}
-
-        settype <: AbstractConvexSet && error("AbstractConvexSet type must be specified")
 
         size(A,1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
         size(b,2) != 1 && throw(DimensionMismatch("Input b must be a vector or a scalar."))
@@ -66,29 +65,49 @@ struct Constraint{T <: AbstractFloat}
         convexSet = settype{T}(dim)
         new(A,b,convexSet)
     end
-
-    function Constraint{T}(
-        A::T,b::T,
-        settype::Type,
-        indices::UnitRange=0:0) where{T}
-
-        Aarr = zeros(1,1)
-        Aarr[1] = A
-        bvec = [b]::Vector
-        Constraint(Aarr,bvec,settype,indices)
-    end
-
-    Constraint{T}(A::AbstractMatrix{T},
-                  b::AbstractMatrix{T},
-                  settype,
-                  indices::UnitRange=0:0) where {T} = Constraint{T}(A,vec(b),settype,indices)
-
-    Constraint{T}(A::AbstractMatrix{T},b::T,settype,indices::UnitRange=0:0) where{T} = Constraint{T}(A,[b],settype,indices)
-
-    #default all contructors to the default float type
-    Constraint(args...) = Constraint{DefaultFloat}(args...)
-
 end
+
+#We always choose to internally convert whatever datatype
+#we are given to a floating point type either specified by
+#the user or to DefaultFloat
+Constraint(args...) = Constraint{DefaultFloat}(args...)
+
+function Constraint{T}(A::AbstractMatrix,b::AbstractVector,
+                       settype,
+                       dim::Integer=0,
+                       indices::UnitRange=0:0) where{T}
+    Constraint{T}(AbstractMatrix{T}(A),AbstractVector{T}(b),settype,dim,indices)
+end
+
+#all others convert first o matrix / vector args
+function Constraint{T}(A::Real,b::Real,
+                       settype,
+                       dim::Integer=0,
+                       indices::UnitRange=0:0) where{T}
+    Constraint{T}(reshape([A],1,1),[b],settype,dim,indices)
+end
+
+function Constraint{T}(A::AbstractMatrix,
+                       b::AbstractMatrix,
+                       settype,
+                       dim::Integer=0,
+                       indices::UnitRange=0:0) where {T}
+
+     Constraint{T}(A,vec(b),settype,dim,indices)
+ end
+
+
+function Constraint{T}(A::Union{AbstractVector,AbstractMatrix},
+                       b::Real,
+                       settype,
+                       dim::Integer=0,
+                       indices::UnitRange=0:0) where{T}
+    Constraint{T}(reshape(A,1,length(A)),[b],settype,dim,indices)
+end
+
+
+
+
 
 function Base.show(io::IO, obj::COSMO.Constraint)
     print(io,"Constraint\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convexSet))")

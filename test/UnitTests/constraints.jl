@@ -26,12 +26,12 @@ b_mat = sparse(rand(rng,10,1))
 @testset "Constraints" begin
 
   @testset "Constructors" begin
-    @test typeof(COSMO.Constraint(A_int,b_int,COSMO.Zeros())) == COSMO.Constraint
-    @test typeof(COSMO.Constraint(A_Float,b_Float,COSMO.Zeros())) == COSMO.Constraint
-    @test typeof(COSMO.Constraint(A_UInt,b_UInt,COSMO.Zeros())) == COSMO.Constraint
-    @test typeof(COSMO.Constraint(A_sparse,b_sparse,COSMO.Zeros())) == COSMO.Constraint
-    @test typeof(COSMO.Constraint(A_vec,b_vec,COSMO.Zeros())) == COSMO.Constraint
-    @test typeof(COSMO.Constraint(A_mat,b_mat,COSMO.Zeros())) == COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_int,b_int,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_Float,b_Float,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_UInt,b_UInt,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_sparse,b_sparse,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_vec,b_vec,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_mat,b_mat,COSMO.ZeroSet)) <: COSMO.Constraint
   end
 
   @testset "Indizes" begin
@@ -39,7 +39,7 @@ b_mat = sparse(rand(rng,10,1))
     b = rand(rng,3)
     ind = 3:5
     dim = 10
-    cs = COSMO.Constraint(A,b,COSMO.Zeros(),dim,ind)
+    cs = COSMO.Constraint(A,b,COSMO.ZeroSet,dim,ind)
 
     @test cs.A[:,ind] == A
     @test cs.b[ind] == b
@@ -53,10 +53,10 @@ b_mat = sparse(rand(rng,10,1))
     b2 = rand(rng,10)
     Am = [A1;A2]
     bm = [b1;b2]
-    c1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
-    c2 = COSMO.Constraint(A2,b2,COSMO.Zeros())
+    c1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    c2 = COSMO.Constraint(A2,b2,COSMO.ZeroSet)
     cArr = [c1;c2]
-    cm = COSMO.Constraint(Am,bm,COSMO.Zeros())
+    cm = COSMO.Constraint(Am,bm,COSMO.ZeroSet)
     COSMO.mergeConstraints!(cArr)
 
     @test cArr[1].A == cm.A
@@ -65,10 +65,10 @@ b_mat = sparse(rand(rng,10,1))
     @test typeof(cArr[1].convexSet) == typeof(cm.convexSet)
 
 
-    c1 = COSMO.Constraint(A1,b1,COSMO.Nonnegatives())
-    c2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives())
+    c1 = COSMO.Constraint(A1,b1,COSMO.Nonnegatives)
+    c2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
     cArr = [c1;c2]
-    cm = COSMO.Constraint(Am,bm,COSMO.Nonnegatives())
+    cm = COSMO.Constraint(Am,bm,COSMO.Nonnegatives)
     COSMO.mergeConstraints!(cArr)
 
     @test cArr[1].A == cm.A
@@ -83,6 +83,3 @@ b_mat = sparse(rand(rng,10,1))
 
 end
 nothing
-
-
-

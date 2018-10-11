@@ -93,7 +93,7 @@ function scaleRuiz!(ws::COSMO.Workspace,set::COSMO.Settings)
         #only rescale if the above returns true,
         #i.e. some cone scalings were rectified
         scaleData!(P,A,q,b,I,Ework,1.)
-        -         lmul!(Ework,E)
+        lmul!(Ework,E)
     end
 
     #scale set components
@@ -109,9 +109,9 @@ function scaleRuiz!(ws::COSMO.Workspace,set::COSMO.Settings)
     ws.sm.cinv[]     = 1. ./ c
 
     # scale the potentially warm started variables
-    ws.x[:] = ws.sm.Dinv * ws.x
-    ws.μ[:] = ws.sm.Einv * ws.μ
-    ws.μ  .*= c
+    ws.vars.x[:] = ws.sm.Dinv * ws.vars.x
+    ws.vars.μ[:] = ws.sm.Einv * ws.vars.μ
+    ws.vars.μ  .*= c
 
     return nothing
 end
@@ -122,7 +122,6 @@ end
 
 function rectifySetScalings!(E,Ework,C::AbstractConvexSet)
 
-    anyRectifiedBlocks  = false
     Ework.diag         .= 1.
 
     # FIX ME: split the vector Ework.diag over the sets.
@@ -130,24 +129,10 @@ function rectifySetScalings!(E,Ework,C::AbstractConvexSet)
     # splitting should happen at the time the scaling
     # structure is allocated, so that E is a Diagonal
     # of a SplitVector type.
-    esplit = SplitVector(Ework.diag,C)
-
-    # NB : we should actually provide each cone
-    # with the opportunity to provide its own
-    # (possibly non-scalar) rectification
-
-    for i = 1:num_subsets(C)
-
-        isScalar, = scale!(getsubset(C,i))
-
-        if isScalar
-            #at least one block was scalar
-            anyRectifiedBlocks = true
-            tmp = mean(esplit.views[i])
-            esplit.views[i][:] .= tmp./esplit.views[i][:]
-        end
-    end
-    return anyRectifiedBlocks
+    Es  = SplitVector(E.diag,C)
+    Ews = SplitVector(Ework.diag,C)
+    scale_changed = rectify_scaling!(Es,Ews,C)
+    return scale_changed
 end
 
 
@@ -158,18 +143,8 @@ function scaleSets!(E,C)
     # splitting should happen at the time the scaling
     # structure is allocated, so that E is a Diagonal
     # of a SplitVector type.
-    esplit = SplitVector(Ework.diag,C)
-
-    # scale set components (like u,l in a box)
-    for i = 1:num_subsets(E,C)
-        scaleInfo = set.scale!(get_subset(C,i))
-        if length(scaleInfo) > 1
-            #NB : Memory allocated here?
-            for elem in scaleInfo[2:end]
-                elem[set.indices] .*= E.diag[set.indices]
-            end
-        end
-    end
+    Es = SplitVector(E.diag,C)
+    scale!(C,Es)
 end
 
 
@@ -192,12 +167,12 @@ function reverseScaling!(ws::COSMO.Workspace)
 
     cinv = ws.sm.cinv[] #from the Base.RefValue type
 
-    ws.x[:] = ws.sm.D*ws.x
-    ws.s[:] = ws.sm.Einv*ws.s
-    ws.ν[:] = ws.sm.E*ws.ν
-    ws.μ[:] = ws.sm.E*ws.μ
-    ws.ν  .*= cinv
-    ws.μ  .*= cinv
+    ws.vars.x[:] = ws.sm.D*ws.vars.x
+    ws.vars.s[:] = ws.sm.Einv*ws.vars.s
+    ws.vars.ν[:] = ws.sm.E*ws.vars.ν
+    ws.vars.μ[:] = ws.sm.E*ws.vars.μ
+    ws.vars.ν  .*= cinv
+    ws.vars.μ  .*= cinv
 
     # reverse scaling for model data
     if ws.p.flags.REVERSE_SCALE_PROBLEM_DATA

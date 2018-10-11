@@ -25,7 +25,7 @@ nn = 1
   b = A*xtrue+strue
   b = vec(b)
 
-  constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives())
+  constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives)
 
   settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
   model = COSMO.Model()

@@ -35,10 +35,10 @@ rng = Random.MersenneTwister(1313)
     # b2 = zeros(n)
     # b3 =
     # create dual feasible problem Px+q+A'y = 0, and y in K*
-    P = Helper.generatePosDefMatrix(n,rng)
+    P = COSMOTestUtils.generatePosDefMatrix(n,rng)
     ytrue_1 = randn(rng,m1,1)*50
     ytrue_2 = rand(rng,n,1)*50
-    ytrue_3 = vec(Helper.generatePosDefMatrix(r,rng))
+    ytrue_3 = vec(COSMOTestUtils.generatePosDefMatrix(r,rng))
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 
@@ -46,9 +46,9 @@ rng = Random.MersenneTwister(1313)
     Kl = n
     Kq = []
     Ks = [r^2]
-    cs1 = COSMO.Constraint(A1,b1,COSMO.Zeros())
-    cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives())
-    cs3 = COSMO.Constraint(A3,b3,COSMO.PositiveSemidefiniteCone())
+    cs1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
+    cs3 = COSMO.Constraint(A3,b3,COSMO.PsdCone)
 
     settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
 

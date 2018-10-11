@@ -18,12 +18,12 @@ rng = Random.MersenneTwister(1313)
     b = [b;zeros(n)]
 
     # create dual feasibile problem
-    P = Helper.generatePosDefMatrix(n,rng)
+    P = COSMOTestUtils.generatePosDefMatrix(n,rng)
     ytrue = rand(rng,m+n,1)*50
     xtrue = rand(rng,n,1)*50
     q = (-P*xtrue -  A'*ytrue)[:]
 
-    constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives())
+    constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives)
     ra = 0.
 
     settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)

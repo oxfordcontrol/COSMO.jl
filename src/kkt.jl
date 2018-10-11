@@ -1,4 +1,5 @@
 function factorKKT!(ws::COSMO.Workspace,settings::COSMO.Settings)
+
     p = ws.p
     if nnz(p.P) > 0 && p.P != p.P'
         p.P = p.P ./ 2+(p.P ./ 2)'

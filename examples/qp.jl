@@ -15,7 +15,7 @@ u = [1; 0.7; 0.7]
 # Define the constraint l <= Ax <= u with the help of a Nonnegatives set
 Aa = [-A;A]
 ba = [u; -l]
-constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives())
+constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives)
 
 # define example problem
 settings = COSMO.Settings(verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)

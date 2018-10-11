@@ -1,7 +1,7 @@
 # Test file to check the projections
 # workspace()
 # include("../src/Solver.jl")
-using Test, COSMO.Helper, COSMO.Projections, LinearAlgebra, SparseArrays
+using Test, COSMOTestUtils, COSMO.Projections, LinearAlgebra, SparseArrays
 
 rng = Random.MersenneTwister(1234)
 

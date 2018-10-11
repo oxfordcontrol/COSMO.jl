@@ -5,10 +5,10 @@ const DefaultFloat = Float64
 const DefaultInt   = Int64
 
 #export MathOptInterfaceCOSMO
-export  assemble!
+export  assemble!,
+         optimize!,
+         warmStart!
 #         reset!,
-#         optimize!,
-#         warmStart!,
 #         Settings,
 #         Model,
 #         Result,
@@ -20,19 +20,16 @@ using SparseArrays,LinearAlgebra
 include("./algebra.jl")
 include("./projections.jl")
 include("./types.jl")               # some types still need tidying
-include("./settings.jl")            # unmodified - revisit
-include("./constraint.jl")          # unmodified - revisit
-include("./parameters.jl")          # unmodified - revisit
-include("./residuals.jl")           # unmodified - revisit
-include("./scaling.jl")             # set scaling / E scaling is broken
-include("./kkt.jl")                 # unmodified - revisit.  Add lin solver type
-include("./infeasibility.jl")       # unmodified - revisit.  Redundancy with composite set
-#include("./printing.jl")            # unmodified - revisit (not used or uses SEDUMI K?)
-include("./setup.jl")               # unmodified - revisit (very short - consolidate?)
-include("./solver.jl")              # unmodified - revisit
-include("./interface.jl")           # unmodified - revisit
-
-# Is this module required?
-# include("./Helper.jl")
+include("./settings.jl")            # TODO: unmodified - revisit
+include("./constraint.jl")          # TODO: unmodified - revisit
+include("./parameters.jl")          # TODO: unmodified - revisit
+include("./residuals.jl")           # TODO: unmodified - revisit
+include("./scaling.jl")             # TODO: set scaling / E scaling is broken
+include("./kkt.jl")                 # TODO: unmodified - revisit.  Add lin solver type
+include("./infeasibility.jl")       # TODO: stylistic fixes needed
+include("./printing.jl")            # TODO: unmodified - revisit
+include("./setup.jl")               # TODO: unmodified - revisit (short - consolidate?)
+include("./solver.jl")              # TODO: unmodified - revisit
+include("./interface.jl")           # TODO: unmodified - revisit
 
 end #end module

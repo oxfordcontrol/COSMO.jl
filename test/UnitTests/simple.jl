@@ -16,8 +16,8 @@ function simpleQP()
     l = [1.;0;0]
     u = [1.;0.7;0.7]
 
-    constraint1 = COSMO.Constraint(-A,u,COSMO.Nonnegatives())
-    constraint2 = COSMO.Constraint(A,-l,COSMO.Nonnegatives())
+    constraint1 = COSMO.Constraint(-A,u,COSMO.Nonnegatives)
+    constraint2 = COSMO.Constraint(A,-l,COSMO.Nonnegatives)
     constraints = [constraint1;constraint2]
     return TestProblem(P,q,constraints)
 end
@@ -39,7 +39,7 @@ end
         @test isapprox(res.objVal, 1.8800000298331538, atol=tol)
 
     end
-
+    
 
     # @testset "Update_b" begin
     #     p = simpleQP()
@@ -120,7 +120,7 @@ end
         m = 6
         x0 = res1.x + 0.01*randn(rng,n)
         y0 = res1.y + 0.01*randn(rng,m)
-        warmStart!(model,x0=x0,y0=y0)
+        COSMO.warmStart!(model,x0=x0,y0=y0)
         res2 = COSMO.optimize!(model,settings);
 
         @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter
