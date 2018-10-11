@@ -311,10 +311,6 @@ struct Constraint
     if dim != 0
       dim < 0 && error("The dimension of x has to be greater than zero.")
     end
-
-    A = convert(Matrix{Float64},A)
-    b = convert(Vector{Float64},b)
-
     if indices != 0:0
       (indices.start < 1 || indices.stop < indices.start) && error("The index range for x has to be increasing and nonnegative.")
       dim < indices.stop && error("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop).")
