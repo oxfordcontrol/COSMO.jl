@@ -12,19 +12,20 @@ end
 ZeroSet(dim) = ZeroSet{DefaultFloat}(dim)
 
 
-function project!(x::AbstractVector{T},::ZeroSet{T}) where{T}
+function project!(x::SplitView{T},::ZeroSet{T}) where{T}
     x .= zero(T)
+    return nothing
 end
 
-function indual(x::AbstractVector{T},::ZeroSet{T},tol::T) where{T}
+function indual(x::SplitView{T},::ZeroSet{T},tol::T) where{T}
     true
 end
 
-function inrecc(x::AbstractVector{T},::ZeroSet{T},tol::T) where{T}
+function inrecc(x::SplitView{T},::ZeroSet{T},tol::T) where{T}
     !any(x->(abs(x) > tol),x)
 end
 
-function scale!(::ZeroSet{T},::AbstractVector{T}) where{T}
+function scale!(::ZeroSet{T},::SplitView{T}) where{T}
     return nothing
 end
 
@@ -44,19 +45,23 @@ struct Nonnegatives{T} <: AbstractConvexCone{T}
 end
 Nonnegatives(dim) = Nonnegatives{DefaultFloat}(dim)
 
-function project!(x::AbstractVector{T},::Nonnegatives{T}) where{T}
-    @. x = max(x,zero(T))
+function project!(x::SplitView{T},C::Nonnegatives{T}) where{T}
+    z = zero(T)
+    for i = 1:length(x)
+        x[i] = x[i] < z ? z : x[i]
+    end
+    return nothing
 end
 
-function indual(x::AbstractVector{T},::Nonnegatives{T},tol::T) where{T}
+function indual(x::SplitView{T},::Nonnegatives{T},tol::T) where{T}
     !any(x->(x < -tol),x)
 end
 
-function inrecc(x::AbstractVector{T},::Nonnegatives{T},tol::T) where{T}
+function inrecc(x::SplitView{T},::Nonnegatives{T},tol::T) where{T}
     !any(x->(x > tol),x)
 end
 
-function scale!(cone::Nonnegatives{T},::AbstractVector{T}) where{T}
+function scale!(cone::Nonnegatives{T},::SplitView{T}) where{T}
     return nothing
 end
 
@@ -77,7 +82,7 @@ struct SecondOrderCone{T} <: AbstractConvexCone{T}
 end
 SecondOrderCone(dim) = SecondOrderCone{DefaultFloat}(dim)
 
-function project!(x::AbstractVector{T},::SecondOrderCone{T}) where{T}
+function project!(x::SplitView{T},::SecondOrderCone{T}) where{T}
     t = x[1]
     xt = view(x,2:length(x))
     normX = norm(xt,2)
@@ -90,18 +95,18 @@ function project!(x::AbstractVector{T},::SecondOrderCone{T}) where{T}
         #x(2:end) assigned via view
         @.xt = (normX+t)/(2*normX)*xt
     end
-    return x
+    return nothing
 end
 
-function indual(x::AbstractVector{T},::SecondOrderCone{T},tol::T) where{T}
+function indual(x::SplitView{T},::SecondOrderCone{T},tol::T) where{T}
     @views norm(x[2:end]) <= (tol + x[1]) #self dual
 end
 
-function inrecc(x::AbstractVector{T},::SecondOrderCone,tol::T) where{T}
+function inrecc(x::SplitView{T},::SecondOrderCone,tol::T) where{T}
     @views norm(x[2:end]) <= (tol - x[1]) #self dual
 end
 
-function scale!(cone::SecondOrderCone{T},::AbstractVector{T}) where{T}
+function scale!(cone::SecondOrderCone{T},::SplitView{T}) where{T}
     return nothing
 end
 
@@ -126,13 +131,13 @@ struct PsdCone{T} <: AbstractConvexCone{T}
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 
-function project!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
+function project!(x::SplitView{T},cone::PsdCone{T}) where{T}
 
     n = cone.sqrtdim
 
     # handle 1D case
-    if size(x,1) == 1
-        x = max.(x,0.)
+    if length(x) == 1
+        x = max.(x,zero(T))
     else
         # symmetrized square view of x
         X    = reshape(x,n,n)
@@ -144,22 +149,22 @@ function project!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
         rmul!(U,Diagonal(s))
         mul!(X, U, U')
     end
-    return x
+    return nothing
 end
 
-function indual(x::AbstractVector{T},cone::PsdCone{T},tol::T) where{T}
+function indual(x::SplitView{T},cone::PsdCone{T},tol::T) where{T}
     n = cone.sqrtdim
     X = reshape(x,n,n)
     return ( minimum(real(eigvals(X))) >= -tol )
 end
 
-function inrecc(x::AbstractVector{T},cone::PsdCone{T},tol::T) where{T}
+function inrecc(x::SplitView{T},cone::PsdCone{T},tol::T) where{T}
     n = cone.sqrtdim
     X = reshape(x,n,n)
     return ( maximum(real(eigvals(X))) <= +tol )
 end
 
-function scale!(cone::PsdCone{T},::AbstractVector{T}) where{T}
+function scale!(cone::PsdCone{T},::SplitView{T}) where{T}
     return nothing
 end
 
@@ -193,11 +198,12 @@ end
 Box(dim) = Box{DefaultFloat}(dim)
 Box(l,u) = Box{DefaultFloat}(l,u)
 
-function project!(x::AbstractVector{T},box::Box{T}) where{T}
+function project!(x::SplitView{T},box::Box{T}) where{T}
     @. x = clip(x,box.l,box.u)
+    return nothing
 end
 
-function indual(x::AbstractVector{T},box::Box{T},tol::T) where{T}
+function indual(x::SplitView{T},box::Box{T},tol::T) where{T}
     l = box.l
     u = box.u
     for i in eachindex(x)
@@ -208,11 +214,11 @@ function indual(x::AbstractVector{T},box::Box{T},tol::T) where{T}
     return true
 end
 
-function inrecc(x::AbstractVector{T},::Box{T},tol::T) where{T}
+function inrecc(x::SplitView{T},::Box{T},tol::T) where{T}
     true
 end
 
-function scale!(box::Box{T},e::AbstractVector{T}) where{T}
+function scale!(box::Box{T},e::SplitView{T}) where{T}
     @. box.l = box.l * e
     @. box.u = box.u * e
     return nothing
@@ -234,10 +240,13 @@ end
 CompositeConvexSet(args...) = CompositeConvexSet{DefaultFloat}(args...)
 
 function project!(x::SplitVector{T},C::CompositeConvexSet{T}) where{T}
-    # @assert x.projectsto == C
-    for i = 1:num_subsets(C)
+    # @assert x.splitby == C
+    n = num_subsets(C)
+    for i = 1:length(C.sets)
         project!(x.views[i],C.sets[i])
     end
+    #foreach(xC->project!(xC[1],xC[2]),zip(x.views,C.sets))
+    return nothing
 end
 
 function indual(x::SplitVector{T},C::CompositeConvexSet{T},tol::T) where{T}
@@ -249,17 +258,17 @@ function inrecc(x::SplitVector{T},C::CompositeConvexSet{T},tol::T) where{T}
 end
 
 function scale!(C::CompositeConvexSet{T},e::SplitVector{T}) where{T}
-    @assert e.projectsto == C
+    @assert e.splitby == C
     for i = eachindex(C.sets)
         scale!(C.sets[i],e.views[i])
     end
 end
 
-function rectify_scaling!(E::AbstractVector{T},
-                          work::AbstractVector{T},
+function rectify_scaling!(E::SplitVector{T},
+                          work::SplitVector{T},
                           C::CompositeConvexSet{T}) where {T}
-    @assert E.projectsto == C
-    @assert work.projectsto == C
+    @assert E.splitby == C
+    @assert work.splitby == C
     any_changed = false
     for i = eachindex(C.sets)
         any_changed |= rectify_scaling!(E.views[i],work.views[i],C.sets[i])
@@ -275,8 +284,8 @@ end
 # end
 
 eltype(::AbstractConvexSet{T}) where{T} = T
-num_subsets(C::AbstractConvexSet)  = 1
-num_subsets(C::CompositeConvexSet) = length(C.sets)
+num_subsets(C::AbstractConvexSet{T}) where{T}  = 1
+num_subsets(C::CompositeConvexSet{T}) where{T} = length(C.sets)
 
 function getsubset(C::AbstractConvexSet,idx::Int)
     idx == 1 || throw(DimensionMismatch("Input only has 1 subset (itself)"))

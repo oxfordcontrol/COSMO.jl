@@ -2,8 +2,6 @@
 
 using COSMO, Test, LinearAlgebra, SparseArrays, Random
 
-
-
 # generate problem data
 rng = Random.MersenneTwister(12345)
 n = 8

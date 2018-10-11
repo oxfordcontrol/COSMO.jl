@@ -113,7 +113,7 @@ mutable struct Model{T<:Real}
     q::Vector{T}
     A::AbstractMatrix{T}
     b::Vector{T}
-    C::AbstractConvexSet{T}
+    C::CompositeConvexSet{T}
     x0::Vector{T}
     y0::Vector{T}
     F #LDL Factorization
@@ -127,7 +127,7 @@ mutable struct Model{T<:Real}
         T[],                        #q
         spzeros(T,1,1),             #A
         T[],                        #b
-        ZeroSet{T}(1),              #C
+        COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)]),     #C
         T[],                        #x0
         T[],                        #y0
         nothing,                    #F

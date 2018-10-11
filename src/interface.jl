@@ -52,12 +52,8 @@ function assemble!(model::Model{T},
     rowNum += con.convexSet.dim
   end
 
-  # save the convex sets inside the model
-  if length(constraints) == 1
-      model.C = constraints[1].convexSet
-  else
-      model.C = CompositeConvexSet(map(x->x.convexSet,constraints))
-  end
+  # save the convex sets inside the model as a composite set
+  model.C = CompositeConvexSet(map(x->x.convexSet,constraints))
 
   # if user provided warm starting variables, update model
   warmStart!(model,x0 = x0,y0 = y0)

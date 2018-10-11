@@ -1,13 +1,15 @@
 using Base: @propagate_inbounds
 
+const SplitView{T} = SubArray{T,1,Vector{T},Tuple{UnitRange{Int64}},true}
+
 struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
 
     #contiguous array of source data
     data::Vector{T}
     #array of data views of type Vector{T}, with indexing of
     #each view assumed to be over a contiguous range
-    views::Array{SubArray{T,1,Vector{T},Tuple{UnitRange{Int64}},true}}
-    projectsto::AbstractConvexSet{T}   #sets that generated the views
+    views::Vector{SplitView{T}}
+    splitby::AbstractConvexSet{T}   #sets that generated the views
 
     #constructor (composite set)
     function SplitVector{T}(x::Vector{T},C::CompositeConvexSet{T}) where{T}
@@ -20,8 +22,7 @@ struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
         #of a view is convoluted, so just make one
         #and test it directly.  Use 'similar' in case x
         #is length zero for some reason
-        vtype = typeof(view(similar(x,1),1:1))
-        views = Array{vtype}(undef,num_subsets(C))
+        views = Vector{SplitView{T}}(undef,num_subsets(C))
 
         # loop over the sets and create views
         sidx = 0

@@ -70,7 +70,7 @@ settings = COSMO.Settings()
 model = COSMO.Model()
 assemble!(model,P,q,constraints)
 
-res = COSMO.optimize!(model,settings);
+res = COSMO.optimize!(model,settings)
 
 Xsol = reshape(res.x,n,n)
 

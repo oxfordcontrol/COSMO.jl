@@ -1,5 +1,4 @@
-
-function admmStep!(x::Vector{Float64}, s::SplitVector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,set::AbstractConvexSet,projTime::Float64)
+function admmStep!(x::Vector{Float64}, s::SplitVector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,set::CompositeConvexSet{Float64},projTime::Float64)
   #linear solve
   @. ls[1:n] = σ*x-q
   @. ls[(n+1):end] = b-s+μ/ρ
@@ -12,7 +11,7 @@ function admmStep!(x::Vector{Float64}, s::SplitVector{Float64}, μ::Vector{Float
   @. s_tl = s - (ν+μ)./ρ
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ./ρ
-  # Project onto cone K
+  # Project onto cone
   pTime = @elapsed project!(s, set)
   projTime += pTime
   # update dual variable μ
@@ -174,7 +173,9 @@ end
     resinfo = COSMO.ResultInfo(r_prim,r_dual)
     y = -ws.vars.μ
 
-    return result = COSMO.Result(ws.vars.x,y,ws.vars.s,cost,numIter,status,resinfo,ws.times);
+    result = COSMO.Result(ws.vars.x,y,ws.vars.s,cost,numIter,status,resinfo,ws.times)
+
+    return result
 
 
   end

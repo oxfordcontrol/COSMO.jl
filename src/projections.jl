@@ -15,7 +15,7 @@ abstract type AbstractConvexCone{T} <: AbstractConvexSet{T} end
 
 struct CompositeConvexSet{T} <:AbstractConvexSet{T}
     dim::Int
-    sets::Vector{AbstractConvexSet{T}}
+    sets::Vector{AbstractConvexSet}
     function CompositeConvexSet{T}(sets::Vector{<:AbstractConvexSet{T}}) where{T}
         # do not allow nesting of composite sets
         if any(set->isa(set,CompositeConvexSet),sets)
