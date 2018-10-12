@@ -4,8 +4,8 @@ function admmStep!(x::Vector{Float64}, s::SplitVector{Float64}, μ::Vector{Float
   @. ls[(n+1):end] = b-s+μ/ρ
   sol = F \ ls
   # deconstruct solution vector ls = [x_tl(n+1);ν(n+1)]
-  @. x_tl = sol[1:n]
-  @. ν = sol[n+1:end]
+  @views x_tl .= sol[1:n]
+  @views ν    .= sol[n+1:end]
   # Over relaxation
   @. x = α*x_tl + (1.0-α)*x
   @. s_tl = s - (ν+μ)./ρ
