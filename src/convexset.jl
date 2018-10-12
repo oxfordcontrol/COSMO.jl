@@ -241,11 +241,7 @@ CompositeConvexSet(args...) = CompositeConvexSet{DefaultFloat}(args...)
 
 function project!(x::SplitVector{T},C::CompositeConvexSet{T}) where{T}
     # @assert x.splitby == C
-    n = num_subsets(C)
-    for i = 1:length(C.sets)
-        project!(x.views[i],C.sets[i])
-    end
-    #foreach(xC->project!(xC[1],xC[2]),zip(x.views,C.sets))
+    foreach(xC->project!(xC[1],xC[2]),zip(x.views,C.sets))
     return nothing
 end
 
