@@ -39,8 +39,11 @@ function admmStep!(x::Vector{Float64},
   return pTime
 end
 
-
-
+function createViews!(views::Array{SubArray,1},s::Vector{Float64},convexSets::Array{AbstractConvexSet,1})
+  for (i,cs) in enumerate(convexSets)
+    views[i] = view(s,cs.indices)
+  end
+end
 # SOLVER ROUTINE
 # -------------------------------------
 
@@ -66,7 +69,6 @@ end
     ws.times.projTime  = 0. #reset projection time
 
     # instantiate variables
-    projTime = 0.
     numIter = 0
     status = :Unsolved
     cost = Inf
