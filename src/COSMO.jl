@@ -1,21 +1,18 @@
 #__precompile__()
 module COSMO
 
-const DefaultFloat = Float64
-const DefaultInt   = Int64
+using SparseArrays,LinearAlgebra, SuiteSparse
 
 #export MathOptInterfaceCOSMO
 export  assemble!,
-         optimize!,
-         warmStart!
-#         reset!,
-#         Settings,
-#         Model,
-#         Result,
-#         Constraint,
-#         AbstractConvexSet
+        optimize!,
+        warmStart!,
+        reset!
 
-using SparseArrays,LinearAlgebra
+const DefaultFloat = Float64
+const DefaultInt   = Int64
+
+
 
 include("./algebra.jl")
 include("./projections.jl")

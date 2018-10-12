@@ -14,15 +14,15 @@ end
 
 function maxResComponentNorm(ws::COSMO.Workspace,settings::COSMO.Settings, IGNORESCALING_FLAG::Bool=false)
     if (settings.scaling != 0 && !IGNORESCALING_FLAG)
-        maxNormPrim = max.(norm(ws.sm.Einv*ws.p.A*ws.vars.x,Inf),  norm(ws.sm.Einv*ws.vars.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
-        maxNormDual = max.(norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.P*ws.vars.x,Inf), norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.q,Inf), norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.A'*ws.vars.μ,Inf) )
-    end
-    if (settings.scaling == 0 || IGNORESCALING_FLAG)
-        maxNormPrim = max.(norm(ws.p.A*ws.vars.x,Inf),norm(ws.vars.s,Inf), norm(ws.p.b,Inf))
-        maxNormDual = max.(norm(ws.p.P*ws.vars.x,Inf), norm(ws.p.q,Inf),norm(ws.p.A'*ws.vars.μ,Inf) )
-    end
-    return maxNormPrim, maxNormDual
-end
+       maxNormPrim = max.(norm(ws.sm.Einv*(ws.p.A*ws.vars.x),Inf),  norm(ws.sm.Einv*ws.vars.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
+       maxNormDual = max.(norm(ws.sm.cinv.*(ws.sm.Dinv*(ws.p.P*ws.vars.x)),Inf), norm(ws.sm.cinv.*(ws.sm.Dinv*ws.p.q),Inf), norm(ws.sm.cinv.*(ws.sm.Dinv*(ws.p.A'*ws.vars.μ)),Inf) )
+     end
+     if (settings.scaling == 0 || IGNORESCALING_FLAG)
+       maxNormPrim = max.(norm(ws.p.A*ws.vars.x,Inf),norm(ws.vars.s,Inf), norm(ws.p.b,Inf))
+       maxNormDual = max.(norm(ws.p.P*ws.vars.x,Inf), norm(ws.p.q,Inf),norm(ws.p.A'*ws.vars.μ,Inf) )
+     end
+     return maxNormPrim, maxNormDual
+   end
 
 function hasConverged(ws::COSMO.Workspace,settings::COSMO.Settings,r_prim::Float64,r_dual::Float64)
     maxNormPrim, maxNormDual = maxResComponentNorm(ws,settings)

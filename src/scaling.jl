@@ -169,9 +169,7 @@ function reverseScaling!(ws::COSMO.Workspace)
 
     ws.vars.x[:] = ws.sm.D*ws.vars.x
     ws.vars.s[:] = ws.sm.Einv*ws.vars.s
-    ws.vars.ν[:] = ws.sm.E*ws.vars.ν
     ws.vars.μ[:] = ws.sm.E*ws.vars.μ
-    ws.vars.ν  .*= cinv
     ws.vars.μ  .*= cinv
 
     # reverse scaling for model data

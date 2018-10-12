@@ -1,24 +1,8 @@
 using Printf
 
 function printHeader(ws::COSMO.Workspace,settings::COSMO.Settings)
-    n = ws.p.n
-    m = ws.p.m
-    K = ws.p.K
-    numSOC = numSOCBlk = numSDP = numSDPBlk = 0
-    if length(K.q) > 0
-        numSOC = sum(K.q)
-        numSOCBlk = length(K.q)
-    else
-        numSOC = 0
-        numSOCBlk = 0
-    end
-    if length(K.s) > 0
-        numSDP = sum(K.s)
-        numSDPBlk = length(K.s)
-    else
-        numSDP = 0
-        numSDPBlk = 0
-    end
+
+    m, n = ws.p.model_size
 
     settings.scaling > 0 ? scalingStatus = "on" : scalingStatus = "off"
     nnzInP = count(!iszero,ws.p.P) - count(!iszero,diag(ws.p.P)) + n

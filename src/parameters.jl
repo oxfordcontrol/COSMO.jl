@@ -1,10 +1,10 @@
 # set initial values of rhoVec
 function setRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
-    p = ws.p
+    m = ws.p.model_size[1]
     # nEQ = p.K.f
     # nINEQ = p.m - p.K.f
     ws.ρ = settings.rho
-    ws.ρVec = ws.ρ*ones(p.m) #[1e3*ws.ρ*ones(nEQ);ws.ρ*ones(nINEQ)]
+    ws.ρVec = ws.ρ*ones(m) #[1e3*ws.ρ*ones(nEQ);ws.ρ*ones(nINEQ)]
     push!(ws.Info.rho_updates,ws.ρ)
     return nothing
 end
@@ -31,13 +31,6 @@ function adaptRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
 end
 
 function updateRhoVec!(newRho::Float64,ws::COSMO.Workspace,settings::COSMO.Settings)
-    p = ws.p
-
-    # FIX ME : We don't use K anymore, but it's also unclear
-    # how the EQ and INEQ values should be used for general
-    # conic programs
-    #nEQ = p.K.f
-    #nINEQ = p.m - p.K.f
 
     ws.ρ     = newRho
     ws.ρVec .= newRho #[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]

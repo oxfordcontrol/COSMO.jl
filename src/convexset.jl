@@ -46,7 +46,7 @@ end
 Nonnegatives(dim) = Nonnegatives{DefaultFloat}(dim)
 
 function project!(x::SplitView{T},C::Nonnegatives{T}) where{T}
-    @. x = max(x,zero(T))
+    x .= max.(x,zero(T))
     return nothing
 end
 

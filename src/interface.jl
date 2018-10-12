@@ -36,8 +36,8 @@ function assemble!(model::Model{T},
   n = length(q)
   m = sum(map(x->x.dim,map(x->x.convexSet,constraints)))
 
-  model.m = m
-  model.n = n
+  model.model_size = [m;n]
+
   model.A = spzeros(Float64,m,n)
   model.b = spzeros(Float64,m)
 
@@ -126,8 +126,7 @@ function set!(model::COSMO.Model,
   model.q = q
   model.A = A
   model.b = b
-  model.m = length(b)
-  model.n = length(q)
+  model.model_size = [length(b);length(q)]
   model.C = CompositeConvexSet(convexSets)
   nothing
 end

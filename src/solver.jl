@@ -1,22 +1,42 @@
-function admmStep!(x::Vector{Float64}, s::SplitVector{Float64}, μ::Vector{Float64}, ν::Vector{Float64}, x_tl::Vector{Float64}, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,set::CompositeConvexSet{Float64},projTime::Float64)
+const LinsolveSubarray = SubArray{Float64,1,Vector{Float64},Tuple{UnitRange{Int64}},true}
+
+function admmStep!(x::Vector{Float64},
+                   s::SplitVector{Float64},
+                   μ::Vector{Float64},
+                   ν::LinsolveSubarray,
+                   x_tl::LinsolveSubarray,
+                   s_tl::Vector{Float64},
+                   ls::Vector{Float64},
+                   sol::Vector{Float64},
+                   F,
+                   q::Vector{Float64},
+                   b::Vector{Float64},
+                   ρ::Vector{Float64},
+                   α::Float64,
+                   σ::Float64,
+                   m::Int64,
+                   n::Int64,
+                   set::CompositeConvexSet{Float64})
+
   #linear solve
+  # Create right hand side for linear system
+  # deconstructed solution vector is ls = [x_tl(n+1);ν(n+1)]
+  # x_tl and ν are automatically updated, since they are views on sol
   @. ls[1:n] = σ*x-q
   @. ls[(n+1):end] = b-s+μ/ρ
-  sol = F \ ls
-  # deconstruct solution vector ls = [x_tl(n+1);ν(n+1)]
-  @views x_tl .= sol[1:n]
-  @views ν    .= sol[n+1:end]
+  sol .= F \ ls
+
   # Over relaxation
   @. x = α*x_tl + (1.0-α)*x
-  @. s_tl = s - (ν+μ)./ρ
+  @. s_tl = s - (ν+μ)/ρ
   @. s_tl = α*s_tl + (1.0-α)*s
-  @. s = s_tl + μ./ρ
+  @. s = s_tl + μ/ρ
+
   # Project onto cone
   pTime = @elapsed project!(s, set)
-  projTime += pTime
   # update dual variable μ
   @. μ = μ + ρ.*(s_tl - s)
-  nothing
+  return pTime
 end
 
 
@@ -36,13 +56,14 @@ end
     # create scaling variables
     # with scaling    -> uses mutable diagonal scaling matrices
     # without scaling -> uses identity matrices
-    sm = (settings.scaling > 0) ? ScaleMatrices(model.m,model.n) : ScaleMatrices()
+    sm = (settings.scaling > 0) ? ScaleMatrices(model.model_size[1],model.model_size[2]) : ScaleMatrices()
 
     # create workspace
     ws = Workspace(model,sm)
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     ws.times.setupTime = @elapsed setup!(ws,settings);
+    ws.times.projTime  = 0. #reset projection time
 
     # instantiate variables
     projTime = 0.
@@ -57,29 +78,33 @@ end
     settings.verbose && printHeader(ws,settings)
 
     timeLimit_start = time()
+
     #preallocate arrays
-    n = ws.p.n
-    m = ws.p.m
+    m,n = ws.p.model_size
     δx = zeros(n)
     δy =  zeros(m)
-    x_tl = zeros(n) # i.e. xTilde
     s_tl = zeros(m) # i.e. sTilde
+
     ls = zeros(n + m)
     sol = zeros(n + m)
+    x_tl = view(sol,1:n) # i.e. xTilde
+    ν = view(sol,(n+1):(n+m))
 
     settings.verbose_timing && (iter_start = time())
 
     for iter = 1:settings.max_iter
+
       numIter+= 1
+
       @. δx = ws.vars.x
       @. δy = ws.vars.μ
-      admmStep!(
-        ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.ν,
-        x_tl, s_tl, ls,sol,
+
+      ws.times.projTime += admmStep!(
+        ws.vars.x, ws.vars.s, ws.vars.μ, ν,
+        x_tl, s_tl, ls, sol,
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n, ws.p.C,ws.times.projTime
-      );
+        m, n, ws.p.C);
 
       # compute deltas for infeasibility detection
       @. δx = ws.vars.x - δx
@@ -116,7 +141,6 @@ end
             cost = Inf
             ws.vars.x .= NaN
             ws.vars.μ .= NaN
-            ws.vars.ν .= NaN
             break
         end
 
@@ -125,7 +149,6 @@ end
             cost = -Inf
             ws.vars.x .= NaN
             ws.vars.μ .= NaN
-            ws.vars.ν .= NaN
             break
         end
       end
@@ -161,21 +184,16 @@ end
 
 
     # print solution to screen
-    settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
-
-
-    ws.times.projTime = projTime
     ws.times.solverTime = time() - solverTime_start
     settings.verbose_timing && (ws.times.postTime = time()-ws.times.postTime)
+    settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
     # create result object
-    resinfo = COSMO.ResultInfo(r_prim,r_dual)
+    resinfo = ResultInfo(r_prim,r_dual)
     y = -ws.vars.μ
 
-    result = COSMO.Result(ws.vars.x,y,ws.vars.s,cost,numIter,status,resinfo,ws.times)
-
-    return result
+    return result = Result(ws.vars.x,y,ws.vars.s,cost,numIter,status,resinfo,ws.times);
 
 
   end

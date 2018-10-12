@@ -116,9 +116,8 @@ mutable struct Model{T<:Real}
     C::CompositeConvexSet{T}
     x0::Vector{T}
     y0::Vector{T}
-    F #LDL Factorization
-    m::Integer
-    n::Integer
+    model_size::Array{Integer,1}
+    F::SuiteSparse.CHOLMOD.Factor{T}
     flags::Flags
 
     function Model{T}() where{T}
@@ -130,9 +129,8 @@ mutable struct Model{T<:Real}
         COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)]),     #C
         T[],                        #x0
         T[],                        #y0
-        nothing,                    #F
-        0,                          #m
-        0,                          #n
+        [0;0],                      #model size
+        ldlt(sparse(1.0I,1,1)),     #F
         Flags())                    #Flags
     end
 end
@@ -146,7 +144,6 @@ Model(args...) = Model{DefaultFloat}(args...)
 struct Variables{T}
     x::Vector{T}
     s::SplitVector{T}
-    ν::Vector{T}
     μ::Vector{T}
 
     function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where{T}
@@ -154,8 +151,7 @@ struct Variables{T}
         x = zeros(T,n)
         s = SplitVector(zeros(T,m),C)
         μ = zeros(T,m)
-        ν = zeros(T,m)
-        new(x,s,μ,ν)
+        new(x,s,μ)
     end
 end
 
@@ -176,11 +172,12 @@ mutable struct Workspace{T}
     times::ResultTimes{Float64} #Always 64 bit regardless of data type?
     #constructor
     function Workspace{T}(p::COSMO.Model{T},sm::ScaleMatrices{T}) where{T}
-        vars = Variables{T}(p.m,p.n,p.C)
+        m, n  = p.model_size
+        vars = Variables{T}(m,n,p.C)
         ws = new(p,sm,vars,zero(T),T[],Info([zero(T)]),ResultTimes())
         # hand over warm starting variables
-        length(p.x0) == p.n && (ws.vars.x[:] = p.x0[:])
-        length(p.y0) == p.m && (ws.vars.μ[:] = -p.y0[:])
+        length(p.x0) == n && (ws.vars.x[:] = p.x0[:])
+        length(p.y0) == m && (ws.vars.μ[:] = -p.y0[:])
         return ws
     end
 end
