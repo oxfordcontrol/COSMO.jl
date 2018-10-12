@@ -134,7 +134,7 @@ export scaleRuiz!,reverseScaling!
       # (possibly non-scalar) rectification
 
       for set in sets
-          isScalar, = set.scale!(set)
+          isScalar, = QOCS.scale!(set)
 
           @views if isScalar
               #at least one block was scalar
@@ -151,7 +151,7 @@ export scaleRuiz!,reverseScaling!
 
       # scale set components (like u,l in a box)
       for set in sets
-          scaleInfo = set.scale!(set)
+          scaleInfo = QOCS.scale!(set)
           if length(scaleInfo) > 1
               #NB : Memory allocated here?
               for elem in scaleInfo[2:end]

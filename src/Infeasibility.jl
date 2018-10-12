@@ -8,7 +8,7 @@ export isPrimalInfeasible, isDualInfeasible
   function inDual(x,convexSets,tol)
     for convexSet in convexSets
       xpart = view(x,convexSet.indices)
-      if !convexSet.inDual(xpart,convexSet,tol)
+      if !QOCS.inDual(xpart,convexSet,tol)
         return false
       end
     end
@@ -29,7 +29,7 @@ export isPrimalInfeasible, isDualInfeasible
      convexSets = ws.p.convexSets
      for convexSet in convexSets
         A_δxpart = view(A_δx,convexSet.indices)
-        if !convexSet.inRecc(A_δxpart,convexSet,settings.eps_dual_inf)
+        if !QOCS.inRecc(A_δxpart,convexSet,settings.eps_dual_inf)
           return false
         end
       end

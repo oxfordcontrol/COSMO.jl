@@ -1,35 +1,32 @@
 module Projections
 
 using ..QOCS, LinearAlgebra
-export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcone!, projectCompositeCone!
+export project!, projectCompositeCone!
 
 # -------------------------------------
 # Standard Projection Functions
 # -------------------------------------
 
-    function projectCompositeCone!(x::Vector{Float64},convexSets::Array{AbstractConvexSet})
-
-      for convexSet in convexSets
-        xpart = view(x,convexSet.indices)
-        convexSet.project!(xpart,convexSet)
+    function projectCompositeCone!(s_views::Vector{SubArray},convexSets::Array{AbstractConvexSet})
+      for (i,convexSet) in enumerate(convexSets)
+        project!(s_views[i],convexSet)
       end
-      return x
     end
 
 
     # projection onto nonegative orthant R_+^n
-    function nonNegativeOrthant!(x::SubArray{T},convexSet::QOCS.Nonnegatives) where{T}
+    function project!(x::SubArray{T},convexSet::QOCS.Nonnegatives) where{T}
       @.x = max(x,zero(T))
     end
 
     # projection onto zero cone
-    function zeroCone!(x::SubArray{T},convexSet::QOCS.Zeros) where{T}
+    function project!(x::SubArray{T},convexSet::QOCS.Zeros) where{T}
       x .= zero(T)
     end
 
 
     # compute projection of x onto a box defined by l and u
-    function box!(x::SubArray{Float64},convexSet::QOCS.Box)
+    function project!(x::SubArray{Float64},convexSet::QOCS.Box)
       l  = convexSet.l
       u  = convexSet.u
       x .= clip.(x,l,u)
@@ -37,7 +34,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
 
 
     # projection onto second-order-cone {(t,x) | ||x||_2 <= t}
-    function secondOrderCone!(x::SubArray{Float64},convexSet::QOCS.SecondOrderCone)
+    function project!(x::SubArray{Float64},convexSet::QOCS.SecondOrderCone)
       t = x[1]
       xt = view(x,2:length(x))
 
@@ -55,7 +52,7 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     end
 
   # compute projection of X=mat(x) onto the positive semidefinite cone
-   function sdcone!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
+   function project!(x::SubArray{Float64},convexSet::QOCS.PositiveSemidefiniteCone)
 
     n = Int(sqrt(length(x)))
 

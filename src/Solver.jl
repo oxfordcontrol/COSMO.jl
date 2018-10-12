@@ -1,7 +1,7 @@
 
 
 
-function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::SubArray, x_tl::SubArray, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet})
+function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::SubArray, x_tl::SubArray, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},s_views::Array{SubArray})
   # Create right hand side for linear system
    @. ls[1:n] = σ*x-q
    @. ls[(n+1):end] = b-s+μ/ρ
@@ -15,14 +15,17 @@ function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, 
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ/ρ
   # Project onto cone K
-  pTime = @elapsed Projections.projectCompositeCone!(s, convexSets)
+  pTime = @elapsed Projections.projectCompositeCone!(s_views,convexSets)
   # update dual variable μ
   @. μ = μ + ρ*(s_tl - s)
   return pTime
 end
 
-
-
+function createViews!(views::Array{SubArray,1},s::Vector{Float64},convexSets::Array{AbstractConvexSet,1})
+  for (i,cs) in enumerate(convexSets)
+    views[i] = view(s,cs.indices)
+  end
+end
 # SOLVER ROUTINE
 # -------------------------------------
 
@@ -58,6 +61,7 @@ end
     settings.verbose && printHeader(ws,settings)
 
     timeLimit_start = time()
+
     #preallocate arrays
     m,n = ws.p.model_size
     δx = zeros(n)
@@ -67,6 +71,10 @@ end
     sol = zeros(n + m)
     x_tl = view(sol,1:n) # i.e. xTilde
     ν = view(sol,(n+1):(n+m))
+
+    # create views on s
+    s_views = Array{SubArray,1}(undef,length(ws.p.convexSets))
+    createViews!(s_views,ws.s,ws.p.convexSets)
 
     settings.verbose_timing && (iter_start = time())
 
@@ -79,7 +87,7 @@ end
         x_tl, s_tl, ls,sol,
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n, ws.p.convexSets);
+        m, n, ws.p.convexSets,s_views);
 
       # compute deltas for infeasibility detection
       @. δx = ws.x - δx
