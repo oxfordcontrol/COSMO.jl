@@ -2,6 +2,7 @@ module Projections
 
 using ..QOCS, LinearAlgebra
 export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcone!, projectCompositeCone!
+using Arpack
 
 # -------------------------------------
 # Standard Projection Functions
@@ -88,33 +89,55 @@ export nonNegativeOrthant!, zeroCone!,  freeCone!, box!, secondOrderCone!, sdcon
     if m < 0 || m > n/2  # should be m >= n/k where k is number of lanczos steps
       # First iteration
       E = eigen(X)
-      if sum(E.values .> 0.0) >= sum(E.values .< 0.0)
+      V = E.vectors; λ = E.values;
+      if sum(E.values .> 0.0) <= sum(E.values .< 0.0)
         convexSet.positive_subspace = true
+        subspace_ind = λ .> 0
       else
         convexSet.positive_subspace = false
+        subspace_ind = λ .< 0
       end
-      ind = findall(x-> x>0, E.values)
-      Z = E.vectors[:, ind]*Diagonal(E.values[ind])
-      Xp = Z*E.vectors[:,ind]'
+      Z = V[:, subspace_ind]
+      ind = λ .> 0
+      Xp = V[:, ind]*(λ[ind].*V[:, ind]')
     else
       z = view(convexSet.subspace, 1:m*n)
       Z = reshape(z, n, m)
       if !convexSet.positive_subspace
         X .= -X;
       end
-      # Just two steps of block-Lanczos
+      # Just one step of block-Lanczos
       Q = Array(qr([Z X*Z]).Q)
       QXQ = Q'*X*Q; QXQ = (QXQ+QXQ')/2;
       E = eigen(QXQ);
-      ind = findall(x-> x>0, E.values)
-      Z = Q*E.vectors[:, max(minimum(ind.-2),1):maximum(ind)]
+      l = E.values; V = E.vectors;
+      # Sort eigenvalues-vectors
+      sorted_idx = sortperm(l)
+      l .= l[sorted_idx]; V .= V[:, sorted_idx];
 
-      Xp = Q*E.vectors*max.(Diagonal(E.values),0)*E.vectors'*Q';
-      Xp = (Xp+Xp')/2;
+      # Subspace to be used by next iterations
+      idx = findfirst(l .> 0)
+      Z = Q*V[:, max(idx-2,1):end]
 
+      # Rayleigh values and vectors
+      l_ = view(l, idx:length(l)); V_ = Q*view(V, :, idx:length(l))
+
+      # Calculate projection error
+      Xp = V_*(l_.*V_');
       if !convexSet.positive_subspace
           Xp .= -X .+ Xp;
       end
+
+      # Calculate projection error
+      P = I - V_*V_' # ToDo: Don't form the matrix
+      λ_rem_max = eigs(Symmetric(P*X*P'), nev=1, ritzvec=false, which=:LR, tol=1e-4)[1]
+      # λ_rem_max = sort(eigvals(Symmetric(P*X*P')))[end]
+
+      projection_error = sqrt(
+        2*norm(X*V_ - V_.*l_', 2)^2 +
+        (n-size(V_, 2))*max(λ_rem_max[1], 0)^2
+      )
+      @show projection_error
     end
     x[:] = vec(Xp)
     convexSet.subspace_dimension = size(Z)[2]
