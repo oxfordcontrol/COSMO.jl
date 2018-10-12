@@ -73,9 +73,9 @@ using Arpack
       # compute eigenvalue decomposition
       # then round eigs up and rebuild
       s,U  = eigen!(X)
-      floorsqrt!(s,0.)
-      rmul!(U,Diagonal(s))
-      mul!(X, U, U')
+      ind = s .> 0
+      Z = U[:, ind]*Diagonal(s[ind])
+      X .= Z*U[:,ind]'
     end
     nothing
   end
