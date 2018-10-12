@@ -4,18 +4,20 @@ export factorKKT!
 
   function factorKKT!(ws::QOCS.Workspace,settings::QOCS.Settings)
      p = ws.p
-     if nnz(p.P) > 0 && p.P != p.P'
-      p.P = p.P ./ 2+(p.P ./ 2)'
+    if length(p.M) <= 1
+      At = SparseMatrixCSC(p.A')
+      p.M = [p.P+settings.sigma*I At; p.A -I]
     end
-    # KKT matrix M
-    M = [p.P+settings.sigma*sparse(1.0I,p.n,p.n) p.A';p.A -sparse(Diagonal(1 ./ws.ρVec))]
+    @inbounds @simd for i = (p.n + 1):(p.n + p.m)
+      p.M[i, i] = -1.0/ws.ρVec[i - ws.p.n]
+    end
     # Do LDLT Factorization: A = LDL^T
     #try
     if settings.verbose_timing
-      ws.times.factorTime += @elapsed ws.p.F = ldlt(M)
+      ws.times.factorTime += @elapsed ws.p.F = ldlt(p.M)
       @show ws.times.factorTime
     else
-      ws.p.F = ldlt(M)
+      ws.p.F = ldlt(p.M)
     end
     #catch
     #  warn("Problems performing the LDLT facorization. Matrix has one or more zero pivots. Reusing previous step matrix.")

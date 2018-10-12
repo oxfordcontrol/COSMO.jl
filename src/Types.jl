@@ -154,10 +154,11 @@ mutable struct Model
     m::Int64
     n::Int64
     F #LDL Factorization
+    M::SparseMatrixCSC{Float64,Int64}
     flags::QOCS.Flags
 
     function Model()
-        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],0,0,0,Flags())
+        return new(spzeros(Float64,1,1), Float64[], spzeros(Float64,1,1),Float64[],AbstractConvexSet[],Cone(),Float64[],Float64[],0,0,0,spzeros(Float64,1,1),Flags())
     end
 end
 
@@ -315,8 +316,8 @@ struct Constraint
       dim < 0 && error("The dimension of x has to be greater than zero.")
     end
 
-    A = convert(Matrix{Float64},A)
-    b = convert(Vector{Float64},b)
+    # A = convert(Matrix{Float64},A)
+    # b = convert(Vector{Float64},b)
 
     if indices != 0:0
       (indices.start < 1 || indices.stop < indices.start) && error("The index range for x has to be increasing and nonnegative.")

@@ -18,8 +18,9 @@ module Residuals
 
   function maxResComponentNorm(ws::QOCS.Workspace,settings::QOCS.Settings, IGNORESCALING_FLAG::Bool=false)
     if (settings.scaling != 0 && !IGNORESCALING_FLAG)
-      maxNormPrim = max.(norm(ws.sm.Einv*ws.p.A*ws.x,Inf),  norm(ws.sm.Einv*ws.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
-      maxNormDual = max.(norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.P*ws.x,Inf), norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.q,Inf), norm(ws.sm.cinv[]*ws.sm.Dinv*ws.p.A'*ws.μ,Inf) )
+      maxNormPrim = max.(norm(ws.sm.Einv*(ws.p.A*ws.x),Inf),  norm(ws.sm.Einv*ws.s,Inf), norm(ws.sm.Einv*ws.p.b,Inf))
+      maxNormDual = max.(norm(ws.sm.cinv[]*ws.sm.Dinv*(ws.p.P*ws.x),Inf),
+        norm(ws.sm.cinv[]*(ws.sm.Dinv*ws.p.q),Inf), norm(ws.sm.cinv[]*(ws.sm.Dinv*(ws.μ'*ws.p.A)'),Inf) )
     end
     if (settings.scaling == 0 || IGNORESCALING_FLAG)
       maxNormPrim = max.(norm(ws.p.A*ws.x,Inf),norm(ws.s,Inf), norm(ws.p.b,Inf))
