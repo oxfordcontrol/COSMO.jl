@@ -7,7 +7,7 @@ struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
     #contiguous array of source data
     data::Vector{T}
     #array of data views of type Vector{T}, with indexing of
-    #each view assumed to be over a contiguous range
+    #each view assumed to be over a contiguous range in the typedef
     views::Vector{SplitView{T}}
     splitby::AbstractConvexSet{T}   #sets that generated the views
 
@@ -18,10 +18,6 @@ struct SplitVector{T<:AbstractFloat} <: AbstractVector{T}
         #and sum of all of the cone sizes
         @assert C.dim == length(x)
 
-        #I want an array of views. The actual type
-        #of a view is convoluted, so just make one
-        #and test it directly.  Use 'similar' in case x
-        #is length zero for some reason
         views = Vector{SplitView{T}}(undef,num_subsets(C))
 
         # loop over the sets and create views
