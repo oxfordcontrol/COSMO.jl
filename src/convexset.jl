@@ -237,7 +237,7 @@ end
 CompositeConvexSet(args...) = CompositeConvexSet{DefaultFloat}(args...)
 
 function project!(x::SplitVector{T},C::CompositeConvexSet{T}) where{T}
-    # @assert x.splitby == C
+    @assert x.splitby === C
     foreach(xC->project!(xC[1],xC[2]),zip(x.views,C.sets))
     return nothing
 end
@@ -251,7 +251,7 @@ function inrecc(x::SplitVector{T},C::CompositeConvexSet{T},tol::T) where{T}
 end
 
 function scale!(C::CompositeConvexSet{T},e::SplitVector{T}) where{T}
-    @assert e.splitby == C
+    @assert e.splitby === C
     for i = eachindex(C.sets)
         scale!(C.sets[i],e.views[i])
     end
@@ -260,8 +260,8 @@ end
 function rectify_scaling!(E::SplitVector{T},
                           work::SplitVector{T},
                           C::CompositeConvexSet{T}) where {T}
-    @assert E.splitby == C
-    @assert work.splitby == C
+    @assert E.splitby === C
+    @assert work.splitby === C
     any_changed = false
     for i = eachindex(C.sets)
         any_changed |= rectify_scaling!(E.views[i],work.views[i],C.sets[i])

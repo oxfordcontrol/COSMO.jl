@@ -115,7 +115,7 @@ function set!(model::COSMO.Model,
               q::AbstractVector{<:Real},
               A::AbstractMatrix{<:Real},
               b::AbstractVector{<:Real},
-              convexSets::Array{COSMO.AbstractConvexSet})
+              convexSets::Vector{COSMO.AbstractConvexSet{T}}) where{T}
   # convert inputs
   P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
   A[:,:] = convert(SparseMatrixCSC{Float64,Int64},A)
