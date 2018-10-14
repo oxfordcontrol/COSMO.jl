@@ -68,8 +68,8 @@ function colnorms!(v::Array{Tf,1},
     if(reset) v.= 0 end
 
     for i=1:A.n
-        for j = A.colptr[i]:(A.colptr[i+1] - 1)
-            v[i] = max(v[i],abs(A.nzval[j]))
+        @inbounds for j = A.colptr[i]:(A.colptr[i+1] - 1)
+            @inbounds v[i] = max(v[i],abs(A.nzval[j]))
         end
     end
     return v
@@ -93,8 +93,8 @@ function rownorms!(v::Array{Tf,1},
 
     if(reset) v.= 0 end
 
-    for i=1:(A.colptr[end]-1)
-        v[A.rowval[i]] = max(v[A.rowval[i]],abs(A.nzval[i]))
+    @inbounds for i=1:(A.colptr[end]-1)
+        @inbounds v[A.rowval[i]] = max(v[A.rowval[i]],abs(A.nzval[i]))
     end
     return v
 end
