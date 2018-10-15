@@ -6,8 +6,8 @@ using Arpack
 using LinearMaps
 
 n = 1000;
-X = Symmetric(randn(n, n)) - 40*I; @save "data.jld" X
-# @load "data.jld" X 
+# X = Symmetric(randn(n, n)) - 40*I; @save "data.jld" X
+@load "data.jld" X 
 
 cone = QOCS.PositiveSemidefiniteCone()
 cone.dim = n^2
@@ -55,7 +55,8 @@ function my_projection(X, Z, λ, v_rem)
 	# Estimate largest eigenvalue on the subspace we discarded
 	# Careful, we need to enforce all iterates to be orthogonal to the range of U
 	# This can be violated by finite precision if we are not careful
-	w = zeros(size(U, 2))
+	k = size(U, 2)
+	w = zeros(k)
 	function custom_mul(y::AbstractVector, x::AbstractVector)
 		#=
 		tmp = Symmetric(X)*x
@@ -68,12 +69,20 @@ function my_projection(X, Z, λ, v_rem)
 		BLAS.gemv!('N', -1.0, U, w, 1.0, y)
 	end
 	D = LinearMap{Float64}(custom_mul, n; ismutating=true, issymmetric=true)
-	@time (λ_rem, v_rem, nconv, niter, nmult, resid) = eigs(D, nev=1, ncv=20, ritzvec=true, which=:LR, tol=1e-1, v0=v_rem - U*(U'*v_rem))
-	@show λ_rem
-	@show nmult
+	nev = 1;
+	v0 = v_rem - U*(U'*v_rem)
+	(λ_rem, v_rem, nconv, niter, nmult, resid) = eigs(D, nev=nev, ncv=20, ritzvec=true, which=:LR, tol=1e-1, v0=v0)
 
 	R = [XZ XQ]*V_ - U*Diagonal(λ)
-	@show residual = sqrt(2*norm(R)^2 + (n - size(U, 2))*max(λ_rem[1], 0)^2)
+	# R = X*U - U*Diagonal(λ)
+
+	#= 
+	@show λ_rem
+	@show nmult
+	@show norm(R)
+	@show eig_sum = sum(max.(λ_rem, 0)).^2 + (n - k - nev)*minimum(max.(λ_rem, 0)).^2
+	@show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
+	=#
 
 	return Xπ, [U Ub], [λ; λb], v_rem[:, 1]
 end
