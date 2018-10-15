@@ -104,7 +104,10 @@ function lmul!(L::Diagonal, M::SparseMatrixCSC)
     #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
     #but this way allocates no memory at all and
     #is marginally faster
-    for i = 1:(M.colptr[end]-1)
+    m, n = size(M)
+    (m==length(L.diag)) || throw(DimensionMismatch())
+
+    @inbounds for i = 1:(M.colptr[end]-1)
         M.nzval[i] *= L.diag[M.rowval[i]]
     end
     return M
@@ -113,10 +116,12 @@ end
 lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
 
 function rmul!(M::SparseMatrixCSC,R::Diagonal)
-    for i = 1:M.n
-        for j = M.colptr[i]:(M.colptr[i+1]-1)
-            M.nzval[j] *= R.diag[i]
-        end
+
+    m, n = size(M)
+    (n==length(R.diag)) || throw(DimensionMismatch())
+
+    @inbounds for i = 1:n, j = M.colptr[i]:(M.colptr[i+1]-1)
+        M.nzval[j] *= R.diag[i]
     end
     return M
 end
@@ -124,10 +129,18 @@ end
 rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
 
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
-    for i = 1:M.n
-        for j = M.colptr[i]:(M.colptr[i+1]-1)
-            M.nzval[j] *= L.diag[M.rowval[j]]*R.diag[i]
-        end
+
+    Mnzval  = M.nzval
+    Mrowval = M.rowval
+    Mcolptr = M.colptr
+    Rd      = R.diag
+    Ld      = L.diag
+
+    m, n = size(M)
+    (m==length(Ld) && n==length(Rd)) || throw(DimensionMismatch())
+
+    for i = 1:n, j = Mcolptr[i]:(Mcolptr[i+1]-1)
+        Mnzval[j] *= Ld[Mrowval[j]]*Rd[i]
     end
     return M
 end
