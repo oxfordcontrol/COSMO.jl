@@ -22,14 +22,16 @@ function my_projection(X, Z, λ, v_rem)
 	XZ = X*Z
 	ZXZ= Z'*XZ
 
+	###
+	# Don't propagate parts of the subspace that have already "converged"
 	res_norms = vecnorm(XZ - Z*Diagonal(λ))[:]
 	sorted_idx = sortperm(res_norms)
 	start_idx = findfirst(res_norms[sorted_idx] .> 1e-5)
 	if isa(start_idx, Nothing) || start_idx - length(res_norms) > sqrt(n)/2
 		start_idx = Int(floor(length(res_norms) - sqrt(n)/2))
 	end
+	###
 	Q = Array(qr(XZ[:, sorted_idx[start_idx:end]] - Z*ZXZ[:, sorted_idx[start_idx:end]]).Q)
-	@show size(Q)
 	QXZ = Q'*XZ
 	XQ = X*Q
 	W = Symmetric([ZXZ QXZ'; QXZ Q'*XQ])
@@ -50,9 +52,9 @@ function my_projection(X, Z, λ, v_rem)
 	# Projection
 	Xπ = U*Diagonal(λ)*U';
 
-	R = [XZ XQ]*V_ - U*Diagonal(λ)
-	qr(U).Q
-
+	# Estimate largest eigenvalue on the subspace we discarded
+	# Careful, we need to enforce all iterates to be orthogonal to the range of U
+	# This can be violated by finite precision if we are not careful
 	w = zeros(size(U, 2))
 	function custom_mul(y::AbstractVector, x::AbstractVector)
 		#=
@@ -70,7 +72,8 @@ function my_projection(X, Z, λ, v_rem)
 	@show λ_rem
 	@show nmult
 
-	@show residual = sqrt(2*norm(R)^2 + (n - size(U, 2))*λ_rem[1]^2)
+	R = [XZ XQ]*V_ - U*Diagonal(λ)
+	@show residual = sqrt(2*norm(R)^2 + (n - size(U, 2))*max(λ_rem[1], 0)^2)
 
 	return Xπ, [U Ub], [λ; λb], v_rem[:, 1]
 end
