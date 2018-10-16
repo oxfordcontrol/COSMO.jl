@@ -119,6 +119,7 @@ mutable struct Model{T<:Real}
     model_size::Array{Integer,1}
     F::SuiteSparse.CHOLMOD.Factor{T}
     flags::Flags
+    M::SparseMatrixCSC{T}
 
     function Model{T}() where{T}
         return new(
@@ -131,7 +132,8 @@ mutable struct Model{T<:Real}
         T[],                        #y0
         [0;0],                      #model size
         ldlt(sparse(1.0I,1,1)),     #F
-        Flags())                    #Flags
+        Flags(),                    #Flags
+        spzeros(T,0,0))             #M
     end
 end
 
