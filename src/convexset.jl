@@ -1,4 +1,5 @@
 import Base: showarg, eltype
+using Arpack, LinearMaps
 
 # ----------------------------------------------------
 # Zero cone
@@ -116,20 +117,117 @@ end
 # ----------------------------------------------------
 # Positive Semidefinite Cone
 # ----------------------------------------------------
-struct PsdCone{T} <: AbstractConvexCone{T}
+mutable struct PsdCone{T} <: AbstractConvexCone{T}
     dim::Int
     sqrtdim::Int
+    positive_subspace::Bool
+    Z::AbstractMatrix{Float32}  # Ritz vectors
+    λ::AbstractVector{Float32}  # Ritz values
+    λ_rem::T
+    z_rem::AbstractVector{Float32}
+    buffer_size::Int
     function PsdCone{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         iroot = isqrt(dim)
         iroot^2 == dim || throw(DomainError(x, "dimension must be a square"))
-        new(dim,iroot)
+        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 3)
     end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 
-function project!(x::SplitView{T},cone::PsdCone{T}) where{T}
+function project_to_nullspace(X::AbstractArray, x::AbstractVector, tmp::AbstractVector)
+    # Project x to the nullspace of X', i.e. x .= (I - X*X')*x
+    # tmp is a vector used in intermmediate calculations
+    BLAS.gemv!('T', 1.0f0, X, x, 0.0f0, tmp)
+    BLAS.gemv!('N', -1.0f0, X, tmp, 1.0f0, x)
+end
 
+function estimate_λ_rem(X::AbstractArray, U::AbstractArray, n::Int, x0::AbstractVector)
+	# Estimates largest eigenvalue of the Symmetric X on the subspace we discarded
+	# Careful, we need to enforce all iterates to be orthogonal to the range of U
+    tmp = zeros(Float32, size(U, 2))
+    function custom_mul!(y::AbstractVector, x::AbstractVector)
+        # Performs y .= (I - U*U')*X*x
+        # y .= X*x - U*(U'*(X*x))
+        BLAS.symv!('U', 1.0f0, X, x, 0.0f0, y)
+        project_to_nullspace(U, y, tmp)
+	end
+    project_to_nullspace(U, x0, tmp)
+    A = LinearMap{Float32}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
+    (λ_rem, v_rem, nconv, niter, nmult, resid) = eigs(A, nev=n,
+        ncv=20, ritzvec=true, which=:LR, tol=0.1f0, v0=x0)
+    return λ_rem, v_rem
+end
+
+function project!(x::AbstractVector,cone::PsdCone{T}) where{T}
+    n = cone.sqrtdim
+
+    println("Subspace dim:", size(cone.Z, 2))
+    if size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.sqrtdim/3 || n == 1
+        return project_exact!(x, cone)
+    end
+
+    if !cone.positive_subspace
+        @. x = -x
+    end
+
+    X = convert(Array{Float32, 2}, reshape(x, n, n)) # Convert to Float32
+	XZ = X*cone.Z
+	ZXZ= cone.Z'*XZ
+    # Don't propagate parts of the subspace that have already "converged"
+    res_norms = similar(cone.λ)
+	colnorms!(res_norms, XZ - cone.Z*Diagonal(cone.λ))
+    sorted_idx = sortperm(res_norms)
+    #ToDo: Change the tolerance here to something relative to the total acceptable residual
+	start_idx = findfirst(res_norms[sorted_idx] .> 1f-5)
+	if isa(start_idx, Nothing) || start_idx - length(res_norms) > sqrt(n)/2
+		start_idx = Int(floor(length(res_norms) - sqrt(n)/2))
+	end
+    idx = sorted_idx[start_idx:end]
+	Q = Array(qr(XZ[:, idx] - cone.Z*ZXZ[:, idx]).Q)
+	QXZ = Q'*XZ
+    XQ = X*Q
+    W = [cone.Z Q]
+    Xsmall = [ZXZ QXZ'; QXZ Q'*XQ] # Reduced matrix
+    # i.e. Xsmall = W'*X*W
+
+    l, V = eigen!(Symmetric(Xsmall));
+
+	sorted_idx = sortperm(l)
+	first_positive = findfirst(l[sorted_idx] .> 0.0f0)
+	
+    # Positive Ritz pairs
+    positive_idx = sorted_idx[first_positive:end]
+	Vp = V[:, positive_idx]
+	U = W*Vp; λ = l[positive_idx];
+
+    # Negative Ritz pairs that we will keep as buffer
+    buffer_idx = sorted_idx[max(first_positive-cone.buffer_size,1):max(first_positive-1,1)]
+	Ub = W*V[:, buffer_idx]; λb = l[buffer_idx]
+
+	# Projection
+	Xπ = U*Diagonal(λ)*U';
+
+    R = [XZ XQ]*Vp - U*Diagonal(λ)
+    nev = 1
+    λ_rem, z_rem = estimate_λ_rem(X, U, nev, cone.z_rem)
+    λ_rem .= max.(λ_rem, 0.0)
+
+	eig_sum = sum(max.(λ_rem, 0)).^2 + (n - size(W, 2) - nev)*minimum(max.(λ_rem, 0)).^2
+    @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
+    
+    if cone.positive_subspace
+        x .= reshape(Xπ, cone.dim)
+    else
+        x .= .-x .+ reshape(Xπ, cone.dim);
+    end
+
+    cone.Z = [U Ub]
+    cone.λ = [λ; λb]
+    cone.z_rem = z_rem[:, 1]
+end
+
+function project_exact!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
     n = cone.sqrtdim
 
     # handle 1D case
@@ -138,13 +236,35 @@ function project!(x::SplitView{T},cone::PsdCone{T}) where{T}
     else
         # symmetrized square view of x
         X    = reshape(x,n,n)
-        X[:] = 0.5*(X+X')
         # compute eigenvalue decomposition
         # then round eigs up and rebuild
-        s,U  = eigen!(X)
-        floorsqrt!(s,0.)
-        rmul!(U,Diagonal(s))
-        mul!(X, U, U')
+        λ, U  = eigen!(Symmetric(X))
+        Up = U[:, λ .> 0]
+        sqrt_λp = sqrt.(λ[λ .> 0])
+        if length(sqrt_λp) > 0
+            rmul!(Up, Diagonal(sqrt_λp))
+            mul!(X, Up, Up')
+        else
+            X .= 0
+            return nothing
+            #ToDo: Handle this case with lanczos
+        end
+        
+
+        # Save the subspace we will be tracking
+        if sum(λ .> 0) <= sum(λ .< 0)
+            sorted_idx = sortperm(λ)
+            cone.positive_subspace = true
+            idx = findfirst(λ[sorted_idx] .> 0) # First positive index
+        else
+            sorted_idx = sortperm(-λ)
+            cone.positive_subspace = false
+            idx = findfirst(λ[sorted_idx] .> 0) # First positive index
+        end
+        # Take also a few vectors from the other discarted eigenspace
+        idx = max(idx - 3, 1)
+        cone.Z = U[:, sorted_idx[idx:end]]
+        cone.λ = λ[sorted_idx[idx:end]]
     end
     return nothing
 end
