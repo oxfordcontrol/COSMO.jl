@@ -9,11 +9,11 @@ function printHeader(ws::COSMO.Workspace,settings::COSMO.Settings)
     nnzInM = 2*count(!iszero,ws.p.A) + nnzInP + m
     println("-"^66 * "\n" * " "^13 * "Quadratic Objective Conic Solver (COSMO)\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2018\n" * "-"^66 * "\n")
     println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero,ws.p.A)) nnz), b ∈ R^{$(m)},\n          matrix size to factor: $(n+m)x$(n+m) ($((n+m)^2) elem, $(nnzInM) nnz)")
-    for (iii,set) in enumerate(sort(ws.p.convexSets,by=x -> -x.dim))
+    for (iii,set) in enumerate(sort(ws.p.C.sets,by=x -> -x.dim))
         setName = split(string(typeof(set)),".")[end]
         iii == 1 ? println("Sets:"*" "^5*"$(setName) of dim: $(set.dim)") : println(" "^10*"$(setName) of dim: $(set.dim)")
         if iii > 5
-            print(" "^10*"... and $(length(ws.p.convexSets)-5) more")
+            print(" "^10*"... and $(length(ws.p.C.sets)-5) more")
             break
         end
     end
