@@ -1,6 +1,7 @@
 function factorKKT!(ws::COSMO.Workspace,settings::COSMO.Settings)
 
     p = ws.p
+    @show "Malakia"
 
     if length(p.M) == 0
         # KKT matrix
