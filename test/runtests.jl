@@ -20,5 +20,7 @@ rng = Random.MersenneTwister(12345)
   include("./UnitTests/closestcorr.jl")
   include("./UnitTests/print.jl")
   include("./UnitTests/InfeasibilityTests/runTests.jl")
+  include("./UnitTests/Lanczos/simple_sdp.jl")
+  include("./UnitTests/Lanczos/exact_subspace.jl")
 end
 nothing

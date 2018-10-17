@@ -121,16 +121,16 @@ mutable struct PsdCone{T} <: AbstractConvexCone{T}
     dim::Int
     sqrtdim::Int
     positive_subspace::Bool
-    Z::AbstractMatrix{Float32}  # Ritz vectors
-    λ::AbstractVector{Float32}  # Ritz values
+    Z::AbstractMatrix{Float64}  # Ritz vectors
+    λ::AbstractVector{Float64}  # Ritz values
     λ_rem::T
-    z_rem::AbstractVector{Float32}
+    z_rem::AbstractVector{Float64}
     buffer_size::Int
     function PsdCone{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         iroot = isqrt(dim)
         iroot^2 == dim || throw(DomainError(x, "dimension must be a square"))
-        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 3)
+        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 0)
     end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
@@ -138,77 +138,113 @@ PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 function project_to_nullspace(X::AbstractArray, x::AbstractVector, tmp::AbstractVector)
     # Project x to the nullspace of X', i.e. x .= (I - X*X')*x
     # tmp is a vector used in intermmediate calculations
-    BLAS.gemv!('T', 1.0f0, X, x, 0.0f0, tmp)
-    BLAS.gemv!('N', -1.0f0, X, tmp, 1.0f0, x)
+    BLAS.gemv!('T', 1.0, X, x, 0.0, tmp)
+    BLAS.gemv!('N', -1.0, X, tmp, 1.0, x)
 end
 
 function estimate_λ_rem(X::AbstractArray, U::AbstractArray, n::Int, x0::AbstractVector)
 	# Estimates largest eigenvalue of the Symmetric X on the subspace we discarded
 	# Careful, we need to enforce all iterates to be orthogonal to the range of U
-    tmp = zeros(Float32, size(U, 2))
+    tmp = zeros(Float64, size(U, 2))
     function custom_mul!(y::AbstractVector, x::AbstractVector)
         # Performs y .= (I - U*U')*X*x
         # y .= X*x - U*(U'*(X*x))
-        BLAS.symv!('U', 1.0f0, X, x, 0.0f0, y)
+        BLAS.symv!('U', 1.0, X, x, 0.0, y)
         project_to_nullspace(U, y, tmp)
 	end
     project_to_nullspace(U, x0, tmp)
-    A = LinearMap{Float32}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
+    A = LinearMap{Float64}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
     (λ_rem, v_rem, nconv, niter, nmult, resid) = eigs(A, nev=n,
-        ncv=20, ritzvec=true, which=:LR, tol=0.1f0, v0=x0)
+        ncv=20, ritzvec=true, which=:LR, tol=0.1, v0=x0)
     return λ_rem, v_rem
 end
 
-function project!(x::AbstractVector,cone::PsdCone{T}) where{T}
+function generate_subspace(X::AbstractArray, cone::PsdCone) 
+    W = Array(qr([cone.Z X*cone.Z]).Q)
+    XW = X*W
+    return W, XW
+end
+
+
+function generate_subspace_unstable(X::AbstractArray, cone::PsdCone)
     n = cone.sqrtdim
-
-    println("Subspace dim:", size(cone.Z, 2))
-    if size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.sqrtdim/3 || n == 1
-        return project_exact!(x, cone)
-    end
-
-    if !cone.positive_subspace
-        @. x = -x
-    end
-
-    X = convert(Array{Float32, 2}, reshape(x, n, n)) # Convert to Float32
+    # cone.Z = Array(qr(cone.Z).Q)
 	XZ = X*cone.Z
-	ZXZ= cone.Z'*XZ
     # Don't propagate parts of the subspace that have already "converged"
     res_norms = similar(cone.λ)
 	colnorms!(res_norms, XZ - cone.Z*Diagonal(cone.λ))
     sorted_idx = sortperm(res_norms)
     #ToDo: Change the tolerance here to something relative to the total acceptable residual
-	start_idx = findfirst(res_norms[sorted_idx] .> 1f-5)
-	if isa(start_idx, Nothing) || start_idx - length(res_norms) > sqrt(n)/2
-		start_idx = Int(floor(length(res_norms) - sqrt(n)/2))
-	end
+    #WARNING: This has to be here for the "small" QR to work
+    start_idx = findfirst(res_norms[sorted_idx] .> 1f-5)
+    if isa(start_idx, Nothing)
+        start_idx = length(sorted_idx) + 1
+    end
     idx = sorted_idx[start_idx:end]
-	Q = Array(qr(XZ[:, idx] - cone.Z*ZXZ[:, idx]).Q)
-	QXZ = Q'*XZ
-    XQ = X*Q
+    XZ1 = XZ[:, idx]
+    delta = Int(floor(2*sqrt(n) - size(XZ1, 2)))
+    if delta > 0
+        XZ1 = [XZ1 randn(n, delta)]
+    end
+	Q = Array(qr(XZ1 - cone.Z*(cone.Z'*XZ1)).Q)
     W = [cone.Z Q]
-    Xsmall = [ZXZ QXZ'; QXZ Q'*XQ] # Reduced matrix
-    # i.e. Xsmall = W'*X*W
+    XW = [XZ X*Q]
 
-    l, V = eigen!(Symmetric(Xsmall));
+    # ZXZ = cone.Z'*XZ
+	# QXZ = Q'*XZ
+    # XQ = X*Q
+    # Xsmall = [ZXZ QXZ'; QXZ Q'*XQ] # Reduced matrix
 
-	sorted_idx = sortperm(l)
-	first_positive = findfirst(l[sorted_idx] .> 0.0f0)
+    return W, XW
+end
+
+function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
+    n = cone.sqrtdim
+
+    # @show size(Z)
+    if size(cone.Z, 2) == 0 # || size(cone.Z, 2) >= cone.sqrtdim/3 || n == 1
+        return project_exact!(x, cone)
+    end
+
+    X = reshape(x, n, n)
+    if !cone.positive_subspace
+        @. X = -(X + X')/2
+    else
+        @. X = (X + X')/2
+    end
+    # X = convert(Array{Float32, 2}, X) # Convert to Float64
+
+    W, XW = generate_subspace(X, cone)
+    Xsmall = W'*XW
+
+    l, V = eigen(Symmetric(Xsmall));
+
+    tol = 1e-10
+    sorted_idx = sortperm(l)
+    first_positive = findfirst(l[sorted_idx] .>= tol)
+    if isa(first_positive, Nothing)
+        if !cone.positive_subspace
+            @. x = -x
+        end
+        return project_exact!(x, cone) 
+    end
 	
     # Positive Ritz pairs
     positive_idx = sorted_idx[first_positive:end]
 	Vp = V[:, positive_idx]
-	U = W*Vp; λ = l[positive_idx];
+    U = W*Vp; λ = l[positive_idx];
+    @show λ
 
     # Negative Ritz pairs that we will keep as buffer
-    buffer_idx = sorted_idx[max(first_positive-cone.buffer_size,1):max(first_positive-1,1)]
+	first_negative = findfirst(l[sorted_idx] .<= -tol)
+    buffer_idx = sorted_idx[max(first_negative-cone.buffer_size,1):max(first_negative-1,1)]
 	Ub = W*V[:, buffer_idx]; λb = l[buffer_idx]
 
 	# Projection
-	Xπ = U*Diagonal(λ)*U';
-
-    R = [XZ XQ]*Vp - U*Diagonal(λ)
+    Xπ = U*Diagonal(λ)*U';
+    
+    # Residual Calculation
+    R = XW*Vp - U*Diagonal(λ)
     nev = 1
     λ_rem, z_rem = estimate_λ_rem(X, U, nev, cone.z_rem)
     λ_rem .= max.(λ_rem, 0.0)
@@ -227,7 +263,7 @@ function project!(x::AbstractVector,cone::PsdCone{T}) where{T}
     cone.z_rem = z_rem[:, 1]
 end
 
-function project_exact!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
+function project_exact!(x::AbstractArray{T},cone::PsdCone{T}) where{T}
     n = cone.sqrtdim
 
     # handle 1D case
@@ -236,6 +272,7 @@ function project_exact!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
     else
         # symmetrized square view of x
         X    = reshape(x,n,n)
+        @. X = (X + X')/2
         # compute eigenvalue decomposition
         # then round eigs up and rebuild
         λ, U  = eigen!(Symmetric(X))
@@ -250,7 +287,6 @@ function project_exact!(x::AbstractVector{T},cone::PsdCone{T}) where{T}
             #ToDo: Handle this case with lanczos
         end
         
-
         # Save the subspace we will be tracking
         if sum(λ .> 0) <= sum(λ .< 0)
             sorted_idx = sortperm(λ)
