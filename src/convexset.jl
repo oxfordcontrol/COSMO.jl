@@ -1,5 +1,5 @@
 import Base: showarg, eltype
-using Arpack, LinearMaps
+using Arpack, LinearMaps, LinearAlgebra
 
 # ----------------------------------------------------
 # Zero cone
@@ -165,8 +165,43 @@ function generate_subspace(X::AbstractArray, cone::PsdCone)
     return W, XW, zeros(size(W,1), 0), zeros(0)
 end
 
+function generate_subspace_chol(X::AbstractArray, cone::PsdCone)
+    V = cone.Z
+    XV = X*V; X2V = X*XV;
+    VXV = V'*XV;
+    VX2V = XV'*XV;
+    R = cholesky([I VXV; VXV' VX2V]; check=false)
+    if !issuccess(R) # || logdet(R) > ?
+        λ, U_ = eigen(Symmetric(VXV))
+        # Don't propagate parts of the subspace that have already "converged"
+        Vall = V*U_
+        XVall = XV*U_
+        res_norms = similar(λ)
+        colnorms!(res_norms, XVall - Vall*Diagonal(λ)) 
+        # @show res_norms
+        tol = 1e-4
+        U = U_[:, res_norms .> tol]
+        V = Vall[:, res_norms .> tol]
+        XV = XVall[:, res_norms .> tol]
+        X2V = X2V*U
+        VXV = V'*XV
+        VX2V = XV'*XV
+        eye = Matrix{Float64}(I, size(V,2), size(V, 2))
+        # @show eigen([eye VXV; VXV' VX2V]).values
+        R = cholesky([eye VXV; VXV' VX2V])
+        V_ret = Vall[:, res_norms .<= tol]
+        λ_ret = λ[res_norms .<= tol]
+    else
+        V_ret = zeros(size(V,1), 0)
+        λ_ret = zeros(0)
+    end
+    W = (R.L\[V XV]')';
+    XW = X*W
 
-function generate_subspace_unstable(X::AbstractArray, cone::PsdCone)
+    return W, XW, V_ret, λ_ret
+end
+
+function generate_subspace_reduced_qr(X::AbstractArray, cone::PsdCone)
     n = cone.sqrtdim
     Z = Array(qr(cone.Z).Q)
     XZ = X*Z
@@ -208,8 +243,8 @@ end
 function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     n = cone.sqrtdim
 
-    # @show size(Z)
-    if size(cone.Z, 2) == 0 # || size(cone.Z, 2) >= cone.sqrtdim/3 || n == 1
+    @show size(cone.Z)
+    if size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.sqrtdim/2 || n == 1
         return project_exact!(x, cone)
     end
 
@@ -221,9 +256,7 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     end
     # X = convert(Array{Float32, 2}, X) # Convert to Float64
 
-    W, XW, U1, λ1 = generate_subspace_unstable(X, cone)
-    @show size(W)
-    @show size(U1)
+    W, XW, U1, λ1 = generate_subspace_chol(X, cone)
     Xsmall = W'*XW
 
     l, V = eigen(Symmetric(Xsmall));
@@ -231,15 +264,6 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     tol = 1e-10
     sorted_idx = sortperm(l)
     first_positive = findfirst(l[sorted_idx] .>= tol)
-    #=
-    if isa(first_positive, Nothing)
-        if !cone.positive_subspace
-            @. x = -x
-        end
-        @show "exact!!!"
-        return project_exact!(x, cone) 
-    end
-    =#
     if isa(first_positive, Nothing)
         first_positive = length(l) + 1
     end
