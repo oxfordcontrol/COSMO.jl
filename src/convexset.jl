@@ -130,7 +130,7 @@ mutable struct PsdCone{T} <: AbstractConvexCone{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         iroot = isqrt(dim)
         iroot^2 == dim || throw(DomainError(x, "dimension must be a square"))
-        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 0)
+        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 3)
     end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
@@ -162,17 +162,21 @@ end
 function generate_subspace(X::AbstractArray, cone::PsdCone) 
     W = Array(qr([cone.Z X*cone.Z]).Q)
     XW = X*W
-    return W, XW
+    return W, XW, zeros(size(W,1), 0), zeros(0)
 end
 
 
 function generate_subspace_unstable(X::AbstractArray, cone::PsdCone)
     n = cone.sqrtdim
-    # cone.Z = Array(qr(cone.Z).Q)
-	XZ = X*cone.Z
+    Z = Array(qr(cone.Z).Q)
+    XZ = X*Z
+    ZXZ = Z'*XZ
+    λ, U_ = eigen(Symmetric(ZXZ))
     # Don't propagate parts of the subspace that have already "converged"
-    res_norms = similar(cone.λ)
-	colnorms!(res_norms, XZ - cone.Z*Diagonal(cone.λ))
+    U = Z*U_  # Unstable operation, that's why we do QR on Z before
+    XU = XZ*U_
+    res_norms = similar(λ)
+    colnorms!(res_norms, XU - U*Diagonal(λ))
     sorted_idx = sortperm(res_norms)
     #ToDo: Change the tolerance here to something relative to the total acceptable residual
     #WARNING: This has to be here for the "small" QR to work
@@ -181,21 +185,24 @@ function generate_subspace_unstable(X::AbstractArray, cone::PsdCone)
         start_idx = length(sorted_idx) + 1
     end
     idx = sorted_idx[start_idx:end]
-    XZ1 = XZ[:, idx]
-    delta = Int(floor(2*sqrt(n) - size(XZ1, 2)))
+    XU1 = XU[:, idx]
+    @show delta = Int(floor(sqrt(n)/2 - size(XU1, 2)))
     if delta > 0
-        XZ1 = [XZ1 randn(n, delta)]
+        XU1 = [XU1 randn(n, delta)]
     end
-	Q = Array(qr(XZ1 - cone.Z*(cone.Z'*XZ1)).Q)
-    W = [cone.Z Q]
-    XW = [XZ X*Q]
+    Q = Array(qr(XU1 - U[:, idx]*(U[:, idx]'*XU1)).Q)
+    W = [U[:, idx] Q]
+    # WW = W'*W
+    # @show WW[abs.(WW) .> 1e-5]
+    XW = X*W
+    # XW = [XZ[:, idx] X*Q]
 
     # ZXZ = cone.Z'*XZ
 	# QXZ = Q'*XZ
     # XQ = X*Q
     # Xsmall = [ZXZ QXZ'; QXZ Q'*XQ] # Reduced matrix
 
-    return W, XW
+    return W, XW, U[:, sorted_idx[1:start_idx-1]], λ[sorted_idx[1:start_idx-1]]
 end
 
 function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
@@ -214,7 +221,9 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     end
     # X = convert(Array{Float32, 2}, X) # Convert to Float64
 
-    W, XW = generate_subspace(X, cone)
+    W, XW, U1, λ1 = generate_subspace_unstable(X, cone)
+    @show size(W)
+    @show size(U1)
     Xsmall = W'*XW
 
     l, V = eigen(Symmetric(Xsmall));
@@ -222,29 +231,40 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     tol = 1e-10
     sorted_idx = sortperm(l)
     first_positive = findfirst(l[sorted_idx] .>= tol)
+    #=
     if isa(first_positive, Nothing)
         if !cone.positive_subspace
             @. x = -x
         end
+        @show "exact!!!"
         return project_exact!(x, cone) 
+    end
+    =#
+    if isa(first_positive, Nothing)
+        first_positive = length(l) + 1
     end
 	
     # Positive Ritz pairs
     positive_idx = sorted_idx[first_positive:end]
-	Vp = V[:, positive_idx]
+    Vp = V[:, positive_idx]
     U = W*Vp; λ = l[positive_idx];
+    U = [U U1[:, λ1 .> 0]]; λ = [λ; λ1[λ1 .> 0]]
     @show λ
 
     # Negative Ritz pairs that we will keep as buffer
-	first_negative = findfirst(l[sorted_idx] .<= -tol)
-    buffer_idx = sorted_idx[max(first_negative-cone.buffer_size,1):max(first_negative-1,1)]
+    first_negative = findfirst(l[sorted_idx] .<= -tol)
+    if isa(first_negative, Nothing)
+        first_negative = 1
+    end
+    buffer_idx = sorted_idx[max(first_negative-cone.buffer_size,1):max(first_negative-1,0)]
 	Ub = W*V[:, buffer_idx]; λb = l[buffer_idx]
 
 	# Projection
     Xπ = U*Diagonal(λ)*U';
     
     # Residual Calculation
-    R = XW*Vp - U*Diagonal(λ)
+    # R = XW*Vp - U*Diagonal(λ)
+    R = X*U - U*Diagonal(λ)
     nev = 1
     λ_rem, z_rem = estimate_λ_rem(X, U, nev, cone.z_rem)
     λ_rem .= max.(λ_rem, 0.0)
@@ -287,6 +307,7 @@ function project_exact!(x::AbstractArray{T},cone::PsdCone{T}) where{T}
             #ToDo: Handle this case with lanczos
         end
         
+        @show λ
         # Save the subspace we will be tracking
         if sum(λ .> 0) <= sum(λ .< 0)
             sorted_idx = sortperm(λ)
@@ -295,12 +316,15 @@ function project_exact!(x::AbstractArray{T},cone::PsdCone{T}) where{T}
         else
             sorted_idx = sortperm(-λ)
             cone.positive_subspace = false
-            idx = findfirst(λ[sorted_idx] .> 0) # First positive index
+            idx = findfirst(λ[sorted_idx] .< 0) # First positive index
         end
         # Take also a few vectors from the other discarted eigenspace
-        idx = max(idx - 3, 1)
+        idx = max(idx - cone.buffer_size, 1)
         cone.Z = U[:, sorted_idx[idx:end]]
         cone.λ = λ[sorted_idx[idx:end]]
+        if sum(λ .> 0) >= sum(λ .< 0)
+            cone.λ = -cone.λ
+        end
     end
     return nothing
 end
