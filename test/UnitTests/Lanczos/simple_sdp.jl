@@ -7,7 +7,7 @@ rng = Random.MersenneTwister(12345)
 n = 10;
 S0 = Symmetric(randn(rng, n, n))
 @testset "Lanczos Projection - Simple SDP" begin
-  for offset in [-3]# , .5]
+  for offset in [-3, 3]
     S = S0 - offset*I;
     @show sum(eigen(S).values .> 0)
     Aa = Diagonal(ones(n^2));
