@@ -178,10 +178,16 @@ end
 function generate_subspace_chol(X::AbstractArray, cone::PsdCone)
     XZ = X*cone.Z; ZXZ = cone.Z'*XZ
     V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ, ZXZ, cone.λ)
+    if size(VXV, 2) == 0
+        return cone.Z, XZ
+    end
     R = cholesky([I VXV; VXV' VX2V]; check=false)
     if !issuccess(R) || abs(logdet(R)) > 100
         λ, U = eigen(Symmetric(ZXZ))
         V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ*U, ZXZ*U, λ)
+        if size(VXV, 2) == 0
+            return cone.Z, XZ
+        end
         R = cholesky([I VXV; VXV' VX2V])
     end
     W = (R.L\[V XV]')';
@@ -199,37 +205,21 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
         return project_exact!(x, cone)
     end
 
-    X = reshape(x, n, n)
+    X = reshape(x, n, n); @. X = (X + X')/2
     if !cone.positive_subspace
-        @. X = -(X + X')/2
-    else
-        @. X = (X + X')/2
+        @. X = -X
     end
-    X = convert(Array{Float64, 2}, X) # Convert to Float64
+    # X = convert(Array{Float32, 2}, X) # Convert to Float32
 
     W, XW = generate_subspace_chol(X, cone)
     Xsmall = W'*XW
-
-    l, V = eigen(Symmetric(Xsmall));
-
-    tol = 1e-10
-    sorted_idx = sortperm(l)
-    first_positive = findfirst(l[sorted_idx] .>= tol)
-    if isa(first_positive, Nothing)
-        first_positive = length(l) + 1
-    end
+    l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), 1e-10);
 	
     # Positive Ritz pairs
-    positive_idx = sorted_idx[first_positive:end]
-    Vp = V[:, positive_idx]
-    U = W*Vp; λ = l[positive_idx];
+    Vp = V[:, first_positive:end]
+    U = W*Vp; λ = l[first_positive:end];
 
-    # Negative Ritz pairs that we will keep as buffer
-    first_negative = findfirst(l[sorted_idx] .<= -tol)
-    if isa(first_negative, Nothing)
-        first_negative = 1
-    end
-    buffer_idx = sorted_idx[max(first_negative-cone.buffer_size,1):max(first_negative-1,0)]
+    buffer_idx = max(first_negative-cone.buffer_size-1,1):max(first_negative,0)
 	Ub = W*V[:, buffer_idx]; λb = l[buffer_idx]
 
 	# Projection
@@ -238,12 +228,10 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     # Residual Calculation
     # R = XW*Vp - U*Diagonal(λ)
     R = X*U - U*Diagonal(λ)
-    nev = 1
-    λ_rem, z_rem = estimate_λ_rem(X, U, nev, cone.z_rem)
-    λ_rem .= max.(λ_rem, 0.0)
 
-    eig_sum = sum(max.(λ_rem, 0)).^2 + (n - size(W, 2) - nev)*minimum(max.(λ_rem, 0)).^2
-    @show eig_sum
+    λ_rem, z_rem = estimate_λ_rem(X, U, 1, cone.z_rem)
+    λ_rem .= max.(λ_rem, 0.0)
+    eig_sum = sum(max.(λ_rem, 0)).^2 + (n - size(W, 2) - length(λ_rem))*minimum(max.(λ_rem, 0)).^2
     @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
     
     if cone.positive_subspace

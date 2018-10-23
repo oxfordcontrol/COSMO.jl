@@ -87,8 +87,14 @@ function eigen_sorted(A::Symmetric, tol::AbstractFloat=0.0)
     sorted_idx = sortperm(λ)
     λ = λ[sorted_idx]
     U = U[:, sorted_idx]
-    first_positive = findfirst(l[sorted_idx] .> tol)
-    first_negative = findfirst(l[sorted_idx] .< tol)
+    first_positive = findfirst(λ[sorted_idx] .> tol)
+    if isa(first_positive, Nothing)
+        first_positive = length(λ) + 1
+    end
+    first_negative = findfirst(λ[sorted_idx] .< tol)
+    if isa(first_positive, Nothing)
+        first_positive = 0
+    end
 
     return λ, U, first_positive, first_negative
 end
