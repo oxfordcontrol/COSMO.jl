@@ -126,11 +126,12 @@ mutable struct PsdCone{T} <: AbstractConvexCone{T}
     λ_rem::T
     z_rem::AbstractVector{Float64}
     buffer_size::Int
+    iter_number::Int
     function PsdCone{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         iroot = isqrt(dim)
         iroot^2 == dim || throw(DomainError(x, "dimension must be a square"))
-        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 3)
+        new(dim,iroot,true,zeros(T,iroot,0),zeros(T,iroot),0.0, randn(T,iroot), 3, 0)
     end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
@@ -157,7 +158,7 @@ function estimate_λ_rem(X::AbstractArray, U::AbstractArray, n::Int, x0::Abstrac
     project_to_nullspace(U, x0, tmp)
     A = LinearMap{T}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
     (λ_rem, v_rem, nconv, niter, nmult, resid) = eigs(A, nev=n,
-        ncv=20, ritzvec=true, which=:LR, tol=0.1, v0=x0)
+        ncv=20, ritzvec=true, which=:LR, tol=.1, v0=x0)
     return λ_rem, v_rem
 end
 
@@ -199,9 +200,10 @@ end
 
 function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     n = cone.sqrtdim
+    cone.iter_number += 1
 
-    @show size(cone.Z)
-    if size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.sqrtdim/2 || n == 1
+    # @show size(cone.Z)
+    if mod(cone.iter_number, 40) == 0 || size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.sqrtdim/2 || n == 1
         return project_exact!(x, cone)
     end
 
@@ -211,7 +213,7 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     end
     # X = convert(Array{Float32, 2}, X) # Convert to Float32
 
-    W, XW = generate_subspace_chol(X, cone)
+    W, XW = generate_subspace(X, cone)
     Xsmall = W'*XW
     l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), 1e-10);
 	
@@ -231,8 +233,10 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
 
     λ_rem, z_rem = estimate_λ_rem(X, U, 1, cone.z_rem)
     λ_rem .= max.(λ_rem, 0.0)
-    eig_sum = sum(max.(λ_rem, 0)).^2 + (n - size(W, 2) - length(λ_rem))*minimum(max.(λ_rem, 0)).^2
-    @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
+    eig_sum = sum(λ_rem).^2 + (n - size(W, 2) - length(λ_rem))*minimum(λ_rem).^2
+    # @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
+    # @show norm(R, 2)
+    # @show sqrt(eig_sum)
     
     if cone.positive_subspace
         x .= reshape(Xπ, cone.dim)
@@ -269,16 +273,22 @@ function project_exact!(x::AbstractArray{T},cone::PsdCone{T}) where{T}
             #ToDo: Handle this case with lanczos
         end
         
-        @show λ
+        # @show λ
         # Save the subspace we will be tracking
         if sum(λ .> 0) <= sum(λ .< 0)
             sorted_idx = sortperm(λ)
             cone.positive_subspace = true
             idx = findfirst(λ[sorted_idx] .> 0) # First positive index
+            if isa(idx, Nothing)
+                idx = length(λ) + 1
+            end
         else
             sorted_idx = sortperm(-λ)
             cone.positive_subspace = false
             idx = findfirst(λ[sorted_idx] .< 0) # First positive index
+            if isa(idx, Nothing)
+                idx = length(λ) + 1
+            end
         end
         # Take also a few vectors from the other discarted eigenspace
         idx = max(idx - cone.buffer_size, 1)
