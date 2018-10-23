@@ -146,16 +146,16 @@ end
 function estimate_λ_rem(X::AbstractArray, U::AbstractArray, n::Int, x0::AbstractVector)
 	# Estimates largest eigenvalue of the Symmetric X on the subspace we discarded
 	# Careful, we need to enforce all iterates to be orthogonal to the range of U
-    tmp = zeros(Float64, size(U, 2))
+    T = eltype(X)
+    tmp = zeros(T, size(U, 2))
     function custom_mul!(y::AbstractVector, x::AbstractVector)
         # Performs y .= (I - U*U')*X*x
         # y .= X*x - U*(U'*(X*x))
-        T = eltype(X)
         BLAS.symv!('U', one(T), X, x, zero(T), y)
         project_to_nullspace(U, y, tmp)
 	end
     project_to_nullspace(U, x0, tmp)
-    A = LinearMap{Float64}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
+    A = LinearMap{T}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
     (λ_rem, v_rem, nconv, niter, nmult, resid) = eigs(A, nev=n,
         ncv=20, ritzvec=true, which=:LR, tol=0.1, v0=x0)
     return λ_rem, v_rem
