@@ -138,8 +138,9 @@ PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 function project_to_nullspace(X::AbstractArray, x::AbstractVector, tmp::AbstractVector)
     # Project x to the nullspace of X', i.e. x .= (I - X*X')*x
     # tmp is a vector used in intermmediate calculations
-    BLAS.gemv!('T', 1.0, X, x, 0.0, tmp)
-    BLAS.gemv!('N', -1.0, X, tmp, 1.0, x)
+    T = eltype(X)
+    BLAS.gemv!('T', one(T), X, x, zero(T), tmp)
+    BLAS.gemv!('N', -one(T), X, tmp, one(T), x)
 end
 
 function estimate_λ_rem(X::AbstractArray, U::AbstractArray, n::Int, x0::AbstractVector)
@@ -149,7 +150,8 @@ function estimate_λ_rem(X::AbstractArray, U::AbstractArray, n::Int, x0::Abstrac
     function custom_mul!(y::AbstractVector, x::AbstractVector)
         # Performs y .= (I - U*U')*X*x
         # y .= X*x - U*(U'*(X*x))
-        BLAS.symv!('U', 1.0, X, x, 0.0, y)
+        T = eltype(X)
+        BLAS.symv!('U', one(T), X, x, zero(T), y)
         project_to_nullspace(U, y, tmp)
 	end
     project_to_nullspace(U, x0, tmp)
@@ -162,82 +164,31 @@ end
 function generate_subspace(X::AbstractArray, cone::PsdCone) 
     W = Array(qr([cone.Z X*cone.Z]).Q)
     XW = X*W
-    return W, XW, zeros(size(W,1), 0), zeros(0)
+    return W, XW
+end
+
+function propagate_subspace(Z, XZ, ZXZ, λ, tol=1e-5)
+    res_norms = colnorms(XZ - Z*Diagonal(λ)) 
+    XV = XZ[:, res_norms .> tol]
+    VXV = ZXZ[:, res_norms .> tol]
+    VX2V = XV'*XV;
+    return Z, XV, VXV, VX2V
 end
 
 function generate_subspace_chol(X::AbstractArray, cone::PsdCone)
-    V = cone.Z
-    XV = X*V; X2V = X*XV;
-    VXV = V'*XV;
-    VX2V = XV'*XV;
+    XZ = X*cone.Z; ZXZ = cone.Z'*XZ
+    V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ, ZXZ, cone.λ)
     R = cholesky([I VXV; VXV' VX2V]; check=false)
-    if !issuccess(R) # || logdet(R) > ?
-        λ, U_ = eigen(Symmetric(VXV))
-        # Don't propagate parts of the subspace that have already "converged"
-        Vall = V*U_
-        XVall = XV*U_
-        res_norms = similar(λ)
-        colnorms!(res_norms, XVall - Vall*Diagonal(λ)) 
-        # @show res_norms
-        tol = 1e-4
-        U = U_[:, res_norms .> tol]
-        V = Vall[:, res_norms .> tol]
-        XV = XVall[:, res_norms .> tol]
-        X2V = X2V*U
-        VXV = V'*XV
-        VX2V = XV'*XV
-        eye = Matrix{Float64}(I, size(V,2), size(V, 2))
-        # @show eigen([eye VXV; VXV' VX2V]).values
-        R = cholesky([eye VXV; VXV' VX2V])
-        V_ret = Vall[:, res_norms .<= tol]
-        λ_ret = λ[res_norms .<= tol]
-    else
-        V_ret = zeros(size(V,1), 0)
-        λ_ret = zeros(0)
+    if !issuccess(R) || abs(logdet(R)) > 100
+        λ, U = eigen(Symmetric(ZXZ))
+        V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ*U, ZXZ*U, λ)
+        R = cholesky([I VXV; VXV' VX2V])
     end
     W = (R.L\[V XV]')';
+    @show norm(W'*W - I)
     XW = X*W
 
-    return W, XW, V_ret, λ_ret
-end
-
-function generate_subspace_reduced_qr(X::AbstractArray, cone::PsdCone)
-    n = cone.sqrtdim
-    Z = Array(qr(cone.Z).Q)
-    XZ = X*Z
-    ZXZ = Z'*XZ
-    λ, U_ = eigen(Symmetric(ZXZ))
-    # Don't propagate parts of the subspace that have already "converged"
-    U = Z*U_  # Unstable operation, that's why we do QR on Z before
-    XU = XZ*U_
-    res_norms = similar(λ)
-    colnorms!(res_norms, XU - U*Diagonal(λ))
-    sorted_idx = sortperm(res_norms)
-    #ToDo: Change the tolerance here to something relative to the total acceptable residual
-    #WARNING: This has to be here for the "small" QR to work
-    start_idx = findfirst(res_norms[sorted_idx] .> 1f-5)
-    if isa(start_idx, Nothing)
-        start_idx = length(sorted_idx) + 1
-    end
-    idx = sorted_idx[start_idx:end]
-    XU1 = XU[:, idx]
-    @show delta = Int(floor(sqrt(n)/2 - size(XU1, 2)))
-    if delta > 0
-        XU1 = [XU1 randn(n, delta)]
-    end
-    Q = Array(qr(XU1 - U[:, idx]*(U[:, idx]'*XU1)).Q)
-    W = [U[:, idx] Q]
-    # WW = W'*W
-    # @show WW[abs.(WW) .> 1e-5]
-    XW = X*W
-    # XW = [XZ[:, idx] X*Q]
-
-    # ZXZ = cone.Z'*XZ
-	# QXZ = Q'*XZ
-    # XQ = X*Q
-    # Xsmall = [ZXZ QXZ'; QXZ Q'*XQ] # Reduced matrix
-
-    return W, XW, U[:, sorted_idx[1:start_idx-1]], λ[sorted_idx[1:start_idx-1]]
+    return W, XW
 end
 
 function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
@@ -254,9 +205,9 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     else
         @. X = (X + X')/2
     end
-    # X = convert(Array{Float32, 2}, X) # Convert to Float64
+    X = convert(Array{Float64, 2}, X) # Convert to Float64
 
-    W, XW, U1, λ1 = generate_subspace_chol(X, cone)
+    W, XW = generate_subspace_chol(X, cone)
     Xsmall = W'*XW
 
     l, V = eigen(Symmetric(Xsmall));
@@ -272,8 +223,6 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     positive_idx = sorted_idx[first_positive:end]
     Vp = V[:, positive_idx]
     U = W*Vp; λ = l[positive_idx];
-    U = [U U1[:, λ1 .> 0]]; λ = [λ; λ1[λ1 .> 0]]
-    @show λ
 
     # Negative Ritz pairs that we will keep as buffer
     first_negative = findfirst(l[sorted_idx] .<= -tol)
@@ -293,7 +242,8 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     λ_rem, z_rem = estimate_λ_rem(X, U, nev, cone.z_rem)
     λ_rem .= max.(λ_rem, 0.0)
 
-	eig_sum = sum(max.(λ_rem, 0)).^2 + (n - size(W, 2) - nev)*minimum(max.(λ_rem, 0)).^2
+    eig_sum = sum(max.(λ_rem, 0)).^2 + (n - size(W, 2) - nev)*minimum(max.(λ_rem, 0)).^2
+    @show eig_sum
     @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
     
     if cone.positive_subspace

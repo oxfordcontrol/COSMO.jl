@@ -48,10 +48,13 @@ function scalednorm1(E::Diagonal,v::Array)
     return norm::eltype(v)
 end
 
-
+function colnorms(A::AbstractArray)
+    T = eltype(A)
+    return colnorms!(zeros(T, size(A, 2)), A)
+end
 
 function colnorms!(v::Array{Tf,1},
-    A::Matrix{Tf};
+    A::AbstractArray;
     reset::Bool = true) where{Tf<:AbstractFloat}
 
     if(reset) v.= 0 end
@@ -75,8 +78,23 @@ function colnorms!(v::Array{Tf,1},
     return v
 end
 
+function rownorms(A::AbstractArray)
+    return rownorms!(zeros(eltype(A), size(A, 1)), A)
+end
+
+function eigen_sorted(A::Symmetric, tol::AbstractFloat=0.0)
+    λ, U = eigen(A)
+    sorted_idx = sortperm(λ)
+    λ = λ[sorted_idx]
+    U = U[:, sorted_idx]
+    first_positive = findfirst(l[sorted_idx] .> tol)
+    first_negative = findfirst(l[sorted_idx] .< tol)
+
+    return λ, U, first_positive, first_negative
+end
+
 function rownorms!(v::Array{Tf,1},
-    A::Matrix{Tf};
+    A::AbstractArray,
     reset::Bool = true) where{Tf<:AbstractFloat}
 
     if(reset) v.= 0 end
