@@ -1,3 +1,6 @@
+# Optimal Eigenvalue problem described in Pataki 1998:
+# On the Rank of Extreme Matrices in Semidefinite Programs and the Multiplicity of Optimal Eigenvalues
+
 using COSMO, Test, LinearAlgebra, Random, SparseArrays
 using JuMP, SCS, LinearAlgebra
 
@@ -7,7 +10,7 @@ k = 10;
 rng = Random.MersenneTwister(12345)
 A = []
 for i = 1:m+1
-    A_i = sprandn(rng, n, n, 0.001/2); A_i = (A_i + A_i')/2
+    A_i = sprandn(rng, n, n, 0.05/2); A_i = (A_i + A_i')/2
     push!(A, A_i)
 end
 #@testset "Lanczos Projection - Simple SDP" begin
@@ -30,14 +33,31 @@ b_ = zeros(size(A_, 1), 1)
 conic_constraint_2 = COSMO.Constraint(A_, b_, COSMO.PsdCone)
 
 # define example problem
-settings = COSMO.Settings(verbose=true, max_iter=2500)
+settings = COSMO.Settings(verbose=true, verbose_timing=true, max_iter=2500)
 
 model = COSMO.Model()
 assemble!(model,P,c,[zero_constraint; conic_constraint_1; conic_constraint_2])
 
-res = COSMO.optimize!(model,settings);
+# res = COSMO.optimize!(model,settings)
+# res = COSMO.optimize!(model,settings)
 
+COSMO.optimize!(model,settings)
+# @time COSMO.optimize!(model,settings)
+using Profile
+Profile.clear()
+Profile.@profile COSMO.optimize!(model,settings)
+using ProfileView
+ProfileView.view()
+@show res.times
+println("Press enter to continue...")
+readline(stdin)
 #=
+open("prof.txt", "w") do s
+	Profile.print(IOContext(s, :displaysize => (24, 500)))
+end
+=#
+
+
 model = JuMP.Model()
 setsolver(model, SCSSolver(max_iters=10000, acceleration_lookback=1))
 @variable(model, V[1:n,1:n], SDP)
@@ -45,11 +65,11 @@ setsolver(model, SCSSolver(max_iters=10000, acceleration_lookback=1))
 @variable(model, z)
 @variable(model, x[1:m])
 @objective(model, Min, k*z + sum(diag(V)))
-@constraint(model, z.*eye + V - W .== A[1] + x[1].*A[2] + x[2].*A[3] + x[3].*A[4] + x[4].*A[5] + x[5].*A[6])
+@constraint(model, z.*speye_small + V - W .== A[1] + x[1].*A[2] + x[2].*A[3] + x[3].*A[4] + x[4].*A[5] + x[5].*A[6])
 status = JuMP.solve(model)
-@show getvalue(z)
-=#
 
+println("The following two should be approximately the same")
+@show getvalue(z)
 @show res.x[2*n^2+1]
 
 nothing

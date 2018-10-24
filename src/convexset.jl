@@ -184,13 +184,19 @@ function generate_subspace_chol(X::AbstractArray, cone::PsdCone)
     end
     R = cholesky([I VXV; VXV' VX2V]; check=false)
     if !issuccess(R) || abs(logdet(R)) > 100
+        #=
         λ, U = eigen(Symmetric(ZXZ))
         V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ*U, ZXZ*U, λ)
         if size(VXV, 2) == 0
             return cone.Z, XZ
         end
         R = cholesky([I VXV; VXV' VX2V])
+        =#
+        @show "QR!"
+        W = Array(qr([cone.Z XZ]).Q)
+        return W, X*W
     end
+    @show logdet(R)
     W = (R.L\[V XV]')';
     @show norm(W'*W - I)
     XW = X*W
@@ -202,16 +208,16 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     n = cone.sqrtdim
     cone.iter_number += 1
 
-    # @show size(cone.Z)
     if mod(cone.iter_number, 40) == 0 || size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.sqrtdim/2 || n == 1
+        # @show size(cone.Z)
         return project_exact!(x, cone)
     end
 
-    X = reshape(x, n, n); @. X = (X + X')/2
     if !cone.positive_subspace
-        @. X = -X
+        @. x = -x
     end
-    # X = convert(Array{Float32, 2}, X) # Convert to Float32
+    X = Symmetric(reshape(x, n, n));
+    X = convert(Array{Float64, 2}, X) # Convert to Float32
 
     W, XW = generate_subspace(X, cone)
     Xsmall = W'*XW
@@ -231,22 +237,25 @@ function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
     # R = XW*Vp - U*Diagonal(λ)
     R = X*U - U*Diagonal(λ)
 
-    λ_rem, z_rem = estimate_λ_rem(X, U, 1, cone.z_rem)
+    # Important: why not [U Ub]?
+    λ_rem, z_rem = estimate_λ_rem(X, U, 2, cone.z_rem)
     λ_rem .= max.(λ_rem, 0.0)
     eig_sum = sum(λ_rem).^2 + (n - size(W, 2) - length(λ_rem))*minimum(λ_rem).^2
-    # @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
-    # @show norm(R, 2)
-    # @show sqrt(eig_sum)
+    @show residual = sqrt(2*norm(R, 2)^2 + eig_sum)
+    #=
+    @show norm(R, 2)
+    @show sqrt(eig_sum)
+    =#
     
-    if cone.positive_subspace
-        x .= reshape(Xπ, cone.dim)
-    else
-        x .= .-x .+ reshape(Xπ, cone.dim);
+    if !cone.positive_subspace
+        @. Xπ -= X 
     end
+    copyto!(x, Xπ)
 
-    cone.Z = [U Ub]
-    cone.λ = [λ; λb]
-    cone.z_rem = z_rem[:, 1]
+    # It should be [U ub z_rem]
+    cone.Z = [U z_rem]
+    cone.z_rem = randn(size(U, 1))
+    cone.λ = [λ; λ_rem]
 end
 
 function project_exact!(x::AbstractArray{T},cone::PsdCone{T}) where{T}
@@ -265,13 +274,15 @@ function project_exact!(x::AbstractArray{T},cone::PsdCone{T}) where{T}
         Up = U[:, λ .> 0]
         sqrt_λp = sqrt.(λ[λ .> 0])
         if length(sqrt_λp) > 0
-            rmul!(Up, Diagonal(sqrt_λp))
-            mul!(X, Up, Up')
+            # rmul!(Up, Diagonal(sqrt_λp))
+            # mul!(X, Up, Up')
+            X = Up*Diagonal(λ[λ .> 0])*Up'
         else
             X .= 0
             return nothing
             #ToDo: Handle this case with lanczos
         end
+        x .= reshape(X, cone.dim)
         
         # @show λ
         # Save the subspace we will be tracking
