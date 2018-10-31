@@ -1,6 +1,6 @@
 # Unit Test for constraint type
 
-using QOCS, Test, SparseArrays, Random
+using COSMO, Test, SparseArrays, Random
 
 
 rng = Random.MersenneTwister(1872381)
@@ -26,12 +26,12 @@ b_mat = sparse(rand(rng,10,1))
 @testset "Constraints" begin
 
   @testset "Constructors" begin
-    @test typeof(QOCS.Constraint(A_int,b_int,QOCS.Zeros())) == QOCS.Constraint
-    @test typeof(QOCS.Constraint(A_Float,b_Float,QOCS.Zeros())) == QOCS.Constraint
-    @test typeof(QOCS.Constraint(A_UInt,b_UInt,QOCS.Zeros())) == QOCS.Constraint
-    @test typeof(QOCS.Constraint(A_sparse,b_sparse,QOCS.Zeros())) == QOCS.Constraint
-    @test typeof(QOCS.Constraint(A_vec,b_vec,QOCS.Zeros())) == QOCS.Constraint
-    @test typeof(QOCS.Constraint(A_mat,b_mat,QOCS.Zeros())) == QOCS.Constraint
+    @test typeof(COSMO.Constraint(A_int,b_int,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_Float,b_Float,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_UInt,b_UInt,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_sparse,b_sparse,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_vec,b_vec,COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_mat,b_mat,COSMO.ZeroSet)) <: COSMO.Constraint
   end
 
   @testset "Indizes" begin
@@ -39,7 +39,7 @@ b_mat = sparse(rand(rng,10,1))
     b = rand(rng,3)
     ind = 3:5
     dim = 10
-    cs = QOCS.Constraint(A,b,QOCS.Zeros(),dim,ind)
+    cs = COSMO.Constraint(A,b,COSMO.ZeroSet,dim,ind)
 
     @test cs.A[:,ind] == A
     @test cs.b[ind] == b
@@ -53,11 +53,11 @@ b_mat = sparse(rand(rng,10,1))
     b2 = rand(rng,10)
     Am = [A1;A2]
     bm = [b1;b2]
-    c1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
-    c2 = QOCS.Constraint(A2,b2,QOCS.Zeros())
+    c1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    c2 = COSMO.Constraint(A2,b2,COSMO.ZeroSet)
     cArr = [c1;c2]
-    cm = QOCS.Constraint(Am,bm,QOCS.Zeros())
-    QOCS.mergeConstraints!(cArr)
+    cm = COSMO.Constraint(Am,bm,COSMO.ZeroSet)
+    COSMO.mergeConstraints!(cArr)
 
     @test cArr[1].A == cm.A
     @test cArr[1].b == cm.b
@@ -65,11 +65,11 @@ b_mat = sparse(rand(rng,10,1))
     @test typeof(cArr[1].convexSet) == typeof(cm.convexSet)
 
 
-    c1 = QOCS.Constraint(A1,b1,QOCS.Nonnegatives())
-    c2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives())
+    c1 = COSMO.Constraint(A1,b1,COSMO.Nonnegatives)
+    c2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
     cArr = [c1;c2]
-    cm = QOCS.Constraint(Am,bm,QOCS.Nonnegatives())
-    QOCS.mergeConstraints!(cArr)
+    cm = COSMO.Constraint(Am,bm,COSMO.Nonnegatives)
+    COSMO.mergeConstraints!(cArr)
 
     @test cArr[1].A == cm.A
     @test cArr[1].b == cm.b
@@ -83,6 +83,3 @@ b_mat = sparse(rand(rng,10,1))
 
 end
 nothing
-
-
-

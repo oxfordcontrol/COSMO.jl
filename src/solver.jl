@@ -1,23 +1,41 @@
+const LinsolveSubarray = SubArray{Float64,1,Vector{Float64},Tuple{UnitRange{Int64}},true}
 
+function admmStep!(x::Vector{Float64},
+                   s::SplitVector{Float64},
+                   μ::Vector{Float64},
+                   ν::LinsolveSubarray,
+                   x_tl::LinsolveSubarray,
+                   s_tl::Vector{Float64},
+                   ls::Vector{Float64},
+                   sol::Vector{Float64},
+                   F,
+                   q::Vector{Float64},
+                   b::Vector{Float64},
+                   ρ::Vector{Float64},
+                   α::Float64,
+                   σ::Float64,
+                   m::Int64,
+                   n::Int64,
+                   set::CompositeConvexSet{Float64})
 
-
-function admmStep!(x::Vector{Float64}, s::Vector{Float64}, μ::Vector{Float64}, ν::SubArray, x_tl::SubArray, s_tl::Vector{Float64}, ls::Vector{Float64}, sol::Vector{Float64}, F, q::Vector{Float64}, b::Vector{Float64}, ρ::Vector{Float64}, α::Float64, σ::Float64, m::Int64, n::Int64,convexSets::Array{AbstractConvexSet},s_views::Array{SubArray})
+  #linear solve
   # Create right hand side for linear system
-   @. ls[1:n] = σ*x-q
-   @. ls[(n+1):end] = b-s+μ/ρ
-  sol .= F \ ls
-  # deconstruct solution vector ls = [x_tl(n+1);ν(n+1)]
+  # deconstructed solution vector is ls = [x_tl(n+1);ν(n+1)]
   # x_tl and ν are automatically updated, since they are views on sol
+  @. ls[1:n] = σ*x-q
+  @. ls[(n+1):end] = b-s+μ/ρ
+  sol .= F \ ls
 
   # Over relaxation
   @. x = α*x_tl + (1.0-α)*x
   @. s_tl = s - (ν+μ)/ρ
   @. s_tl = α*s_tl + (1.0-α)*s
   @. s = s_tl + μ/ρ
-  # Project onto cone K
-  pTime = @elapsed Projections.projectCompositeCone!(s_views,convexSets)
+
+  # Project onto cone
+  pTime = @elapsed project!(s, set)
   # update dual variable μ
-  @. μ = μ + ρ*(s_tl - s)
+  @. μ = μ + ρ.*(s_tl - s)
   return pTime
 end
 
@@ -33,9 +51,9 @@ end
   """
       optimize!(model,settings)
 
-  Attempts to solve the optimization problem defined in `QOCS.Model` object with the user settings defined in `QOCS.Settings`. Returns a `QOCS.Result` object.
+  Attempts to solve the optimization problem defined in `COSMO.Model` object with the user settings defined in `COSMO.Settings`. Returns a `COSMO.Result` object.
   """
-  function optimize!(model::QOCS.Model,settings::QOCS.Settings)
+  function optimize!(model::COSMO.Model,settings::COSMO.Settings)
     solverTime_start = time()
 
     # create scaling variables
@@ -48,6 +66,7 @@ end
 
     # perform preprocessing steps (scaling, initial KKT factorization)
     ws.times.setupTime = @elapsed setup!(ws,settings);
+    ws.times.projTime  = 0. #reset projection time
 
     # instantiate variables
     numIter = 0
@@ -67,31 +86,31 @@ end
     δx = zeros(n)
     δy =  zeros(m)
     s_tl = zeros(m) # i.e. sTilde
+
     ls = zeros(n + m)
     sol = zeros(n + m)
     x_tl = view(sol,1:n) # i.e. xTilde
     ν = view(sol,(n+1):(n+m))
 
-    # create views on s
-    s_views = Array{SubArray,1}(undef,length(ws.p.convexSets))
-    createViews!(s_views,ws.s,ws.p.convexSets)
-
     settings.verbose_timing && (iter_start = time())
 
     for iter = 1:settings.max_iter
+
       numIter+= 1
-      @. δx = ws.x
-      @. δy = ws.μ
+
+      @. δx = ws.vars.x
+      @. δy = ws.vars.μ
+
       ws.times.projTime += admmStep!(
-        ws.x, ws.s, ws.μ, ν,
-        x_tl, s_tl, ls,sol,
+        ws.vars.x, ws.vars.s, ws.vars.μ, ν,
+        x_tl, s_tl, ls, sol,
         ws.p.F, ws.p.q, ws.p.b, ws.ρVec,
         settings.alpha, settings.sigma,
-        m, n, ws.p.convexSets,s_views);
+        m, n, ws.p.C);
 
       # compute deltas for infeasibility detection
-      @. δx = ws.x - δx
-      @. δy = -ws.μ + δy
+      @. δx = ws.vars.x - δx
+      @. δy = -ws.vars.μ + δy
 
       # compute residuals (based on optimality conditions of the problem) to check for termination condition
       # compute them every {settings.check_termination} step
@@ -101,7 +120,7 @@ end
       # check convergence with residuals every {settings.checkIteration} steps
       if mod(iter,settings.check_termination) == 0
         # update cost
-        cost = ws.sm.cinv[]*(1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1]
+        cost = ws.sm.cinv[]*(1/2 * ws.vars.x'*ws.p.P*ws.vars.x + ws.p.q'*ws.vars.x)[1]
 
         if abs(cost) > 1e20
           status = :Unsolved
@@ -122,16 +141,16 @@ end
         if isPrimalInfeasible(δy,ws,settings)
             status = :Primal_infeasible
             cost = Inf
-            ws.x .= NaN
-            ws.μ .= NaN
+            ws.vars.x .= NaN
+            ws.vars.μ .= NaN
             break
         end
 
         if isDualInfeasible(δx,ws,settings)
             status = :Dual_infeasible
             cost = -Inf
-            ws.x .= NaN
-            ws.μ .= NaN
+            ws.vars.x .= NaN
+            ws.vars.μ .= NaN
             break
         end
       end
@@ -162,7 +181,7 @@ end
     if settings.scaling != 0 && (cost != Inf && cost != -Inf)
       reverseScaling!(ws)
       # FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
-      cost =  (1/2 * ws.x'*ws.p.P*ws.x + ws.p.q'*ws.x)[1] #sm.cinv * not necessary anymore since reverseScaling
+      cost =  (1/2 * ws.vars.x'*ws.p.P*ws.vars.x + ws.p.q'*ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
     end
 
 
@@ -173,10 +192,10 @@ end
     settings.verbose && printResult(status,numIter,cost,ws.times.solverTime)
 
     # create result object
-    resinfo = QOCS.ResultInfo(r_prim,r_dual)
-    y = -ws.μ
+    resinfo = ResultInfo(r_prim,r_dual)
+    y = -ws.vars.μ
 
-    return result = QOCS.Result(ws.x,y,ws.s,cost,numIter,status,resinfo,ws.times);
+    return result = Result(ws.vars.x,y,ws.vars.s,cost,numIter,status,resinfo,ws.times);
 
 
   end

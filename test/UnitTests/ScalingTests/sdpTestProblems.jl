@@ -12,10 +12,10 @@ timestamp = Dates.format(now(), "yyddmm_HH-MM")
 dataFile = "../resultDataFiles/SC_" * timestamp * "MaxEigSDP.jld"
 problemType = "SDP-MaxEig"
 
-sr1 = SolverResult(nn, problemType,"QOCS",timestamp,0,false,false)
-sr2 = SolverResult(nn, problemType,"QOCS",timestamp,0,true,false)
-sr3 = SolverResult(nn, problemType,"QOCS",timestamp,0,false,true)
-sr4 = SolverResult(nn, problemType,"QOCS",timestamp,0,true,true)
+sr1 = SolverResult(nn, problemType,"COSMO",timestamp,0,false,false)
+sr2 = SolverResult(nn, problemType,"COSMO",timestamp,0,true,false)
+sr3 = SolverResult(nn, problemType,"COSMO",timestamp,0,false,true)
+sr4 = SolverResult(nn, problemType,"COSMO",timestamp,0,true,true)
 resData = [sr1;sr2;sr3;sr4]
 ws = 0
 for iii =1:1:nn

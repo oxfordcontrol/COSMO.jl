@@ -1,21 +1,21 @@
-![QOCS Logo](https://github.com/migarstka/QOCS_assets/blob/master/QOCS_logo.png)
-This repository hosts a Julia implementation of the QOCS solver. It solves convex optimization problems of the following form:
+![COSMO Logo](https://github.com/migarstka/COSMO_assets/blob/master/COSMO_logo.png)
+This repository hosts a Julia implementation of the COSMO solver. It solves convex optimization problems of the following form:
 ```
 min 1/2 x'Px + q'x
 s.t. Ax + s = b, s in C
 ```
-with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set C is a composition of convex sets and cones. By default QOCS supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
+with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set C is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
 
 ## Installation / Usage
 - The Solver was written for Julia v0.7/1.0
-- Clone package to local machine: `Pkg.clone("https://github.com/oxfordcontrol/QOCS.jl")`
-- Load the package with `using QOCS`
+- Clone package to local machine: `Pkg.clone("https://github.com/oxfordcontrol/COSMO.jl")`
+- Load the package with `using COSMO`
 - Consider the following example:
 
 ### Example
 ```julia
 
-using QOCS, Test, LinearAlgebra
+using COSMO, Test, LinearAlgebra
 
 # Linear program example
 # min c'x
@@ -30,15 +30,15 @@ Aa = -[A;-Matrix(1.0I,4,4);0 -1 0 0;-1 0 -1 0]
 ba = vec([b; -ones(4,1);-5;-4])
 P = zeros(size(A,2),size(A,2))
 
-constraint1 = QOCS.Constraint(Aa,ba,QOCS.Nonnegatives())
+constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives)
 
 # define example problem
-settings = QOCS.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)
+settings = COSMO.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)
 
-model = QOCS.Model()
+model = COSMO.Model()
 assemble!(model,P,c,[constraint1])
 
-res = QOCS.optimize!(model,settings);
+res = COSMO.optimize!(model,settings);
 
 @testset "Linear Problem" begin
   @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-2, norm=(x -> norm(x,Inf)))
@@ -49,7 +49,7 @@ nothing
 
 
 ## Settings
-Settings can be specified using the `QOCS.Settings` struct. The following settings are available:
+Settings can be specified using the `COSMO.Settings` struct. The following settings are available:
 
 Argument | Description | Values (default)
 --- | --- | ---
@@ -72,7 +72,7 @@ time_limit | set solver time limit in s | 0
 For more low-level settings, see the Settings definition in `/src/Types.jl`.
 
 ## Result
-After attempting to solve the problem, QOCS will return a result object with the following fields:
+After attempting to solve the problem, COSMO will return a result object with the following fields:
 
 Fieldname | Type | Description
 ---  | --- | ---
@@ -82,11 +82,11 @@ s | Vector{Float64}| (Primal) set variable
 objVal | Float64 | Objective value
 iter | Int64 | Number of iterations
 status | Symbol | Solution status
-info | QOCS.ResultInfo | Struct with more information
-times | QOCS.ResultTimes | Struct with several measured times
+info | COSMO.ResultInfo | Struct with more information
+times | COSMO.ResultTimes | Struct with several measured times
 
 ### Status Codes
-QOCS will return one of the following statuses:
+COSMO will return one of the following statuses:
 
 Status Code  | Description
 ---  | ---
@@ -99,7 +99,7 @@ Status Code  | Description
 
 
 ### Timings
-If `settings.verboseTiming` is set to `true` QOCS will report the following times in `result.times`:
+If `settings.verboseTiming` is set to `true` COSMO will report the following times in `result.times`:
 
 Time Name  | Description
 ---  | ---

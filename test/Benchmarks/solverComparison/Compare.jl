@@ -145,7 +145,7 @@ export SolverResult, updateResults!,loadMeszarosData,getMeszarosDim,meszarosFile
       resObj.ind+=1
       resObj.problemDim[resObj.ind,:] = pDims
       resObj.problemName[resObj.ind] = pName
-      if contains(resObj.solverName,"QOCS")
+      if contains(resObj.solverName,"COSMO")
         resObj.iter[resObj.ind] = resArr[i].iter
         resObj.objVal[resObj.ind] = resArr[i].cost + r
         resObj.x[resObj.ind] = resArr[i].x[1:n]

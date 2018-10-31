@@ -1,11 +1,8 @@
-using LinearAlgebra
-import LinearAlgebra; lmul!, rmul!
-export colNorms!, rowNorms!, lrmul!, scalednorm, clip
-const IdentityMatrix = UniformScaling{Bool}
-const LA = LinearAlgebra
+using  LinearAlgebra
+import LinearAlgebra: lmul!, rmul!
+const  IdentityMatrix = UniformScaling{Bool}
 
 
-#array case
 function clip(s,minThresh,maxThresh,minNew = minThresh,maxNew = maxThresh)
     s = ifelse(s < minThresh,minNew,ifelse(s > maxThresh,maxNew,s))
 end
@@ -52,7 +49,8 @@ function scalednorm1(E::Diagonal,v::Array)
 end
 
 
-function colNorms!(v::Array{Tf,1},
+
+function colnorms!(v::Array{Tf,1},
     A::Matrix{Tf};
     reset::Bool = true) where{Tf<:AbstractFloat}
 
@@ -64,20 +62,20 @@ function colNorms!(v::Array{Tf,1},
     return v
 end
 
-function colNorms!(v::Array{Tf,1},
+function colnorms!(v::Array{Tf,1},
     A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where{Tf<:AbstractFloat,Ti<:Integer}
 
     if(reset) v.= 0 end
 
     for i=1:A.n
-        for j = A.colptr[i]:(A.colptr[i+1] - 1)
-            v[i] = max(v[i],abs(A.nzval[j]))
+        @inbounds for j = A.colptr[i]:(A.colptr[i+1] - 1)
+            @inbounds v[i] = max(v[i],abs(A.nzval[j]))
         end
     end
     return v
 end
 
-function rowNorms!(v::Array{Tf,1},
+function rownorms!(v::Array{Tf,1},
     A::Matrix{Tf};
     reset::Bool = true) where{Tf<:AbstractFloat}
 
@@ -89,52 +87,60 @@ function rowNorms!(v::Array{Tf,1},
     return v
 end
 
-
-
-function rowNorms!(v::Array{Tf,1},
+function rownorms!(v::Array{Tf,1},
     A::SparseMatrixCSC{Tf,Ti};
     reset::Bool = true) where{Tf<:AbstractFloat,Ti<:Integer}
 
     if(reset) v.= 0 end
 
-    for i=1:(A.colptr[end]-1)
-        v[A.rowval[i]] = max(v[A.rowval[i]],abs(A.nzval[i]))
+    @inbounds for i=1:(A.colptr[end]-1)
+        @inbounds v[A.rowval[i]] = max(v[A.rowval[i]],abs(A.nzval[i]))
     end
     return v
 end
 
-
-function LA.lmul!(L::Diagonal, M::SparseMatrixCSC)
+function lmul!(L::Diagonal, M::SparseMatrixCSC)
 
     #NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
     #but this way allocates no memory at all and
     #is marginally faster
-    for i = 1:(M.colptr[end]-1)
-        M.nzval[i] *= L.diag[M.rowval[i]]
+    m, n = size(M)
+    (m==length(L.diag)) || throw(DimensionMismatch())
+
+    @inbounds for i = 1:(M.colptr[end]-1)
+        @inbounds M.nzval[i] *= L.diag[M.rowval[i]]
     end
     return M
 end
 
-LA.lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
+lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
 
+function rmul!(M::SparseMatrixCSC,R::Diagonal)
 
-function LA.rmul!(M::SparseMatrixCSC,R::Diagonal)
-    for i = 1:M.n
-        for j = M.colptr[i]:(M.colptr[i+1]-1)
-            M.nzval[j] *= R.diag[i]
-        end
+    m, n = size(M)
+    (n==length(R.diag)) || throw(DimensionMismatch())
+
+    @inbounds for i = 1:n, j = M.colptr[i]:(M.colptr[i+1]-1)
+        @inbounds M.nzval[j] *= R.diag[i]
     end
     return M
 end
 
-LA.rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
-
+rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
 
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
-    for i = 1:M.n
-        for j = M.colptr[i]:(M.colptr[i+1]-1)
-            M.nzval[j] *= L.diag[M.rowval[j]]*R.diag[i]
-        end
+
+    Mnzval  = M.nzval
+    Mrowval = M.rowval
+    Mcolptr = M.colptr
+    Rd      = R.diag
+    Ld      = L.diag
+
+    m, n = size(M)
+    (m==length(Ld) && n==length(Rd)) || throw(DimensionMismatch())
+
+    @inbounds for i = 1:n, j = Mcolptr[i]:(Mcolptr[i+1]-1)
+        @inbounds Mnzval[j] *= Ld[Mrowval[j]]*Rd[i]
     end
     return M
 end

@@ -1,8 +1,6 @@
 # SOCP Lasso Testproblem
 
-using QOCS, Test, LinearAlgebra, SparseArrays, Random
-
-
+using COSMO, Test, LinearAlgebra, SparseArrays, Random
 
 # generate problem data
 rng = Random.MersenneTwister(12345)
@@ -35,17 +33,17 @@ b3 = zeros(m+2)
 q = vec([1;zeros(n);μ*ones(n,1);zeros(m+2,1)])
 P = spzeros(length(q),length(q))
 
-cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
-cs2 = QOCS.Constraint(A2,b2,QOCS.Nonnegatives())
-cs3 = QOCS.Constraint(A3,b3,QOCS.SecondOrderCone())
+cs1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
+cs3 = COSMO.Constraint(A3,b3,COSMO.SecondOrderCone)
 
 
-settings = QOCS.Settings()
+settings = COSMO.Settings()
 
 # Solve with OSSDP
-model = QOCS.Model()
+model = COSMO.Model()
 assemble!(model,P,q,[cs1;cs2;cs3])
-res = QOCS.optimize!(model,settings);
+res = COSMO.optimize!(model,settings);
 
 @testset "SOCP - Lasso" begin
   @test res.status == :Solved

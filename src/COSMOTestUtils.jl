@@ -1,4 +1,4 @@
-module Helper
+module COSMOTestUtils
 using LinearAlgebra, Random
 export generatePosDefMatrix, isNumericallyPosSemDef, isNumericallySymmetric, findNonSymmetricComponent, findDifferentElements, reCreateSparseMatrix,duplicateSparsityPattern, gmean
 

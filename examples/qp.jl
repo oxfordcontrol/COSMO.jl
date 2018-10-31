@@ -1,7 +1,7 @@
 # Test script to test solver for a qp
 
 using Test
-using QOCS, SparseArrays, LinearAlgebra
+using COSMO, SparseArrays, LinearAlgebra
 
 # Quadratic program example from OSQP Doc
 # min 0.5 * x'Px +  q'x
@@ -15,23 +15,23 @@ u = [1; 0.7; 0.7]
 # Define the constraint l <= Ax <= u with the help of a Nonnegatives set
 Aa = [-A;A]
 ba = [u; -l]
-constraint1 = QOCS.Constraint(Aa,ba,QOCS.Nonnegatives())
+constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives)
 
 # define example problem
-settings = QOCS.Settings(verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
+settings = COSMO.Settings(verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
 
 
-model = QOCS.Model()
+model = COSMO.Model()
 assemble!(model,P,q,constraint1)
-res = QOCS.optimize!(model,settings);
+res = COSMO.optimize!(model,settings);
 
 # solve again by defining the constraints with the help of a box (disable infeasibility checks)
-constraint1 = QOCS.Constraint(A,zeros(3),QOCS.Box(l,u))
-settings = QOCS.Settings(check_infeasibility = 2500, verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
+constraint1 = COSMO.Constraint(A,zeros(3),COSMO.Box(l,u))
+settings = COSMO.Settings(check_infeasibility = 2500, verbose=true,eps_abs = 1e-4,eps_rel = 1e-4)
 
-model = QOCS.Model()
+model = COSMO.Model()
 assemble!(model,P,q,constraint1)
-res_box = QOCS.optimize!(model,settings);
+res_box = COSMO.optimize!(model,settings);
 
 
 @testset "QP Problem" begin

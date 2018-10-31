@@ -7,7 +7,7 @@
 # This immediately gives us that
 # λ1 = min{t | s.t. tI − A ≥ 0}
 using Test
-using QOCS, SparseArrays,LinearAlgebra, Random
+using COSMO, SparseArrays,LinearAlgebra, Random
 
 nn = 10
 rng = MersenneTwister(7232)
@@ -26,15 +26,15 @@ rng = MersenneTwister(7232)
     b1 = 1.
     b2 = zeros(r^2)
 
-    constraint1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
-    constraint2 = QOCS.Constraint(A2,b2,QOCS.PositiveSemidefiniteCone())
+    constraint1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    constraint2 = COSMO.Constraint(A2,b2,COSMO.PsdCone)
     P = spzeros(r^2,r^2)
 
-    settings = QOCS.Settings(check_termination=1,scaling = 0)
+    settings = COSMO.Settings(check_termination=1,scaling = 0)
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     assemble!(model,P,c,[constraint1;constraint2])
-    res = QOCS.optimize!(model,settings);
+    res = COSMO.optimize!(model,settings);
 
 
 
@@ -46,4 +46,3 @@ rng = MersenneTwister(7232)
    end
 end
 nothing
-

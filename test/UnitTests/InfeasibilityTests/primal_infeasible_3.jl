@@ -20,7 +20,7 @@ rng = Random.MersenneTwister(1313)
     xtrue = rand(rng,n,1)*50
     s1 = zeros(m1,1)
     s2 = randn(rng,m2,1)
-    s3 = vec(Helper.generatePosDefMatrix(r,rng))
+    s3 = vec(COSMOTestUtils.generatePosDefMatrix(r,rng))
     s = [s1;s2;s3]
     b = A*xtrue+s
 
@@ -30,11 +30,11 @@ rng = Random.MersenneTwister(1313)
     b = vec(b)
 
     # create dual feasible problem Px+q+A'y = 0, and y in K*
-    P = Helper.generatePosDefMatrix(n,rng)
+    P = COSMOTestUtils.generatePosDefMatrix(n,rng)
     ytrue_1 = randn(rng,m1,1)*50
     ytrue_2 = randn(rng,m2-1,1)*50
     ytrue_2 = [norm(ytrue_2,2)+1;ytrue_2]
-    ytrue_3 = vec(Helper.generatePosDefMatrix(r,rng))
+    ytrue_3 = vec(COSMOTestUtils.generatePosDefMatrix(r,rng))
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 
@@ -45,15 +45,15 @@ rng = Random.MersenneTwister(1313)
     b2 = b[m1+1:m1+m2]
     b3 = b[m1+m2+1:end]
 
-    cs1 = QOCS.Constraint(A1,b1,QOCS.Zeros())
-    cs2 = QOCS.Constraint(A2,b2,QOCS.SecondOrderCone())
-    cs3 = QOCS.Constraint(A3,b3,QOCS.PositiveSemidefiniteCone())
+    cs1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
+    cs2 = COSMO.Constraint(A2,b2,COSMO.SecondOrderCone)
+    cs3 = COSMO.Constraint(A3,b3,COSMO.PsdCone)
 
-    settings = QOCS.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
 
-    model = QOCS.Model()
+    model = COSMO.Model()
     assemble!(model,P,q,[cs1;cs2;cs3])
-    res = QOCS.optimize!(model,settings);
+    res = COSMO.optimize!(model,settings);
 
     @test res.status == :Primal_infeasible
   end
