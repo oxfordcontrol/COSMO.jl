@@ -113,7 +113,7 @@ function lmul!(L::Diagonal, M::SparseMatrixCSC)
     return M
 end
 
-lmul!(L::IdentityMatrix, M::AbstractMatrix) = R.λ ? R : R .= zero(eltype(M))
+lmul!(L::IdentityMatrix, M::AbstractMatrix) = L.λ ? M : M .= zero(eltype(M))
 
 function rmul!(M::SparseMatrixCSC,R::Diagonal)
 
