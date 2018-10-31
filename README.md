@@ -4,12 +4,12 @@ This repository hosts a Julia implementation of the COSMO solver. It solves conv
 min 1/2 x'Px + q'x
 s.t. Ax + s = b, s in C
 ```
-with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set C is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
+with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
 
 ## Installation / Usage
-- The Solver was written for Julia v0.7/1.0
-- Clone package to local machine: `Pkg.clone("https://github.com/oxfordcontrol/COSMO.jl")`
-- Load the package with `using COSMO`
+- The Solver was written for Julia v1.0
+- Add package via the package manager (type `]`): `add https://github.com/oxfordcontrol/COSMO.jl`
+- Make the package available with `using COSMO`
 - Consider the following example:
 
 ### Example
