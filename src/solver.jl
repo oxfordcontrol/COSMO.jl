@@ -1,3 +1,4 @@
+using IterativeSolvers
 const LinsolveSubarray = SubArray{Float64,1,Vector{Float64},Tuple{UnitRange{Int64}},true}
 
 function admmStep!(x::Vector{Float64},
@@ -25,6 +26,7 @@ function admmStep!(x::Vector{Float64},
   @. ls[1:n] = σ*x-q
   @. ls[(n+1):end] = b-s+μ/ρ
   sol .= F \ ls
+  # minres!(sol, F, ls, maxiter=50)
 
   # Over relaxation
   @. x = α*x_tl + (1.0-α)*x
