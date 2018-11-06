@@ -24,15 +24,15 @@ function assemble!(model::Model{T},
   #FIX ME : It should not be necessary to force sparsity,
   #since maybe we would like a dense solver.  Sparse for
   #now until we get a dense LDL option
-  P = convert(SparseMatrixCSC{Float64,Int64},P)
-  q = convert(Vector{Float64},q)
+  P_c = convert_copy(P, SparseMatrixCSC{Float64, Int64})
+  q_c = convert_copy(q, Vector{Float64})
 
   !isa(constraints, Array) && (constraints = [constraints])
   # model.Flags.INFEASIBILITY_CHECKS = checkConstraintFunctions(constraints)
 
   mergeConstraints!(constraints)
-  model.P = P
-  model.q = q
+  model.P = P_c
+  model.q = q_c
   n = length(q)
   m = sum(map(x->x.dim,map(x->x.convexSet,constraints)))
 
@@ -116,19 +116,30 @@ function set!(model::COSMO.Model,
               A::AbstractMatrix{<:Real},
               b::AbstractVector{<:Real},
               convexSets::Vector{COSMO.AbstractConvexSet{T}}) where{T}
-  # convert inputs
-  P[:,:] = convert(SparseMatrixCSC{Float64,Int64},P)
-  A[:,:] = convert(SparseMatrixCSC{Float64,Int64},A)
-  q[:] = convert(Vector{Float64},q)
-  b[:] = convert(Vector{Float64},b)
 
-  model.P = P
-  model.q = q
-  model.A = A
-  model.b = b
+  # convert inputs and copy them
+  P_c = convert_copy(P, SparseMatrixCSC{Float64, Int64})
+  A_c = convert_copy(A, SparseMatrixCSC{Float64, Int64})
+  q_c = convert_copy(q, Vector{Float64})
+  b_c = convert_copy(b, Vector{Float64})
+
+  model.P = P_c
+  model.q = q_c
+  model.A = A_c
+  model.b = b_c
   model.model_size = [length(b);length(q)]
   model.C = CompositeConvexSet(convexSets)
   nothing
+end
+
+# convert x into type (which creates a copy) or copy x if type coincides
+function convert_copy(x::AbstractArray, type::Type)
+  if typeof(x) == type
+    x_c = copy(x)
+  else
+    x_c = convert(type, x)
+  end
+  return x_c
 end
 
 # merge zeros sets and nonnegative sets
