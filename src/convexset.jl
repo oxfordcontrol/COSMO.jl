@@ -291,3 +291,14 @@ function rectify_scalar_scaling!(E,work)
     work .= tmp./E
     return true
 end
+
+# computes the row indices of A,b for each convex set
+function get_set_indices(sets::Array{COSMO.AbstractConvexSet, 1})
+    sidx = 0
+    indices = Array{UnitRange{Int64},1}(undef, length(sets))
+    for i = eachindex(sets)
+        indices[i] = (sidx + 1) : (sidx + sets[i].dim)
+        sidx += sets[i].dim
+    end
+    return indices
+end

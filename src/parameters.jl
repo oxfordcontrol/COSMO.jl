@@ -4,8 +4,17 @@ function setRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
     # nEQ = p.K.f
     # nINEQ = p.m - p.K.f
     ws.ρ = settings.rho
-    ws.ρVec = ws.ρ*ones(m) #[1e3*ws.ρ*ones(nEQ);ws.ρ*ones(nINEQ)]
-    push!(ws.Info.rho_updates,ws.ρ)
+    ws.ρVec = ws.ρ * ones(m)
+
+    # scale ρ values that belong to equality constraints with a factor of 1e3
+    set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
+    if length(set_ind) > 0
+        row_ind = COSMO.get_set_indices(ws.p.C.sets)
+        for (i, rows) in enumerate(row_ind[set_ind])
+            ws.ρVec[rows] *= 1e3
+        end
+    end
+    push!(ws.Info.rho_updates, ws.ρ)
     return nothing
 end
 
@@ -33,9 +42,19 @@ end
 function updateRhoVec!(newRho::Float64,ws::COSMO.Workspace,settings::COSMO.Settings)
 
     ws.ρ     = newRho
-    ws.ρVec .= newRho #[1e3*newRho*ones(nEQ);newRho*ones(nINEQ)]
+    ws.ρVec .= newRho
+
+     # scale ρ values that belong to equality constraints with a factor of 1e3
+    set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
+    if length(set_ind) > 0
+        row_ind = COSMO.get_set_indices(ws.p.C.sets)
+        for (i, rows) in enumerate(row_ind[set_ind])
+            ws.ρVec[rows] *= 1e3
+        end
+    end
+
     # log rho updates to info variable
-    push!(ws.Info.rho_updates,newRho)
-    factorKKT!(ws,settings)
+    push!(ws.Info.rho_updates, newRho)
+    factorKKT!(ws, settings)
     return nothing
 end
