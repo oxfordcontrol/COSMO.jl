@@ -128,7 +128,7 @@ struct PsdCone{T} <: AbstractConvexCone{T}
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 
-function project!(x::SplitView{T},cone::PsdCone{T}) where{T}
+function project!(x::AbstractArray,cone::PsdCone{T}) where{T}
 
     n = cone.sqrtdim
 
@@ -138,13 +138,10 @@ function project!(x::SplitView{T},cone::PsdCone{T}) where{T}
     else
         # symmetrized square view of x
         X    = reshape(x,n,n)
-        X[:] = 0.5*(X+X')
-        # compute eigenvalue decomposition
-        # then round eigs up and rebuild
-        s,U  = eigen!(X)
-        floorsqrt!(s,0.)
-        rmul!(U,Diagonal(s))
-        mul!(X, U, U')
+        @. X = 0.5*(X+X')
+        s,U  = eigen!(Symmetric(X))
+        # X .= U*Diagonal(max.(s, 0.0))*U'
+        BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
     end
     return nothing
 end
