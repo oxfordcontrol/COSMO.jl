@@ -99,7 +99,7 @@ Status Code  | Description
 
 
 ### Timings
-If `settings.verboseTiming` is set to `true` COSMO will report the following times in `result.times`:
+If `settings.verbose_timing` is set to `true` COSMO will report the following times in `result.times`:
 
 Time Name  | Description
 ---  | ---
