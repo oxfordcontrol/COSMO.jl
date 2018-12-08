@@ -10,8 +10,8 @@ rt = 0.7
 
 
 @testset "Printing" begin
-   @test COSMO.printIteration(settings,iter,cost,r_prim,r_dual) == nothing
-   @test COSMO.printIteration(settings,settings.check_termination,cost,r_prim,r_dual) == nothing
-   @test COSMO.printResult(status,iter,cost,rt) == nothing
+   @test COSMO.print_iteration(settings, iter, cost, r_prim, r_dual) == nothing
+   @test COSMO.print_iteration(settings, settings.check_termination, cost, r_prim, r_dual) == nothing
+   @test COSMO.print_result(status, iter, cost, rt) == nothing
 end
 nothing

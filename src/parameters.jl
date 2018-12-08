@@ -1,60 +1,59 @@
 # set initial values of rhoVec
-function setRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
-    m = ws.p.model_size[1]
-    # nEQ = p.K.f
-    # nINEQ = p.m - p.K.f
-    ws.ρ = settings.rho
-    ws.ρVec = ws.ρ * ones(m)
+function set_rho_vec!(ws::COSMO.Workspace, settings::COSMO.Settings)
+	m = ws.p.model_size[1]
+	# nEQ = p.K.f
+	# nINEQ = p.m - p.K.f
+	ws.ρ = settings.rho
+	ws.ρvec = ws.ρ * ones(m)
 
-    # scale ρ values that belong to equality constraints with a factor of 1e3
-    set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
-    if length(set_ind) > 0
-        row_ind = COSMO.get_set_indices(ws.p.C.sets)
-        for (i, rows) in enumerate(row_ind[set_ind])
-            ws.ρVec[rows] *= 1e3
-        end
-    end
-    push!(ws.Info.rho_updates, ws.ρ)
-    return nothing
+	# scale ρ values that belong to equality constraints with a factor of 1e3
+	set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
+	if length(set_ind) > 0
+		row_ind = COSMO.get_set_indices(ws.p.C.sets)
+		for (i, rows) in enumerate(row_ind[set_ind])
+			ws.ρvec[rows] *= 1e3
+		end
+	end
+	push!(ws.Info.rho_updates, ws.ρ)
+	return nothing
 end
 
 
 # adapt rhoVec based on residual ratio
-function adaptRhoVec!(ws::COSMO.Workspace,settings::COSMO.Settings)
-    # compute normalized residuals based on the working variables (dont unscale)
-    IGNORE_SCALING = true
-    r_prim::Float64, r_dual::Float64 = calculateResiduals(ws,settings,IGNORE_SCALING)
-    maxNormPrim::Float64, maxNormDual::Float64  = maxResComponentNorm(ws,settings,IGNORE_SCALING)
+function adapt_rho_vec!(ws::COSMO.Workspace, settings::COSMO.Settings)
+	# compute normalized residuals based on the working variables (dont unscale)
+	ignore_scaling = true
+	r_prim::Float64, r_dual::Float64 = calculate_residuals(ws, settings, ignore_scaling)
+	max_norm_prim::Float64, max_norm_dual::Float64  = max_res_component_norm(ws, settings, ignore_scaling)
 
-    r_prim = r_prim/(maxNormPrim + 1e-10)
-    r_dual = r_dual/(maxNormDual + 1e-10)
+	r_prim = r_prim / (max_norm_prim + 1e-10)
+	r_dual = r_dual / (max_norm_dual + 1e-10)
 
-    newRho = ws.ρ * sqrt(r_prim/(r_dual+1e-10))
-    newRho = min(max(newRho,settings.RHO_MIN),settings.RHO_MAX)
-    # only update rho if significantly different than current rho
-    # FIXME: Should it be settings.rho or previous rho???
-    if (newRho > settings.adaptive_rho_tolerance*ws.ρ) || (newRho < (1 ./ settings.adaptive_rho_tolerance)*ws.ρ)
-        updateRhoVec!(newRho,ws,settings)
-    end
-    return nothing
+	new_rho = ws.ρ * sqrt(r_prim / (r_dual + 1e-10))
+	new_rho = min(max(new_rho, settings.RHO_MIN), settings.RHO_MAX)
+	# only update rho if significantly different than current rho
+	if (new_rho > settings.adaptive_rho_tolerance * ws.ρ) || (new_rho < (1 ./ settings.adaptive_rho_tolerance) * ws.ρ)
+		update_rho_vec!(new_rho, ws, settings)
+	end
+	return nothing
 end
 
-function updateRhoVec!(newRho::Float64,ws::COSMO.Workspace,settings::COSMO.Settings)
+function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace, settings::COSMO.Settings)
 
-    ws.ρ     = newRho
-    ws.ρVec .= newRho
+	ws.ρ     = new_rho
+	ws.ρvec .= new_rho
 
-     # scale ρ values that belong to equality constraints with a factor of 1e3
-    set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
-    if length(set_ind) > 0
-        row_ind = COSMO.get_set_indices(ws.p.C.sets)
-        for (i, rows) in enumerate(row_ind[set_ind])
-            ws.ρVec[rows] *= 1e3
-        end
-    end
+	# scale ρ values that belong to equality constraints with a factor of 1e3
+	set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
+	if length(set_ind) > 0
+		row_ind = COSMO.get_set_indices(ws.p.C.sets)
+		for (i, rows) in enumerate(row_ind[set_ind])
+			ws.ρvec[rows] *= 1e3
+		end
+	end
 
-    # log rho updates to info variable
-    push!(ws.Info.rho_updates, newRho)
-    factorKKT!(ws, settings)
-    return nothing
+	# log rho updates to info variable
+	push!(ws.Info.rho_updates, new_rho)
+	factor_KKT!(ws, settings)
+	return nothing
 end
