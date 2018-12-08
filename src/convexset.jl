@@ -127,18 +127,18 @@ function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
 
 	n = cone.sqrt_dim
 
-	# handle 1D case
-	if length(x) == 1
-		x = max.(x, zero(T))
-	else
-		# symmetrized square view of x
-		X    = reshape(x, n, n)
-		@. X = 0.5 * (X + X')
-		s, U  = eigen!(Symmetric(X))
-		# X .= U*Diagonal(max.(s, 0.0))*U'
-		BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
-	end
-	return nothing
+    # handle 1D case
+    if length(x) == 1
+        x = max.(x, zero(T))
+    else
+        # symmetrized square view of x
+        X    = reshape(x, n, n)
+        symmetrize!(X)
+        s,U  = eigen!(Symmetric(X))
+        # X .= U*Diagonal(max.(s, 0.0))*U'
+        BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
+    end
+    return nothing
 end
 
 function in_dual(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
