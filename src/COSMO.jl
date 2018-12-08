@@ -1,13 +1,10 @@
 #__precompile__()
 module COSMO
 
-using SparseArrays,LinearAlgebra, SuiteSparse
+using SparseArrays, LinearAlgebra, SuiteSparse
 
 #export MathOptInterfaceCOSMO
-export  assemble!,
-        optimize!,
-        warmStart!,
-        reset!
+export  assemble!, optimize!, warmStart!, reset!
 
 const DefaultFloat = Float64
 const DefaultInt   = Int64

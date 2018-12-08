@@ -18,7 +18,7 @@ rng = Random.MersenneTwister(1313)
     b = [b;zeros(n)]
 
     # create dual feasibile problem
-    P = COSMOTestUtils.generatePosDefMatrix(n,rng)
+    P = COSMOTestUtils.generate_pos_def_matrix(n,rng)
     ytrue = rand(rng,m+n,1)*50
     xtrue = rand(rng,n,1)*50
     q = (-P*xtrue -  A'*ytrue)[:]

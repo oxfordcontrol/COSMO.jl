@@ -22,27 +22,27 @@ using COSMO, Test, LinearAlgebra
 # s.t. Ax <= b
 #      x >= 1,  x2 =>5, x1+x3 => 4
 c = [1; 2; 3; 4]
-A = Matrix(1.0I,4,4)
+A = Matrix(1.0I, 4, 4)
 b = [10; 10; 10; 10]
 
 # create augmented matrices
-Aa = -[A;-Matrix(1.0I,4,4);0 -1 0 0;-1 0 -1 0]
-ba = vec([b; -ones(4,1);-5;-4])
-P = zeros(size(A,2),size(A,2))
+Aa = -[A; -Matrix(1.0I, 4, 4); 0 -1 0 0; -1 0 -1 0]
+ba = vec([b; -ones(4, 1); -5; -4])
+P = zeros(size(A, 2), size(A, 2))
 
-constraint1 = COSMO.Constraint(Aa,ba,COSMO.Nonnegatives)
+constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives)
 
 # define example problem
-settings = COSMO.Settings(rho=0.1,sigma=1e-6,alpha=1.6,max_iter=2500,verbose=true,check_termination=1,eps_abs = 1e-6, eps_rel = 1e-6)
+settings = COSMO.Settings(rho=0.1, sigma=1e-6, alpha=1.6, max_iter=2500, verbose=true, check_termination=1, eps_abs = 1e-6, eps_rel = 1e-6)
 
 model = COSMO.Model()
-assemble!(model,P,c,[constraint1])
+assemble!(model, P, c, [constraint1])
 
-res = COSMO.optimize!(model,settings);
+res = COSMO.optimize!(model, settings);
 
 @testset "Linear Problem" begin
-  @test isapprox(res.x[1:4],[3;5;1;1], atol=1e-2, norm=(x -> norm(x,Inf)))
-  @test isapprox(res.objVal,20.0, atol=1e-2)
+  @test isapprox(res.x[1:4], [3; 5; 1; 1], atol=1e-2, norm = (x -> norm(x, Inf)))
+  @test isapprox(res.obj_val, 20.0, atol = 1e-2)
 end
 nothing
 ```
@@ -79,7 +79,7 @@ Fieldname | Type | Description
 x | Vector{Float64}| Primal variable
 y | Vector{Float64}| Dual variable
 s | Vector{Float64}| (Primal) set variable
-objVal | Float64 | Objective value
+obj_val | Float64 | Objective value
 iter | Int64 | Number of iterations
 status | Symbol | Solution status
 info | COSMO.ResultInfo | Struct with more information
@@ -99,22 +99,22 @@ Status Code  | Description
 
 
 ### Timings
-If `settings.verboseTiming` is set to `true` COSMO will report the following times in `result.times`:
+If `settings.verbose_timing` is set to `true` COSMO will report the following times in `result.times`:
 
 Time Name  | Description
 ---  | ---
-solverTime | Total time used to solve the problem
-setupTime | Setup time = graphTime + factorTime
-graphTime | Time used to perform chordal decomposition
-factorTime | Time used to factor the system of linear equations
-iterTime | Time spent in iteration loop
-projTime | Time spent in projection functions
-postTime | Time used for post processing
+solver_time | Total time used to solve the problem
+setup_time | Setup time = graphTime + factorTime
+graph_time | Time used to perform chordal decomposition
+factor_time | Time used to factor the system of linear equations
+iter_time | Time spent in iteration loop
+proj_time | Time spent in projection functions
+post_time | Time used for post processing
 
 It holds:
-`solverTime` = `setupTime`+ `iterTime` + `postTime`,
-`setupTime` = `graphTime`+ `factorTime`,
-`projTime` subset of `iterTime`.
+`solver_time` = `setup_time`+ `iter_time` + `post_time`,
+`setup_time` = `graph_time`+ `factor_time`,
+`proj_time` subset of `iter_time`.
 
 
 ## Test problems
