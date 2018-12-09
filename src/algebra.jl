@@ -160,7 +160,7 @@ lrmul!(L::IdentityMatrix,
 	M::AbstractMatrix,
 	R::Diagonal) = L.λ ? rmul!(M,R) : M .= zero(eltype(M))
 
-function symmetrize!(A::Matrix{Tf})
+function symmetrize!(A::AbstractMatrix)
 	n = size(A, 1)
 	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")
 	@inbounds for j in 1:n, i in 1:j
