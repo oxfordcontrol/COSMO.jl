@@ -34,9 +34,9 @@ constraints = [constraint1; constraint2]
 
 settings = COSMO.Settings()
 model = COSMO.Model()
-assemble!(model, P, q, constraints)
+assemble!(model, P, q, constraints, settings)
 
-res = COSMO.optimize!(model, settings)
+res = COSMO.optimize!(model)
 
 @testset "QP - Lasso" begin
   @test res.status == :Solved

@@ -57,9 +57,9 @@ constraints = [cs1; cs2]
 
 settings = COSMO.Settings()
 model = COSMO.Model()
-assemble!(model, P, q, constraints)
+assemble!(model, P, q, constraints, settings)
 
-res = COSMO.optimize!(model, settings)
+res = COSMO.optimize!(model)
 
 Xsol = reshape(res.x, n, n)
 

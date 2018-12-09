@@ -41,8 +41,8 @@ settings = COSMO.Settings()
 
 # Solve with OSSDP
 model = COSMO.Model()
-assemble!(model, P, q, [cs1; cs2; cs3])
-res = COSMO.optimize!(model, settings);
+assemble!(model, P, q, [cs1; cs2; cs3], settings)
+res = COSMO.optimize!(model);
 
 @testset "SOCP - Lasso" begin
 @test res.status == :Solved

@@ -28,11 +28,10 @@ end
 
     @testset "Simple QP" begin
         p = simpleQP()
-        settings = COSMO.Settings()
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints)
+        assemble!(model, p.P, p.q, p.constraints, COSMO.Settings())
 
-        res = COSMO.optimize!(model, settings);
+        res = COSMO.optimize!(model);
 
         @test res.status == :Solved
         @test isapprox(norm(res.x - [0.3; 0.7]), 0., atol=tol)
@@ -69,9 +68,9 @@ end
         p = simpleQP()
         settings = COSMO.Settings(max_iter=20)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints)
+        assemble!(model, p.P, p.q, p.constraints, settings)
 
-        res = COSMO.optimize!(model, settings);
+        res = COSMO.optimize!(model);
         @test res.status == :Max_iter_reached
     end
 
@@ -81,9 +80,9 @@ end
          p = simpleQP()
         settings = COSMO.Settings(check_termination=100000)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints)
+        assemble!(model, p.P, p.q, p.constraints, settings)
 
-        res = COSMO.optimize!(model, settings);
+        res = COSMO.optimize!(model);
 
         @test res.status == :Max_iter_reached
 
@@ -101,9 +100,9 @@ end
         p = simpleQP()
         settings = COSMO.Settings(time_limit=1, check_termination=100000000,max_iter=10000000)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints)
+        assemble!(model, p.P, p.q, p.constraints, settings)
 
-        res = COSMO.optimize!(model, settings);
+        res = COSMO.optimize!(model);
         @test res.status == :Time_limit_reached
     end
 
@@ -111,15 +110,15 @@ end
         p = simpleQP()
         settings = COSMO.Settings(check_termination = 1)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints)
+        assemble!(model, p.P, p.q, p.constraints, settings)
 
-        res1 = COSMO.optimize!(model, settings);
+        res1 = COSMO.optimize!(model);
         n = 2
         m = 6
         x0 = res1.x + 0.01*randn(rng, n)
         y0 = res1.y + 0.01*randn(rng, m)
         COSMO.warm_start!(model, x0=x0, y0=y0)
-        res2 = COSMO.optimize!(model, settings);
+        res2 = COSMO.optimize!(model);
 
         @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter
     end

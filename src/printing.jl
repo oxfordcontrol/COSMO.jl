@@ -1,9 +1,9 @@
 using Printf
 
-function print_header(ws::COSMO.Workspace, settings::COSMO.Settings)
+function print_header(ws::COSMO.Workspace)
 
 	m, n = ws.p.model_size
-
+	settings = ws.settings
 	settings.scaling > 0 ? scaling_status = "on" : scaling_status = "off"
 	nnz_in_P = count(!iszero,ws.p.P) - count(!iszero,diag(ws.p.P)) + n
 	nnz_in_M = 2*count(!iszero,ws.p.A) + nnz_in_P + m

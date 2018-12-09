@@ -50,11 +50,11 @@ rng = Random.MersenneTwister(1313)
     cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
     cs3 = COSMO.Constraint(A3,b3,COSMO.PsdCone)
 
-    settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    settings = COSMO.Settings(max_iter=10000, eps_abs = 1e-5, eps_rel=1e-5)
 
     model = COSMO.Model()
-    assemble!(model,P,q,[cs1;cs2;cs3])
-    res = COSMO.optimize!(model,settings);
+    assemble!(model,P,q,[cs1;cs2;cs3], settings)
+    res = COSMO.optimize!(model);
 
     @test res.status == :Primal_infeasible
   end

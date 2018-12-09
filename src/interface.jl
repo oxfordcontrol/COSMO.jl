@@ -1,5 +1,5 @@
 """
-assemble!(model, P, q, constraint(s), [x0, y0])
+assemble!(model, P, q, constraint(s), [settings, x0, y0])
 
 Assembles a `COSMO.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
 
@@ -13,11 +13,12 @@ s.t.  Ax + b ∈ C
 
 ---
 The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
+The optinal argument `settings` can be used to pass custom solver settings.
 """
 function assemble!(model::Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractVector{T},
-	constraints::Union{Constraint{T},Vector{Constraint{T}}},
+	constraints::Union{Constraint{T},Vector{Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings(),
 	x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing) where{ T<: AbstractFloat}
 
 	# convert inputs
@@ -31,15 +32,15 @@ function assemble!(model::Model{T},
 	# model.Flags.INFEASIBILITY_CHECKS = checkConstraintFunctions(constraints)
 
 	merge_constraints!(constraints)
-	model.P = P_c
-	model.q = q_c
+	model.p.P = P_c
+	model.p.q = q_c
 	n = length(q)
 	m = sum(map( x-> x.dim, map( x-> x.convex_set, constraints)))
 
-	model.model_size = [m;n]
+	model.p.model_size = [m;n]
 
-	model.A = spzeros(Float64, m, n)
-	model.b = spzeros(Float64, m)
+	model.p.A = spzeros(Float64, m, n)
+	model.p.b = spzeros(Float64, m)
 
 	model.x0 = zeros(Float64, n)
 	model.y0 = zeros(Float64, m)
@@ -48,13 +49,14 @@ function assemble!(model::Model{T},
 	sort!(constraints, by = x-> sort_sets(x.convex_set))
 	row_num = 1
 	for con in constraints
-		process_constraint!(model, row_num, con.A, con.b, con.convex_set)
+		process_constraint!(model.p, row_num, con.A, con.b, con.convex_set)
 		row_num += con.convex_set.dim
 	end
 
 	# save the convex sets inside the model as a composite set
-	model.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
-
+	model.p.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
+	model.settings = settings
+	model.vars = Variables{T}(m, n, model.p.C)
 	# if user provided warm starting variables, update model
 	warm_start!(model, x0 = x0, y0 = y0)
 
@@ -63,12 +65,12 @@ end
 
 function assemble!(model::COSMO.Model,
 	P::Real,q::Real,
-	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where{T}
+	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings()) where{T}
 	Pm = spzeros(T, 1, 1)
 	qm = zeros(T, 1)
 	Pm[1, 1] = convert(T, P)
 	qm[1] = convert(T, q)
-	assemble!(model, Pm, qm, constraints)
+	assemble!(model, Pm, qm, constraints, settings)
 end
 
 function assemble!(model::COSMO.Model,
@@ -79,7 +81,7 @@ function assemble!(model::COSMO.Model,
 	assemble!(model, P, vec(q), constraints)
 end
 
-assemble!(model::COSMO.Model, P::AbstractMatrix{<:Real}, q::Real, constraints::Union{COSMO.Constraint, Array{COSMO.Constraint}}) = assemble!(model, P, [q], constraints)
+assemble!(model::COSMO.Model, P::AbstractMatrix{<:Real}, q::Real, constraints::Union{COSMO.Constraint, Array{COSMO.Constraint}}, settings::COSMO.Settings = COSMO.Settings()) = assemble!(model, P, [q], constraints, settings)
 
 """
 warm_start!(model, [x0, y0])
@@ -88,14 +90,14 @@ Provides the `COSMO.Model` with warm starting values for the primal variable `x`
 """
 function warm_start!(model::COSMO.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
 	if x0 isa Vector{Float64}
-		if size(model.A, 2) == length(x0)
+		if size(model.p.A, 2) == length(x0)
 			model.x0 = x0
 		else
 			error("Dimension of x0 doesn't match the dimension of A.")
 		end
 	end
 	if y0 isa Vector{Float64}
-		if length(model.b) == length(y0)
+		if length(model.p.b) == length(y0)
 			model.y0 = y0
 		else
 			error("Dimension of y0 doesn't match the dimensions of the constraint variables A, b.")
@@ -105,7 +107,7 @@ end
 
 
 """
-set!(model, P, q, A, b, convex_sets)
+set!(model, P, q, A, b, convex_sets, [settings])
 
 Sets model data directly based on provided fields.
 """
@@ -114,7 +116,7 @@ function set!(model::COSMO.Model,
 	q::AbstractVector{<:Real},
 	A::AbstractMatrix{<:Real},
 	b::AbstractVector{<:Real},
-	convex_sets::Vector{COSMO.AbstractConvexSet{T}}) where{T}
+	convex_sets::Vector{COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings = COSMO.Settings()) where{T}
 
 	# convert inputs and copy them
 	P_c = convert_copy(P, SparseMatrixCSC{Float64, Int64})
@@ -122,12 +124,17 @@ function set!(model::COSMO.Model,
 	q_c = convert_copy(q, Vector{Float64})
 	b_c = convert_copy(b, Vector{Float64})
 
-	model.P = P_c
-	model.q = q_c
-	model.A = A_c
-	model.b = b_c
-	model.model_size = [length(b); length(q)]
-	model.C = CompositeConvexSet(convex_sets)
+	n = length(q)
+	m = length(b)
+	model.p.P = P_c
+	model.p.q = q_c
+	model.p.A = A_c
+	model.p.b = b_c
+	model.p.model_size = [m; n]
+	model.p.C = CompositeConvexSet(convex_sets)
+	model.p.C = CompositeConvexSet(convex_sets)
+	model.vars = Variables{T}(m, n, model.p.C)
+ 	model.settings = settings
 	nothing
 end
 
@@ -207,9 +214,9 @@ function sort_sets(C::AbstractConvexSet)
 end
 
 # transform A*x + b in {0}, to A*x + s == b, s in {0}
-function process_constraint!(model::COSMO.Model, row_num::Int64, A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, b::AbstractVector{<:Real}, C::AbstractConvexSet)
+function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, b::AbstractVector{<:Real}, C::AbstractConvexSet)
 	s = row_num
 	e = row_num + C.dim - 1
-	model.A[s:e, :] = -A
-	model.b[s:e, :] = b
+	p.A[s:e, :] = -A
+	p.b[s:e, :] = b
 end

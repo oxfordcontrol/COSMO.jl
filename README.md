@@ -36,9 +36,9 @@ constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives)
 settings = COSMO.Settings(rho=0.1, sigma=1e-6, alpha=1.6, max_iter=2500, verbose=true, check_termination=1, eps_abs = 1e-6, eps_rel = 1e-6)
 
 model = COSMO.Model()
-assemble!(model, P, c, [constraint1])
+assemble!(model, P, c, [constraint1], settings)
 
-res = COSMO.optimize!(model, settings);
+res = COSMO.optimize!(model);
 
 @testset "Linear Problem" begin
   @test isapprox(res.x[1:4], [3; 5; 1; 1], atol=1e-2, norm = (x -> norm(x, Inf)))
