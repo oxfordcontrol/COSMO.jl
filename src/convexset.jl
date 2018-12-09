@@ -134,7 +134,7 @@ function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
         # symmetrized square view of x
         X    = reshape(x, n, n)
         symmetrize!(X)
-        s,U  = eigen!(Symmetric(X))
+        s,U  = eigen!(Symmetric(X, :U))
         # X .= U*Diagonal(max.(s, 0.0))*U'
         BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
     end

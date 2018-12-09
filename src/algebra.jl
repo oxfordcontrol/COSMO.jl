@@ -164,7 +164,8 @@ function symmetrize!(A::AbstractMatrix)
 	n = size(A, 1)
 	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")
 	@inbounds for j in 1:n, i in 1:j
- 	A[j, i] = (A[j, i] + A[i, j]) / 2
+ 		A[i, j] = (A[i, j] + A[j, i]) / 2
 	end
+	nothing
 end
 
