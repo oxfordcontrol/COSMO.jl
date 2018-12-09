@@ -107,36 +107,26 @@ Model()
 
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model,P,q,constraints)`.
 """
-mutable struct Model{T<:Real}
+mutable struct ProblemData{T<:Real}
 	P::AbstractMatrix{T}
 	q::Vector{T}
 	A::AbstractMatrix{T}
 	b::Vector{T}
 	C::CompositeConvexSet{T}
-	x0::Vector{T}
-	y0::Vector{T}
 	model_size::Array{Integer,1}
-	F::SuiteSparse.CHOLMOD.Factor{T}
-	flags::Flags
-	M::SparseMatrixCSC{T}
 
-	function Model{T}() where{T}
+	function ProblemData{T}() where{T}
 		return new(
 			spzeros(T, 1, 1),             #P
 			T[],                        #q
 			spzeros(T, 1, 1),             #A
 			T[],                        #b
 			COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)]),     #C
-			T[],                        #x0
-			T[],                        #y0
-			[0; 0],                      #model size
-			ldlt(sparse(1.0I, 1, 1)),     #F
-			Flags(),                    #Flags
-			spzeros(T, 0, 0))             #M
+			[0; 0])                 #model size
 	end
 end
 
-Model(args...) = Model{DefaultFloat}(args...)
+ProblemData(args...) = ProblemData{DefaultFloat}(args...)
 
 # -------------------------------------
 # Structure of internal iterate variables
@@ -164,23 +154,28 @@ Variables(args...) = Variables{DefaultFloat}(args...)
 # -------------------------------------
 
 mutable struct Workspace{T}
-	p::Model{T}
+	p::ProblemData{T}
+	settings::Settings
 	sm::ScaleMatrices{T}
 	vars::Variables{T}
 	ρ::T
 	ρvec::Vector{T}
+	x0::Vector{T}
+	y0::Vector{T}
+	F::SuiteSparse.CHOLMOD.Factor{T}
+	M::SparseMatrixCSC{T}
+	flags::Flags
 	Info::Info
 	times::ResultTimes{Float64} #Always 64 bit regardless of data type?
 	#constructor
-	function Workspace{T}(p::COSMO.Model{T},sm::ScaleMatrices{T}) where{T}
-		m, n  = p.model_size
-		vars = Variables{T}(m, n, p.C)
-		ws = new(p, sm, vars, zero(T), T[], Info([zero(T)]), ResultTimes())
-		# hand over warm starting variables
-		length(p.x0) == n && (ws.vars.x[:] = p.x0[:])
-		length(p.y0) == m && (ws.vars.μ[:] = -p.y0[:])
-		return ws
+	function Workspace{T}() where {T}
+		p = ProblemData{T}()
+		sm = ScaleMatrices{T}()
+		vars = Variables{T}(1, 1, p.C)
+		return new(p, Settings(), sm, vars, zero(T), T[], T[], T[], ldlt(sparse(1.0I, 1, 1)), spzeros(0, 0), Flags(), Info([zero(T)]), ResultTimes())
 	end
 end
-
 Workspace(args...) = Workspace{DefaultFloat}(args...)
+
+# Type alias facing the user
+const Model = Workspace;

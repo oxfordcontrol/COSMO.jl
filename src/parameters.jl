@@ -1,9 +1,9 @@
 # set initial values of rhoVec
-function set_rho_vec!(ws::COSMO.Workspace, settings::COSMO.Settings)
+function set_rho_vec!(ws::COSMO.Workspace)
 	m = ws.p.model_size[1]
 	# nEQ = p.K.f
 	# nINEQ = p.m - p.K.f
-	ws.ρ = settings.rho
+	ws.ρ = ws.settings.rho
 	ws.ρvec = ws.ρ * ones(m)
 
 	# scale ρ values that belong to equality constraints with a factor of 1e3
@@ -20,11 +20,12 @@ end
 
 
 # adapt rhoVec based on residual ratio
-function adapt_rho_vec!(ws::COSMO.Workspace, settings::COSMO.Settings)
+function adapt_rho_vec!(ws::COSMO.Workspace)
+	settings = ws.settings
 	# compute normalized residuals based on the working variables (dont unscale)
 	ignore_scaling = true
-	r_prim::Float64, r_dual::Float64 = calculate_residuals(ws, settings, ignore_scaling)
-	max_norm_prim::Float64, max_norm_dual::Float64  = max_res_component_norm(ws, settings, ignore_scaling)
+	r_prim::Float64, r_dual::Float64 = calculate_residuals(ws, ignore_scaling)
+	max_norm_prim::Float64, max_norm_dual::Float64  = max_res_component_norm(ws, ignore_scaling)
 
 	r_prim = r_prim / (max_norm_prim + 1e-10)
 	r_dual = r_dual / (max_norm_dual + 1e-10)
@@ -33,12 +34,12 @@ function adapt_rho_vec!(ws::COSMO.Workspace, settings::COSMO.Settings)
 	new_rho = min(max(new_rho, settings.RHO_MIN), settings.RHO_MAX)
 	# only update rho if significantly different than current rho
 	if (new_rho > settings.adaptive_rho_tolerance * ws.ρ) || (new_rho < (1 ./ settings.adaptive_rho_tolerance) * ws.ρ)
-		update_rho_vec!(new_rho, ws, settings)
+		update_rho_vec!(new_rho, ws)
 	end
 	return nothing
 end
 
-function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace, settings::COSMO.Settings)
+function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace)
 
 	ws.ρ     = new_rho
 	ws.ρvec .= new_rho
@@ -54,6 +55,6 @@ function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace, settings::COSMO.
 
 	# log rho updates to info variable
 	push!(ws.Info.rho_updates, new_rho)
-	factor_KKT!(ws, settings)
+	factor_KKT!(ws)
 	return nothing
 end

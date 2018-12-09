@@ -22,8 +22,8 @@ settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-4)
 
 
 model = COSMO.Model()
-assemble!(model, P, q, constraint1)
-res = COSMO.optimize!(model, settings);
+assemble!(model, P, q, constraint1, settings)
+res = COSMO.optimize!(model);
 
 # solve again by defining the constraints with the help of a box (disable infeasibility checks)
 # constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u))

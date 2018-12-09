@@ -1,5 +1,5 @@
 
-using COSMO, Random
+using COSMO, Random, Test
 
 rng = Random.MersenneTwister(12345)
 

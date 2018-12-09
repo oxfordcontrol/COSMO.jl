@@ -18,8 +18,9 @@ function limit_scaling(s::Number, set::COSMO.Settings)
 end
 
 
-function scale_ruiz!(ws::COSMO.Workspace, set::COSMO.Settings)
+function scale_ruiz!(ws::COSMO.Workspace)
 
+	set = ws.settings
 	#references to scaling matrices from workspace
 	D    = ws.sm.D
 	E    = ws.sm.E
@@ -172,7 +173,7 @@ function reverse_scaling!(ws::COSMO.Workspace)
 	ws.vars.μ  .*= cinv
 
 	# reverse scaling for model data
-	if ws.p.flags.REVERSE_SCALE_PROBLEM_DATA
+	if ws.flags.REVERSE_SCALE_PROBLEM_DATA
 		scale_data!(ws.p.P, ws.p.A, ws.p.q, ws.p.b,
 			ws.sm.Dinv, ws.sm.Einv, cinv)
 	end
