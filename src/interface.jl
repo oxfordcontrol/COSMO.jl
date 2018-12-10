@@ -215,14 +215,16 @@ function merge_nonnegatives(constraints::Array{COSMO.Constraint{T}}) where{T}
 end
 
 
+
 function sort_sets(C::AbstractConvexSet)
-	C = typeof(C)
-	(C <: ZeroSet) && return 1
-	(C <: Nonnegatives) && return 2
-	(C <: Box) && return 3
-	(C <: SecondOrderCone) && return 4
-	(C <: PsdCone) && return 5
-	return 6
+  C = typeof(C)
+  (C <: ZeroSet) && return 1
+  (C <: Nonnegatives) && return 2
+  (C <: Box) && return 3
+  (C <: SecondOrderCone) && return 4
+  (C <: PsdCone) && return 5
+  (C <: PsdConeTriangle) && return 6
+  return 6
 end
 
 # transform A*x + b in {0}, to A*x + s == b, s in {0}
@@ -231,4 +233,12 @@ function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{Abst
 	e = row_num + C.dim - 1
 	p.A[s:e, :] = -A
 	p.b[s:e, :] = b
+end
+
+# For PsdConeTriangle - sets, one can disregard the lower-triangular entries. However the off-diagonal entries have to be scaled by sqrt(2) to preserve the inner product
+function processConstraint!(model::COSMO.Model,rowNum::Int64,A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}},b::AbstractVector{<:Real},C::PsdConeTriangle)
+  s = rowNum
+  e = rowNum + C.dim - 1
+  model.A[s:e,:] = -A
+  model.b[s:e,:] = b
 end

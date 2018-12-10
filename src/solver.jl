@@ -187,7 +187,7 @@ function optimize!(ws::COSMO.Workspace)
 	res_info = ResultInfo(r_prim, r_dual)
 	y = -ws.vars.μ
 
-	return result = Result(ws.vars.x, y, ws.vars.s, cost, num_iter, status, res_info, ws.times);
-
+	return result = Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
+

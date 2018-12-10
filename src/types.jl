@@ -40,14 +40,22 @@ info | COSMO.ResultInfo | Struct with more information
 times | COSMO.ResultTimes | Struct with several measured times
 """
 struct Result{T <: AbstractFloat}
-	x::Vector{T}
-	y::Vector{T}
-	s::SplitVector{T}
-	obj_val::T
-	iter::Int64
-	status::Symbol
-	info::ResultInfo
-	times::ResultTimes
+    x::Vector{T}
+    y::Vector{T}
+    s::Vector{T}
+    obj_val::T
+    iter::Int64
+    status::Symbol
+    info::ResultInfo{T}
+    times::ResultTimes{T}
+
+    function Result{T}() where {T <: AbstractFloat}
+      return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, :Unsolved, ResultInfo{T}(0.,0.), ResultTimes{T}())
+    end
+
+    function Result{T}(x, y, s, obj_val, iter, status, info, times) where {T <: AbstractFloat}
+      return new(x, y, s, obj_val, iter, status, info, times)
+    end
 
 end
 
