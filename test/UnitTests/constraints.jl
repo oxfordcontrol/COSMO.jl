@@ -42,7 +42,6 @@ b_mat = sparse(rand(rng, 10, 1))
     cs = COSMO.Constraint(A, b, COSMO.ZeroSet, dim, ind)
 
     @test cs.A[:, ind] == A
-    @test cs.b[ind] == b
 
    end
 
