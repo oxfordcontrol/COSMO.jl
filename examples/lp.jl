@@ -15,7 +15,7 @@ n = 4
 # create constraints A * x + b in set
 # -------------------
 # Ax <= b
-c1 = COSMO.Constraint(A, b, COSMO.Nonnegatives)
+c1 = COSMO.Constraint(-A, b, COSMO.Nonnegatives)
 # x >= 1
 c2 = COSMO.Constraint(Matrix(1.0I, n, n), -ones(n), COSMO.Nonnegatives)
 # x2 >= 5
