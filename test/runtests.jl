@@ -3,6 +3,8 @@ using COSMO, Random, Test
 
 rng = Random.MersenneTwister(12345)
 
+include("../src/COSMOTestUtils.jl")
+
 @testset "All Unit Tests" begin
 
   include("./UnitTests/simple.jl")
