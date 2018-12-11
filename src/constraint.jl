@@ -54,11 +54,8 @@ struct Constraint{T <: AbstractFloat}
 			(indices.start < 1 || indices.stop < indices.start) && throw(DomainError("The index range for x has to be increasing and nonnegative."))
 			dim < indices.stop && throw(DomainError("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop)."))
 			Ac = spzeros(size(A, 1), dim)
-			bc = zeros(dim)
 			Ac[:, indices] = A
-			bc[indices] = b
 			A = Ac
-			b = bc
 		end
 		dim = size(A, 1)
 		# call the appropriate set constructor

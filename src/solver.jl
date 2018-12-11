@@ -44,23 +44,22 @@ end
 
 
 """
-optimize!(model,settings)
+optimize!(model)
 
 Attempts to solve the optimization problem defined in `COSMO.Model` object with the user settings defined in `COSMO.Settings`. Returns a `COSMO.Result` object.
 """
-function optimize!(model::COSMO.Model, settings::COSMO.Settings)
+function optimize!(ws::COSMO.Workspace)
 	solver_time_start = time()
+	settings = ws.settings
 
 	# create scaling variables
 	# with scaling    -> uses mutable diagonal scaling matrices
 	# without scaling -> uses identity matrices
-	sm = (settings.scaling > 0) ? ScaleMatrices(model.model_size[1], model.model_size[2]) : ScaleMatrices()
+	ws.sm = (settings.scaling > 0) ? ScaleMatrices(ws.p.model_size[1], ws.p.model_size[2]) : ScaleMatrices()
 
-	# create workspace
-	ws = Workspace(model, sm)
 
 	# perform preprocessing steps (scaling, initial KKT factorization)
-	ws.times.setup_time = @elapsed setup!(ws, settings);
+	ws.times.setup_time = @elapsed setup!(ws);
 	ws.times.proj_time  = 0. #reset projection time
 
 	# instantiate variables
@@ -72,7 +71,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 
 
 	# print information about settings to the screen
-	settings.verbose && print_header(ws, settings)
+	settings.verbose && print_header(ws)
 	time_limit_start = time()
 
 	#preallocate arrays
@@ -98,7 +97,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 		ws.times.proj_time += admm_step!(
 			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
 			x_tl, s_tl, ls, sol,
-			ws.p.F, ws.p.q, ws.p.b, ws.ρvec,
+			ws.F, ws.p.q, ws.p.b, ws.ρvec,
 			settings.alpha, settings.sigma,
 			m, n, ws.p.C);
 
@@ -108,7 +107,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 
 		# compute residuals (based on optimality conditions of the problem) to check for termination condition
 		# compute them every {settings.check_termination} step
-		mod(iter, settings.check_termination)  == 0 && ((r_prim, r_dual) = calculate_residuals(ws, settings))
+		mod(iter, settings.check_termination)  == 0 && ((r_prim, r_dual) = calculate_residuals(ws))
 
 
 		# check convergence with residuals every {settings.checkIteration} steps
@@ -124,7 +123,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 			# print iteration steps
 			settings.verbose && print_iteration(settings, iter, cost, r_prim, r_dual)
 
-			if has_converged(ws, settings, r_prim, r_dual)
+			if has_converged(ws, r_prim, r_dual)
 				status = :Solved
 				break
 			end
@@ -132,7 +131,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 
 		# check infeasibility conditions every {settings.checkInfeasibility} steps
 		if mod(iter, settings.check_infeasibility) == 0
-			if is_primal_infeasible(δy, ws, settings)
+			if is_primal_infeasible(δy, ws)
 				status = :Primal_infeasible
 				cost = Inf
 				ws.vars.x .= NaN
@@ -140,7 +139,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 				break
 			end
 
-			if is_dual_infeasible(δx, ws, settings)
+			if is_dual_infeasible(δx, ws)
 				status = :Dual_infeasible
 				cost = -Inf
 				ws.vars.x .= NaN
@@ -152,7 +151,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 
 		# adapt rhoVec if enabled
 		if settings.adaptive_rho && (mod(iter, settings.adaptive_rho_interval) == 0) && (settings.adaptive_rho_interval > 0)
-			adapt_rho_vec!(ws, settings)
+			adapt_rho_vec!(ws)
 		end
 
 		if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
@@ -167,7 +166,7 @@ function optimize!(model::COSMO.Model, settings::COSMO.Settings)
 
 	# calculate primal and dual residuals
 	if num_iter == settings.max_iter
-		r_prim, r_dual = calculate_residuals(ws, settings)
+		r_prim, r_dual = calculate_residuals(ws)
 		status = :Max_iter_reached
 	end
 
