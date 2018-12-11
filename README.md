@@ -7,13 +7,13 @@ s.t. Ax + s = b, s in C
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
 
 ## Installation / Usage
-- The Solver was written for Julia v1.0
-- Add package via the package manager (type `]`): `add https://github.com/oxfordcontrol/COSMO.jl`
+- The solver is written for Julia `v1.0`
+- Add the package via the package manager (type `]`): `add https://github.com/oxfordcontrol/COSMO.jl`
 - Make the package available with `using COSMO`
-- Consider the following example:
 
 ### Example
 ```julia
+using COSMO, LinearAlgebra, SparseArrays, Test
 
 # Linear program example
 # min c'x
@@ -28,7 +28,7 @@ n = 4
 # create constraints A * x + b in set
 # -------------------
 # Ax <= b
-c1 = COSMO.Constraint(A, b, COSMO.Nonnegatives)
+c1 = COSMO.Constraint(-A, b, COSMO.Nonnegatives)
 # x >= 1
 c2 = COSMO.Constraint(Matrix(1.0I, n, n), -ones(n), COSMO.Nonnegatives)
 # x2 >= 5
@@ -78,7 +78,7 @@ scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
 time_limit | set solver time limit in s | 0
 
-For more low-level settings, see the Settings definition in `/src/Types.jl`.
+For more low-level settings, see the Settings definition in `/src/types.jl`.
 
 ## Result
 After attempting to solve the problem, COSMO will return a result object with the following fields:
@@ -108,7 +108,7 @@ Status Code  | Description
 
 
 ### Timings
-If `settings.verbose_timing` is set to `true` COSMO will report the following times in `result.times`:
+If `settings.verbose_timing` is set to `true`, COSMO will report the following times in `result.times`:
 
 Time Name  | Description
 ---  | ---
@@ -123,15 +123,15 @@ post_time | Time used for post processing
 It holds:
 `solver_time` = `setup_time`+ `iter_time` + `post_time`,
 `setup_time` = `graph_time`+ `factor_time`,
-`proj_time` subset of `iter_time`.
+`proj_time` is a subset of `iter_time`.
 
 
 ## Test problems
 A set of benchmark problems with conic constraints has been collected and made available here:
 [https://github.com/migarstka/SDP_Benchmark_Problems](https://github.com/migarstka/SDP_Benchmark_Problems)
 
-## Tasks / Future Work
-The current tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:
+## Issues / Tasks / Future Work
+Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
