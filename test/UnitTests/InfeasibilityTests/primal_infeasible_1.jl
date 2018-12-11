@@ -18,7 +18,7 @@ rng = Random.MersenneTwister(1313)
     b = [b;zeros(n)]
 
     # create dual feasibile problem
-    P = COSMOTestUtils.generatePosDefMatrix(n,rng)
+    P = COSMOTestUtils.generate_pos_def_matrix(n,rng)
     ytrue = rand(rng,m+n,1)*50
     xtrue = rand(rng,n,1)*50
     q = (-P*xtrue -  A'*ytrue)[:]
@@ -28,8 +28,8 @@ rng = Random.MersenneTwister(1313)
 
     settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
     model = COSMO.Model()
-    assemble!(model,P,q,[constraint])
-    res1 = COSMO.optimize!(model,settings);
+    assemble!(model,P,q,[constraint], settings)
+    res1 = COSMO.optimize!(model);
 
      @test res1.status == :Primal_infeasible
   end

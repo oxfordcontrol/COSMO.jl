@@ -7,7 +7,7 @@
 # This immediately gives us that
 # λ1 = min{t | s.t. tI − A ≥ 0}
 using Test
-using COSMO, SparseArrays,LinearAlgebra, Random
+using COSMO, SparseArrays, LinearAlgebra, Random
 
 nn = 10
 rng = MersenneTwister(7232)
@@ -16,25 +16,25 @@ rng = MersenneTwister(7232)
 
   for iii = 1:nn
     # generate symmetric test matrix A
-    r = rand(rng,2:30)
-    A = Symmetric(randn(rng,r,r))
+    r = rand(rng, 2:30)
+    A = Symmetric(randn(rng, r, r))
 
     # solve the dual problem
     c = -vec(A)
-    A1 = -vec(sparse(1.0I,r,r))'
-    A2 = sparse(1.0I,r^2,r^2)
+    A1 = -vec(sparse(1.0I, r, r))'
+    A2 = sparse(1.0I, r^2, r^2)
     b1 = 1.
     b2 = zeros(r^2)
 
-    constraint1 = COSMO.Constraint(A1,b1,COSMO.ZeroSet)
-    constraint2 = COSMO.Constraint(A2,b2,COSMO.PsdCone)
-    P = spzeros(r^2,r^2)
+    constraint1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
+    constraint2 = COSMO.Constraint(A2, b2, COSMO.PsdCone)
+    P = spzeros(r^2, r^2)
 
-    settings = COSMO.Settings(check_termination=1,scaling = 0)
+    settings = COSMO.Settings(check_termination=1, scaling = 0)
 
     model = COSMO.Model()
-    assemble!(model,P,c,[constraint1;constraint2])
-    res = COSMO.optimize!(model,settings);
+    assemble!(model, P, c,[constraint1; constraint2], settings)
+    res = COSMO.optimize!(model);
 
 
 
@@ -42,7 +42,7 @@ rng = MersenneTwister(7232)
 
     # true solution
     λMaxTrue = maximum(eigen(A).values)
-    @test abs(res.y[1]-λMaxTrue) < 1e-2
+    @test abs(res.y[1] - λMaxTrue) < 1e-2
    end
 end
 nothing

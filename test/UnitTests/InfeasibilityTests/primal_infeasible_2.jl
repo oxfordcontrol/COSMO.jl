@@ -35,10 +35,10 @@ rng = Random.MersenneTwister(1313)
     # b2 = zeros(n)
     # b3 =
     # create dual feasible problem Px+q+A'y = 0, and y in K*
-    P = COSMOTestUtils.generatePosDefMatrix(n,rng)
+    P = COSMOTestUtils.generate_pos_def_matrix(n,rng)
     ytrue_1 = randn(rng,m1,1)*50
     ytrue_2 = rand(rng,n,1)*50
-    ytrue_3 = vec(COSMOTestUtils.generatePosDefMatrix(r,rng))
+    ytrue_3 = vec(COSMOTestUtils.generate_pos_def_matrix(r,rng))
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 
@@ -50,11 +50,11 @@ rng = Random.MersenneTwister(1313)
     cs2 = COSMO.Constraint(A2,b2,COSMO.Nonnegatives)
     cs3 = COSMO.Constraint(A3,b3,COSMO.PsdCone)
 
-    settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+    settings = COSMO.Settings(max_iter=10000, eps_abs = 1e-5, eps_rel=1e-5)
 
     model = COSMO.Model()
-    assemble!(model,P,q,[cs1;cs2;cs3])
-    res = COSMO.optimize!(model,settings);
+    assemble!(model,P,q,[cs1;cs2;cs3], settings)
+    res = COSMO.optimize!(model);
 
     @test res.status == :Primal_infeasible
   end

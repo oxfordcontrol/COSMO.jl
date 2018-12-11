@@ -1,11 +1,11 @@
-function setup!(ws::COSMO.Workspace,settings::COSMO.Settings)
-    # scale problem data
-    if settings.scaling != 0
-        scaleRuiz!(ws,settings)
-    end
+function setup!(ws::COSMO.Workspace)
+	# scale problem data
+	if ws.settings.scaling != 0
+		scale_ruiz!(ws)
+	end
 
-    setRhoVec!(ws,settings)
+	set_rho_vec!(ws)
 
-    # factor the KKT condition matrix
-    ws.p.flags.FACTOR_LHS && factorKKT!(ws,settings)
+	# factor the KKT condition matrix
+	ws.flags.FACTOR_LHS && factor_KKT!(ws)
 end
