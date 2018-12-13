@@ -3,10 +3,9 @@
 [![codecov](https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/oxfordcontrol/COSMO.jl)
 
 This repository hosts a Julia implementation of the COSMO solver. It solves convex optimization problems of the following form:
-```
-min 1/2 x'Px + q'x
-s.t. Ax + s = b, s in C
-```
+
+<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;\textstyle{\frac{1}{2}}x^\top&space;Px&space;&plus;&space;q^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&plus;&space;s&space;=&space;b&space;\\&space;&&space;s&space;\in&space;\mathcal{C},&space;\end{array}" title="\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}" />
+
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
 
 ## Installation / Usage
