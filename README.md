@@ -1,4 +1,7 @@
 ![COSMO Logo](https://github.com/migarstka/COSMO_assets/blob/master/COSMO_logo.png)
+[![Build Status](https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master)](https://travis-ci.org/oxfordcontrol/COSMO.jl)
+[![codecov](https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/oxfordcontrol/COSMO.jl)
+
 This repository hosts a Julia implementation of the COSMO solver. It solves convex optimization problems of the following form:
 ```
 min 1/2 x'Px + q'x
