@@ -9,6 +9,8 @@ julia:
 notifications:
   email: false
 
+git:
+  depth: 3
 
 ## uncomment the following lines to allow failures on nightly julia
 ## (tests will run but not make your overall status red)
@@ -26,11 +28,7 @@ matrix:
 
 ## uncomment the following lines to override the default test script
 script:
-script:
-   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
    - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; Pkg.clone(pwd()); Pkg.build("COSMO"); Pkg.test("COSMO"; coverage=true)';
 after_success:
-  # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("COSMO")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
-  - julia -e 'cd(Pkg.dir("COSMO")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; cd(Pkg.dir("COSMO")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'

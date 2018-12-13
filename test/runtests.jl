@@ -1,9 +1,8 @@
 
 using COSMO, Random, Test
-
+using COSMOTestUtils
 rng = Random.MersenneTwister(12345)
 
-include("../src/COSMOTestUtils.jl")
 
 @testset "All Unit Tests" begin
 

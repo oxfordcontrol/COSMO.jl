@@ -40,8 +40,8 @@ tol = 1e-4
 
     # Positive Semidefinite cones
     psd = COSMO.PsdCone(16)
-    X = randn(rng, 4, 4)
-    X = X * X' - 4 * Matrix(1.0I, 4, 4)
+    X = Symmetric(randn(rng, 4, 4))
+    X = X - 4 * Matrix(1.0I, 4, 4)
     x = vec(X)
     COSMO.project!(view(x, 1:length(x)), psd)
     @test minimum(eigen(reshape(x, 4, 4)).values) >= -1e-9
@@ -85,9 +85,9 @@ tol = 1e-4
 
     # Dual of Positive Semidefinite Cone (self-dual)
     tol = 1e-4
-    X = randn(rng, 4, 4)
-    Xpos = X * X' + 4 * Matrix(1.0I, 4, 4)
-    Xneg = X * X' - 4 * Matrix(1.0I, 4, 4)
+    X = Symmetric(randn(rng, 4, 4))
+    Xpos = X + 4 * Matrix(1.0I, 4, 4)
+    Xneg = X - 4 * Matrix(1.0I, 4, 4)
     xpos = vec(Xpos)
     xneg = vec(Xneg)
     convex_set = COSMO.PsdCone(16)
@@ -128,9 +128,9 @@ tol = 1e-4
 
     # Polar Recc of Positive Semidefinite Cone
     tol = 1e-4
-    X = randn(rng,4, 4)
-    Xpos = X * X' - 20 * Matrix(1.0I, 4, 4)
-    Xneg = X * X' + 4 * Matrix(1.0I, 4, 4)
+    X = Symmetric(randn(rng, 4, 4))
+    Xpos = X - 20 * Matrix(1.0I, 4, 4)
+    Xneg = X + 4 * Matrix(1.0I, 4, 4)
     xpos = vec(Xpos)
     xneg = vec(Xneg)
     convex_set = COSMO.PsdCone(16)
