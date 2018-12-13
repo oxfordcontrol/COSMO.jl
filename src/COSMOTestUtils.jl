@@ -1,6 +1,3 @@
-module COSMOTestUtils
-using LinearAlgebra, Random
-export generate_pos_def_matrix, is_numerically_pos_sem_def, is_numerically_symmetric, find_nonsymmetric_component, find_different_elements, recreate_sparse_matrix, duplicate_sparsity_pattern, gmean
 
 # generate a random pos def matrix with eigenvalues between 0.1 and 2
 function generate_pos_def_matrix(n::Int64,rng)
@@ -106,4 +103,3 @@ function gmean(a::AbstractArray{T}) where T<:Real
 	end
 	return exp(s / n)
 end
-end #MODULE

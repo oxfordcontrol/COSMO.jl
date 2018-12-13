@@ -35,10 +35,10 @@ rng = Random.MersenneTwister(1313)
     # b2 = zeros(n)
     # b3 =
     # create dual feasible problem Px+q+A'y = 0, and y in K*
-    P = COSMOTestUtils.generate_pos_def_matrix(n,rng)
+    P = generate_pos_def_matrix(n,rng)
     ytrue_1 = randn(rng,m1,1)*50
     ytrue_2 = rand(rng,n,1)*50
-    ytrue_3 = vec(COSMOTestUtils.generate_pos_def_matrix(r,rng))
+    ytrue_3 = vec(generate_pos_def_matrix(r,rng))
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 
