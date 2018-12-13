@@ -53,7 +53,6 @@ res = COSMO.optimize!(model);
 @testset "Linear Problem" begin
   @test isapprox(res.x[1:4], [3; 5; 1; 1], atol=1e-2, norm = (x -> norm(x, Inf)))
   @test isapprox(res.obj_val, 20.0, atol=1e-2)
->>>>>>> devel
 end
 ```
 
