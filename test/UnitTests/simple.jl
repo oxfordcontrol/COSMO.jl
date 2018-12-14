@@ -121,6 +121,9 @@ end
         res2 = COSMO.optimize!(model);
 
         @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter
+
+        @test_throws DimensionMismatch COSMO.warm_start!(model, x0 = rand(4))
+        @test_throws DimensionMismatch COSMO.warm_start!(model, y0 = rand(2))
     end
 
 end
