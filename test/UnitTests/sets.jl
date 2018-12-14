@@ -25,6 +25,9 @@ tol = 1e-4
     l = -1 * ones(10)
     u = 1 * ones(10)
     box = COSMO.Box(l, u)
+    box = COSMO.Box{Float64}(10)
+    box.l .= l
+    box.u .= u
     x = 100 * randn(rng, 10)
     COSMO.project!(view(x, 1:length(x)), box)
     @test minimum(x) >= -1. && maximum(x) <= 1.

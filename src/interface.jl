@@ -42,6 +42,8 @@ function assemble!(model::Model{T},
 	model.p.A = spzeros(Float64, m, n)
 	model.p.b = spzeros(Float64, m)
 
+	check_dimensions(model.p.P, model.p.q, model.p.A, model.p.b)
+
 	model.x0 = zeros(Float64, n)
 	model.y0 = zeros(Float64, m)
 
@@ -81,7 +83,6 @@ function assemble!(model::COSMO.Model,
 	assemble!(model, P, vec(q), constraints)
 end
 
-assemble!(model::COSMO.Model, P::AbstractMatrix{<:Real}, q::Real, constraints::Union{COSMO.Constraint, Array{COSMO.Constraint}}, settings::COSMO.Settings = COSMO.Settings()) = assemble!(model, P, [q], constraints, settings)
 
 """
 warm_start!(model, [x0, y0])
@@ -93,14 +94,14 @@ function warm_start!(model::COSMO.Model; x0::Union{Vector{Float64}, Nothing} = n
 		if size(model.p.A, 2) == length(x0)
 			model.x0 = x0
 		else
-			error("Dimension of x0 doesn't match the dimension of A.")
+			throw(DimensionMismatch("Dimension of x0 doesn't match the dimension of A."))
 		end
 	end
 	if y0 isa Vector{Float64}
 		if length(model.p.b) == length(y0)
 			model.y0 = y0
 		else
-			error("Dimension of y0 doesn't match the dimensions of the constraint variables A, b.")
+			throw(DimensionMismatch("Dimension of y0 doesn't match the dimensions of the constraint variables A, b."))
 		end
 	end
 end
@@ -116,13 +117,16 @@ function set!(model::COSMO.Model,
 	q::AbstractVector{<:Real},
 	A::AbstractMatrix{<:Real},
 	b::AbstractVector{<:Real},
-	convex_sets::Vector{COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings = COSMO.Settings()) where{T}
+	convex_sets::Vector{<: COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings = COSMO.Settings()) where{T}
+
+	check_dimensions(P, q, A, b)
 
 	# convert inputs and copy them
 	P_c = convert_copy(P, SparseMatrixCSC{Float64, Int64})
 	A_c = convert_copy(A, SparseMatrixCSC{Float64, Int64})
 	q_c = convert_copy(q, Vector{Float64})
 	b_c = convert_copy(b, Vector{Float64})
+
 
 	n = length(q)
 	m = length(b)
@@ -135,6 +139,14 @@ function set!(model::COSMO.Model,
 	model.p.C = CompositeConvexSet(convex_sets)
 	model.vars = Variables{T}(m, n, model.p.C)
  	model.settings = settings
+	nothing
+end
+
+function check_dimensions(P, q, A, b)
+		size(A, 1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
+	size(A, 2) != length(q) && throw(DimensionMismatch("The dimensions of matrix A and vector q don't match."))
+	size(b, 2) != 1 && throw(DimensionMismatch("Input b must be a vector or a scalar."))
+	size(P, 1) != length(q) && throw(DimensionMismatch("The dimensions of matrix P and vector q don't match."))
 	nothing
 end
 

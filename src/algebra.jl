@@ -3,7 +3,7 @@ import LinearAlgebra: lmul!, rmul!
 const  IdentityMatrix = UniformScaling{Bool}
 
 
-function clip(s, min_thresh, max_thresh,min_new = min_thresh, max_new = max_thresh)
+function clip(s::Real, min_thresh::Real, max_thresh::Real, min_new::Real = min_thresh, max_new::Real = max_thresh)
 	s = ifelse(s < min_thresh, min_new, ifelse(s > max_thresh, max_new, s))
 end
 
@@ -13,11 +13,11 @@ end
 
 function scaled_norm(E::Diagonal, v::Array{T}, p::Real = 2) where{T}
 	if p == 2
-		return scaled_norm2(E, v)::T
+		return scaled_norm2(E, v)
 	elseif p == Inf
-		return scaled_norm_Inf(E, v)::T
+		return scaled_norm_Inf(E, v)
 	elseif p == 1
-		return scaledN_norm1(E, v)::T
+		return scaled_norm1(E, v)
 	else
 		throw(ArgumentError("bad norm specified"))
 	end
@@ -28,7 +28,7 @@ function scaled_norm2(E::Diagonal, v::Array)
 	for i = 1:length(v)
 		sum_sq += (E.diag[i] * v[i])^2
 	end
-	return sqrt(sum_sq)::eltype(v)
+	return sqrt(sum_sq)
 end
 
 function scaled_norm_Inf(E::Diagonal, v::Array)
@@ -36,7 +36,7 @@ function scaled_norm_Inf(E::Diagonal, v::Array)
 	for i = 1:length(v)
 		norm = max(norm, E.diag[i] * v[i])
 	end
-	return norm::eltype(v)
+	return norm
 end
 
 function scaled_norm1(E::Diagonal, v::Array)
@@ -44,10 +44,8 @@ function scaled_norm1(E::Diagonal, v::Array)
 	for i = 1:length(v)
 		norm += abs(E.diag[i] * v[i])
 	end
-	return norm::eltype(v)
+	return norm
 end
-
-
 
 function col_norms!(v::Array{Tf, 1},
 	A::Matrix{Tf};

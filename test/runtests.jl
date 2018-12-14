@@ -2,7 +2,7 @@
 using COSMO, Random, Test
 rng = Random.MersenneTwister(12345)
 
-include("../src/COSMOTestUtils.jl")
+include("./UnitTests/COSMOTestUtils.jl")
 
 @testset "All Unit Tests" begin
 
@@ -15,5 +15,7 @@ include("../src/COSMOTestUtils.jl")
   include("./UnitTests/closestcorr.jl")
   include("./UnitTests/print.jl")
   include("./UnitTests/InfeasibilityTests/runTests.jl")
+  include("./UnitTests/algebra.jl")
+  include("./UnitTests/interface.jl")
 end
 nothing
