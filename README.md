@@ -8,6 +8,10 @@ This repository hosts a Julia implementation of the COSMO solver. It solves conv
 
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
 
+## Upcoming changes
+- JuMP interface currently developed in `mg/MOptInterface`(see [here](https://github.com/oxfordcontrol/COSMO.jl/issues/56))
+- Update of PSD decomposition related code to Julia v1.0
+
 ## Installation / Usage
 - The solver is written for Julia `v1.0`
 - Add the package via the package manager (type `]`): `add https://github.com/oxfordcontrol/COSMO.jl`
