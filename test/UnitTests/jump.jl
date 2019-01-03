@@ -1,8 +1,5 @@
 # JuMP unit tests for MOI Wrapper
-
-
 using COSMO, Test, LinearAlgebra, JuMP, MathOptInterface
-
 
 # ---------------------------
 # Linear Program
@@ -100,6 +97,28 @@ m = Model(with_optimizer(COSMO.Optimizer));
 status = JuMP.optimize!(m);
 
 @testset "SDP Square - JuMP" begin
+    @test isapprox(JuMP.objective_value(m), 13.9022, atol = 1e-3)
+    @test JuMP.termination_status(m) == MathOptInterface.Success
+    @test JuMP.primal_status(m) == MathOptInterface.FeasiblePoint
+end
+
+# ---------------------------
+# Semidefinite Program - Triangle
+# ---------------------------
+A1 = [1.0 0 1; 0 3 7; 1 7 5]
+A2 = [0.0 2 8; 2 6 0; 8 0 4]
+C = [1.0 2 3; 2 9 0; 3 0 7]
+b1 = 11.0
+b2 = 19.0
+
+    m = Model(with_optimizer(COSMO.Optimizer));
+    @variable(m, X[1:3,1:3], PSD);
+    @objective(m, Min, tr(C * X));
+    @constraint(m, tr(A1 * X) == b1);
+    @constraint(m, tr(A2 * X) == b2);
+    status = JuMP.optimize!(m);
+
+@testset "SDP Triangle - JuMP" begin
     @test isapprox(JuMP.objective_value(m), 13.9022, atol = 1e-3)
     @test JuMP.termination_status(m) == MathOptInterface.Success
     @test JuMP.primal_status(m) == MathOptInterface.FeasiblePoint

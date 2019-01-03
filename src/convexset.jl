@@ -201,14 +201,14 @@ function project!(x::AbstractArray,cone::PsdConeTriangle{T}) where{T}
     return nothing
 end
 
-function indual(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
+function in_dual(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
     return ( minimum(real(eigvals(Xs))) >= -tol )
 end
 
-function inrecc(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
+function in_recc(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)

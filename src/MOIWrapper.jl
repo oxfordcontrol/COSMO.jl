@@ -28,9 +28,11 @@ IntervalConvertible = Union{LessThan, GreaterThan, EqualTo, Interval}
 
 
 Zeros = MOI.Zeros
- #Nonnegatives = MOI.Nonnegatives
+#Nonnegatives = MOI.Nonnegatives
 Nonpositives = MOI.Nonpositives
 SOC = MOI.SecondOrderCone
+PSDS = MOI.PositiveSemidefiniteConeSquare
+PSDT = MOI.PositiveSemidefiniteConeTriangle
 PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
 SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives,SOC,PSD}
 
@@ -63,23 +65,25 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     hasresults::Bool
     results::COSMO.Result{Float64}
     is_empty::Bool
-    settings::COSMO.Settings
     sense::MOI.OptimizationSense
     objconstant::Float64
-    constrconstant::Vector{Float64}
+    set_constant::Vector{Float64}
+    constr_constant::Vector{Float64}
     rowranges::Dict{Int, UnitRange{Int}}
+    idxmap::MOIU.IndexMap
 
     function Optimizer()
         inner = COSMO.Model()
         hasresults = false
         results = COSMO.Result{Float64}()
         is_empty = true
-        settings = COSMO.Settings()
         sense = MOI.MinSense
         objconstant = 0.
-        constrconstant = Float64[]
+        set_constant = Float64[]
+        constr_constant = Float64[]
         rowranges = Dict{Int, UnitRange{Int}}()
-        new(inner, hasresults, results, is_empty, settings, sense, objconstant, constrconstant, rowranges)
+        idxmap = MOIU.IndexMap()
+        new(inner, hasresults, results, is_empty, sense, objconstant, set_constant, constr_constant, rowranges, idxmap)
     end
 end
 
@@ -87,7 +91,7 @@ function Base.show(io::IO, obj::Optimizer)
     if obj.is_empty
         print(io,"Empty COSMO - Optimizer")
     elseif obj.hasresults
-        print(io,"COSMO - Optimizer\n- Has results: $(obj.hasresults)\n- Objective constant: $(obj.objconstant)\n- Problem status: $(obj.results.status)\n- Optimal objective: $(round(obj.results.objVal, digits = 3))\n- Sense: $(obj.sense)\n- Iterations: $(obj.results.iter)\n- Solve time: $(round.(obj.results.times.solverTime*1000,digits=2))ms")
+        print(io,"COSMO - Optimizer\n- Has results: $(obj.hasresults)\n- Objective constant: $(obj.objconstant)\n- Problem status: $(obj.results.status)\n- Optimal objective: $(round(obj.results.obj_val, digits = 3))\n- Sense: $(obj.sense)\n- Iterations: $(obj.results.iter)\n- Solve time: $(round.(obj.results.times.solver_time*1000,digits=2))ms")
     else
         print(io,"COSMO - Optimizer\n- Has results: $(obj.hasresults)\n- Objective constant: $(obj.objconstant)\n- Sense: $(obj.sense)")
     end
@@ -104,7 +108,9 @@ function MOI.empty!(optimizer::Optimizer)
     optimizer.is_empty = true
     optimizer.sense = MOI.MinSense # model parameter, so needs to be reset
     optimizer.objconstant = 0.
-    optimizer.constrconstant = Float64[]
+    optimizer.set_constant = Float64[]
+    optimizer.constr_constant = Float64[]   # the 5 in (3 * x1 + 2 * x2 + 5 ≤ 10 )
+    optimizer.idxmap = MOIU.IndexMap()
     empty!(optimizer.rowranges)
     optimizer
 end
@@ -120,34 +126,25 @@ struct UnsupportedObjectiveError <: Exception end
 # MODEL --> SOLVER FORMAT FUNCTIONS
 ##############################
 
-function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names=false)
+function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     copy_names && error("Copying names is not supported.")
     MOI.empty!(dest)
     idxmap = MOIU.IndexMap(dest, src)
     assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
     dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
-    A,b,convexSets = processconstraints(src, idxmap, dest.rowranges)
+    A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
     COSMO.set!(dest.inner, P, q, A, b, convexSets)
     dest.is_empty = false
-    idxmap
+    dest.idxmap = idxmap
 end
 
 function MOI.optimize!(optimizer::Optimizer)
-    optimizer.results = COSMO.optimize!(optimizer.inner, optimizer.settings)
+    optimizer.results = COSMO.optimize!(optimizer.inner)
     optimizer.hasresults = true
     nothing
 end
 
-# function add_constant(result::COSMO.Result{T}, constant::Real) where {T}
-#     return new_result = COSMO.Result{T}(result.x, result.y, result.s, result.objVal + constant, result.iter, result.status, result.info, result.times);
-# end
 
-# create function for your solver that creates a index map, defined like this:
-# struct IndexMap
-#     varmap::Dict{MOI.VariableIndex, MOI.VariableIndex}
-#     conmap::Dict{MOI.ConstraintIndex, MOI.ConstraintIndex}
-# end
-#FIX-ME: The order is important in my case, since s is ordered -> {0}, R+, SOCP, PSD
 function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
     idxmap = MOIU.IndexMap()
     # map model variable indices to solver variable indices
@@ -171,14 +168,6 @@ function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
     idxmap
 end
 
-# # returns a number for each supported set to ensure compatible order
-# function sortSets(t::Type{<:MOI.AbstractSet})
-#     (t <: MOI.EqualTo || t <: MOI.Zeros ) && return 1
-#     (t <:MOI.GreaterThan || t <: MOI.LessThan || t <: MOI.Interval || t <: MOI.Nonnegatives || t <: MOI.Nonpositives) && return 2
-#     (t <:MOI.SecondOrderCone) && return 3
-#     (t <: MOI.PositiveSemidefiniteConeSquare) && return 4
-#     return 5
-# end
 
 # Print idxmap for debugging purposes
 function printIdxmap(idxmap::MOIU.IndexMap)
@@ -213,10 +202,12 @@ function assign_constraint_row_ranges!(rowranges::Dict{Int, UnitRange{Int}}, idx
     end
 end
 
+
 function constraint_rows(rowranges::Dict{Int, UnitRange{Int}}, ci::CI{<:Any, <:MOI.AbstractScalarSet})
     rowrange = rowranges[ci.value]
     length(rowrange) == 1 || error()
     first(rowrange)
+
 end
 constraint_rows(rowranges::Dict{Int, UnitRange{Int}}, ci::CI{<:Any, <:MOI.AbstractVectorSet}) = rowranges[ci.value]
 constraint_rows(optimizer::Optimizer, ci::CI) = constraint_rows(optimizer.rowranges, ci)
@@ -293,7 +284,78 @@ function symmetrize!(I::Vector{Int}, J::Vector{Int}, V::Vector)
     end
 end
 
-function processconstraints(src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}})
+# taken from https://github.com/JuliaOpt/SCS.jl
+
+# Vectorized length for matrix dimension n
+sympackedlen(n) = div(n*(n+1), 2)
+# Matrix dimension for vectorized length n
+sympackeddim(n) = div(isqrt(1+8n) - 1, 2)
+trimap(i::Integer, j::Integer) = i < j ? trimap(j, i) : div((i-1)*i, 2) + j
+trimapL(i::Integer, j::Integer, n::Integer) = i < j ? trimapL(j, i, n) : i + div((2n-j) * (j-1), 2)
+function _sympackedto(x, n, mapfrom, mapto)
+    @assert length(x) == sympackedlen(n)
+    y = similar(x)
+    for i in 1:n, j in 1:i
+        y[mapto(i, j)] = x[mapfrom(i, j)]
+    end
+    y
+end
+sympackedLtoU(x, n=sympackeddim(length(x))) = _sympackedto(x, n, (i, j) -> trimapL(i, j, n), trimap)
+sympackedUtoL(x, n=sympackeddim(length(x))) = _sympackedto(x, n, trimap, (i, j) -> trimapL(i, j, n))
+
+function sympackedUtoLidx(x::AbstractVector{<:Integer}, n)
+    y = similar(x)
+    map = sympackedLtoU(1:sympackedlen(n), n)
+    for i in eachindex(y)
+        y[i] = map[x[i]]
+    end
+    y
+end
+
+orderval(val, s) = val
+function orderval(val, s::MOI.PositiveSemidefiniteConeTriangle)
+    sympackedUtoL(val, s.side_dimension)
+end
+orderidx(idx, s) = idx
+function orderidx(idx, s::MOI.PositiveSemidefiniteConeTriangle)
+    sympackedUtoLidx(idx, s.side_dimension)
+end
+
+# Scale coefficients depending on rows index
+# rows: List of row indices
+# coef: List of corresponding coefficients
+# minus: if true, multiply the result by -1
+# d: dimension of set
+# rev: if true, we unscale instead (e.g. divide by √2 instead of multiply for PSD cone)
+_scalecoef(rows, coef, minus, ::Type{<:MOI.AbstractSet}, d, rev) = minus ? -coef : coef
+_scalecoef(rows, coef, minus, ::Union{Type{<:MOI.LessThan}, Type{<:MOI.Nonpositives}, Type{<:MOI.EqualTo}}, d, rev) = minus ? coef : -coef
+function _scalecoef(rows, coef, minus, ::Type{MOI.PositiveSemidefiniteConeTriangle}, d, rev)
+    scaling = minus ? -1 : 1
+    scaling2 = rev ? scaling / √2 : scaling * √2
+    output = copy(coef)
+    diagidx = BitSet()
+    for i in 1:d
+        # vector index of diagonal entries of original matrix
+        push!(diagidx, trimap(i, i))
+    end
+    # normalize rows
+    rows = rows .- first(rows) .+ 1
+    for i in 1:length(output)
+        if rows[i] in diagidx
+            output[i] *= scaling
+        else
+            output[i] *= scaling2
+        end
+    end
+    output
+end
+# Unscale the coefficients in `coef` with respective rows in `rows` for a set `s` and multiply by `-1` if `minus` is `true`.
+scalecoef(rows, coef, minus, s) = _scalecoef(rows, coef, minus, typeof(s), MOI.dimension(s), false)
+# Unscale the coefficients in `coef` with respective rows in `rows` for a set of type `S` with dimension `d`
+unscalecoef(rows, coef, S::Type{<:MOI.AbstractSet}, d) = _scalecoef(rows, coef, false, S, d, true)
+#unscalecoef(rows, coef, S::Type{MOI.PositiveSemidefiniteConeTriangle}, d) = _scalecoef(rows, coef, false, S, sympackeddim(d), true)
+
+function processconstraints(optimizer, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}})
 
     m = mapreduce(length, +, values(rowranges), init=0)
 
@@ -303,17 +365,19 @@ function processconstraints(src::MOI.ModelLike, idxmap, rowranges::Dict{Int, Uni
     J = Int[]
     V = Float64[]
     COSMOconvexSets = Array{COSMO.AbstractConvexSet{Float64}}(undef, 0)
+    set_constant = zeros(Float64, m)
     # loop over constraints and modify A, l, u and constants
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
-        processconstraints!((I, J, V), b, COSMOconvexSets, constant, src, idxmap, rowranges, F, S)
+        processconstraints!((I, J, V), b, COSMOconvexSets, constant, set_constant, src, idxmap, rowranges, F, S)
     end
+    optimizer.set_constant = set_constant
     # subtract constant from right hand side
     n = MOI.get(src, MOI.NumberOfVariables())
     A = sparse(I, J, V, m, n)
-    return (A, b, COSMOconvexSets)
+    return A, b, constant, COSMOconvexSets
 end
 
-function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSets::Array{COSMO.AbstractConvexSet{Float64}}, constant::Vector{Float64},
+function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSets::Array{COSMO.AbstractConvexSet{Float64}}, constant::Vector{Float64}, set_constant::Vector{Float64},
         src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}},
         F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})
     cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
@@ -322,11 +386,16 @@ function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSet
         s = MOI.get(src, MOI.ConstraintSet(), ci)
         f = MOI.get(src, MOI.ConstraintFunction(), ci)
         # handle cases where the sign of rows of A an b has to be flipped
-        isa(s, Union{MOI.GreaterThan, MOI.Nonnegatives, SOC, PSD}) ? FLIP_SIGN = true : FLIP_SIGN = false
+        # isa(s, Union{MOI.GreaterThan, MOI.Nonnegatives, SOC, PSD}) ? FLIP_SIGN = true : FLIP_SIGN = false
 
         rows = constraint_rows(rowranges, idxmap[ci])
         processConstant!(b, rows, f)
-        processConstraint!(triplets, f, rows, idxmap, FLIP_SIGN)
+        constant[rows] = b[rows]
+        if typeof(s) <: MOI.AbstractScalarSet
+            set_constant[rows] =  MOIU.getconstant(s)
+        end
+
+        processConstraint!(triplets, f, rows, idxmap, s)
         processSet!(b, rows, COSMOconvexSets, s)
     end
     nothing
@@ -359,17 +428,17 @@ function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine)
 end
 
 # process function like f(x)= x1
-function processConstraint!(triplets::SparseTriplets, f::MOI.SingleVariable, row::Int, idxmap, FLIP_SIGN::Bool)
+function processConstraint!(triplets::SparseTriplets, f::MOI.SingleVariable, row::Int, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     col = idxmap[f.variable].value
     push!(I, row)
     push!(J, col)
-    FLIP_SIGN ? push!(V, -1) : push!(V,1)
+    push!(V, scalecoef(row, 1, true, s))
     nothing
 end
 
 # process function like f(x) = coeff*x_1
-function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap, FLIP_SIGN::Bool)
+function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     for term in f.terms
         var = term.variable_index
@@ -377,24 +446,28 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunctio
         col = idxmap[var].value
         push!(I, row)
         push!(J, col)
-        FLIP_SIGN ? push!(V, -coeff) : push!(V, coeff)
+        push!(V, scalecoef(row, coeff, true, s))
     end
 end
 
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap, FLIP_SIGN::Bool)
+function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
-    for (i,var) in enumerate(f.variables)
-        row = rows[i]
-        col = idxmap[var].value
-        push!(I, row)
-        push!(J, col)
-        FLIP_SIGN ? push!(V, -1) : push!(V, 1)
+    cols = zeros(length(rows))
+    @show(f.variables)
+    for (i, var) in enumerate(f.variables)
+        cols[i] = idxmap[var].value
     end
+    row_start = first(rows) - 1
+    # @show(row_start, orderidx(collect(1:length(rows)), s), cols, scalecoef(rows, orderval(ones(length(rows)), s), true, s))
+    append!(I, rows)#row_start .+ orderidx(collect(1:length(rows)), s))
+    append!(J, cols)
+    append!(V, scalecoef(rows, orderval(ones(length(rows)), s), true, s))
     nothing
 end
 
+# FIXME: This won't work with the loop because of the way scalecoef is written
 # process function like f(x) = a'*x where x[1:n]
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap, FLIP_SIGN::Bool)
+function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     for term in f.terms
         row = rows[term.output_index]
@@ -403,7 +476,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunctio
         col = idxmap[var].value
         push!(I, row)
         push!(J, col)
-        FLIP_SIGN ? push!(V, -coeff) : push!(V, coeff)
+        push!(V, scalecoef(rows, coeff, true, s))
     end
 end
 
@@ -458,6 +531,13 @@ function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonnegatives)
     push!(cs, set)
     nothing
 end
+
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonpositives)
+    set = COSMO.Nonnegatives{Float64}(length(rows))
+    push!(cs, set)
+    nothing
+end
+
 function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::SOC)
     set = COSMO.SecondOrderCone{Float64}(length(rows))
     push!(cs, set)
@@ -478,7 +558,7 @@ end
 
 
 ##############################
-# CAN GET / GET / SET : OPTIMIZER ATTRIBUTES
+# GET / SET : OPTIMIZER ATTRIBUTES
 ##############################
 
 # MOI.canset(optimizer::Optimizer, a::COSMOAttribute) = isupdatable(a) || MOI.isempty(optimizer)
@@ -499,7 +579,11 @@ MOI.get(optimizer::Optimizer, ::MOI.ResultCount) = 1
 # Get objective function
 function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
     rawobj = optimizer.results.obj_val
-    return ifelse(optimizer.sense == MOI.MaxSense, -rawobj, rawobj)
+    if optimizer.sense == MOI.MaxSense
+        return -rawobj - optimizer.objconstant
+    else
+        return rawobj + optimizer.objconstant
+    end
 end
 
 # Get solve time
@@ -512,30 +596,30 @@ function MOI.get(optimizer::Optimizer, a::MOI.TerminationStatus)
     # Note that the :Dual_infeasible and :Primal_infeasible are mapped to MOI.Success
     # because COSMO can return a proof of infeasibility. For the same reason,
     # :Primal_infeasible_inaccurate is mapped to MOI.AlmostSuccess
-    oscpstatus = optimizer.results.status
-    if oscpstatus == :Unsolved
+    status = optimizer.results.status
+    if status == :Unsolved
         error("Problem is unsolved.") # TODO: good idea?
-    elseif oscpstatus == :Dual_infeasible
+    elseif status == :Dual_infeasible
         MOI.Success
-    elseif oscpstatus == :Primal_infeasible
+    elseif status == :Primal_infeasible
         MOI.Success
-    elseif oscpstatus == :Max_iter_reached
+    elseif status == :Max_iter_reached
         MOI.IterationLimit
-    elseif oscpstatus == :Solved
+    elseif status == :Solved
         MOI.Success
     end
 end
 
 # Get Primal Status
 function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
-    oscpstatus = optimizer.results.status
-    if oscpstatus == :Unsolved
+    status = optimizer.results.status
+    if status == :Unsolved
         error("Problem is unsolved.") # TODO: good idea?
-    elseif oscpstatus == :Primal_infeasible
+    elseif status == :Primal_infeasible
         MOI.InfeasibilityCertificate
-    elseif oscpstatus == :Solved
+    elseif status == :Solved
         MOI.FeasiblePoint
-    elseif oscpstatus == :Dual_infeasible
+    elseif status == :Dual_infeasible
         MOI.InfeasibilityCertificate
     else
         MOI.UnknownResultStatus
@@ -544,20 +628,45 @@ end
 
 # Get Dual Status
 function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
-    oscpstatus = optimizer.results.info.status
-    if oscpstatus == :Unsolved
+    status = optimizer.results.status
+    if status == :Unsolved
         error("Problem is unsolved.") # TODO: good idea?
-    elseif oscpstatus == :Dual_infeasible
+    elseif status == :Dual_infeasible
         MOI.InfeasibilityCertificate
-    elseif oscpstatus == :Primal_infeasible
+    elseif status == :Primal_infeasible
         MOI.InfeasibilityCertificate
-    elseif oscpstatus == :Solved
+    elseif status == :Solved
         MOI.FeasiblePoint
     else # :Interrupted, :Max_iter_reached, :Solved_inaccurate, :Non_convex (TODO: good idea? use COSMO.SOLUTION_PRESENT?)
         MOI.UnknownResultStatus
     end
 end
 
+# function constraint_primal(optimizer::Optimizer, rows, S::Type{<:MOI.AbstractSet})
+#      @show(optimizer.inner.p.b, optimizer.constr_constant, optimizer.results.s )
+#      coeff = optimizer.inner.p.b[rows] + optimizer.constr_constant[rows] - optimizer.results.s[rows]
+#        return unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
+
+# end
+
+_unshift(optimizer::Optimizer, offset, value, s) = value
+_unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value + optimizer.set_constant[offset]
+
+function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+    # offset = constroffset(optimizer, ci)
+    # rows = constrrows(optimizer, ci)
+    # _unshift(optimizer, offset, unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
+    @show(ci, optimizer.idxmap)
+    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    c_primal = unscalecoef(rows, optimizer.results.s[rows], S, length(rows))
+    # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))
+    return _unshift(optimizer, rows, c_primal, S)
+end
+
+function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    return unscalecoef(rows, optimizer.results.y[rows], S, length(rows))
+end
 
 ## Variable attributes:
 
