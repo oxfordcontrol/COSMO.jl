@@ -110,11 +110,6 @@ end
 # Problem data
 # -------------------------------------
 
-"""
-Model()
-
-Initializes an empty COSMO model that can be filled with problem data using `assemble!(model,P,q,constraints)`.
-"""
 mutable struct ProblemData{T<:Real}
 	P::AbstractMatrix{T}
 	q::Vector{T}
@@ -160,7 +155,11 @@ Variables(args...) = Variables{DefaultFloat}(args...)
 # -------------------------------------
 # Top level container for all solver data
 # -------------------------------------
+"""
+Model()
 
+Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints, [settings])`.
+"""
 mutable struct Workspace{T}
 	p::ProblemData{T}
 	settings::Settings

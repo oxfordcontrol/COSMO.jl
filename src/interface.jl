@@ -83,6 +83,22 @@ function assemble!(model::COSMO.Model,
 	assemble!(model, P, vec(q), constraints)
 end
 
+# empty all fields apart from settings
+function empty!(model::COSMO.Model{T}) where {T}
+	model.p = ProblemData{T}()
+	model.sm = ScaleMatrices{T}()
+	model.vars = Variables{T}(1, 1, model.p.C)
+	model.ρ = zero(T)
+	model.ρvec = T[]
+	model.x0 = T[]
+	model.y0 = T[]
+	model.F = ldlt(sparse(1.0I, 1, 1))
+	model.M = spzeros(0, 0)
+	model.flags = Flags()
+	model.Info = Info([zero(T)])
+	model.times = ResultTimes()
+	nothing
+end
 
 """
 warm_start!(model, [x0, y0])

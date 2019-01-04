@@ -78,7 +78,7 @@ check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
-time_limit | set solver time limit in s | 0
+time_limit | set solver time limit in s | 0.0
 
 For more low-level settings, see the Settings definition in `/src/types.jl`.
 

@@ -72,8 +72,9 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     rowranges::Dict{Int, UnitRange{Int}}
     idxmap::MOIU.IndexMap
 
-    function Optimizer()
+    function Optimizer(; user_settings...)
         inner = COSMO.Model()
+        length(user_settings) > 0 && set_user_settings!(inner, user_settings)
         hasresults = false
         results = COSMO.Result{Float64}()
         is_empty = true
@@ -97,12 +98,19 @@ function Base.show(io::IO, obj::Optimizer)
     end
 end
 
+function set_user_settings!(inner::COSMO.Model, user_settings)
+    for (k, v) in user_settings
+        !in(k, fieldnames(typeof(inner.settings))) && error("The user setting $(k) is not defined.")
+        setfield!(inner.settings, k, v)
+    end
+    # @show(user_settings)
+end
 
 hasresults(optimizer::Optimizer) = optimizer.hasresults
 
 # MG: function to reset otimizer
 function MOI.empty!(optimizer::Optimizer)
-    optimizer.inner = COSMO.Model()
+    COSMO.empty!(optimizer.inner)
     optimizer.hasresults = false
     optimizer.results = COSMO.Result{Float64}()
     optimizer.is_empty = true
@@ -111,9 +119,10 @@ function MOI.empty!(optimizer::Optimizer)
     optimizer.set_constant = Float64[]
     optimizer.constr_constant = Float64[]   # the 5 in (3 * x1 + 2 * x2 + 5 ≤ 10 )
     optimizer.idxmap = MOIU.IndexMap()
-    empty!(optimizer.rowranges)
+    optimizer.rowranges = Dict{Int, UnitRange{Int}}()
     optimizer
 end
+
 
 # MG: check if optimizer object is empty
 MOI.is_empty(optimizer::Optimizer) = optimizer.is_empty
@@ -133,7 +142,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
     dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
     A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
-    COSMO.set!(dest.inner, P, q, A, b, convexSets)
+    COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
     dest.is_empty = false
     dest.idxmap = idxmap
 end
@@ -453,7 +462,6 @@ end
 function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     cols = zeros(length(rows))
-    @show(f.variables)
     for (i, var) in enumerate(f.variables)
         cols[i] = idxmap[var].value
     end
@@ -656,7 +664,6 @@ function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci::CI{<:MOI.Abst
     # offset = constroffset(optimizer, ci)
     # rows = constrrows(optimizer, ci)
     # _unshift(optimizer, offset, unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
-    @show(ci, optimizer.idxmap)
     rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
     c_primal = unscalecoef(rows, optimizer.results.s[rows], S, length(rows))
     # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))

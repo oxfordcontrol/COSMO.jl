@@ -43,7 +43,7 @@ mutable struct Settings
 	RHO_MIN::Float64
 	RHO_MAX::Float64
 	RHO_TOL::Float64
-	time_limit::Int64
+	time_limit::Float64
 	obj_true::Float64
 	obj_true_tol::Float64
 	#constructor
@@ -69,7 +69,7 @@ mutable struct Settings
 		RHO_MIN = 1e-6,
 		RHO_MAX = 1e6,
 		RHO_TOL = 1e-4,
-		time_limit = 0,
+		time_limit = 0.0,
 		obj_true = NaN,
 		obj_true_tol = 1e-3
 		)
