@@ -134,16 +134,12 @@ function optimize!(ws::COSMO.Workspace)
 			if is_primal_infeasible(δy, ws)
 				status = :Primal_infeasible
 				cost = Inf
-				ws.vars.x .= NaN
-				ws.vars.μ .= NaN
 				break
 			end
 
 			if is_dual_infeasible(δx, ws)
 				status = :Dual_infeasible
 				cost = -Inf
-				ws.vars.x .= NaN
-				ws.vars.μ .= NaN
 				break
 			end
 		end
@@ -171,7 +167,7 @@ function optimize!(ws::COSMO.Workspace)
 	end
 
 	# reverse scaling for scaled feasible cases
-	if settings.scaling != 0 && (cost != Inf && cost != -Inf)
+	if settings.scaling != 0
 		reverse_scaling!(ws)
 		# FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
 		cost =  (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
