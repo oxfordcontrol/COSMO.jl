@@ -34,7 +34,7 @@ SOC = MOI.SecondOrderCone
 PSDS = MOI.PositiveSemidefiniteConeSquare
 PSDT = MOI.PositiveSemidefiniteConeTriangle
 PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
-SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives,SOC,PSD}
+SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives,SOC, PSD}
 
 export printIdxmap,sortSets,assign_constraint_row_ranges!, processconstraints,constraint_rows, processobjective,processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 
@@ -398,7 +398,7 @@ function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSet
         # isa(s, Union{MOI.GreaterThan, MOI.Nonnegatives, SOC, PSD}) ? FLIP_SIGN = true : FLIP_SIGN = false
 
         rows = constraint_rows(rowranges, idxmap[ci])
-        processConstant!(b, rows, f)
+        processConstant!(b, rows, f, s)
         constant[rows] = b[rows]
         if typeof(s) <: MOI.AbstractScalarSet
             set_constant[rows] =  MOIU.getconstant(s)
@@ -418,20 +418,20 @@ constant(f::MOI.ScalarAffineFunction) = f.constant
 
 
 # process constant for functions Union{Affine, SingleVariable}
-function processConstant!(b, row::Int, f::AffineConvertible)
-    b[row] = constant(f)
+function processConstant!(b, row::Int, f::AffineConvertible, s)
+    b[row] = scalecoef(row, constant(f), false, s)
     nothing
 end
 
-function processConstant!(b, rows::UnitRange{Int}, f::VectorOfVariables)
+function processConstant!(b, rows::UnitRange{Int}, f::VectorOfVariables, s)
     b[rows] .= 0
     nothing
 end
 
 # process constant for functions VectorAffineFunction{Float64}
-function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine)
+function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine, s)
     for (i, row) in enumerate(rows)
-        b[row] = f.constants[i]
+        b[row] = scalecoef(row, f.constants[i], false, s)
     end
     nothing
 end
@@ -624,7 +624,7 @@ function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
     if status == :Unsolved
         error("Problem is unsolved.") # TODO: good idea?
     elseif status == :Primal_infeasible
-        MOI.InfeasibilityCertificate
+        MOI.InfeasiblePoint
     elseif status == :Solved
         MOI.FeasiblePoint
     elseif status == :Dual_infeasible
@@ -640,7 +640,7 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
     if status == :Unsolved
         error("Problem is unsolved.") # TODO: good idea?
     elseif status == :Dual_infeasible
-        MOI.InfeasibilityCertificate
+        MOI.InfeasiblePoint
     elseif status == :Primal_infeasible
         MOI.InfeasibilityCertificate
     elseif status == :Solved
@@ -720,9 +720,8 @@ MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 ## Supported Constraints
 MOI.supports_constraint(optimizer::Optimizer, ::SingleVariable, ::GreaterThan) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:AffineConvertible}, ::Type{<:IntervalConvertible}) = true
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:VectorAffine}, ::Type{<:SupportedVectorSets}) = true
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables,VectorAffine}}, ::Type{SOC}) = true
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables,VectorAffine}}, ::Type{<:PSD}) = true
+MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
+# MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables,VectorAffine}}, ::Type{<:PSD}) = true
 
 
 
