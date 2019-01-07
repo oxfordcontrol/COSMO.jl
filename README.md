@@ -6,10 +6,14 @@ This repository hosts a Julia implementation of the COSMO solver. It solves conv
 
 <img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;\textstyle{\frac{1}{2}}x^\top&space;Px&space;&plus;&space;q^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&plus;&space;s&space;=&space;b&space;\\&space;&&space;s&space;\in&space;\mathcal{C},&space;\end{array}" title="\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}" />
 
-with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. Further convex sets can be added by the user.
+with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. COSMO allows you to:
+- solve semidefinite programs with quadratic objective functions directly
+- detect infeasible problems without a homogeneous self-dual embedding of the problem
+- describe your optimisation problem using [JuMP](https://github.com/JuliaOpt/JuMP.jl) (COSMO requires JuMP v0.19-beta)
+- use chordal decomposition techniques to decompose chordally structured SDPs
+- define your own convex sets for constraints
 
 ## Upcoming changes
-- JuMP interface currently developed in `mg/MOptInterface`(see [here](https://github.com/oxfordcontrol/COSMO.jl/issues/56))
 - Update of PSD decomposition related code to Julia v1.0
 
 ## Installation / Usage
@@ -48,7 +52,7 @@ end
 status = JuMP.optimize!(m)
 obj_val = JuMP.objective_value(m)
 X_sol = JuMP.value.(X)
-``
+```
 
 ### Example - Direct solver interface
 ```julia
