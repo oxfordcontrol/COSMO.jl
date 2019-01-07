@@ -12,11 +12,13 @@ notifications:
 git:
   depth: 3
 
+
 ## uncomment the following lines to allow failures on nightly julia
 ## (tests will run but not make your overall status red)
 matrix:
   allow_failures:
     - julia: nightly
+
 
 ## uncomment and modify the following lines to manually install system packages
 #addons:
@@ -29,6 +31,7 @@ matrix:
 ## uncomment the following lines to override the default test script
 script:
    - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; Pkg.clone(pwd()); Pkg.build("COSMO"); Pkg.test("COSMO"; coverage=true)';
+
 after_success:
   # push coverage results to Codecov
   - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; cd(Pkg.dir("COSMO")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'

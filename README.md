@@ -17,7 +17,40 @@ with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q �
 - Add the package via the package manager (type `]`): `add https://github.com/oxfordcontrol/COSMO.jl`
 - Make the package available with `using COSMO`
 
-### Example
+### Example - JuMP
+We consider the problem of finding the closest correlation matrix X, i.e. PSD and ones on the diagonal, to a random matrix C.
+```julia
+using COSMO, JuMP, LinearAlgebra, SparseArrays, Test, Random
+rng = Random.MersenneTwister(12345);
+
+# Original problem has the following format:
+# min_X   1/2 ||X-C||^2
+# s.t.    Xii = 1
+#         X ⪴ 0
+
+# create a random test matrix C
+n = 8
+C = -1 .+ rand(rng, n, n) .* 2;
+c = vec(C);
+
+# define problem in JuMP
+q = -vec(C);
+r = 0.5 * vec(C)' * vec(C);
+m = Model(with_optimizer(COSMO.Optimizer, verbose=true, eps_abs = 1e-4));
+@variable(m, X[1:n, 1:n], PSD);
+x = vec(X);
+@objective(m, Min, 0.5 * x' * x  + q' * x + r)
+for i = 1:n
+  @constraint(m, X[i, i] == 1.)
+end
+
+# solve and get results
+status = JuMP.optimize!(m)
+obj_val = JuMP.objective_value(m)
+X_sol = JuMP.value.(X)
+``
+
+### Example - Direct solver interface
 ```julia
 using COSMO, LinearAlgebra, SparseArrays, Test
 
@@ -82,7 +115,7 @@ check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
-time_limit | set solver time limit in s | 0
+time_limit | set solver time limit in s | 0.0
 
 For more low-level settings, see the Settings definition in `/src/types.jl`.
 

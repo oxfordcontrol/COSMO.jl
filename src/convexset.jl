@@ -124,7 +124,6 @@ end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 
 function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
-
 	n = cone.sqrt_dim
 
     # handle 1D case
@@ -134,11 +133,16 @@ function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
         # symmetrized square view of x
         X    = reshape(x, n, n)
         symmetrize!(X)
-        s,U  = eigen!(Symmetric(X, :U))
-        # X .= U*Diagonal(max.(s, 0.0))*U'
-        BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
+        _project!(X)
     end
     return nothing
+end
+
+function _project!(X::AbstractArray)
+	 # below LAPACK function does the following: s, U  = eigen!(Symmetric(X))
+     s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
+     # below BLAS function does the following: X .= U*Diagonal(max.(s, 0.0))*U'
+     BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
 end
 
 function in_dual(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
@@ -165,7 +169,91 @@ function floor_sqrt!(s::Array, floor::Real)
 	@. s  = sqrt(max(floor, s))
 end
 
-# ---------------------------------------------------
+# ----------------------------------------------------
+# Positive Semidefinite Cone (Triangle)
+# ----------------------------------------------------
+
+# Psd cone given by upper-triangular entries of matrix
+struct PsdConeTriangle{T} <: AbstractConvexCone{T}
+    dim::Int #dimension of vector
+    sqrt_dim::Int # side length of matrix
+    X::Array{T,2}
+
+    function PsdConeTriangle{T}(dim::Int) where{T}
+        dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
+        side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
+
+        new(dim, side_dimension, zeros(side_dimension, side_dimension))
+    end
+end
+PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
+
+
+function project!(x::AbstractArray,cone::PsdConeTriangle{T}) where{T}
+    # handle 1D case
+    if length(x) == 1
+        x = max.(x,zero(T))
+    else
+        populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
+        _project!(cone.X)
+        extract_upper_triangle!(cone.X, x, sqrt(2) )
+    end
+    return nothing
+end
+
+function in_dual(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
+    n = cone.sqrt_dim
+    populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
+    Xs = Symmetric(cone.X)
+    return ( minimum(real(eigvals(Xs))) >= -tol )
+end
+
+function in_recc(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
+    n = cone.sqrt_dim
+    populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
+    Xs = Symmetric(cone.X)
+    return ( maximum(real(eigvals(Xs))) <= +tol )
+end
+
+function scale!(cone::PsdConeTriangle{T},::SplitView{T}) where{T}
+    return nothing
+end
+
+function rectify_scaling!(E,work,set::PsdConeTriangle{T}) where{T}
+    return rectify_scalar_scaling!(E,work)
+end
+
+function populate_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
+ 	k = 0
+  	for j in 1:size(A, 2)
+     	for i in 1:j
+        	k += 1
+        	if i != j
+        		A[i, j] = scaling_factor * x[k]
+        	else
+        		A[i, j] = x[k]
+        	end
+      	end
+  	end
+  	nothing
+end
+
+function extract_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
+	k = 0
+  	for j in 1:size(A, 2)
+     	for i in 1:j
+        	k += 1
+        	if i != j
+        		x[k] = scaling_factor * A[i, j]
+        	else
+        		x[k] = A[i, j]
+        	end
+      	end
+  	end
+	nothing
+end
+
+# ----------------------------------------------------
 # Box
 # ----------------------------------------------------
 struct Box{T} <: AbstractConvexSet{T}

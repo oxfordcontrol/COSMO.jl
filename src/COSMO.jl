@@ -25,5 +25,6 @@ include("./printing.jl")            # TODO: unmodified - revisit
 include("./setup.jl")               # TODO: unmodified - revisit (short - consolidate?)
 include("./solver.jl")              # TODO: unmodified - revisit
 include("./interface.jl")           # TODO: unmodified - revisit
+include("./MOIWrapper.jl")
 
 end #end module
