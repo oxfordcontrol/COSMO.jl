@@ -7,7 +7,6 @@ include("./UnitTests/COSMOTestUtils.jl")
 @testset "All Unit Tests" begin
 
   include("./UnitTests/simple.jl")
-  include("./UnitTests/jump.jl")
   include("./UnitTests/moi_wrapper.jl")
   include("./UnitTests/sets.jl")
   include("./UnitTests/constraints.jl")
