@@ -79,7 +79,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
         hasresults = false
         results = COSMO.Result{Float64}()
         is_empty = true
-        sense = MOI.MinSense
+        sense = MOI.MIN_SENSE
         objconstant = 0.
         set_constant = Float64[]
         constr_constant = Float64[]
@@ -114,7 +114,7 @@ function MOI.empty!(optimizer::Optimizer)
     optimizer.hasresults = false
     optimizer.results = COSMO.Result{Float64}()
     optimizer.is_empty = true
-    optimizer.sense = MOI.MinSense # model parameter, so needs to be reset
+    optimizer.sense = MOI.MIN_SENSE # model parameter, so needs to be reset
     optimizer.objconstant = 0.
     optimizer.set_constant = Float64[]
     optimizer.constr_constant = Float64[]   # the 5 in (3 * x1 + 2 * x2 + 5 ≤ 10 )
@@ -226,7 +226,7 @@ function processobjective(src::MOI.ModelLike, idxmap)
     sense = MOI.get(src, MOI.ObjectiveSense())
     n = MOI.get(src, MOI.NumberOfVariables())
     q = zeros(n)
-    if sense != MOI.FeasibilitySense
+    if sense != MOI.FEASIBILITY_SENSE
         # FIXME: this is a hacky way of finding the objective function type and should be changed
         if typeof(src) <: MOIU.UniversalFallback
             obj_type = MOI.get(src.model,MOI.ObjectiveFunctionType())
@@ -257,7 +257,7 @@ function processobjective(src::MOI.ModelLike, idxmap)
         else
             throw(UnsupportedObjectiveError())
         end
-        sense == MOI.MaxSense && (rmul!(P, -1); rmul!(q, -1); c = -c)
+        sense == MOI.MAX_SENSE && (rmul!(P, -1); rmul!(q, -1); c = -c)
     else
         P = spzeros(n, n)
         q = zeros(n)
@@ -581,7 +581,7 @@ MOI.get(optimizer::Optimizer, ::MOI.ResultCount) = 1
 # Get objective function
 function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
     rawobj = optimizer.results.obj_val
-    if optimizer.sense == MOI.MaxSense
+    if optimizer.sense == MOI.MAX_SENSE
         return -rawobj - optimizer.objconstant
     else
         return rawobj + optimizer.objconstant
@@ -598,49 +598,55 @@ function MOI.get(optimizer::Optimizer, a::MOI.TerminationStatus)
     # Note that the :Dual_infeasible and :Primal_infeasible are mapped to MOI.Success
     # because COSMO can return a proof of infeasibility. For the same reason,
     # :Primal_infeasible_inaccurate is mapped to MOI.AlmostSuccess
+    hasresults(optimizer) || return MOI.OPTIMIZE_NOT_CALLED
+
     status = optimizer.results.status
     if status == :Unsolved
-        error("Problem is unsolved.") # TODO: good idea?
+        return MOI.NO_SOLUTION
     elseif status == :Dual_infeasible
-        MOI.Success
+        return MOI.DUAL_INFEASIBLE
     elseif status == :Primal_infeasible
-        MOI.Success
+        return MOI.INFEASIBLE
     elseif status == :Max_iter_reached
-        MOI.IterationLimit
+        return MOI.ITERATION_LIMIT
     elseif status == :Solved
-        MOI.Success
+        return MOI.OPTIMAL
     end
 end
 
 # Get Primal Status
 function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
+    hasresults(optimizer) || return MOI.NO_SOLUTION
+
     status = optimizer.results.status
     if status == :Unsolved
-        error("Problem is unsolved.") # TODO: good idea?
+        return MOI.NO_SOLUTION
     elseif status == :Primal_infeasible
-        MOI.InfeasiblePoint
+        return MOI.INFEASIBLE_POINT
     elseif status == :Solved
-        MOI.FeasiblePoint
+        return MOI.FEASIBLE_POINT
     elseif status == :Dual_infeasible
-        MOI.InfeasibilityCertificate
+        return MOI.INFEASIBILITY_CERTIFICATE
     else
-        MOI.UnknownResultStatus
+        return MOI.NO_SOLUTION
     end
 end
 
 # Get Dual Status
 function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
+    hasresults(optimizer) || return MOI.NO_SOLUTION
+
     status = optimizer.results.status
     if status == :Unsolved
-        error("Problem is unsolved.") # TODO: good idea?
+        return MOI.NO_SOLUTION
     elseif status == :Dual_infeasible
-        MOI.InfeasiblePoint
+        return MOI.MOI.INFEASIBLE_POINT
     elseif status == :Primal_infeasible
-        MOI.InfeasibilityCertificate
+        return MOI.INFEASIBILITY_CERTIFICATE
     elseif status == :Solved
-        MOI.FeasiblePoint
-    else # :Interrupted, :Max_iter_reached, :Solved_inaccurate, :Non_convex (TODO: good idea? use COSMO.SOLUTION_PRESENT?)
-        MOI.UnknownResultStatus
+        return MOI.FEASIBLE_POINT
+    else
+        return MOI.NO_SOLUTION
     end
 end
 
