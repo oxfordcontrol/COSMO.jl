@@ -1,6 +1,7 @@
-# This interface was derived from the OSQP MathOptInterface written by T. Koolen and B. Stellato
+# This interface was partially derived from the OSQP MathOptInterface written by T. Koolen and B. Stellato
 # https://github.com/oxfordcontrol/OSQP.jl/blob/master/src/MathOptInterfaceOSQP.jl
-
+# certain utility function are taken from the SCS MathOptInterface:
+# https://github.com/JuliaOpt/SCS.jl
 
 using MathOptInterface
 
@@ -34,7 +35,7 @@ SOC = MOI.SecondOrderCone
 PSDS = MOI.PositiveSemidefiniteConeSquare
 PSDT = MOI.PositiveSemidefiniteConeTriangle
 PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
-SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives,SOC, PSD}
+SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDS, PSDT}
 
 export printIdxmap,sortSets,assign_constraint_row_ranges!, processconstraints,constraint_rows, processobjective,processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 
@@ -103,7 +104,6 @@ function set_user_settings!(inner::COSMO.Model, user_settings)
         !in(k, fieldnames(typeof(inner.settings))) && error("The user setting $(k) is not defined.")
         setfield!(inner.settings, k, v)
     end
-    # @show(user_settings)
 end
 
 hasresults(optimizer::Optimizer) = optimizer.hasresults
@@ -364,6 +364,13 @@ scalecoef(rows, coef, minus, s) = _scalecoef(rows, coef, minus, typeof(s), MOI.d
 unscalecoef(rows, coef, S::Type{<:MOI.AbstractSet}, d) = _scalecoef(rows, coef, false, S, d, true)
 #unscalecoef(rows, coef, S::Type{MOI.PositiveSemidefiniteConeTriangle}, d) = _scalecoef(rows, coef, false, S, sympackeddim(d), true)
 
+
+output_index(t::MOI.VectorAffineTerm) = t.output_index
+variable_index_value(t::MOI.ScalarAffineTerm) = t.variable_index.value
+variable_index_value(t::MOI.VectorAffineTerm) = variable_index_value(t.scalar_term)
+coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
+coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
+
 function processconstraints(optimizer, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}})
 
     m = mapreduce(length, +, values(rowranges), init=0)
@@ -430,9 +437,9 @@ end
 
 # process constant for functions VectorAffineFunction{Float64}
 function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine, s)
-    for (i, row) in enumerate(rows)
-        b[row] = scalecoef(row, f.constants[i], false, s)
-    end
+    # for (i, row) in enumerate(rows)
+        b[rows] = scalecoef(rows, f.constants, false, s)
+    # end
     nothing
 end
 
@@ -465,7 +472,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, 
     for (i, var) in enumerate(f.variables)
         cols[i] = idxmap[var].value
     end
-    row_start = first(rows) - 1
+    # row_start = first(rows) - 1
     # @show(row_start, orderidx(collect(1:length(rows)), s), cols, scalecoef(rows, orderval(ones(length(rows)), s), true, s))
     append!(I, rows)#row_start .+ orderidx(collect(1:length(rows)), s))
     append!(J, cols)
@@ -473,34 +480,21 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, 
     nothing
 end
 
-# FIXME: This won't work with the loop because of the way scalecoef is written
-# process function like f(x) = a'*x where x[1:n]
 function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
-    for term in f.terms
-        row = rows[term.output_index]
-        var = term.scalar_term.variable_index
-        coeff = term.scalar_term.coefficient
-        col = idxmap[var].value
-        push!(I, row)
-        push!(J, col)
-        push!(V, scalecoef(rows, coeff, true, s))
-    end
+    A = sparse(output_index.(f.terms), variable_index_value.(f.terms), coefficient.(f.terms))
+    # sparse combines duplicates with + but does not remove zeros created so we call dropzeros!
+    dropzeros!(A)
+    A_I, A_J, A_V = findnz(A)
+
+    offset = first(rows) - 1
+
+    append!(I, A_I .+ offset)
+    append!(J, A_J)
+    append!(V, scalecoef(A_I, A_V, true, s))
+
 end
 
-# Special case for PositiveSemidefiniteConeTriangle, since this involves adding more rows to A and b
-# function processConstraint!(triplets::SparseTriplets,f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap,FLIP_SIGN::Bool)
-#     (I, J, V) = triplets
-#     for term in f.terms
-#         row = rows[term.output_index]
-#         var = term.scalar_term.variable_index
-#         coeff = term.scalar_term.coefficient
-#         col = idxmap[var].value
-#         push!(I, row)
-#         push!(J, col)
-#         FLIP_SIGN ? push!(V, -coeff) : push!(V, coeff)
-#     end
-# end
 
 ##############################
 # PROCESS SETS
@@ -650,12 +644,6 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
     end
 end
 
-# function constraint_primal(optimizer::Optimizer, rows, S::Type{<:MOI.AbstractSet})
-#      @show(optimizer.inner.p.b, optimizer.constr_constant, optimizer.results.s )
-#      coeff = optimizer.inner.p.b[rows] + optimizer.constr_constant[rows] - optimizer.results.s[rows]
-#        return unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
-
-# end
 
 _unshift(optimizer::Optimizer, offset, value, s) = value
 _unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value + optimizer.set_constant[offset]
@@ -664,14 +652,15 @@ function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci::CI{<:MOI.Abst
     # offset = constroffset(optimizer, ci)
     # rows = constrrows(optimizer, ci)
     # _unshift(optimizer, offset, unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
-    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    # ci_dest = optimizer.idxmap[ci_src]
+    rows = constraint_rows(optimizer.rowranges, ci)
     c_primal = unscalecoef(rows, optimizer.results.s[rows], S, length(rows))
     # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))
     return _unshift(optimizer, rows, c_primal, S)
 end
 
 function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
-    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    rows = constraint_rows(optimizer.rowranges, ci)#optimizer.idxmap[ci])
     return unscalecoef(rows, optimizer.results.y[rows], S, length(rows))
 end
 
@@ -721,7 +710,7 @@ MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 MOI.supports_constraint(optimizer::Optimizer, ::SingleVariable, ::GreaterThan) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:AffineConvertible}, ::Type{<:IntervalConvertible}) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
-# MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables,VectorAffine}}, ::Type{<:PSD}) = true
+MOI.supports_constraint(optimizer::Optimizer, ::Type{MOI.VectorAffineFunction{Float64}}, ::Type{MOI.PositiveSemidefiniteConeSquare}) = true
 
 
 
