@@ -166,6 +166,56 @@ end
 
 ProblemData(args...) = ProblemData{DefaultFloat}(args...)
 
+# ---------------------------
+# Struct to hold clique and sparsity data for a constraint
+# ---------------------------
+mutable struct SparsityPattern
+  sntree::SuperNodeTree
+  ordering::Array{Int64}
+  reverse_ordering::Array{Int64}
+
+  # constructor for sparsity pattern
+  function SparsityPattern(rows::Array{Int64,1}, N::Int64, NONZERO_FLAG::Bool)
+    g = Graph(rows, N, NONZERO_FLAG)
+    sntree = SuperNodeTree(g)
+    return new(sntree, g.ordering, g.reverse_ordering)
+  end
+
+end
+
+# -------------------------------------
+# Chordal Decomposition Information
+# -------------------------------------
+mutable struct ChordalInfo{T <: Real}
+  originalM::Int64
+  originalN::Int64
+  originalC::CompositeConvexSet{T}
+  H::SparseMatrixCSC{T}
+  sp_arr::Array{COSMO.SparsityPattern}
+  psd_cones_ind::Array{UnitRange{Int64}}
+
+  function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
+    originalM = problem.model_size[1]
+    originalN = problem.model_size[2]
+    originalC = deepcopy(problem.C)
+
+    # Store the indices of the psd cones in psd_cones_ind
+    indices = get_set_indices(problem.C.sets)
+    psd_cones_ind = indices[findall(x -> typeof(x) == PsdCone{Float64}, problem.C.sets)]
+
+    # allocate sparsity pattern for each cone
+    sp_arr = Array{COSMO.SparsityPattern}(undef, length(psd_cones_ind))
+
+    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, psd_cones_ind)
+  end
+
+	function ChordalInfo{T}() where{T}
+		C = COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)])
+		return new(0, 0, C, spzeros(1, 1), COSMO.SparsityPattern[], [1:1])
+	end
+
+end
+
 # -------------------------------------
 # Structure of internal iterate variables
 # -------------------------------------
@@ -199,6 +249,7 @@ mutable struct Workspace{T}
 	p::ProblemData{T}
 	settings::Settings
 	sm::ScaleMatrices{T}
+	ci::ChordalInfo{T}
 	vars::Variables{T}
 	ρ::T
 	ρvec::Vector{T}
@@ -212,7 +263,8 @@ mutable struct Workspace{T}
 		p = ProblemData{T}()
 		sm = ScaleMatrices{T}()
 		vars = Variables{T}(1, 1, p.C)
-		return new(p, Settings(), sm, vars, zero(T), T[], ldlt(sparse(1.0I, 1, 1)), spzeros(0, 0), Flags(), Info([zero(T)]), ResultTimes())
+		ci = ChordalInfo{T}()
+		return new(p, Settings(), sm, ci, vars, zero(T), T[], ldlt(sparse(1.0I, 1, 1)), spzeros(0, 0), Flags(), Info([zero(T)]), ResultTimes())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
@@ -224,3 +276,5 @@ Workspace(args...) = Workspace{DefaultFloat}(args...)
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints; [settings, x0, s0, y0])`.
 """
 const Model = Workspace;
+
+

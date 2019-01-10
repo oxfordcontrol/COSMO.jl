@@ -19,6 +19,8 @@ check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
+decompose | Activate to decompose chordal psd constraints | false
+complete_dual | Activate to complete the dual variable after decomposition | false
 time_limit | set solver time limit in s | 0
 """
 mutable struct Settings
@@ -43,6 +45,8 @@ mutable struct Settings
 	RHO_MIN::Float64
 	RHO_MAX::Float64
 	RHO_TOL::Float64
+  decompose::Bool
+  complete_dual::Bool
 	time_limit::Float64
 	obj_true::Float64
 	obj_true_tol::Float64
@@ -69,10 +73,12 @@ mutable struct Settings
 		RHO_MIN = 1e-6,
 		RHO_MAX = 1e6,
 		RHO_TOL = 1e-4,
+		decompose = false,
+    complete_dual = false,
 		time_limit = 0.0,
 		obj_true = NaN,
 		obj_true_tol = 1e-3
 		)
-	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose,  check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, time_limit, obj_true, obj_true_tol)
+	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose,  check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, decompose, complete_dual, time_limit, obj_true, obj_true_tol)
 end
 end
