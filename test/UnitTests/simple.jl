@@ -29,7 +29,7 @@ end
     @testset "Simple QP" begin
         p = simpleQP()
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints, COSMO.Settings())
+        assemble!(model, p.P, p.q, p.constraints, COSMO.Settings(verbose=true))
 
         res = COSMO.optimize!(model);
 
