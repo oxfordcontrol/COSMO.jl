@@ -1,3 +1,4 @@
+
 <div style="display: flex; justify-content: flex-end" margin=0px>
     <img src="https://github.com/migarstka/COSMO_assets/blob/master/star_badge_2.png" align="right" width=6%>
 </div>
@@ -10,8 +11,8 @@
 </h1>
 <p align="center">
   <a href="https://travis-ci.org/oxfordcontrol/COSMO.jl"><img src="https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master"></a>
-  <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://opensource.org/licenses/Apache-2.0"></a>
-  <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
+  <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg"></a>
+  <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
 </p>
 
 
@@ -45,8 +46,8 @@ By default COSMO supports the zero cone, the non-negative orthant, second order 
 
 ## Installation
 - The solver is written for Julia `v1.0`
-- Add the package via the package manager (type `]`): `add COSMO`
-- Make the package available in your script with `using COSMO`
+- Add the package via the package manager (type `]`): `>> add COSMO`
+- Make the package available in your project with `>> using COSMO`
 
 ## Examples
 
@@ -204,7 +205,9 @@ It holds:
 `proj_time` is a subset of `iter_time`.
 
 ## Contributing
-Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
+- Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
+- Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
+- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know! 
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
