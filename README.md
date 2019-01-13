@@ -1,27 +1,56 @@
-![COSMO Logo](https://github.com/migarstka/COSMO_assets/blob/master/COSMO_logo.png)
-[![Build Status](https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master)](https://travis-ci.org/oxfordcontrol/COSMO.jl)
-[![codecov](https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/oxfordcontrol/COSMO.jl)
+<div style="display: flex; justify-content: flex-end" margin=0px>
+    <img src="https://github.com/migarstka/COSMO_assets/blob/master/star_badge_2.png" align="right" width=6%>
+</div>
+<h1 align="center" margin=0px>
+  <br>
+  <img src="https://github.com/migarstka/COSMO_assets/blob/master/COSMO_logo_only.png" width=40%>
+  <br>
+  <img src="https://github.com/migarstka/COSMO_assets/blob/master/COSMO_text_only.png" width=50%>
+  <br>
+</h1>
+<p align="center">
+  <a href="https://travis-ci.org/oxfordcontrol/COSMO.jl"><img src="https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master"></a>
+  <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://opensource.org/licenses/Apache-2.0"></a>
+  <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
+</p>
 
-This repository hosts a Julia implementation of the COSMO solver. It solves convex optimization problems of the following form:
 
-<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;\textstyle{\frac{1}{2}}x^\top&space;Px&space;&plus;&space;q^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&plus;&space;s&space;=&space;b&space;\\&space;&&space;s&space;\in&space;\mathcal{C},&space;\end{array}" title="\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}" />
 
-with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones. By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. COSMO allows you to:
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#examples">Examples</a> •
+  <a href="#interface">Interface</a> •
+  <a href="NEWS.md">News</a> •
+  <a href="#contributing">Contributing</a> •
+  <a href="#contact">Contact</a>
+</p>
+
+This is a Julia implementation of the _Conic operator splitting method_ (COSMO) solver. It can solve large convex conic optimization problems of the following form:
+<p align="center">
+<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;\textstyle{\frac{1}{2}}x^\top&space;Px&space;&plus;&space;q^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&plus;&space;s&space;=&space;b&space;\\&space;&&space;s&space;\in&space;\mathcal{C},&space;\end{array}" title="\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}"/>
+</p>
+
+with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones.
+
+## Features
+By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. COSMO allows you to:
 - solve semidefinite programs with quadratic objective functions directly
 - detect infeasible problems without a homogeneous self-dual embedding of the problem
 - describe your optimisation problem using [JuMP](https://github.com/JuliaOpt/JuMP.jl) (COSMO requires JuMP v0.19-beta)
 - use chordal decomposition techniques to decompose chordally structured SDPs
 - define your own convex sets for constraints
 
-## Upcoming changes
-- Update of PSD decomposition related code to Julia v1.0
 
-## Installation / Usage
+
+## Installation
 - The solver is written for Julia `v1.0`
-- Add the package via the package manager (type `]`): `add https://github.com/oxfordcontrol/COSMO.jl`
-- Make the package available with `using COSMO`
+- Add the package via the package manager (type `]`): `add COSMO`
+- Make the package available in your script with `using COSMO`
 
-### Example - JuMP
+## Examples
+
+### Using JuMP
 We consider the problem of finding the closest correlation matrix X, i.e. PSD and ones on the diagonal, to a random matrix C.
 ```julia
 using COSMO, JuMP, LinearAlgebra, SparseArrays, Test, Random
@@ -54,7 +83,7 @@ obj_val = JuMP.objective_value(m)
 X_sol = JuMP.value.(X)
 ```
 
-### Example - Direct solver interface
+### Using the native solver interface
 ```julia
 using COSMO, LinearAlgebra, SparseArrays, Test
 
@@ -100,7 +129,13 @@ end
 ```
 
 
-## Settings
+### Test problems
+A set of benchmark problems with conic constraints is available here:
+[https://github.com/migarstka/SDP_Benchmark_Problems](https://github.com/migarstka/SDP_Benchmark_Problems)
+
+## Interface
+
+### Settings
 Settings can be specified using the `COSMO.Settings` struct. The following settings are available:
 
 Argument | Description | Values (default)
@@ -121,9 +156,9 @@ scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
 time_limit | set solver time limit in s | 0.0
 
-For more low-level settings, see the Settings definition in `/src/types.jl`.
+For more low-level settings, see the `Settings` type definition in `/src/types.jl`.
 
-## Result
+### Result
 After attempting to solve the problem, COSMO will return a result object with the following fields:
 
 Fieldname | Type | Description
@@ -168,12 +203,7 @@ It holds:
 `setup_time` = `graph_time`+ `factor_time`,
 `proj_time` is a subset of `iter_time`.
 
-
-## Test problems
-A set of benchmark problems with conic constraints has been collected and made available here:
-[https://github.com/migarstka/SDP_Benchmark_Problems](https://github.com/migarstka/SDP_Benchmark_Problems)
-
-## Issues / Tasks / Future Work
+## Contributing
 Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
 
 ## Licence
