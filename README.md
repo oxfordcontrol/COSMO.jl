@@ -15,16 +15,14 @@
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
 </p>
 
-
-
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
   <a href="#examples">Examples</a> •
   <a href="#interface">Interface</a> •
   <a href="NEWS.md">News</a> •
-  <a href="#contributing">Contributing</a> •
-  <a href="#contact">Contact</a>
+  <a href="#citing-">Citing</a> •
+  <a href="#contributing">Contributing</a>
 </p>
 
 This is a Julia implementation of the _Conic operator splitting method_ (COSMO) solver. It can solve large convex conic optimization problems of the following form:
@@ -36,6 +34,7 @@ with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q �
 
 ## Features
 By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. COSMO allows you to:
+- solve LPs, QPs, SOCPs and SDPs
 - solve semidefinite programs with quadratic objective functions directly
 - detect infeasible problems without a homogeneous self-dual embedding of the problem
 - describe your optimisation problem using [JuMP](https://github.com/JuliaOpt/JuMP.jl) (COSMO requires JuMP v0.19-beta)
@@ -136,7 +135,7 @@ A set of benchmark problems with conic constraints is available here:
 
 ## Interface
 
-### Settings
+### Settings ⚙️
 Settings can be specified using the `COSMO.Settings` struct. The following settings are available:
 
 Argument | Description | Values (default)
@@ -204,13 +203,40 @@ It holds:
 `setup_time` = `graph_time`+ `factor_time`,
 `proj_time` is a subset of `iter_time`.
 
+## Citing 📃
+If you find COSMO useful in your project, we kindly request that you cite the following paper:
+```
+@article{garstka_2019,
+  author        = {Michael Garstka and Mark Cannon and Paul Goulart},
+  title         = {{COSMO}: A conic operator splitting method for convex conic problems},
+  journal       = {arXiv e-prints},
+  year          = {2019},
+  month         = jan, 
+  eprint        = {1901.10887},
+  keywords      = {Mathematics - Optimization and Control},
+  primaryclass  = {math.OC},
+  url           = {https://arxiv.org/abs/1901.10887},
+}
+```
+A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
+
+## Credits 
+The following people are involved in the development of COSMO:
+- Michael Garstka (main development)
+- Nikitas Rontsis (algorithm performance)
+- Paul Goulart (code architecture, maths and algorithms)
+- Mark Cannon (maths and algorithms)
+ 
+\*all contributors are affiliated with the University of Oxford.
+ 
+To contact us, send an email :email: to [Michael Garstka](mailto:michael.garstka@eng.ox.ac.uk) :rocket:!
+
 ## Contributing
-- Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
+- Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
 - As an open source project we are also interested in any projects and applications that use COSMO. Please let us know! 
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
 
-## Contact
-Send an email :email: to [Michael Garstka](mailto:michael.garstka@eng.ox.ac.uk) :rocket:!
+
