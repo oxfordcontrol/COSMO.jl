@@ -145,6 +145,9 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
     dest.is_empty = false
     dest.idxmap = idxmap
+    warm_start_primal!(dest, src, idxmap)
+    warm_start_dual!(dest, src, idxmap)
+    return idxmap
 end
 
 function MOI.optimize!(optimizer::Optimizer)
@@ -293,7 +296,7 @@ function symmetrize!(I::Vector{Int}, J::Vector{Int}, V::Vector)
     end
 end
 
-# taken from https://github.com/JuliaOpt/SCS.jl
+# The following utility functions are from https://github.com/JuliaOpt/SCS.jl
 
 # Vectorized length for matrix dimension n
 sympackedlen(n) = div(n*(n+1), 2)
@@ -558,6 +561,51 @@ function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidef
     nothing
 end
 
+function warm_start_primal!(dest, src::MOI.ModelLike, idxmap)
+    has_primal_start = false
+    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
+        if attr isa MOI.VariablePrimalStart
+            has_primal_start = true
+        end
+    end
+    if has_primal_start
+        len = 0
+        vis_src = MOI.get(src, MOI.ListOfVariableIndices())
+        for vi in vis_src
+            value = MOI.get(src, MOI.VariablePrimalStart(), vi)
+            if value != nothing
+                len += 1
+                MOI.set(dest, MOI.VariablePrimalStart(), vi, value)
+            end
+        end
+
+        # if all components of the primal variable x are provided, warm start s = b - Ax too
+        if len == dest.inner.p.model_size[2]
+            ws = dest.inner
+            s0 = ws.p.b - ws.p.A * ws.vars.x
+            COSMO.warm_start_slack!(ws, s0)
+        end
+    end
+
+end
+
+function warm_start_dual!(dest, src::MOI.ModelLike, idxmap)
+     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+        has_dual_start = false
+        for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
+            if attr isa MOI.ConstraintDualStart
+                has_dual_start = true
+            end
+        end
+        if has_dual_start
+            cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+            for ci in cis_src
+                value = MOI.get(src, MOI.ConstraintDualStart(), ci)
+                value != nothing && MOI.set(dest, MOI.ConstraintDualStart(), ci, value)
+            end
+        end
+    end
+end
 
 ##############################
 # GET / SET : OPTIMIZER ATTRIBUTES
@@ -576,7 +624,10 @@ end
 MOI.get(optimizer::Optimizer, ::MOI.RawSolver) = optimizer.inner
 # allow returning the number of results available
 MOI.get(optimizer::Optimizer, ::MOI.ResultCount) = 1
-
+MOI.get(optimizer::Optimizer, ::MOI.NumberOfVariables) = length(optimizer.inner.vars.x)
+function MOI.get(optimizer::Optimizer, ::MOI.ListOfVariableIndices)
+    return [MOI.VariableIndex(i) for i in 1:length(optimizer.inner.vars.x)]
+end
 
 # Get objective function
 function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
@@ -588,9 +639,7 @@ function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
     end
 end
 
-# Get solve time
-MOI.get(optimizer::Optimizer, a::MOI.SolveTime) = optimizer.results.times.solverTime
-
+MOI.get(optimizer::Optimizer, a::MOI.SolveTime) = optimizer.results.times.solver_time
 MOI.get(optimizer::Optimizer, a::MOI.SolverName) = "COSMO"
 
 # Get Termination Status
@@ -653,6 +702,8 @@ end
 
 _unshift(optimizer::Optimizer, offset, value, s) = value
 _unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value + optimizer.set_constant[offset]
+_shift(optimizer::Optimizer, offset, value, s) = value
+_shift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value - optimizer.set_constant[offset]
 
 function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
     # offset = constroffset(optimizer, ci)
@@ -671,30 +722,34 @@ function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci::CI{<:MOI.Abstra
 end
 
 ## Variable attributes:
-
-
 function MOI.get(optimizer::Optimizer, a::MOI.VariablePrimal, vi::VI)
     return optimizer.results.x[vi.value]
 end
 
-function MOI.set(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value)
+## Warm starting:
+MOI.supports(::Optimizer, a::MOI.VariablePrimalStart, ::Type{MOI.VariableIndex}) = true
+function MOI.set(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Real)
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    optimizer.warmstartcache.x[vi.value] = value
+    COSMO.warm_start_primal!(optimizer.inner, value, vi.value)
 end
 
-
-## Constraints:
-function MOI.isvalid(optimizer::Optimizer, ci::CI)
-    MOI.is_empty(optimizer) && return false
-    ci.value ∈ keys(optimizer.rowranges)
+MOI.supports(::Optimizer, a::MOI.ConstraintPrimalStart, ::Type{MOI.ConstraintIndex}) = true
+function MOI.set(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+    MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
+    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    # this undoes the scaling and shifting that was used in get(MOI.ConstraintPrimal)
+    # Off-diagonal entries of slack variable of a PSDTriangle constraint has to be scaled by sqrt(2)
+    value = _shift(optimizer, rows, value, S)
+    COSMO.warm_start_slack!(optimizer.inner, _scalecoef(rows, value, false, S, length(rows), false), rows)
 end
 
-function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI, value)
+MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{MOI.ConstraintIndex}) = true
+function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(oscpstatusptimizer, ci)
-    for (i, row) in enumerate(rows)
-        optimizer.warmstartcache.y[row] = -value[i] # opposite dual convention
-    end
+    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    # this undoes the scaling that was used in get(MOI.ConstraintDual)
+    # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sqrt(2)
+    COSMO.warm_start_dual!(optimizer.inner, _scalecoef(rows, value, false, S, length(rows), false), rows)
     nothing
 end
 
@@ -702,8 +757,6 @@ end
 ##############################
 # SUPPORT OBJECTIVE AND SET FUNCTIONS
 ##############################
-
-
 
 # allow objective functions that have the following template types
 MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{MOI.SingleVariable}) = true

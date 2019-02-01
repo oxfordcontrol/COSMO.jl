@@ -39,31 +39,6 @@ end
 
     end
 
-
-    # @testset "Update_b" begin
-    #     p = simpleQP()
-    #     p.b = p.b*0.9
-    #     settings = COSMO.Settings()
-    #     res,nothing = COSMO.solve(p.P,p.q,p.A,p.b,p.K,settings);
-
-    #     @test res.status == :Solved
-    #     @test isapprox(norm(res.x - [0.27; 0.63]), 0., atol=tol)
-    #     @test isapprox(res.obj_val, 1.6128000168085233, atol=tol)
-
-    # end
-
-    # @testset "Update_q" begin
-    #     p = simpleQP()
-    #     p.q = [-10;10]
-    #     settings = COSMO.Settings()
-    #     res,nothing = COSMO.solve(p.P,p.q,p.A,p.b,p.K,settings);
-
-    #     @test res.status == :Solved
-    #     @test isapprox(norm(res.x - [0.7; 0.3]), 0., atol=tol)
-    #     @test isapprox(res.obj_val, -2.7199998274697608, atol=tol)
-
-    # end
-
     @testset "update_max_iter" begin
         p = simpleQP()
         settings = COSMO.Settings(max_iter=20)
@@ -115,15 +90,18 @@ end
         res1 = COSMO.optimize!(model);
         n = 2
         m = 6
-        x0 = res1.x + 0.01*randn(rng, n)
-        y0 = res1.y + 0.01*randn(rng, m)
-        COSMO.warm_start!(model, x0=x0, y0=y0)
+        x0 = res1.x + 0.1 * randn(rng, n)
+        y0 = res1.y + 0.1 * randn(rng, m)
+        s0 = res1.s + 0.1 * randn(rng, m)
+        COSMO.warm_start_primal!(model, x0)
+        COSMO.warm_start_dual!(model, y0)
+        COSMO.warm_start_slack!(model, s0)
         res2 = COSMO.optimize!(model);
 
         @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter
 
-        @test_throws DimensionMismatch COSMO.warm_start!(model, x0 = rand(4))
-        @test_throws DimensionMismatch COSMO.warm_start!(model, y0 = rand(2))
+        @test_throws DimensionMismatch COSMO.warm_start_primal!(model, rand(4))
+        @test_throws DimensionMismatch COSMO.warm_start_dual!(model, rand(2))
     end
 
 end
