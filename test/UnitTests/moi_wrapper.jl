@@ -17,6 +17,18 @@ MOIU.@model(COSMOModelData,
 
 
 @testset "MOI Wrapper" begin
+
+    @testset "Basic properties" begin
+        optimizer =  COSMO.Optimizer(check_termination = 1);
+        @test sprint(show, optimizer) == string("Empty COSMO - Optimizer")
+        @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.SingleVariable}())
+        @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}())
+        @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}())
+        @test MOI.supports(optimizer, MOI.ObjectiveSense())
+        @test MOI.supports(optimizer, MOI.VariablePrimalStart(), MOI.VariableIndex)
+        @test MOI.supports(optimizer, MOI.ConstraintPrimalStart(), MOI.ConstraintIndex)
+        @test MOI.supports(optimizer, MOI.ConstraintDualStart(), MOI.ConstraintIndex)
+    end
     # Solve the following problem:
     # min c'*x
     # vec(A1)' * x == b1
@@ -32,7 +44,6 @@ MOIU.@model(COSMOModelData,
     model = COSMOModelData{Float64}();
     optimizer =  COSMO.Optimizer(check_termination = 1);
     x = MOI.add_variables(model, 9);
-
     # define objective function:
     objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(vec(C),x[1:9]),0.0);
     MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),objectiveFunction);
@@ -47,8 +58,13 @@ MOIU.@model(COSMOModelData,
 
     # copy model into optimizer
     MOI.empty!(optimizer);
+    @test sprint(show, optimizer) != nothing
+
     idxmap = MOI.copy_to(optimizer, model);
+    @test MOI.get(optimizer, MOI.ListOfVariableIndices()) == MOI.VariableIndex.(1:9)
     MOI.optimize!(optimizer);
+    @test sprint(show, optimizer) != nothing
+
     t_cold = MOI.get(optimizer, MOI.SolveTime())
     iter_cold = optimizer.results.iter
     x_sol = MOI.get(optimizer, MOI.VariablePrimal(), getindex.(Ref(idxmap), x))
@@ -152,7 +168,7 @@ MOIU.@model(COSMOModelData,
         u = [1.; 0.7; 0.7]
 
         model = MOIU.UniversalFallback(COSMOModelData{Float64}());
-        optimizer =  COSMO.Optimizer(check_termination = 1);
+        optimizer =  COSMO.Optimizer();
 
         x = MOI.add_variables(model, 2);
         objectiveFunction = MOI.ScalarQuadraticFunction{Float64}([MOI.ScalarAffineTerm(1.0, x[1]); MOI.ScalarAffineTerm(1.0, x[2])], [MOI.ScalarQuadraticTerm(4.0, x[1], x[1]); MOI.ScalarQuadraticTerm(1.0, x[1], x[2]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])] , 0);
@@ -183,6 +199,22 @@ MOIU.@model(COSMOModelData,
         @test optimizer.inner.vars.x == x_sol
         @test optimizer.inner.vars.μ[y_c1_rows] == y_c1
         @test optimizer.inner.vars.μ[y_c2_rows] == -y_c2
+
+    end
+
+    @testset "Small edge cases" begin
+        model = COSMOModelData{Float64}();
+        optimizer =  COSMO.Optimizer(max_iter = 2);
+
+        x = MOI.add_variables(model, 1);
+        objectiveFunction = MOI.ScalarAffineFunction{Float64}([MOI.ScalarAffineTerm(-1.0, x[1])] , 0);
+        MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(), objectiveFunction);
+        MOI.add_constraint(model, MOI.SingleVariable(x[1]), MOI.GreaterThan{Float64}(10.));
+        idxmap = MOI.copy_to(optimizer, model);
+        MOI.optimize!(optimizer);
+        @test MOI.get(optimizer, MOI.TerminationStatus()) == MOI.ITERATION_LIMIT
+        @test MOI.get(optimizer, MOI.PrimalStatus()) == MOI.NO_SOLUTION
+        @test MOI.get(optimizer, MOI.DualStatus()) == MOI.NO_SOLUTION
 
     end
 end
