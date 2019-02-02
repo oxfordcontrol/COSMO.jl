@@ -167,3 +167,16 @@ function symmetrize!(A::AbstractMatrix)
 	nothing
 end
 
+# this function assumes real symmetric X and only considers the upper triangular part
+function is_pos_sem_def(X, tol)
+    # set option 'N' to only compute eigenvalues, s is ordered from min to max
+   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
+   return s[1] >= -tol
+end
+
+function is_neg_sem_def(X, tol)
+    # set option 'N' to only compute eigenvalues, s is ordered from min to max
+   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
+   return s[end] <= tol
+end
+

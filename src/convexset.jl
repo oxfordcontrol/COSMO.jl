@@ -21,7 +21,7 @@ function in_dual(x::SplitView{T}, ::ZeroSet{T}, tol::T) where{T}
 	true
 end
 
-function in_recc(x::SplitView{T}, ::ZeroSet{T}, tol::T) where{T}
+function in_pol_recc(x::SplitView{T}, ::ZeroSet{T}, tol::T) where{T}
 	!any( x-> (abs(x) > tol), x)
 end
 
@@ -53,7 +53,7 @@ function in_dual(x::SplitView{T}, ::Nonnegatives{T}, tol::T) where{T}
 	!any( x-> (x < -tol), x)
 end
 
-function in_recc(x::SplitView{T}, ::Nonnegatives{T}, tol::T) where{T}
+function in_pol_recc(x::SplitView{T}, ::Nonnegatives{T}, tol::T) where{T}
 	!any( x-> (x > tol), x)
 end
 
@@ -96,7 +96,7 @@ function in_dual(x::SplitView{T}, ::SecondOrderCone{T}, tol::T) where{T}
 	@views norm(x[2:end]) <= (tol + x[1]) #self dual
 end
 
-function in_recc(x::SplitView{T}, ::SecondOrderCone, tol::T) where{T}
+function in_pol_recc(x::SplitView{T}, ::SecondOrderCone, tol::T) where{T}
 	@views norm(x[2:end]) <= (tol - x[1]) #self dual
 end
 
@@ -148,13 +148,13 @@ end
 function in_dual(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
-	return ( minimum(real(eigvals(X))) >= -tol )
+  return is_pos_sem_def(X, tol)
 end
 
-function in_recc(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
+function in_pol_recc(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
-	return ( maximum(real(eigvals(X))) <= +tol )
+	return is_neg_sem_def(X, tol)
 end
 
 function scale!(cone::PsdCone{T}, ::SplitView{T}) where{T}
@@ -163,10 +163,6 @@ end
 
 function rectify_scaling!(E, work, set::PsdCone{T}) where{T}
 	return rectify_scalar_scaling!(E, work)
-end
-
-function floor_sqrt!(s::Array, floor::Real)
-	@. s  = sqrt(max(floor, s))
 end
 
 # ----------------------------------------------------
@@ -189,7 +185,7 @@ end
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
 
 
-function project!(x::AbstractArray,cone::PsdConeTriangle{T}) where{T}
+function project!(x::AbstractArray, cone::PsdConeTriangle{T}) where{T}
     # handle 1D case
     if length(x) == 1
         x = max.(x,zero(T))
@@ -201,25 +197,24 @@ function project!(x::AbstractArray,cone::PsdConeTriangle{T}) where{T}
     return nothing
 end
 
-function in_dual(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
+function in_dual(x::SplitView{T}, cone::PsdConeTriangle{T}, tol::T) where{T}
+    n = cone.sqrt_dim
+    populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
+    return is_pos_sem_def(cone.X, tol)
+end
+
+function in_pol_recc(x::SplitView{T}, cone::PsdConeTriangle{T}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
-    return ( minimum(real(eigvals(Xs))) >= -tol )
+    return is_neg_sem_def(cone.X, tol)
 end
 
-function in_recc(x::SplitView{T},cone::PsdConeTriangle{T},tol::T) where{T}
-    n = cone.sqrt_dim
-    populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
-    Xs = Symmetric(cone.X)
-    return ( maximum(real(eigvals(Xs))) <= +tol )
-end
-
-function scale!(cone::PsdConeTriangle{T},::SplitView{T}) where{T}
+function scale!(cone::PsdConeTriangle{T}, ::SplitView{T}) where{T}
     return nothing
 end
 
-function rectify_scaling!(E,work,set::PsdConeTriangle{T}) where{T}
+function rectify_scaling!(E, work, set::PsdConeTriangle{T}) where{T}
     return rectify_scalar_scaling!(E,work)
 end
 
@@ -290,7 +285,7 @@ function in_dual(x::SplitView{T}, box::Box{T}, tol::T) where{T}
 	return true
 end
 
-function in_recc(x::SplitView{T}, ::Box{T}, tol::T) where{T}
+function in_pol_recc(x::SplitView{T}, ::Box{T}, tol::T) where{T}
 	true
 end
 
@@ -325,8 +320,8 @@ function in_dual(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
 	all(xC -> in_dual(xC[1], xC[2], tol),zip(x.views, C.sets))
 end
 
-function in_recc(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
-	all(xC -> in_recc(xC[1], xC[2], tol), zip(x.views, C.sets))
+function in_pol_recc(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
+	all(xC -> in_pol_recc(xC[1], xC[2], tol), zip(x.views, C.sets))
 end
 
 function scale!(C::CompositeConvexSet{T}, e::SplitVector{T}) where{T}

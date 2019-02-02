@@ -52,7 +52,7 @@ function is_dual_infeasible(δx, ws)
 				A_δx = ws.p.A * δx
 				A_δx = ws.sm.Einv * A_δx
 				A_δx_split = SplitVector(A_δx / norm_δx, ws.p.C)
-				if in_recc(A_δx_split, ws.p.C, settings.eps_dual_inf)
+				if in_pol_recc(A_δx_split, ws.p.C, settings.eps_dual_inf)
 					return true
 				end
 			end
