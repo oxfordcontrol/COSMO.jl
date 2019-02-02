@@ -19,7 +19,7 @@ struct CompositeConvexSet{T} <: AbstractConvexSet{T}
 	function CompositeConvexSet{T}(sets::Vector{<:AbstractConvexSet{T}}) where{T}
 		# do not allow nesting of composite sets
 		if any(set->isa(set, CompositeConvexSet), sets)
-			throw("Nesting of CompositeConvexSets not supported")
+			error("Nesting of CompositeConvexSets not supported")
 		end
 		dim = sum(x -> x.dim, sets)
 		new(dim, sets)

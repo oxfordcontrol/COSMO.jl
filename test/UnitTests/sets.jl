@@ -86,7 +86,7 @@ tol = 1e-4
     @test COSMO.in_dual(view(xpos, 1:length(xpos)), convex_set, tol)
     @test !COSMO.in_dual(view(xneg, 1:length(xneg)), convex_set, tol)
 
-    # Dual of Positive Semidefinite Cone (self-dual)
+    # Dual of Positive Semidefinite Cone (Square) (self-dual)
     tol = 1e-4
     X = Symmetric(randn(rng, 4, 4))
     Xpos = X + 4 * Matrix(1.0I, 4, 4)
@@ -97,6 +97,16 @@ tol = 1e-4
     @test COSMO.in_dual(view(xpos, 1:length(xpos)), convex_set, tol)
     @test !COSMO.in_dual(view(xneg, 1:length(xneg)), convex_set, tol)
 
+    # Dual of Positive Semidefinite Cone (Triangle)
+    convex_set = COSMO.PsdConeTriangle(10)
+    xpos = zeros(10)
+    xneg = zeros(10)
+    COSMO.extract_upper_triangle!(Xpos, xpos, sqrt(2))
+    COSMO.extract_upper_triangle!(Xneg, xneg, sqrt(2))
+    @test COSMO.in_dual(view(xpos, 1:length(xpos)), convex_set, tol)
+    @test !COSMO.in_dual(view(xneg, 1:length(xneg)), convex_set, tol)
+
+
     end
 
     @testset "inPolRec Functions" begin
@@ -105,15 +115,15 @@ tol = 1e-4
     xpos = zeros(10)
     xneg = randn(rng, 10)
     convex_set = COSMO.ZeroSet(10)
-    @test COSMO.in_recc(view(xpos, 1:length(xpos)), convex_set, tol)
-    @test !COSMO.in_recc(view(xneg, 1:length(xneg)), convex_set, tol)
+    @test COSMO.in_pol_recc(view(xpos, 1:length(xpos)), convex_set, tol)
+    @test !COSMO.in_pol_recc(view(xneg, 1:length(xneg)), convex_set, tol)
 
     # Polar Recession cone of Positive Orthant R+
     xpos = -rand(rng, 10)
     xneg = rand(rng, 10)
     convex_set = COSMO.Nonnegatives(10)
-    @test COSMO.in_recc(view(xpos,1:length(xpos)), convex_set, tol)
-    @test !COSMO.in_recc(view(xneg,1:length(xneg)), convex_set, tol)
+    @test COSMO.in_pol_recc(view(xpos,1:length(xpos)), convex_set, tol)
+    @test !COSMO.in_pol_recc(view(xneg,1:length(xneg)), convex_set, tol)
 
     #TODO: Polar Recc of Box [important!]
 
@@ -124,12 +134,10 @@ tol = 1e-4
     xpos = [-t - 0.5; x]
     xneg = [-t + 0.5; x]
     convex_set = COSMO.SecondOrderCone(10)
-    @test COSMO.in_recc(view(xpos, 1:length(xpos)), convex_set, tol)
-    @test !COSMO.in_recc(view(xneg, 1:length(xneg)), convex_set, tol)
+    @test COSMO.in_pol_recc(view(xpos, 1:length(xpos)), convex_set, tol)
+    @test !COSMO.in_pol_recc(view(xneg, 1:length(xneg)), convex_set, tol)
 
-
-
-    # Polar Recc of Positive Semidefinite Cone
+    # Polar Recc of Positive Semidefinite Cone (Square)
     tol = 1e-4
     X = Symmetric(randn(rng, 4, 4))
     Xpos = X - 20 * Matrix(1.0I, 4, 4)
@@ -137,10 +145,25 @@ tol = 1e-4
     xpos = vec(Xpos)
     xneg = vec(Xneg)
     convex_set = COSMO.PsdCone(16)
-    @test COSMO.in_recc(view(xpos, 1:length(xpos)), convex_set, tol)
-    @test !COSMO.in_recc(view(xneg, 1:length(xneg)), convex_set, tol)
+    @test COSMO.in_pol_recc(view(xpos, 1:length(xpos)), convex_set, tol)
+    @test !COSMO.in_pol_recc(view(xneg, 1:length(xneg)), convex_set, tol)
 
-    end
+    # Polar Recc of Positive Semidefinite Cone (Triangle)
+    COSMO.extract_upper_triangle!(Xpos, xpos, sqrt(2))
+    COSMO.extract_upper_triangle!(Xneg, xneg, sqrt(2))
+    convex_set = COSMO.PsdConeTriangle(10)
+    @test COSMO.in_pol_recc(view(xpos, 1:length(xpos)), convex_set, tol)
+    @test !COSMO.in_pol_recc(view(xneg, 1:length(xneg)), convex_set, tol)
+   end
+
+   @testset "Set Utilities" begin
+    convex_set = COSMO.PsdConeTriangle(3)
+    composite_set = COSMO.CompositeConvexSet([COSMO.ZeroSet(2), COSMO.Nonnegatives(1)])
+    @test COSMO.get_subset(convex_set, 1) == convex_set
+    @test_throws DimensionMismatch COSMO.get_subset(convex_set, 2)
+    @test COSMO.get_subset(composite_set, 1) == COSMO.ZeroSet(2)
+    @test_throws ErrorException COSMO.CompositeConvexSet([convex_set; composite_set])
+   end
 
 end
 
