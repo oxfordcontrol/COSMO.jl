@@ -1,5 +1,5 @@
 """
-assemble!(model, P, q, constraint(s), [settings, x0, y0])
+assemble!(model, P, q, constraint(s), [settings, x0, y0, s0])
 
 Assembles a `COSMO.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
 
@@ -12,14 +12,14 @@ s.t.  Ax + b ∈ C
 `constraints` is a `COSMO.Constraint` or an array of `COSMO.Constraint` objects that are used to describe the constraints on `x`.
 
 ---
-The optinal arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
+The optinal arguments `x0`, `s0`, and `y0` can be used to provide the solver with warm starting values for the primal variable `x`, the primal slack variable `s` and the dual variable `y`.
 The optinal argument `settings` can be used to pass custom solver settings.
 """
 function assemble!(model::Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractVector{T},
 	constraints::Union{Constraint{T},Vector{Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings(),
-	x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing) where{ T<: AbstractFloat}
+	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where{ T<: AbstractFloat}
 
 	# convert inputs
 	#FIX ME : It should not be necessary to force sparsity,
@@ -44,9 +44,6 @@ function assemble!(model::Model{T},
 
 	check_dimensions(model.p.P, model.p.q, model.p.A, model.p.b)
 
-	model.x0 = zeros(Float64, n)
-	model.y0 = zeros(Float64, m)
-
 	# merge and sort the constraint sets
 	sort!(constraints, by = x-> sort_sets(x.convex_set))
 	row_num = 1
@@ -59,15 +56,18 @@ function assemble!(model::Model{T},
 	model.p.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
 	model.settings = settings
 	model.vars = Variables{T}(m, n, model.p.C)
-	# if user provided warm starting variables, update model
-	warm_start!(model, x0 = x0, y0 = y0)
+
+	# if user provided (full) warm starting variables, update model
+	x0 != nothing && warm_start_primal!(model, x0)
+	s0 != nothing && warm_start_slack!(model, s0)
+	y0 != nothing && warm_start_dual!(model, y0)
 
 	nothing
 end
 
-function assemble!(model::COSMO.Model,
+function assemble!(model::COSMO.Model{T},
 	P::Real,q::Real,
-	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings()) where{T}
+	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings()) where {T}
 	Pm = spzeros(T, 1, 1)
 	qm = zeros(T, 1)
 	Pm[1, 1] = convert(T, P)
@@ -75,10 +75,10 @@ function assemble!(model::COSMO.Model,
 	assemble!(model, Pm, qm, constraints, settings)
 end
 
-function assemble!(model::COSMO.Model,
+function assemble!(model::COSMO.Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractMatrix{T},
-	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where{T}
+	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where {T}
 
 	assemble!(model, P, vec(q), constraints)
 end
@@ -90,8 +90,6 @@ function empty!(model::COSMO.Model{T}) where {T}
 	model.vars = Variables{T}(1, 1, model.p.C)
 	model.ρ = zero(T)
 	model.ρvec = T[]
-	model.x0 = T[]
-	model.y0 = T[]
 	model.F = ldlt(sparse(1.0I, 1, 1))
 	model.M = spzeros(0, 0)
 	model.flags = Flags()
@@ -100,28 +98,41 @@ function empty!(model::COSMO.Model{T}) where {T}
 	nothing
 end
 
-"""
-warm_start!(model, [x0, y0])
 
-Provides the `COSMO.Model` with warm starting values for the primal variable `x` and/or the dual variable `y`.
-"""
-function warm_start!(model::COSMO.Model; x0::Union{Vector{Float64}, Nothing} = nothing, y0::Union{Vector{Float64}, Nothing} = nothing)
-	if x0 isa Vector{Float64}
-		if size(model.p.A, 2) == length(x0)
-			model.x0 = x0
-		else
-			throw(DimensionMismatch("Dimension of x0 doesn't match the dimension of A."))
-		end
-	end
-	if y0 isa Vector{Float64}
-		if length(model.p.b) == length(y0)
-			model.y0 = y0
-		else
-			throw(DimensionMismatch("Dimension of y0 doesn't match the dimensions of the constraint variables A, b."))
-		end
-	end
+function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T}
+		ind == nothing && (ind = 1:length(z))
+		length(ind) != length(z0) && throw(DimensionMismatch("Dimension of warm starting vector doesn't match the length of index range ind."))
+		z[ind] = z0
 end
 
+"""
+warm_start_primal!(model, x0, [ind])
+
+Provides the `COSMO.Model` with warm starting values for the primal variable `x`. `ind` can be used to warm start certain components of `x`.
+"""
+warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.x, x0, ind)
+warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T} = warm_start_primal!(model, x0, nothing)
+warm_start_primal!(model::COSMO.Model{T}, x0::Real, ind::Int64) where {T} = (model.vars.x[ind] = x0)
+
+
+"""
+warm_start_slack!(model, s0, [ind])
+
+Provides the `COSMO.Model` with warm starting values for the primal slack variable `s`. `ind` can be used to warm start certain components of `s`.
+"""
+warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.s.data, s0, ind)
+warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}) where {T} = warm_start_slack!(model, s0, nothing)
+warm_start_slack!(model::COSMO.Model{T}, s0::Real, ind::Int64) where {T} = (model.vars.s.data[ind] = s0)
+
+"""
+warm_start_dual!(model, y0, [ind])
+
+Provides the `COSMO.Model` with warm starting values for the dual variable `y`. `ind` can be used to warm start certain components of `y`.
+"""
+# Notice that the sign of the dual variable y is inverted here, since internally the dual variable μ = -y is used
+warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.μ, -y0, ind)
+warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_slack!(model, -y0, nothing)
+warm_start_dual!(model::COSMO.Model{T}, y0::Real, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
 
 """
 set!(model, P, q, A, b, convex_sets, [settings])

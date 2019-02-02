@@ -17,16 +17,15 @@ function admm_step!(x::Vector{Float64},
 	m::Int64,
 	n::Int64,
 	set::CompositeConvexSet{Float64})
-
-	#linear solve
+	# linear solve
 	# Create right hand side for linear system
-	# deconstructed solution vector is ls = [x_tl(n+1);ν(n+1)]
+	# deconstructed solution vector is ls = [x_tl(n+1); ν(n+1)]
 	# x_tl and ν are automatically updated, since they are views on sol
 	@. ls[1:n] = σ * x - q
 	@. ls[(n + 1):end] = b - s + μ / ρ
 	sol .= F \ ls
 
-	# Over relaxation
+	# Over relaxattion
 	@. x = α * x_tl + (1.0 - α) * x
 	@. s_tl = s - (ν + μ) / ρ
 	@. s_tl = α * s_tl + (1.0 - α) * s
@@ -34,6 +33,7 @@ function admm_step!(x::Vector{Float64},
 
 	# Project onto cone
 	p_time = @elapsed project!(s, set)
+
 	# update dual variable μ
 	@. μ = μ + ρ .* (s_tl - s)
 	return p_time
@@ -57,7 +57,6 @@ function optimize!(ws::COSMO.Workspace)
 	# without scaling -> uses identity matrices
 	ws.sm = (settings.scaling > 0) ? ScaleMatrices(ws.p.model_size[1], ws.p.model_size[2]) : ScaleMatrices()
 
-
 	# perform preprocessing steps (scaling, initial KKT factorization)
 	ws.times.setup_time = @elapsed setup!(ws);
 	ws.times.proj_time  = 0. #reset projection time
@@ -68,7 +67,6 @@ function optimize!(ws::COSMO.Workspace)
 	cost = Inf
 	r_prim = Inf
 	r_dual = Inf
-
 
 	# print information about settings to the screen
 	settings.verbose && print_header(ws)
@@ -173,16 +171,14 @@ function optimize!(ws::COSMO.Workspace)
 		cost =  (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
 	end
 
-	# print solution to screen
-
 	ws.times.solver_time = time() - solver_time_start
 	settings.verbose_timing && (ws.times.post_time = time() - ws.times.post_time)
+	# print solution to screen
 	settings.verbose && print_result(status, num_iter, cost, ws.times.solver_time)
 
 	# create result object
 	res_info = ResultInfo(r_prim, r_dual)
 	y = -ws.vars.μ
-
 	return result = Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
