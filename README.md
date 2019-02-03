@@ -13,6 +13,7 @@
   <a href="https://travis-ci.org/oxfordcontrol/COSMO.jl"><img src="https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master"></a>
   <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
+  <a href="https://github.com/oxfordcontrol/COSMO.jl/releases"><img src="https://img.shields.io/badge/Release-v0.3.1-blue.svg"></a>
 </p>
 
 <p align="center">
