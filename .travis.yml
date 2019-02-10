@@ -37,3 +37,13 @@ script:
 after_success:
   # push coverage results to Codecov
   - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; cd(Pkg.dir("COSMO")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+
+jobs:
+  include:
+    - stage: "Documentation"
+      julia: 1.0
+      os: linux
+      script:
+        - julia --project=docs -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(path=pwd()))'
+        - julia --project=docs --color=yes docs/make.jl
+      after_success: skip
