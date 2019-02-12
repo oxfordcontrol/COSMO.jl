@@ -23,4 +23,5 @@ makedocs(
 deploydocs(
     repo = "github.com/oxfordcontrol/COSMO.jl.git",
     target = "build",
+    devbranch = "mg/docs",
 )
