@@ -20,7 +20,7 @@ makedocs(
     ]
 )
 
-# deploydocs(
-#     repo = "github.com/oxfordcontrol/COSMO.jl.git",
-#     target = "build",
-# )
+deploydocs(
+    repo = "github.com/oxfordcontrol/COSMO.jl.git",
+    target = "build",
+)
