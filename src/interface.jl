@@ -1,5 +1,5 @@
 """
-assemble!(model, P, q, constraint(s), [settings, x0, y0, s0])
+	assemble!(model, P, q, constraint(s), [settings, x0, y0, s0])
 
 Assembles a `COSMO.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
 
@@ -106,7 +106,7 @@ function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int64}, 
 end
 
 """
-warm_start_primal!(model, x0, [ind])
+	warm_start_primal!(model, x0, [ind])
 
 Provides the `COSMO.Model` with warm starting values for the primal variable `x`. `ind` can be used to warm start certain components of `x`.
 """
@@ -116,7 +116,7 @@ warm_start_primal!(model::COSMO.Model{T}, x0::Real, ind::Int64) where {T} = (mod
 
 
 """
-warm_start_slack!(model, s0, [ind])
+	warm_start_slack!(model, s0, [ind])
 
 Provides the `COSMO.Model` with warm starting values for the primal slack variable `s`. `ind` can be used to warm start certain components of `s`.
 """
@@ -124,18 +124,18 @@ warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}) where {T} = warm_start_slack!(model, s0, nothing)
 warm_start_slack!(model::COSMO.Model{T}, s0::Real, ind::Int64) where {T} = (model.vars.s.data[ind] = s0)
 
+# Notice that the sign of the dual variable y is inverted here, since internally the dual variable μ = -y is used
 """
-warm_start_dual!(model, y0, [ind])
+	warm_start_dual!(model, y0, [ind])
 
 Provides the `COSMO.Model` with warm starting values for the dual variable `y`. `ind` can be used to warm start certain components of `y`.
 """
-# Notice that the sign of the dual variable y is inverted here, since internally the dual variable μ = -y is used
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.μ, -y0, ind)
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_slack!(model, -y0, nothing)
 warm_start_dual!(model::COSMO.Model{T}, y0::Real, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
 
 """
-set!(model, P, q, A, b, convex_sets, [settings])
+	set!(model, P, q, A, b, convex_sets, [settings])
 
 Sets model data directly based on provided fields.
 """

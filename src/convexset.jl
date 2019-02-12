@@ -3,6 +3,11 @@ import Base: showarg, eltype
 # ----------------------------------------------------
 # Zero cone
 # ----------------------------------------------------
+"""
+    ZeroSet(dim)
+
+Creates the zero set ``\\{ 0 \\}^{dim}`` of dimension `dim`. If `x` ∈ `ZeroSet` then all entries of x are zero.
+"""
 struct ZeroSet{T} <: AbstractConvexCone{T}
 	dim::Int
 	function ZeroSet{T}(dim::Int) where {T}
@@ -36,6 +41,11 @@ end
 # ----------------------------------------------------
 # Nonnegative orthant
 # ----------------------------------------------------
+"""
+    Nonnegatives(dim)
+
+Creates the nonnegative orthant ``\\{ x \\in \\mathbb{R}^{dim} : x \\ge 0 \\}``  of dimension `dim`.
+"""
 struct Nonnegatives{T} <: AbstractConvexCone{T}
 	dim::Int
 	function Nonnegatives{T}(dim::Int) where {T}
@@ -68,6 +78,11 @@ end
 # ----------------------------------------------------
 # Second Order Cone
 # ----------------------------------------------------
+"""
+    SecondOrderCone(dim)
+
+Creates the second-order cone (or Lorenz cone) ``\\{ (t,x) \\in \\mathrm{R}^{dim} : || x ||_2  \\leq t \\}``.
+"""
 struct SecondOrderCone{T} <: AbstractConvexCone{T}
 	dim::Int
 	function SecondOrderCone{T}(dim::Int) where {T}
@@ -111,13 +126,19 @@ end
 # ----------------------------------------------------
 # Positive Semidefinite Cone
 # ----------------------------------------------------
+"""
+    PsdCone(dim)
+
+Creates the cone of symmetric positive semidefinite matrices ``\\mathcal{S}_+^{dim}`. The entries of the matrix `X` are stored column-by-column in the vector `x` of dimension `dim`.
+Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, where ``X = \\text{mat}(x)``.
+"""
 struct PsdCone{T} <: AbstractConvexCone{T}
 	dim::Int
 	sqrt_dim::Int
 	function PsdCone{T}(dim::Int) where{T}
 		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
 		iroot = isqrt(dim)
-		iroot^2 == dim || throw(DomainError(x, "dimension must be a square"))
+		iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
 		new(dim, iroot)
 	end
 end
@@ -170,6 +191,21 @@ end
 # ----------------------------------------------------
 
 # Psd cone given by upper-triangular entries of matrix
+"""
+    PsdConeTriangle(dim)
+
+Creates the cone of symmetric positive semidefinite matrices. The entries of the upper-triangular part of matrix `X` are stored in the vector `x` of dimension `dim`.
+A ``r \\times r`` matrix has ``r(r+1)/2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r(r+1)/2``.
+
+
+### Examples
+The matrix
+```math
+\\begin{bmatrix} x_1 & x_2 & x_4\\\\ x_2 & x_3 & x_5\\\\ x_4 & x_5 & x_6 \\end{bmatrix}
+```
+is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corresponding constraint  `PsdConeTriangle(6)`.
+
+"""
 struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix

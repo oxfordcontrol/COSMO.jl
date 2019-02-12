@@ -23,9 +23,9 @@ end
 ResultInfo(rp, rd) = ResultInfo{DefaultFloat}(rp, rd)
 
 """
-Result{T <: AbstractFloat}
+	Result{T <: AbstractFloat}
 
-Object returned by the COSMO solver after calling `optimize!(model, settings)`. It has the following fields:
+Object returned by the COSMO solver after calling `optimize!(model)`. It has the following fields:
 
 
 Fieldname | Type | Description
@@ -156,7 +156,7 @@ Variables(args...) = Variables{DefaultFloat}(args...)
 # Top level container for all solver data
 # -------------------------------------
 """
-Model()
+	Workspace()
 
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints, [settings])`.
 """
@@ -183,4 +183,9 @@ end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
 
 # Type alias facing the user
+"""
+	Model()
+
+Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints, [settings])`.
+"""
 const Model = Workspace;

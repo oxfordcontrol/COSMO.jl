@@ -1,21 +1,21 @@
 
 """
-Constraint(A, b, convex_set, dim = 0, indices = 0:0)
+	Constraint(A, b, convex_set, dim = 0, indices = 0:0)
 
 Creates a COSMO constraint: `Ax + b ∈ convex_set`.
 
-By default the following convex sets are supported: `ZeroSet`, `Nonnegatives`, `SecondOrderCone`, `PsdCone`.
+By default the following convex sets are supported: `ZeroSet`, `Nonnegatives`, `SecondOrderCone`, `PsdCone`, `PsdConeTriangle`.
 
 # Examples
 ```jldoctest
-julia> Constraint([1 0;0 1], zeros(2), COSMO.PsdCone)
+julia> Constraint([1 0;0 1], zeros(2), COSMO.Nonnegatives)
 Constraint
 Size of A: (2, 2)
-ConvexSet: COSMO.PsdCone
+ConvexSet: COSMO.Nonnegatives
 ```
 
 ---
-The optinal arguments `dim` and `indices` can be used to specify A and b for subparts of variable `x`. If `x` has dimension `dim = 4`,
+The optional arguments `dim` and `indices` can be used to specify A and b for subparts of variable `x`. If `x` has dimension `dim = 4`,
 then x[2] and x[3] can be constrained to the zero cone in the following way:
 
 

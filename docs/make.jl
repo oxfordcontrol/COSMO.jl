@@ -11,10 +11,12 @@ makedocs(
   pages = [
         "Home" => "index.md",
         "User Guide" => "guide.md",
+        "JuMP Interface" => "jump.md",
         "Method" => "method.md",
         "Examples" => "examples.md",
         "Citing COSMO" => "citing.md",
         "Contributing" => "contributing.md",
+        "API Reference" => "api.md",
     ]
 )
 

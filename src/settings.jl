@@ -1,17 +1,17 @@
 """
-Settings(;arg=val)
+	Settings(;arg=val)
 
 Creates a COSMO settings object that is used to pass user settings to the solver.
 
 Argument | Description | Values (default)
 --- | --- | ---
 rho | ADMM rho step | 0.1
-sigma | ADMM sigma step | 1e-6.
+sigma | ADMM sigma step | 1e-6
 alpha | Relaxation parameter | 1.6
 eps_abs | Absolute residual tolerance | 1e-4
 eps_rel | Relative residual tolerance | 1e-4
-eps_prim_inf | Primal infeasibility tolerance | 1e-4
-eps_dual_inf | Dual infeasibility tolerance | 1e-4
+eps\\_prim\\_inf | Primal infeasibility tolerance | 1e-4
+eps\\_dual\\_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
 verbose_timing | Verbose timing | false

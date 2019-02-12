@@ -26,14 +26,74 @@ If you want to install the latest version from master run
 `pkg> add COSMO#master`
 
 ## Quick Example
+Consider the following 2x2 semidefinite program with decision variable `X`:
+```math
+\begin{array}{ll} \mbox{minimize} &  \text{tr}(CX)\\
+\mbox{subject to} &  \text{tr}(A X) = b \\
+                  &  X \succeq 0,
+\end{array}
+```
+with problem data `A`, `b` and `C`:
+```math
+A = \begin{bmatrix} 1 & 0 \\ 5 & 2\end{bmatrix},
+C = \begin{bmatrix} 1 & 2 \\ 0 & 2\end{bmatrix},
+b = 4.
+```
+where `tr` denotes the trace of a matrix.
+We can solve this problem either using COSMO's interface:
+```julia
+using COSMO, LinearAlgebra
+
+C =  [1. 2; 0 2]
+A = [1. 0; 5 2]
+b = 4;
+
+model = COSMO.Model();
+
+# define the cost function
+P = zeros(4, 4)
+q = vec(C)
+
+# define the constraints
+# A x = b
+cs1 = COSMO.Constraint(vec(A)', -b, COSMO.ZeroSet)
+# X in PSD cone
+cs2 = COSMO.Constraint(Matrix(1.0I, 4, 4), zeros(4), COSMO.PsdCone)
+constraints = [cs1; cs2]
+
+# assemble and solve the model
+assemble!(model, P, q, constraints)
+result = COSMO.optimize!(model);
+
+X_sol = reshape(result.x, 2, 2)
+obj_value = result.obj_val
+```
+
+or we can describe the problem using `JuMP` and use COSMO as the backend solver:
+```julia
+using COSMO, JuMP
+
+C =  [1 2; 0 2]
+A = [1 0; 5 2]
+b = 4;
+
+m = Model(with_optimizer(COSMO.Optimizer));
+@variable(m, X[1:2, 1:2], PSD)
+@objective(m, Min, tr(C * X));
+@constraint(m, tr(A * X) == b);
+status = JuMP.optimize!(m);
+
+X_sol = JuMP.value.(X)
+obj_value = JuMP.objective_value(m)
+```
 
 ## Credits
 
 The following people are involved in the development of COSMO:
-* Michael Garstka (main development)
-* Nikitas Rontsis (algorithm performance)
-* Paul Goulart (code architecture, maths and algorithms)
-* Mark Cannon (maths and algorithms)
+* [Michael Garstka](https://migarstka.github.io) (main development)
+* [Nikitas Rontsis](https://github.com/nrontsis) (algorithm performance)
+* [Paul Goulart](http://users.ox.ac.uk/~engs1373/) (code architecture, maths and algorithms)
+* [Mark Cannon](http://www.eng.ox.ac.uk/control/people/dr-mark-cannon) (maths and algorithms)
 \*all contributors are affiliated with the University of Oxford.
 
 If this project is useful for your work please consider
