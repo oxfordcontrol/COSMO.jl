@@ -221,7 +221,7 @@ end
 # --------------------
 # MOI - Test sets
 # --------------------
-optimizer = MOIU.CachingOptimizer(COSMOModelData{Float64}(),
+optimizer = MOIU.CachingOptimizer(MOIU.UniversalFallback(COSMOModelData{Float64}()),
                                   COSMO.Optimizer(eps_abs = 1e-6, eps_rel = 1e-6 ));
 
 
