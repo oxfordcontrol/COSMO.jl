@@ -13,7 +13,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Features",
     "category": "section",
-    "text": "COSMO solves linear programs, quadratic programs, second-order cone programs and semidefinite programs\nSemi-definite programs with quadratic objective functions are natively supported\nInfeasible problems are detected without a homogeneous self-dual embedding of the problem\nSupport for MathOptInterface and the upcoming JuMP v0.19 release, which allows you to describe your problem in JuMP.\nCOSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem. (this feature is not yet available in Julia v1.0)\nCOSMO supports warm-starting of the decision variables."
+    "text": "COSMO solves linear programs, quadratic programs, second-order cone programs and semidefinite programs\nSemi-definite programs with quadratic objective functions are natively supported\nInfeasible problems are detected without a homogeneous self-dual embedding of the problem\nSupport for MathOptInterface and JuMP v0.19, which allows you to describe your problem in JuMP.\nCOSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem. (this feature is not yet available in Julia v1.0)\nCOSMO supports warm-starting of the decision variables."
 },
 
 {
@@ -189,7 +189,7 @@ var documenterSearchIndex = {"docs": [
     "page": "JuMP Interface",
     "title": "JuMP Interface",
     "category": "section",
-    "text": "Our JuMP interface allows you to describe and modify your optimisation problem with JuMP and use COSMO as the backend solver. The interface is defined in /src/MOIWrapper.jl.note: Note\nCOSMO requires the upcoming JuMP v0.19 release that is based on the MathOptInterface package. Until this version is released we recommend using the latest beta version which can be downloaded via the Julia package manager withpkg> add JuMP#v0.19-beta2"
+    "text": "Our JuMP interface allows you to describe and modify your optimisation problem with JuMP and use COSMO as the backend solver. The interface is defined in /src/MOIWrapper.jl.note: Note\nCOSMO requires the newest JuMP v0.19 release that is based on the MathOptInterface package."
 },
 
 {
