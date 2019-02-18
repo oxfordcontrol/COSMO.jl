@@ -40,7 +40,7 @@ By default COSMO supports the zero cone, the non-negative orthant, second order 
 - solve LPs, QPs, SOCPs and SDPs
 - solve semidefinite programs with quadratic objective functions directly
 - detect infeasible problems without a homogeneous self-dual embedding of the problem
-- describe your optimisation problem using [JuMP](https://github.com/JuliaOpt/JuMP.jl) (COSMO requires JuMP v0.19-beta)
+- describe your optimisation problem using [JuMP](https://github.com/JuliaOpt/JuMP.jl) (COSMO requires JuMP v0.19)
 - use chordal decomposition techniques to decompose chordally structured SDPs
 - define your own convex sets for constraints
 
@@ -55,7 +55,7 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
   title         = {{COSMO}: A conic operator splitting method for convex conic problems},
   journal       = {arXiv e-prints},
   year          = {2019},
-  month         = jan, 
+  month         = jan,
   archiveprefix = {arXiv},
   eprint        = {1901.10887},
   keywords      = {Mathematics - Optimization and Control},
@@ -68,7 +68,7 @@ A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
 ## Contributing
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
 - Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues):exclamation:. Please report any issues or bugs that you encounter.
-- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know! 
+- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know!
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.

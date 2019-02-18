@@ -2,10 +2,7 @@
 Our [JuMP](https://github.com/JuliaOpt/JuMP.jl/) interface allows you to describe and modify your optimisation problem with JuMP and use COSMO as the backend solver. The interface is defined in `/src/MOIWrapper.jl`.
 
 !!! note
-    COSMO requires the upcoming JuMP `v0.19` release that is based on the MathOptInterface package. Until this version is released we recommend using the latest beta version which can be downloaded via the Julia package manager with
-    ```
-    pkg> add JuMP#v0.19-beta2
-    ```
+    COSMO requires the newest JuMP `v0.19` release that is based on the MathOptInterface package.
 
 ## Use COSMO
 To specify COSMO as the solver for your JuMP model, load the solver module with `using COSMO` and then use the `with_optimizer()` function when initialising the JuMP model:

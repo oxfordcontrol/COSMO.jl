@@ -12,7 +12,7 @@ with decision variables ``x \in \mathrm{R}^n``, ``s \in \mathrm{R}^m`` and data 
 * COSMO solves linear programs, quadratic programs, second-order cone programs and semidefinite programs
 * Semi-definite programs with quadratic objective functions are natively supported
 * Infeasible problems are detected without a homogeneous self-dual embedding of the problem
-* Support for MathOptInterface and the upcoming JuMP `v0.19` release, which allows you to describe your problem in JuMP.
+* Support for MathOptInterface and JuMP `v0.19`, which allows you to describe your problem in JuMP.
 * COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem. (_this feature is not yet available in Julia `v1.0`_)
 * COSMO supports warm-starting of the decision variables.
 
