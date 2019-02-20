@@ -7,13 +7,13 @@ Our [JuMP](https://github.com/JuliaOpt/JuMP.jl/) interface allows you to describ
 ## Use COSMO
 To specify COSMO as the solver for your JuMP model, load the solver module with `using COSMO` and then use the `with_optimizer()` function when initialising the JuMP model:
 ```julia
-m = Model(with_optimizer(COSMO.Optimizer);
+m = JuMP.Model(with_optimizer(COSMO.Optimizer);
 ```
 
 ## Pass Solver Settings
 Solver-specific settings can be passed after the `COSMO.Optimizer` object. For example, if you want to adjust the maximum number of iterations and turn on verbose printing use
 ```julia
-m = Model(with_optimizer(COSMO.Optimizer, max_iter = 5000, verbose = true);
+m = JuMP.Model(with_optimizer(COSMO.Optimizer, max_iter = 5000, verbose = true);
 ```
 The full list of available settings can be found in the [Settings](@ref) section.
 
@@ -31,4 +31,4 @@ and the value of a decision variable `x` can be obtained with
 ```julia
 JuMP.value.(x)
 ```
-For more information on how to use JuMP check the [JuMP documentation](http://www.juliaopt.org/JuMP.jl/dev/).
+For more information on how to use JuMP check the [JuMP documentation](http://www.juliaopt.org/JuMP.jl/stable/).
