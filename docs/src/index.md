@@ -93,7 +93,7 @@ The following people are involved in the development of COSMO:
 * [Michael Garstka](https://migarstka.github.io) (main development)
 * [Nikitas Rontsis](https://github.com/nrontsis) (algorithm performance)
 * [Paul Goulart](http://users.ox.ac.uk/~engs1373/) (code architecture, maths and algorithms)
-* [Mark Cannon](http://www.eng.ox.ac.uk/control/people/dr-mark-cannon) (maths and algorithms)
+* [Mark Cannon](https://markcannon.github.io) (maths and algorithms)
 \*all contributors are affiliated with the University of Oxford.
 
 If this project is useful for your work please consider
