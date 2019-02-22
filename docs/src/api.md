@@ -6,6 +6,7 @@
 COSMO.Model
 COSMO.assemble!
 COSMO.set!
+COSMO.empty_model!
 COSMO.warm_start_primal!
 COSMO.warm_start_slack!
 COSMO.warm_start_dual!
@@ -21,8 +22,6 @@ COSMO.SecondOrderCone
 COSMO.PsdCone
 COSMO.PsdConeTriangle
 ```
-
-
 
 ## Settings
 
