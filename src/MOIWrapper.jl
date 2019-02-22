@@ -90,7 +90,7 @@ end
 
 # MG: function to reset otimizer
 function MOI.empty!(optimizer::Optimizer)
-    COSMO.empty!(optimizer.inner)
+    COSMO.empty_model!(optimizer.inner)
     optimizer.hasresults = false
     optimizer.results = COSMO.Result{Float64}()
     optimizer.is_empty = true
