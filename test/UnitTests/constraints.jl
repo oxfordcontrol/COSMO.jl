@@ -17,11 +17,16 @@ b_UInt = UInt64(2)
 A_sparse = sprand(rng, 10, 2, 0.4)
 b_sparse = sparse(rand(rng, 10))
 
-A_vec = [1 2 3 4]
-b_vec = 1
+A_rvec = [1 2 3 4]
+b_rvec = 1
+
+A_colvec = [1; 2; 3; 4]
+b_colvec = [4; 3; 2; 1]
 
 A_mat = rand(rng, 10, 10)
 b_mat = sparse(rand(rng, 10, 1))
+
+
 
 @testset "Constraints" begin
 
@@ -30,7 +35,8 @@ b_mat = sparse(rand(rng, 10, 1))
     @test typeof(COSMO.Constraint(A_Float, b_Float, COSMO.ZeroSet)) <: COSMO.Constraint
     @test typeof(COSMO.Constraint(A_UInt, b_UInt, COSMO.ZeroSet)) <: COSMO.Constraint
     @test typeof(COSMO.Constraint(A_sparse, b_sparse, COSMO.ZeroSet)) <: COSMO.Constraint
-    @test typeof(COSMO.Constraint(A_vec, b_vec, COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_rvec, b_rvec, COSMO.ZeroSet)) <: COSMO.Constraint
+    @test typeof(COSMO.Constraint(A_colvec, b_colvec, COSMO.ZeroSet)) <: COSMO.Constraint
     @test typeof(COSMO.Constraint(A_mat, b_mat, COSMO.ZeroSet)) <: COSMO.Constraint
   end
 
@@ -42,7 +48,6 @@ b_mat = sparse(rand(rng, 10, 1))
     cs = COSMO.Constraint(A, b, COSMO.ZeroSet, dim, ind)
 
     @test cs.A[:, ind] == A
-
    end
 
   @testset "Merge Constraints" begin

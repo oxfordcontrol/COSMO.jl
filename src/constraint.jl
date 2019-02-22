@@ -7,11 +7,11 @@ Creates a COSMO constraint: `Ax + b ∈ convex_set`.
 By default the following convex sets are supported: `ZeroSet`, `Nonnegatives`, `SecondOrderCone`, `PsdCone`, `PsdConeTriangle`.
 
 # Examples
-```jldoctest
+```jldoctest; setup = :(using COSMO)
 julia> Constraint([1 0;0 1], zeros(2), COSMO.Nonnegatives)
 Constraint
 Size of A: (2, 2)
-ConvexSet: COSMO.Nonnegatives
+ConvexSet: Nonnegatives{Float64}
 ```
 
 ---
@@ -20,11 +20,11 @@ then x[2] and x[3] can be constrained to the zero cone in the following way:
 
 
 # Examples
-```jldoctest
+```jldoctest; setup = :(using COSMO)
 julia> c = Constraint([1 0;0 1], zeros(2), COSMO.ZeroSet, 4, 2:3)
 Constraint
 Size of A: (2, 4)
-ConvexSet: COSMO.ZeroSet
+ConvexSet: ZeroSet{Float64}
 ```
 Notice that extra columns of A have been added automatically.
 ```
@@ -70,7 +70,7 @@ end
 Constraint(args...) = Constraint{DefaultFloat}(args...)
 
 function Constraint{T}(A::AbstractMatrix, b::AbstractVector,
-	set_type,
+	set_type::Type{ <: AbstractConvexSet},
 	dim::Integer = 0,
 	indices::UnitRange = 0:0) where{T}
 	Constraint{T}(AbstractMatrix{T}(A), AbstractVector{T}(b), set_type, dim, indices)
@@ -78,7 +78,7 @@ end
 
 #all others convert first o matrix / vector args
 function Constraint{T}(A::Real,b::Real,
-	set_type,
+	set_type::Type{ <: AbstractConvexSet},
 	dim::Integer = 0,
 	indices::UnitRange = 0:0) where{T}
 	Constraint{T}(reshape([A], 1, 1), [b], set_type, dim, indices)
@@ -86,7 +86,7 @@ end
 
 function Constraint{T}(A::AbstractMatrix,
 	b::AbstractMatrix,
-	set_type,
+	set_type::Type{ <: AbstractConvexSet},
 	dim::Integer = 0,
 	indices::UnitRange = 0:0) where {T}
 
@@ -95,10 +95,18 @@ end
 
 function Constraint{T}(A::Union{AbstractVector,AbstractMatrix},
 	b::Real,
-	set_type,
+	set_type::Type{ <: AbstractConvexSet},
 	dim::Integer = 0,
 	indices::UnitRange = 0:0) where{T}
 	Constraint{T}(reshape(A, 1, length(A)), [b], set_type, dim, indices)
+end
+
+function Constraint{T}(A::AbstractVector,
+	b::AbstractVector,
+	set_type::Type{ <: AbstractConvexSet},
+	dim::Integer = 0,
+	indices::UnitRange = 0:0) where{T}
+	Constraint{T}(reshape(A, length(A), 1), b, set_type, dim, indices)
 end
 
 
