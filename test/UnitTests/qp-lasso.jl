@@ -32,9 +32,8 @@ constraint1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
 constraint2 = COSMO.Constraint(A2, b2, COSMO.Nonnegatives)
 constraints = [constraint1; constraint2]
 
-settings = COSMO.Settings()
 model = COSMO.Model()
-assemble!(model, P, q, constraints, settings)
+assemble!(model, P, q, constraints)
 
 res = COSMO.optimize!(model)
 

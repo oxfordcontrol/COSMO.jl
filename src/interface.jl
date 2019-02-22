@@ -1,5 +1,5 @@
 """
-	assemble!(model, P, q, constraint(s), [settings, x0, y0, s0])
+	assemble!(model, P, q, constraint(s); [settings, x0, y0, s0])
 
 Assembles a `COSMO.Model` with a cost function defind by `P` and `q`, and a number of `constraints`.
 
@@ -12,13 +12,25 @@ s.t.  Ax + b ∈ C
 `constraints` is a `COSMO.Constraint` or an array of `COSMO.Constraint` objects that are used to describe the constraints on `x`.
 
 ---
-The optinal arguments `x0`, `s0`, and `y0` can be used to provide the solver with warm starting values for the primal variable `x`, the primal slack variable `s` and the dual variable `y`.
-The optinal argument `settings` can be used to pass custom solver settings.
+The optional keyword argument `settings` can be used to pass custom solver settings:
+
+```julia
+custom_settings = COSMO.Settings(verbose = true);
+assemble!(model, P, q, constraints, settings = custom_settings)
+```
+---
+The optional keyword arguments `x0`, `s0`, and `y0` can be used to provide the solver with warm starting values for the primal variable `x`, the primal slack variable `s` and the dual variable `y`.
+
+```julia
+x_0 = [1.0; 5.0; 3.0]
+COSMO.assemble!(model, P, q, constraints, x0 = x_0)
+```
+
 """
 function assemble!(model::Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractVector{T},
-	constraints::Union{Constraint{T},Vector{Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings(),
+	constraints::Union{Constraint{T},Vector{Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings(),
 	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where{ T<: AbstractFloat}
 
 	# convert inputs
@@ -65,26 +77,29 @@ function assemble!(model::Model{T},
 	nothing
 end
 
+# Handle 1-D case
 function assemble!(model::COSMO.Model{T},
 	P::Real,q::Real,
-	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}, settings::COSMO.Settings = COSMO.Settings()) where {T}
+	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings()) where {T}
 	Pm = spzeros(T, 1, 1)
 	qm = zeros(T, 1)
 	Pm[1, 1] = convert(T, P)
 	qm[1] = convert(T, q)
-	assemble!(model, Pm, qm, constraints, settings)
+	assemble!(model, Pm, qm, constraints, settings = settings)
 end
 
-function assemble!(model::COSMO.Model{T},
-	P::AbstractMatrix{T},
-	q::AbstractMatrix{T},
-	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where {T}
+# Handle case where q is a 2-dimensional array instead of a 1-dimensional array
+assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractMatrix{T}, constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where {T} = assemble!(model, P, vec(q), constraints)
 
-	assemble!(model, P, vec(q), constraints)
-end
 
-# empty all fields apart from settings
-function empty!(model::COSMO.Model{T}) where {T}
+
+
+"""
+	empty_model!(model)
+
+Resets all the fields of `model` to that of a model created with `COSMO.Model()` (apart from the settings).
+"""
+function empty_model!(model::COSMO.Model{T}) where {T}
 	model.p = ProblemData{T}()
 	model.sm = ScaleMatrices{T}()
 	model.vars = Variables{T}(1, 1, model.p.C)
@@ -170,7 +185,7 @@ function set!(model::COSMO.Model,
 end
 
 function check_dimensions(P, q, A, b)
-		size(A, 1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
+	size(A, 1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
 	size(A, 2) != length(q) && throw(DimensionMismatch("The dimensions of matrix A and vector q don't match."))
 	size(b, 2) != 1 && throw(DimensionMismatch("Input b must be a vector or a scalar."))
 	size(P, 1) != length(q) && throw(DimensionMismatch("The dimensions of matrix P and vector q don't match."))

@@ -2,6 +2,23 @@
 # Results and related sub structures
 # -------------------------------------
 
+"""
+	ResultTimes{T <: AbstractFloat}
+
+Part of the Result object returned by the solver. ResultTimes contains timing results for certain parts of the algorithm:
+
+Time Name  | Description
+---  | ---
+solver_time | Total time used to solve the problem
+setup_time | Setup time = graph_time + factor_time
+graph_time | Time used to perform chordal decomposition
+factor_time | Time used to factor the system of linear equations
+iter_time | Time spent in iteration loop
+proj_time | Time spent in projection functions
+post_time | Time used for post processing
+
+By default COSMO only measures `solver_time`, `setup_time` and `proj_time`. To measure the other times set `verbose_timing = true`.
+"""
 mutable struct ResultTimes{T <: AbstractFloat}
 	solver_time::T
 	setup_time::T
@@ -15,6 +32,11 @@ end
 ResultTimes{T}() where{T} = ResultTimes{T}(0., 0., 0., 0., 0., 0., 0.)
 ResultTimes(T::Type = DefaultFloat) = ResultTimes{T}()
 
+"""
+	ResultInfo{T <: AbstractFloat}
+
+Object that contains further information about the primal and dual residuals.
+"""
 struct ResultInfo{T <: AbstractFloat}
 	r_prim::T
 	r_dual::T
@@ -158,7 +180,7 @@ Variables(args...) = Variables{DefaultFloat}(args...)
 """
 	Workspace()
 
-Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints, [settings])`.
+Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints; [settings, x0, s0, y0])`.
 """
 mutable struct Workspace{T}
 	p::ProblemData{T}
@@ -186,6 +208,6 @@ Workspace(args...) = Workspace{DefaultFloat}(args...)
 """
 	Model()
 
-Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints, [settings])`.
+Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints; [settings, x0, s0, y0])`.
 """
 const Model = Workspace;

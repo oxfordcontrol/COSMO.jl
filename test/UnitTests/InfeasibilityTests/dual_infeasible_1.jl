@@ -29,7 +29,7 @@ nn = 1
 
   settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
   model = COSMO.Model()
-  assemble!(model,P,q,[constraint], settings)
+  assemble!(model,P,q,[constraint], settings = settings)
   res = COSMO.optimize!(model);
 
   @test res.status == :Dual_infeasible

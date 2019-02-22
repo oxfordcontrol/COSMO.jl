@@ -55,9 +55,8 @@ cs2 = COSMO.Constraint(A2, b2, COSMO.PsdCone)
 constraints = [cs1; cs2]
 
 
-settings = COSMO.Settings()
 model = COSMO.Model()
-assemble!(model, P, q, constraints, settings)
+assemble!(model, P, q, constraints)
 
 res = COSMO.optimize!(model)
 

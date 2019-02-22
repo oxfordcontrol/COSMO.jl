@@ -37,11 +37,10 @@ cs1 = COSMO.Constraint(A1 ,b1, COSMO.ZeroSet)
 cs2 = COSMO.Constraint(A2 ,b2, COSMO.Nonnegatives)
 cs3 = COSMO.Constraint(A3 ,b3, COSMO.SecondOrderCone)
 
-settings = COSMO.Settings()
 
 # Solve with OSSDP
 model = COSMO.Model()
-assemble!(model, P, q, [cs1; cs2; cs3], settings)
+assemble!(model, P, q, [cs1; cs2; cs3])
 res = COSMO.optimize!(model);
 
 @testset "SOCP - Lasso" begin

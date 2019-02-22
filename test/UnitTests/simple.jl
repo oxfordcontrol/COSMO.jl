@@ -29,7 +29,7 @@ end
     @testset "Simple QP" begin
         p = simpleQP()
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints, COSMO.Settings(verbose=true))
+        assemble!(model, p.P, p.q, p.constraints, settings = COSMO.Settings(verbose=true))
 
         res = COSMO.optimize!(model);
 
@@ -43,7 +43,7 @@ end
         p = simpleQP()
         settings = COSMO.Settings(max_iter=20)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints, settings)
+        assemble!(model, p.P, p.q, p.constraints, settings = settings)
 
         res = COSMO.optimize!(model);
         @test res.status == :Max_iter_reached
@@ -55,7 +55,7 @@ end
          p = simpleQP()
         settings = COSMO.Settings(check_termination=100000)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints, settings)
+        assemble!(model, p.P, p.q, p.constraints, settings = settings)
 
         res = COSMO.optimize!(model);
 
@@ -75,7 +75,7 @@ end
         p = simpleQP()
         settings = COSMO.Settings(time_limit=1, check_termination=100000000,max_iter=10000000)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints, settings)
+        assemble!(model, p.P, p.q, p.constraints, settings = settings)
 
         res = COSMO.optimize!(model);
         @test res.status == :Time_limit_reached
@@ -85,7 +85,7 @@ end
         p = simpleQP()
         settings = COSMO.Settings(check_termination = 1)
         model = COSMO.Model()
-        assemble!(model, p.P, p.q, p.constraints, settings)
+        assemble!(model, p.P, p.q, p.constraints, settings = settings)
 
         res1 = COSMO.optimize!(model);
         n = 2

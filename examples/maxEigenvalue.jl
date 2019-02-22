@@ -33,7 +33,7 @@ rng = MersenneTwister(7232)
     settings = COSMO.Settings(check_termination=1, scaling = 0)
 
     model = COSMO.Model()
-    assemble!(model, P, c,[constraint1; constraint2], settings)
+    assemble!(model, P, c,[constraint1; constraint2], settings = settings)
     res = COSMO.optimize!(model);
 
 

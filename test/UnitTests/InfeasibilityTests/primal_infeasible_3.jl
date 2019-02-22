@@ -52,7 +52,7 @@ rng = Random.MersenneTwister(1313)
     settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
 
     model = COSMO.Model()
-    assemble!(model,P,q,[cs1;cs2;cs3], settings)
+    assemble!(model,P,q,[cs1;cs2;cs3], settings = settings)
     res = COSMO.optimize!(model);
 
     @test res.status == :Primal_infeasible
