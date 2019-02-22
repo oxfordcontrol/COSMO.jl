@@ -3,10 +3,10 @@ This user guide describes the basic structures and functions to define an optimi
 
 COSMO solves optimisation problems in the following format:
 ```math
-\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}
+\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{K}, \end{array}
 ```
 
-with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data matrices ``P=P^\top \succeq 0``, ``q \in \mathbb{R}^n``, ``A \in \mathbb{R}^{m \times n}``, and ``b \in \mathbb{R}^m``. The convex set ``\mathcal{C}``
+with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data matrices ``P=P^\top \succeq 0``, ``q \in \mathbb{R}^n``, ``A \in \mathbb{R}^{m \times n}``, and ``b \in \mathbb{R}^m``. The convex set ``\mathcal{K}``
  is a composition of convex sets and cones.
 
 ## Model
@@ -23,7 +23,7 @@ To initialize the model with an optimisation problem we need to define three mor
 To set the objective function of your optimisation problem simply define the square positive semidefinite matrix ``P \in \mathrm{R}^{n\times n} `` and the vector ``q \in \mathrm{R}^{n}``. You might have to transform your optimisation problem into a solver compatible format for this step.
 
 ## Constraints
-The COSMO interface expects constraints to have the form ``A_i x + b_i \in \mathcal{C}_i``, where ``\mathcal{C}_i`` is one of the convex sets defined below:
+The COSMO interface expects constraints to have the form ``A_i x + b_i \in \mathcal{K}_i``, where ``\mathcal{K}_i`` is one of the convex sets defined below:
 
 Convex Set | Description
 --- | ---
@@ -108,7 +108,7 @@ This simply sets the corresponding variables in the model and transforms the arr
 
 If you want to change the default settings, you can pass your settings object `custom_settings` to the `assemble!` function:
 ```julia
-COSMO.assemble!(model, P, q, constraints, custom_settings)
+COSMO.assemble!(model, P, q, constraints, settings = custom_settings)
 ```
 
 ## Warm starting
@@ -118,11 +118,11 @@ Consider the case where you have a decision variable ``x \in \mathbb{R}^3`` and 
 ```julia
 x_0 = [1.0; 5.0; 3.0]
 y_0 = [1.0; 2.0]
-COSMO.assemble!(model, P, q, constraints, custom_settings, x0, y0)
+COSMO.assemble!(model, P, q, constraints, x0 = x_0, y0 = y_0)
 ```
 Another option is to use
 ```julia
-COSMO.assemble!(model, P, q, constraints, custom_settings)
+COSMO.assemble!(model, P, q, constraints)
 warm_start_primal!(model, x_0)
 warm_start_dual!(model, y_0)
 ```

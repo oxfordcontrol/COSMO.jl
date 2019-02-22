@@ -1,4 +1,4 @@
-# Citing
+# Citing COSMO
 
 If you find COSMO useful in your project, we kindly request that you cite the following paper:
 ```

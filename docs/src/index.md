@@ -1,10 +1,10 @@
-__COSMO.jl__ is a Julia implementation of the _Conic Operator Splitting Method_. The underlying ADMM-algortihm is well-suited for large convex conic problems. COSMO solves the following problem:
+__COSMO.jl__ is a Julia implementation of the _Conic Operator Splitting Method_. The underlying ADMM-algorithm is well-suited for large convex conic problems. COSMO solves the following problem:
 
 ```math
-\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}
+\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{K}, \end{array}
 ```
 
-with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data matrices ``P=P^\top \succeq 0``, ``q \in \mathbb{R}^n``, ``A \in \mathbb{R}^{m \times n}``, and ``b \in \mathbb{R}^m``. The convex set ``\mathcal{C}``
+with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data matrices ``P=P^\top \succeq 0``, ``q \in \mathbb{R}^n``, ``A \in \mathbb{R}^{m \times n}``, and ``b \in \mathbb{R}^m``. The convex set ``\mathcal{K}``
  is a composition of convex sets and cones.
 
 ## Features

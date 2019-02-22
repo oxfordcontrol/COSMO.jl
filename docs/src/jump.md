@@ -10,12 +10,12 @@ To specify COSMO as the solver for your JuMP model, load the solver module with 
 m = JuMP.Model(with_optimizer(COSMO.Optimizer);
 ```
 
-## Pass Solver Settings
+## Specify Solver Settings
 Solver-specific settings can be passed after the `COSMO.Optimizer` object. For example, if you want to adjust the maximum number of iterations and turn on verbose printing use
 ```julia
 m = JuMP.Model(with_optimizer(COSMO.Optimizer, max_iter = 5000, verbose = true);
 ```
-The full list of available settings can be found in the [Settings](@ref) section.
+The full list of available settings can be found in the [Settings](#settings) section.
 
 ## Results
 After solving the problem the result can be obtained using the standard JuMP commands. To see if the optimisation was successful use

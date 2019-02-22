@@ -3,6 +3,7 @@
 ## Model
 
 ```@docs
+COSMO.Model
 COSMO.assemble!
 COSMO.set!
 COSMO.warm_start_primal!
@@ -10,11 +11,28 @@ COSMO.warm_start_slack!
 COSMO.warm_start_dual!
 ```
 
+## Constraints
 
-## Types
+```@docs
+COSMO.Constraint
+COSMO.ZeroSet
+COSMO.Nonnegatives
+COSMO.SecondOrderCone
+COSMO.PsdCone
+COSMO.PsdConeTriangle
+```
+
+
+
+## Settings
 
 ```@docs
 COSMO.Settings
+```
+
+## Results
+```@docs
 COSMO.Result
-COSMO.Model
+COSMO.ResultTimes
+COSMO.ResultInfo
 ```

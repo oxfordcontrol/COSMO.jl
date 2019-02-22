@@ -45,7 +45,7 @@ q = c
 # -------------------
 settings = COSMO.Settings(max_iter=2500, verbose=true, eps_abs = 1e-4, eps_rel = 1e-5)
 model = COSMO.Model()
-assemble!(model, P, q, [c1; c2; c3; c4], settings)
+assemble!(model, P, q, [c1; c2; c3; c4], settings = settings)
 res = COSMO.optimize!(model);
 
 @testset "Linear Problem" begin
