@@ -20,7 +20,6 @@
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
-  <a href="https://oxfordcontrol.github.io/COSMO.jl/stable">Documentation</a> •
   <a href="NEWS.md">News</a> •
   <a href="#citing-">Citing</a> •
   <a href="#contributing">Contributing</a>
@@ -28,21 +27,22 @@
 
 This is a Julia implementation of the _Conic operator splitting method_ (COSMO) solver. It can solve large convex conic optimization problems of the following form:
 <p align="center">
-<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;\textstyle{\frac{1}{2}}x^\top&space;Px&space;&plus;&space;q^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&plus;&space;s&space;=&space;b&space;\\&space;&&space;s&space;\in&space;\mathcal{C},&space;\end{array}" title="\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}"/>
+<img src="https://latex.codecogs.com/gif.latex?\begin{array}{ll}&space;\mbox{minimize}&space;&&space;\textstyle{\frac{1}{2}}x^\top&space;Px&space;&plus;&space;q^\top&space;x\\&space;\mbox{subject&space;to}&space;&&space;Ax&space;&plus;&space;s&space;=&space;b&space;\\&space;&&space;s&space;\in&space;\mathcal{K},&space;\end{array}" title="\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{C}, \end{array}"/>
 </p>
 
-with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones.
+with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `K` is a composition of convex sets and cones.
 
-__For more information check the [COSMO.jl Documentation](https://oxfordcontrol.github.io/COSMO.jl/stable).__
+__For more information check the [COSMO.jl Documentation](https://oxfordcontrol.github.io/COSMO.jl/dev).__
 
 ## Features
-By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. COSMO allows you to:
-- solve LPs, QPs, SOCPs and SDPs
-- solve semidefinite programs with quadratic objective functions directly
-- detect infeasible problems without a homogeneous self-dual embedding of the problem
-- describe your optimisation problem using [JuMP](https://github.com/JuliaOpt/JuMP.jl) (COSMO requires JuMP v0.19)
-- use chordal decomposition techniques to decompose chordally structured SDPs
-- define your own convex sets for constraints
+
+* __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs and semidefinite programs
+* __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
+* __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
+* __JuMP support__: COSMO supports MathOptInterface and JuMP `v0.19`, which allows you to describe your problem in JuMP
+* __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
+* __Warm starting__: COSMO supports warm starting of the decision variables
+* __Open Source__: Our code is free to use and distributed under the Apache 2.0 Licence
 
 ## Installation
 - `COSMO` can be added via the Julia package manager (type `]`): `pkg> add COSMO`
