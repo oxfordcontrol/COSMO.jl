@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://travis-ci.org/oxfordcontrol/COSMO.jl"><img src="https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master"></a>
   <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg"></a>
-  <a href="https://oxfordcontrol.github.io/COSMO.jl/dev"><img src="https://img.shields.io/badge/Documentation-stable-orange.svg"></a>
+  <a href="https://oxfordcontrol.github.io/COSMO.jl/stable"><img src="https://img.shields.io/badge/Documentation-stable-orange.svg"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
   <a href="https://github.com/oxfordcontrol/COSMO.jl/releases"><img src="https://img.shields.io/badge/Release-v0.3.1-blue.svg"></a>
 </p>
@@ -20,7 +20,7 @@
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#installation">Installation</a> •
-  <a href="https://oxfordcontrol.github.io/COSMO.jl/dev">Documentation</a> •
+  <a href="https://oxfordcontrol.github.io/COSMO.jl/stable">Documentation</a> •
   <a href="NEWS.md">News</a> •
   <a href="#citing-">Citing</a> •
   <a href="#contributing">Contributing</a>
@@ -33,7 +33,7 @@ This is a Julia implementation of the _Conic operator splitting method_ (COSMO) 
 
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `C` is a composition of convex sets and cones.
 
-__For more information check the [COSMO.jl Documentation](https://oxfordcontrol.github.io/COSMO.jl/dev).__
+__For more information check the [COSMO.jl Documentation](https://oxfordcontrol.github.io/COSMO.jl/stable).__
 
 ## Features
 By default COSMO supports the zero cone, the non-negative orthant, second order cones and positive semidefinite cones. COSMO allows you to:
