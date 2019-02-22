@@ -129,7 +129,7 @@ end
 """
     PsdCone(dim)
 
-Creates the cone of symmetric positive semidefinite matrices ``\\mathcal{S}_+^{dim}`. The entries of the matrix `X` are stored column-by-column in the vector `x` of dimension `dim`.
+Creates the cone of symmetric positive semidefinite matrices ``\\mathcal{S}_+^{dim}``. The entries of the matrix `X` are stored column-by-column in the vector `x` of dimension `dim`.
 Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, where ``X = \\text{mat}(x)``.
 """
 struct PsdCone{T} <: AbstractConvexCone{T}
