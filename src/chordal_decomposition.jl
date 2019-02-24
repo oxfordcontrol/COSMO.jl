@@ -17,31 +17,54 @@ function chordal_decomposition!(ws::COSMO.Workspace)
 
   find_sparsity_patterns!(ws)
 
-  # find transformation matrix H and new composite convex set
-  find_decomposition_matrix!(ws)
+  if ws.ci.num_decomp > 0
+    # find transformation matrix H and new composite convex set
+    find_decomposition_matrix!(ws)
 
-  # augment the original system
-  augment_system!(ws)
-
+    # augment the original system
+    augment_system!(ws)
+  else
+    ws.settings.decompose = false
+  end
   nothing
 end
 
 # analyse PSD cone constraints for chordal sparsity pattern
 function find_sparsity_patterns!(ws)
-  # find sparsity pattern, graphs, and clique sets for each cone
   row_ranges = get_set_indices(ws.p.C.sets)
-  for (k ,ind) in enumerate(ws.ci.psd_cones_ind)
-    C = ws.p.C.sets[ind]
-    psd_row_range = row_ranges[ind]
-    csp = find_aggregate_sparsity(ws.p.A, ws.p.b, psd_row_range)
-
-    #if length(csp) < length(psd_row_range)
-    ws.ci.sp_arr[k] = COSMO.SparsityPattern(csp, C.sqrt_dim, C)
-    #else
-    # ws.ci.sp_arr[k] = COSMO.DensePattern()
-    #end
+  sp_ind = 1
+  for (k, C) in enumerate(ws.p.C.sets)
+    psd_row_range = row_ranges[k]
+    csp = find_aggregate_sparsity(ws.p.A, ws.p.b, psd_row_range, C)
+    sp_ind = analyse_sparsity_pattern!(ws.ci, csp, ws.p.C.sets, C, k, sp_ind)
   end
 end
+
+function analyse_sparsity_pattern!(ci, csp, sets, C::PsdCone{T}, k, sp_ind) where {T <: Real}
+  if length(csp) < C.dim
+    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(csp, C.sqrt_dim, C)
+    push!(ci.psd_cones_ind, k)
+    ci.num_decomp += 1
+    return sp_ind + 1
+  else
+   sets[k] = COSMO.DensePsdCone{T}(C.dim)
+   return sp_ind
+  end
+end
+
+function analyse_sparsity_pattern!(ci, csp, sets, C::PsdConeTriangle{T}, k, sp_ind) where {T <: Real}
+  if length(csp) < C.dim
+    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(csp, C.sqrt_dim, C)
+    push!(ci.psd_cones_ind, k)
+    ci.num_decomp += 1
+    return sp_ind + 1
+  else
+   sets[k] = COSMO.DensePsdConeTriangle{T}(C.dim)
+    return sp_ind
+  end
+end
+
+analyse_sparsity_pattern!(ci, csp, sets, C::AbstractConvexSet, k, sp_ind) = sp_ind
 
 function nz_rows(a::SparseMatrixCSC, ind::UnitRange{Int64}, DROP_ZEROS_FLAG::Bool)
   DROP_ZEROS_FLAG && dropzeros!(a)
@@ -61,13 +84,15 @@ function number_of_overlaps_in_rows(A::SparseMatrixCSC)
   return ri, numOverlaps[ri]
 end
 
-function find_aggregate_sparsity(A, b, ind)
+
+function find_aggregate_sparsity(A, b, ind, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}})
   AInd = nz_rows(A, ind, false)
   # commonZeros = AInd[find(x->x==0,b[AInd])]
   bInd = findall(x -> x != 0, view(b, ind))
   commonNZeros = union(AInd, bInd)
   return commonNZeros
 end
+find_aggregate_sparsity(A, b, ind, C::AbstractConvexSet) = Int64[]
 
 function vec_to_mat_ind(ind::Int64, n::Int64)
   ind > n^2 && error("Index ind out of range.")
@@ -116,6 +141,7 @@ function find_decomposition_matrix!(ws)
 
   # find number of decomposed and total sets and allocate structure for new compositve convex set
   num_total, num_new_psd_cones = COSMO.num_cone_decomposition(ws)
+  @show(n, num_total, num_new_psd_cones)
   # decomposed_psd_cones = Array{COSMO.PsdCone}(undef, 0)
   C_new = Array{COSMO.AbstractConvexSet{Float64}}(undef, num_total)
   C_new[1] = COSMO.ZeroSet{Float64}(ws.ci.originalM)
@@ -132,14 +158,14 @@ function find_decomposition_matrix!(ws)
   ws.p.C = COSMO.CompositeConvexSet(C_new)
 end
 
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64, C::COSMO.AbstractConvexSet, row::Int64, col::Int64, sp_arr::Array{AbstractSparsityPattern}, sp_ind::Int64)
+function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64, C::COSMO.AbstractConvexSet, row::Int64, col::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   H[row:row + C.dim - 1, col:col + C.dim - 1] = sparse(1.0I, C.dim, C.dim)
   C_new[set_ind] = C
 
   return set_ind + 1, sp_ind, col + C.dim
 end
 
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdCone{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{AbstractSparsityPattern}, sp_ind::Int64)
+function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdCone{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   # original matrix size
@@ -162,7 +188,7 @@ function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdCone
   return set_ind, sp_ind + 1, col_start
 end
 
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdConeTriangle{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{AbstractSparsityPattern}, sp_ind::Int64)
+function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdConeTriangle{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   original_size = C.sqrt_dim
@@ -220,18 +246,19 @@ function find_H_col_dimension(sets, sp_arr)
   sp_arr_ind = 1
   for C in sets
     dim, sp_arr_ind = decomposed_dim(C, sp_arr, sp_arr_ind)
+    @show(C, dim ,sp_arr_ind)
     num_cols += dim
   end
   return num_cols::Int64
 end
 
-decomposed_dim(C::AbstractConvexSet, sp_arr::Array{AbstractSparsityPattern}, sp_arr_ind::Int64) = (C.dim, sp_arr_ind)
-function decomposed_dim(C::PsdCone{<: Real}, sp_arr::Array{AbstractSparsityPattern}, sp_arr_ind::Int64)
+decomposed_dim(C::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64) = (C.dim, sp_arr_ind)
+function decomposed_dim(C::PsdCone{<: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
   dim = sum(sp_arr[sp_arr_ind].sntree.nBlk)
   return dim::Int64, (sp_arr_ind + 1)::Int64
 end
 
-function decomposed_dim(C::PsdConeTriangle{<: Real}, sp_arr::Array{AbstractSparsityPattern}, sp_arr_ind::Int64)
+function decomposed_dim(C::PsdConeTriangle{<: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
   dim = sum(map(d -> div((d + 1) * d, 2), map(x -> isqrt(x), sp_arr[sp_arr_ind].sntree.nBlk)))
   return dim::Int64, (sp_arr_ind + 1)::Int64
 end
@@ -241,7 +268,8 @@ function num_cone_decomposition(ws)
   num_sets = length(ws.p.C.sets)
   num_old_psd_cones = length(ws.ci.psd_cones_ind)
   num_new_psd_cones = 0
-  for (iii, sp) in enumerate(ws.ci.sp_arr)
+  for iii = 1:num_old_psd_cones
+    sp = ws.ci.sp_arr[iii]
     num_new_psd_cones += COSMO.num_cliques(sp.sntree)
   end
   # the total number is the number of original non-psd cones + number of decomposed psd cones + 1 zeroset for the augmented system
@@ -322,16 +350,16 @@ function psd_completion!(ws::COSMO.Workspace)
   return nothing
 end
 
-complete!(μ::AbstractVector, ::AbstractConvexSet, sp_arr::Array{AbstractSparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) = sp_ind
+complete!(μ::AbstractVector, ::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) = sp_ind
 
-function complete!(μ::AbstractVector, C::PsdCone{<: Real}, sp_arr::Array{AbstractSparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
+function complete!(μ::AbstractVector, C::PsdCone{<: Real}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
   sp = sp_arr[sp_ind]
   M = reshape(view(μ, rows), C.sqrt_dim, C.sqrt_dim)
   psd_complete!(M, C.sqrt_dim, sp.sntree, sp.ordering)
   return sp_ind + 1
 end
 
-function complete!(μ::AbstractVector, C::PsdConeTriangle{<: Real}, sp_arr::Array{AbstractSparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
+function complete!(μ::AbstractVector, C::PsdConeTriangle{<: Real}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
   sp = sp_arr[sp_ind]
 
   μ_view = view(μ, rows)
@@ -374,11 +402,9 @@ function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Ar
     Waa = view(W, α, α)
     Wαν = view(W, α, ν)
     Wηα = view(W, η, α)
-    try
-      Y = Waa \ Wαν
-    catch
-      warn("Something went wrong in the PSD completion routine, i.e. Waa not invertible!")
-    end
+
+    Y = Waa \ Wαν
+
     W[η, ν] =  Wηα * Y
     # symmetry condition
     W[ν, η] = view(W, η, ν)'

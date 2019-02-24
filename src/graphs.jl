@@ -17,7 +17,7 @@ mutable struct Graph
 		row_val, col_val = row_ind_to_matrix_indices(rows, N, C)
 		F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)
 	 	ordering = F.p
-		#ordering = collect(1:N)
+	#	ordering = collect(1:N)
 		lower_triangle_to_adjacency_list!(adjacency_list, F.L)
 
 		reverse_ordering = zeros(size(ordering, 1))

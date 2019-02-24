@@ -170,9 +170,7 @@ ProblemData(args...) = ProblemData{DefaultFloat}(args...)
 # Struct to hold clique and sparsity data for a constraint
 # ---------------------------
 
-abstract type AbstractSparsityPattern end
-
-mutable struct SparsityPattern <: AbstractSparsityPattern
+mutable struct SparsityPattern
   sntree::SuperNodeTree
   ordering::Array{Int64}
   reverse_ordering::Array{Int64}
@@ -180,14 +178,18 @@ mutable struct SparsityPattern <: AbstractSparsityPattern
   # constructor for sparsity pattern
   function SparsityPattern(rows::Array{Int64,1}, N::Int64, C::AbstractConvexSet)
     g = Graph(rows, N, C)
+    ldlt_p = deepcopy(g.ordering)
+    g.ordering = collect(1:N)
+    reverse_ordering = zeros(size(ldlt_p, 1))
+    for i = 1:N
+      reverse_ordering[Int64(ldlt_p[i])] = i
+    end
     sntree = SuperNodeTree(g)
-    return new(sntree, g.ordering, g.reverse_ordering)
+    return new(sntree, ldlt_p, reverse_ordering)
   end
 end
 
 # To handle the case where a PSD cone is dense
-struct DensePattern <: AbstractSparsityPattern end
-
 # -------------------------------------
 # Chordal Decomposition Information
 # -------------------------------------
@@ -196,21 +198,20 @@ mutable struct ChordalInfo{T <: Real}
   originalN::Int64
   originalC::CompositeConvexSet{T}
   H::SparseMatrixCSC{T}
-  sp_arr::Array{COSMO.AbstractSparsityPattern}
-  psd_cones_ind::Array{Int64} # stores the position of psd cones in the composite convex set
+  sp_arr::Array{COSMO.SparsityPattern}
+  psd_cones_ind::Array{Int64} # stores the position of decomposable psd cones in the composite convex set
+  num_decomp::Int64 #number of decomposable cones
 
   function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
     originalM = problem.model_size[1]
     originalN = problem.model_size[2]
     originalC = deepcopy(problem.C)
-
-    # Store the indices of the psd cones in psd_cones_ind
-    psd_cones_ind = findall(x -> typeof(x) <: Union{PsdConeTriangle{Float64}, PsdCone{Float64}} , problem.C.sets)
+    num_psd_cones = length(findall(x -> typeof(x) <: Union{PsdConeTriangle{Float64}, PsdCone{Float64}} , problem.C.sets))
 
     # allocate sparsity pattern for each cone
-    sp_arr = Array{COSMO.AbstractSparsityPattern}(undef, length(psd_cones_ind))
+    sp_arr = Array{COSMO.SparsityPattern}(undef, num_psd_cones)
 
-    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, psd_cones_ind)
+    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], 0)
   end
 
 	function ChordalInfo{T}() where{T}
