@@ -131,8 +131,6 @@ end
 # ----------------------------------------------------
 
 #a type to maintain internal workspace data for the BLAS syevr function
-
-
 mutable struct PsdBlasWorkspace{T}
     m::Base.RefValue{BLAS.BlasInt}
     w::Vector{T}
@@ -295,7 +293,6 @@ end
 # ----------------------------------------------------
 # Positive Semidefinite Cone (Triangle)
 # ----------------------------------------------------
-
 # Psd cone given by upper-triangular entries of matrix
 """
     PsdConeTriangle(dim)

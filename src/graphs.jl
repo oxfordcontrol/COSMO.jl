@@ -9,20 +9,17 @@ mutable struct Graph
 	end
 
 	# constructor for list of zero or nonzero rows of vectorized matrix
-	function Graph(rows::Array{Int64,1}, N::Int64, NONZERO_FLAG::Bool)
+	function Graph(rows::Array{Int64,1}, N::Int64, C::Union{PsdCone{Float64}, PsdConeTriangle{Float64}})
 		# determine number of vertices of graph N
 		ordering = collect(1:1:N)
 		adjacency_list = [Int64[] for i = 1:N]
 
-		row_val, col_val = row_ind_to_matrix_indices(rows, N)
-		F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), perm= nothing,logical = true)
-		# ordering = F.p
-		ordering = collect(1:N)
+		row_val, col_val = row_ind_to_matrix_indices(rows, N, C)
+		F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)
+	 	ordering = F.p
+		#ordering = collect(1:N)
 		lower_triangle_to_adjacency_list!(adjacency_list, F.L)
 
-		# make sure that the graph is connected
-		# FIXME: Relevant check?
-		# connect_graph!(g)
 		reverse_ordering = zeros(size(ordering, 1))
 		for i = 1:N
 			reverse_ordering[Int64(ordering[i])] = i
@@ -181,7 +178,9 @@ function is_perfect_ordering(g::Graph)
 	return true
 end
 
-function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64)
+# given an array [rows] that represent the nonzero entries of a vectorized NxN matrix,
+# return the rows and columns of the nonzero entries of the original matrix
+function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::PsdCone{Float64})
 	row_val = zeros(Int64, length(rows))
 	col_val = zeros(Int64, length(rows))
 	for (ind, r) in enumerate(rows)
@@ -198,13 +197,61 @@ function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64)
 	return row_val, col_val
 end
 
+# given an array [rows] that represent the nonzero entries of the vectorized upper triangular part of a NxN matrix,
+# return the rows and columns of the nonzero entries of the original matrix
+function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::COSMO.PsdConeTriangle{Float64})
+	#  allocate conservative here since we don't know how many diagonal entries are contained in row
+	row_val = zeros(Int64, 2 * length(rows) + N)
+	col_val = zeros(Int64, 2 * length(rows) + N)
+	ind = 1
+	_step = 1
+	for (iii, r) in enumerate(rows)
+		i, j = COSMO.svec_to_mat(r)
 
-function lower_triangle_to_adjacency_list!(alist::Array{Array{Int64,1},1}, L::SparseMatrixCSC{Float64, Int64})
+		row_val[ind] = i
+		col_val[ind] = j
+		ind += 1
+
+		if i != j
+			row_val[ind] = j
+			col_val[ind] = i
+			ind += 1
+		end
+	end
+	return row_val[1:ind - 1], col_val[1:ind - 1]
+end
+
+# Given a linear index find the col of the corresponding upper triangular matrix
+function svec_get_col(x::Int64)
+	c = (sqrt(8 * x + 1) - 1) / 2
+	if c % 1 != 0
+		return Int((floor(c) + 1))
+	else
+		return Int(c)
+	end
+end
+
+# Given a linear index find the row of the corresponding upper triangular matrix
+function svec_get_row(x::Int64)
+	c = get_col(x) - 1
+	k = (c + 1) * c / 2
+	return (x - k)::Int64
+end
+
+# Given a linear index find the row and column of the corresponding upper triangular matrix
+function svec_to_mat(ind::Int64)
+	c = svec_get_col(ind)
+	k = (c - 1) * c / 2
+	r = Int(ind - k)
+	return r::Int64, c::Int64
+end
+
+function lower_triangle_to_adjacency_list!(alist::Array{Array{Int64, 1}, 1}, L::SparseMatrixCSC{Float64, Int64})
 	N = length(alist)
 	j = 1
 	for (ind, r) in enumerate(L.rowval)
 		i = r
-		if j != N && !(ind < L.colptr[j+1])
+		if j != N && !(ind < L.colptr[j + 1])
 			j += 1
 		end
 		push!(alist[i], j)

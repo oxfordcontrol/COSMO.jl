@@ -24,6 +24,7 @@ P = data["P"];
 q = data["q"];
 A = data["A"];
 b = data["b"];
+cs = COSMO.Constraint(-A, b, COSMO.PsdCone)
 # # solve problem with sparsity exploitation
 model = COSMO.Model()
 settings_decomp = COSMO.Settings(decompose = true, obj_true = obj_true, verbose_timing = true)

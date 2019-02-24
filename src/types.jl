@@ -169,19 +169,24 @@ ProblemData(args...) = ProblemData{DefaultFloat}(args...)
 # ---------------------------
 # Struct to hold clique and sparsity data for a constraint
 # ---------------------------
-mutable struct SparsityPattern
+
+abstract type AbstractSparsityPattern end
+
+mutable struct SparsityPattern <: AbstractSparsityPattern
   sntree::SuperNodeTree
   ordering::Array{Int64}
   reverse_ordering::Array{Int64}
 
   # constructor for sparsity pattern
-  function SparsityPattern(rows::Array{Int64,1}, N::Int64, NONZERO_FLAG::Bool)
-    g = Graph(rows, N, NONZERO_FLAG)
+  function SparsityPattern(rows::Array{Int64,1}, N::Int64, C::AbstractConvexSet)
+    g = Graph(rows, N, C)
     sntree = SuperNodeTree(g)
     return new(sntree, g.ordering, g.reverse_ordering)
   end
-
 end
+
+# To handle the case where a PSD cone is dense
+struct DensePattern <: AbstractSparsityPattern end
 
 # -------------------------------------
 # Chordal Decomposition Information
@@ -191,8 +196,8 @@ mutable struct ChordalInfo{T <: Real}
   originalN::Int64
   originalC::CompositeConvexSet{T}
   H::SparseMatrixCSC{T}
-  sp_arr::Array{COSMO.SparsityPattern}
-  psd_cones_ind::Array{UnitRange{Int64}}
+  sp_arr::Array{COSMO.AbstractSparsityPattern}
+  psd_cones_ind::Array{Int64} # stores the position of psd cones in the composite convex set
 
   function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
     originalM = problem.model_size[1]
@@ -200,18 +205,17 @@ mutable struct ChordalInfo{T <: Real}
     originalC = deepcopy(problem.C)
 
     # Store the indices of the psd cones in psd_cones_ind
-    indices = get_set_indices(problem.C.sets)
-    psd_cones_ind = indices[findall(x -> typeof(x) == PsdCone{Float64}, problem.C.sets)]
+    psd_cones_ind = findall(x -> typeof(x) <: Union{PsdConeTriangle{Float64}, PsdCone{Float64}} , problem.C.sets)
 
     # allocate sparsity pattern for each cone
-    sp_arr = Array{COSMO.SparsityPattern}(undef, length(psd_cones_ind))
+    sp_arr = Array{COSMO.AbstractSparsityPattern}(undef, length(psd_cones_ind))
 
     return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, psd_cones_ind)
   end
 
 	function ChordalInfo{T}() where{T}
 		C = COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)])
-		return new(0, 0, C, spzeros(1, 1), COSMO.SparsityPattern[], [1:1])
+		return new(0, 0, C, spzeros(1, 1), COSMO.SparsityPattern[], [1])
 	end
 
 end

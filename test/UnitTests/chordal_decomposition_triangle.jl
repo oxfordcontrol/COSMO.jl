@@ -72,6 +72,11 @@ model = COSMO.Model()
 settings = COSMO.Settings(decompose = false)
 COSMO.set!(model, P, q, A, b, C, settings)
 res1 = COSMO.optimize!(model);
+# Y1_sol1 = reshape(res1.y[1:16], 4, 4)
+# Y2_sol1 = reshape(res1.y[19:34], 4, 4)
+S1_sol1 = reshape(res1.s[1:16], 4, 4)
+S2_sol1 = reshape(res1.s[19:34], 4, 4)
+
 
 # --------------------------
 # CONFIG 2: PsdSquare +  decomposition
@@ -81,20 +86,24 @@ model = COSMO.Model()
 settings = COSMO.Settings(decompose = true)
 COSMO.set!(model, P, q, A, b, C, settings)
 res2 = COSMO.optimize!(model);
-
+S1_sol2 = reshape(res2.s[1:16], 4, 4)
+S2_sol2 = reshape(res2.s[19:34], 4, 4)
 
 
 # --------------------------
 # Only keep upper triangular data of the problem
 # --------------------------
+
+# Notice that we have to rescale the off-diagonal entries of s by sqrt(2) since our projection assumes
+# that
 Ct = [COSMO.PsdConeTriangle(10); COSMO.ZeroSet(2); COSMO.PsdConeTriangle(10); COSMO.PsdConeTriangle(6)]
 
 a1t = zeros(10)
-COSMO.extract_upper_triangle!(A1, a1t, 1.)
+COSMO.extract_upper_triangle!(A1, a1t, sqrt(2))
 a3t = zeros(10)
-COSMO.extract_upper_triangle!(A3, a3t, 1.)
+COSMO.extract_upper_triangle!(A3, a3t, sqrt(2))
 a4t = zeros(6)
-COSMO.extract_upper_triangle!(A4, a4t, 1.)
+COSMO.extract_upper_triangle!(A4, a4t, sqrt(2))
 At = [a1t; a2; a3t; a4t]
 
 B1 = reshape(b[1:16], 4, 4)
@@ -103,9 +112,9 @@ B4 = reshape(b[35:end], 3, 3)
 b1t = zeros(10)
 b3t = zeros(10)
 b4t = zeros(6)
-COSMO.extract_upper_triangle!(B1, b1t, 1.)
-COSMO.extract_upper_triangle!(B3, b3t, 1.)
-COSMO.extract_upper_triangle!(B4, b4t, 1.)
+COSMO.extract_upper_triangle!(B1, b1t, sqrt(2))
+COSMO.extract_upper_triangle!(B3, b3t, sqrt(2))
+COSMO.extract_upper_triangle!(B4, b4t, sqrt(2))
 bt = [b1t; b[17:18]; b3t; b4t]
 
 
@@ -117,6 +126,12 @@ model = COSMO.Model()
 settings = COSMO.Settings(decompose = false)
 COSMO.set!(model, P, q, At, bt, Ct, settings)
 res3 = COSMO.optimize!(model);
+S1_sol3 = zeros(4, 4)
+COSMO.populate_upper_triangle!(S1_sol3, res3.s[1:10], 1. / sqrt(2))
+S1_sol3 = Symmetric(S1_sol3)
+S2_sol3 = zeros(4, 4)
+COSMO.populate_upper_triangle!(S2_sol3, res3.s[13:22], 1. / sqrt(2))
+S2_sol3 = Symmetric(S2_sol3)
 
 # --------------------------
 # CONFIG 4: PsdTriangle +  decomposition
@@ -126,11 +141,23 @@ model = COSMO.Model()
 settings = COSMO.Settings(decompose = true)
 COSMO.set!(model, P, q, At, bt, Ct, settings)
 res4 = COSMO.optimize!(model);
+S1_sol4 = zeros(4, 4)
+COSMO.populate_upper_triangle!(S1_sol4, res4.s[1:10], 1. / sqrt(2))
+S1_sol4 = Symmetric(S1_sol4)
+S2_sol4 = zeros(4, 4)
+COSMO.populate_upper_triangle!(S2_sol4, res4.s[13:22], 1. / sqrt(2))
+S2_sol4 = Symmetric(S2_sol4)
 
 @testset "Decomposition with PSDTriangle" begin
   @test abs(res1.obj_val - res2.obj_val) < 1e-4
   @test abs(res1.obj_val - res3.obj_val) < 1e-4
   @test abs(res2.obj_val - res4.obj_val) < 1e-4
+  @test norm(S1_sol1 - S1_sol2, Inf) < 1e-8
+  @test norm(S1_sol2 - S1_sol3, Inf) < 1e-8
+  @test norm(S1_sol3 - S1_sol4, Inf) < 1e-8
+  @test norm(S2_sol1 - S2_sol2, Inf) < 1e-8
+  @test norm(S2_sol2 - S2_sol3, Inf) < 1e-8
+  @test norm(S2_sol3 - S2_sol4, Inf) < 1e-8
 end
 nothing
 

@@ -51,7 +51,6 @@ Attempts to solve the optimization problem defined in `COSMO.Model` object with 
 function optimize!(ws::COSMO.Workspace)
 	solver_time_start = time()
 	settings = ws.settings
-
   # perform chordal decomposition
   if settings.decompose
   	ws.times.graph_time = @elapsed COSMO.chordal_decomposition!(ws)
@@ -177,7 +176,7 @@ function optimize!(ws::COSMO.Workspace)
 
 	# reverse chordal decomposition
 	if settings.decompose
-	  reverse_decomposition!(ws, settings)
+	 reverse_decomposition!(ws, settings)
 	end
 
 	ws.times.solver_time = time() - solver_time_start
@@ -187,8 +186,7 @@ function optimize!(ws::COSMO.Workspace)
 
 	# create result object
 	res_info = ResultInfo(r_prim, r_dual)
-	y = -ws.vars.μ
 
-	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
+	return Result{Float64}(ws.vars.x, -ws.vars.μ, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 end
 
