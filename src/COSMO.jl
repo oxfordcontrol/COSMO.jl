@@ -13,7 +13,6 @@ include("./QDLDL.jl")
 include("./algebra.jl")
 include("./projections.jl")
 include("./settings.jl")            # TODO: unmodified - revisit
-include("./graphs.jl")
 include("./trees.jl")
 include("./types.jl")               # some types still need tidying
 include("./constraint.jl")          # TODO: unmodified - revisit

@@ -10,12 +10,12 @@ using COSMO, Random, Test, LinearAlgebra, SparseArrays, Random
 rng = Random.MersenneTwister(144545)
 
 function generate_pos_def_matrix(rng, n, aMin, aMax)
-  X = rand(rng,n,n)
+  X = rand(rng, n, n)
   # any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R
   Q, R = qr(X)
-  eigs = rand(rng,n).*(aMax.-aMin) .+ aMin
-  X = Q*Diagonal(eigs)*Q'
-  X = 0.5*(X+X')
+  eigs = rand(rng, n).*(aMax .- aMin) .+ aMin
+  X = Q * Diagonal(eigs) * Q'
+  X = 0.5 * (X + X')
   return X
 end
 
@@ -52,9 +52,9 @@ q = -P * x - A' * y
 
 # Run three test cases
 cases = [
-  COSMO.Settings(decompose = false);
-  COSMO.Settings(decompose = true, complete_dual = false);
-  COSMO.Settings(decompose = true, complete_dual = true)
+  COSMO.Settings(decompose = false, verbose_timing = true);
+  COSMO.Settings(decompose = true, complete_dual = false, verbose_timing = true);
+  COSMO.Settings(decompose = true, complete_dual = true, verbose_timing = true)
   ]
 results = Array{COSMO.Result{Float64}}(undef, 3);
 
@@ -74,6 +74,8 @@ end
   @test minimum(eigvals(Y_sol1)) > -1e-6
   @test minimum(eigvals(Y_sol2)) < -1e-6
   @test minimum(eigvals(Y_sol3)) > -1e-6
+  @test norm(Y_sol1 - Y_sol3) < 1e-3
+
 end
 
 # PSDCone Triangle
@@ -89,9 +91,9 @@ results_triangle = Array{COSMO.Result{Float64}}(undef, 3);
 
 
 cases_triangle = [
-  COSMO.Settings(decompose = false, scaling = 0);
-  COSMO.Settings(decompose = true, complete_dual = false, scaling = 0);
-  COSMO.Settings(decompose = true, complete_dual = true, scaling = 0)
+  COSMO.Settings(decompose = false);
+  COSMO.Settings(decompose = true, complete_dual = false);
+  COSMO.Settings(decompose = true, complete_dual = true)
   ]
 for i = 1:3
   model_tri = COSMO.Model()

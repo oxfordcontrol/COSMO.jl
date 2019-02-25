@@ -9,27 +9,35 @@ mutable struct SuperNodeTree
 	cliques::Array{Int64,1} #vertices of cliques stored in one array
 	chptr::Array{Int64,1} #points to the indizes where new clique starts in cliques array
 	nBlk::Array{Int64,1} #sizes of submatrizes defined by each clique
-	function SuperNodeTree(g::Graph)
-		par = etree(g)
+	function SuperNodeTree(L)
+		par = etree(L)
 		child = child_from_par(par)
 		post = post_order(par, child)
+		# sorting of children from highest order one to lowest make sure that a node always gets
+		# added to the supernode with the highest rep vertex
+		sort_children!(child, post)
 		# faster algorithm according to Vandenberghe p.308
-		degrees = higher_degrees(g)
-
+		degrees = higher_degrees(L)
 		snd, snptr, snd_par = find_supernodes(par, child, post, degrees)
 
 		# TODO: amalgamate supernodes
 		snd_child = child_from_par(snd_par)
-		snd_post = post_order(snd_par, snd_child)
+		# # a post-ordering of the elimination tree is needed to make sure that in the
+		# # psd completion step the matrix is completed from lower-right to top-left
+		 snd_post = post_order(snd_par, snd_child)
 
-		cliques, chptr, nBlk = find_cliques(g, snd, snptr, snd_par, post)
+		cliques, chptr, nBlk = find_cliques(L, snd, snptr, snd_par, post)
 
 		new(snd, snptr, snd_par, snd_post, post, par, cliques, chptr, nBlk)
 	end
 
 end
 
-
+function sort_children!(child, post)
+	for v = 1:length(child)
+		child[v] = sort(child[v], by = x -> post[x], rev = true)
+	end
+end
 # -------------------------------------
 # FUNCTION DEFINITIONS
 # -------------------------------------
@@ -74,14 +82,14 @@ function etree_liu(g::Graph)
 end
 
 # simplified version of my own elimination tree algorithm with simplified data structure (fastest)
-function etree(g::Graph)
-	N = number_of_vertices(g)
+function etree(L)
+	N = size(L, 1)
 	par = zeros(Int64, N)
 	# loop over Vertices of graph
 	for i=1:N
 		value = i
 		# number of i-neighbors with order higher than order of node i
-		par_ = find_parentDirect(g, i)
+		par_ = find_parent_direct(L, i)
 		par[i] = par_
 	end
 	return par
@@ -105,6 +113,8 @@ function post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}})
 	sort!(post, by = x-> order[x])
 	return post
 end
+
+
 
 function child_from_par(par::Array{Int64,1})
 
@@ -177,7 +187,8 @@ function pothen_sun(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post::Arr
 	# go through vertices in post_order
 	for v in post
 		child_ind = 0
-		# check degree condition for all of v's childs
+		# check degree condition for all of v's childs from highest to lowest
+
 		for (iii, w) in enumerate(child[v])
 			# if not deg+(v) > deg+(w) - 1 for a certain w, set u to be w in snd(u), add v to snd(u)
 			if !check_degree_condition(v, w, degrees)
@@ -188,7 +199,7 @@ function pothen_sun(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post::Arr
 			end
 		end
 
-		# if v is still a rep vertex (i.e. above loop didnt findall a child that fulfilled degree condition)
+		# if v is still a rep vertex (i.e. above loop didnt find a child that fulfilled degree condition)
 		if sn_ind[v] < 0
 			u = v
 		end
@@ -253,7 +264,7 @@ function find_supernodes(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post
 
 end
 
-function find_cliques(g::Graph,snodes::Array{Int64,1}, snptr::Array{Int64,1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
+function find_cliques(L, snodes::Array{Int64,1}, snptr::Array{Int64,1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
 	postInv = invert_order(post)
 
 	Nc = length(supernode_par)
@@ -268,7 +279,7 @@ function find_cliques(g::Graph,snodes::Array{Int64,1}, snptr::Array{Int64,1}, su
 		else
 			vRep = snodes[snptr[iii]:end][1]
 		end
-		adjPlus = find_higher_neighbors_sorted(g, vRep, postInv)
+		adjPlus = find_higher_order_neighbors(L, vRep)
 		deg = length(adjPlus) + 1
 		cliques = [cliques; vRep; adjPlus]
 		chptr[iii] = jjj
@@ -280,16 +291,125 @@ function find_cliques(g::Graph,snodes::Array{Int64,1}, snptr::Array{Int64,1}, su
 
 end
 
-function find_parentDirect(g::Graph, v::Int64)
-	order = g.ordering[v]
-	neighbors = g.adjacency_list[v]
-	higherOrders = filter(x -> x > order, g.ordering[neighbors])
-	if length(higherOrders) > 0
-		return g.reverse_ordering[minimum(higherOrders)]
+" Given a sparse lower triangular matrix L find the neighboring vertices of v"
+function find_neighbors(L::SparseMatrixCSC, v::Int64)
+	L = Symmetric(L)
+	col_ptr = L.colptr
+	row_val = L.rowval
+	return row_val[col_ptr[v]:col_ptr[v + 1] - 1]
+end
+
+function find_higher_order_neighbors(L::SparseMatrixCSC, v::Int64)
+	v == size(L, 1) && return 0
+	col_ptr = L.colptr
+	row_val = L.rowval
+	return row_val[col_ptr[v]:col_ptr[v + 1] - 1]
+end
+
+
+function find_parent_direct(L::SparseMatrixCSC, v::Int64)
+	v == size(L, 1) && return 0
+	col_ptr = L.colptr
+	row_val = L.rowval
+	return row_val[col_ptr[v]]
+end
+
+
+
+# findall the cardinality of adj+(v) for all v in V
+function higher_degrees(L::SparseMatrixCSC)
+	N = size(L, 1)
+	degrees = zeros(Int64, N)
+	col_ptr = L.colptr
+	row_val = L.rowval
+
+	for v = 1:N-1
+		degrees[v] = col_ptr[v + 1] - col_ptr[v]
+	end
+	return degrees
+end
+
+
+# -------------------------------------
+# FUNCTION DEFINITIONS
+# -------------------------------------
+function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
+	row_val, col_val = row_ind_to_matrix_indices(rows, N, C)
+	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)
+	ci.L = F.L
+	return F.p
+end
+
+
+# given an array [rows] that represent the nonzero entries of a vectorized NxN matrix,
+# return the rows and columns of the nonzero entries of the original matrix
+function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::PsdCone{Float64})
+	row_val = zeros(Int64, length(rows))
+	col_val = zeros(Int64, length(rows))
+	for (ind, r) in enumerate(rows)
+		_rem = mod(r, N)
+		fl = fld(r, N)
+		if _rem == 0
+			row_val[ind] = N
+			col_val[ind] = fl
+		else
+			row_val[ind] = _rem
+			col_val[ind] = fl + 1
+		end
+	end
+	return row_val, col_val
+end
+
+# given an array [rows] that represent the nonzero entries of the vectorized upper triangular part of a NxN matrix,
+# return the rows and columns of the nonzero entries of the original matrix
+function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::COSMO.PsdConeTriangle{Float64})
+	#  allocate conservative here since we don't know how many diagonal entries are contained in row
+	row_val = zeros(Int64, 2 * length(rows) + N)
+	col_val = zeros(Int64, 2 * length(rows) + N)
+	ind = 1
+	_step = 1
+	for (iii, r) in enumerate(rows)
+		i, j = COSMO.svec_to_mat(r)
+
+		row_val[ind] = i
+		col_val[ind] = j
+		ind += 1
+
+		if i != j
+			row_val[ind] = j
+			col_val[ind] = i
+			ind += 1
+		end
+	end
+	return row_val[1:ind - 1], col_val[1:ind - 1]
+end
+
+# Given a linear index find the col of the corresponding upper triangular matrix
+function svec_get_col(x::Int64)
+	c = (sqrt(8 * x + 1) - 1) / 2
+	if c % 1 != 0
+		return Int((floor(c) + 1))
 	else
-		return 0
+		return Int(c)
 	end
 end
+
+# Given a linear index find the row of the corresponding upper triangular matrix
+function svec_get_row(x::Int64)
+	c = get_col(x) - 1
+	k = (c + 1) * c / 2
+	return (x - k)::Int64
+end
+
+# Given a linear index find the row and column of the corresponding upper triangular matrix
+function svec_to_mat(ind::Int64)
+	c = svec_get_col(ind)
+	k = (c - 1) * c / 2
+	r = Int(ind - k)
+	return r::Int64, c::Int64
+end
+
+
 
 
 
