@@ -55,31 +55,31 @@ function num_cliques(sntree::SuperNodeTree)
 end
 
 # elimination tree algorithm from H.Liu - A Compact Row Storage Scheme for Cholesky Factors Using Elimination Trees
-function etree_liu(g::Graph)
-	N = length(g.adjacency_list)
-	par = zeros(Int64,N)
-	ancestor = zeros(Int64,N)
+# function etree_liu(g)
+# 	N = length(g.adjacency_list)
+# 	par = zeros(Int64,N)
+# 	ancestor = zeros(Int64,N)
 
-	elemSequence = g.reverse_ordering[collect(1:N)]
-	for iii in elemSequence
-		for vk in g.adjacency_list[iii]
-			if g.ordering[vk] < g.ordering[iii]
-				r = vk
-				while (ancestor[r] != 0) && (ancestor[r] != iii)
-					t = ancestor[r]
-					ancestor[r] = iii
-					r = t
-				end
-				if ancestor[r] == 0
-					ancestor[r] = iii
-					par[r] = iii
-				end
-			end
-		end
-	end
+# 	elemSequence = g.reverse_ordering[collect(1:N)]
+# 	for iii in elemSequence
+# 		for vk in g.adjacency_list[iii]
+# 			if g.ordering[vk] < g.ordering[iii]
+# 				r = vk
+# 				while (ancestor[r] != 0) && (ancestor[r] != iii)
+# 					t = ancestor[r]
+# 					ancestor[r] = iii
+# 					r = t
+# 				end
+# 				if ancestor[r] == 0
+# 					ancestor[r] = iii
+# 					par[r] = iii
+# 				end
+# 			end
+# 		end
+# 	end
 
-	return par
-end
+# 	return par
+# end
 
 # simplified version of my own elimination tree algorithm with simplified data structure (fastest)
 function etree(L)

@@ -19,6 +19,8 @@ include("./UnitTests/COSMOTestUtils.jl")
   include("./UnitTests/algebra.jl")
   include("./UnitTests/splitvector.jl")
   include("./UnitTests/interface.jl")
+  include("./UnitTests/chordal_decomposition_triangle.jl")
+  include("./UnitTests/psd_completion.jl")
   include("./UnitTests/moi_wrapper.jl")
 end
 nothing

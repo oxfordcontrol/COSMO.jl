@@ -42,7 +42,8 @@ end
 
 function analyse_sparsity_pattern!(ci, csp, sets, C::PsdCone{T}, k, sp_ind) where {T <: Real}
   if length(csp) < C.dim
-    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(csp, C.sqrt_dim, C)
+    ordering = find_graph!(ci, csp, C.sqrt_dim, C)
+    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering)
     push!(ci.psd_cones_ind, k)
     ci.num_decomp += 1
     return sp_ind + 1
@@ -54,7 +55,8 @@ end
 
 function analyse_sparsity_pattern!(ci, csp, sets, C::PsdConeTriangle{T}, k, sp_ind) where {T <: Real}
   if length(csp) < C.dim
-    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(csp, C.sqrt_dim, C)
+    ordering = find_graph!(ci, csp, C.sqrt_dim, C)
+    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering)
     push!(ci.psd_cones_ind, k)
     ci.num_decomp += 1
     return sp_ind + 1
@@ -141,7 +143,6 @@ function find_decomposition_matrix!(ws)
 
   # find number of decomposed and total sets and allocate structure for new compositve convex set
   num_total, num_new_psd_cones = COSMO.num_cone_decomposition(ws)
-  @show(n, num_total, num_new_psd_cones)
   # decomposed_psd_cones = Array{COSMO.PsdCone}(undef, 0)
   C_new = Array{COSMO.AbstractConvexSet{Float64}}(undef, num_total)
   C_new[1] = COSMO.ZeroSet{Float64}(ws.ci.originalM)
@@ -246,7 +247,6 @@ function find_H_col_dimension(sets, sp_arr)
   sp_arr_ind = 1
   for C in sets
     dim, sp_arr_ind = decomposed_dim(C, sp_arr, sp_arr_ind)
-    @show(C, dim ,sp_arr_ind)
     num_cols += dim
   end
   return num_cols::Int64
@@ -393,7 +393,7 @@ function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Ar
     α = filter(x -> !in(x, ν), clique)
 
     # index set containing the row indizes of the lower-triangular zeros in column i (i: representative index) sorted by σ(i)
-    i = ν[end]
+    i = ν[1]
     η = collect(i + 1:1:N)
     # filter out elements in lower triangular part of column i that are non-zero
     filter!(x -> !in(x, α), η)

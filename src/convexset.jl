@@ -41,6 +41,11 @@ function rectify_scaling!(E,work,set::ZeroSet{T}) where{T}
 	return false
 end
 
+function allocate_memory!(cone::AbstractConvexSet{T}) where {T}
+  return nothing
+end
+
+
 # ----------------------------------------------------
 # Nonnegative orthant
 # ----------------------------------------------------
@@ -328,7 +333,6 @@ is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corr
 
 """
 struct PsdConeTriangle{T} <: AbstractConvexCone{T}
-
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix
     X::Array{T,2}
@@ -337,13 +341,13 @@ struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     function PsdConeTriangle{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-
         new(dim, side_dimension, zeros(side_dimension, side_dimension),PsdBlasWorkspace{T}(side_dimension))
+
     end
 end
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
 
-struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
+mutable struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix
     X::Array{T,2}
@@ -352,7 +356,6 @@ struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
     function DensePsdConeTriangle{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-
         new(dim, side_dimension, zeros(side_dimension, side_dimension)),PsdBlasWorkspace{T}(side_dimension))
     end
 end
@@ -392,6 +395,10 @@ end
 
 function rectify_scaling!(E, work, set::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where{T}
     return rectify_scalar_scaling!(E,work)
+end
+
+function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
+  cone.X = zeros(cone.sqrt_dim, cone.sqrt_dim)
 end
 
 function populate_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
