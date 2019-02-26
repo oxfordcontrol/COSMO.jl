@@ -17,7 +17,7 @@ function chordal_decomposition!(ws::COSMO.Workspace)
 
   find_sparsity_patterns!(ws)
 
-  if ws.ci.num_decomp > 0
+  if ws.ci.num_decomposable > 0
     # find transformation matrix H and new composite convex set
     find_decomposition_matrix!(ws)
 
@@ -45,7 +45,7 @@ function analyse_sparsity_pattern!(ci, csp, sets, C::PsdCone{T}, k, sp_ind) wher
     ordering = find_graph!(ci, csp, C.sqrt_dim, C)
     ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering)
     push!(ci.psd_cones_ind, k)
-    ci.num_decomp += 1
+    ci.num_decomposable += 1
     return sp_ind + 1
   else
    sets[k] = COSMO.DensePsdCone{T}(C.dim)
@@ -58,7 +58,7 @@ function analyse_sparsity_pattern!(ci, csp, sets, C::PsdConeTriangle{T}, k, sp_i
     ordering = find_graph!(ci, csp, C.sqrt_dim, C)
     ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering)
     push!(ci.psd_cones_ind, k)
-    ci.num_decomp += 1
+    ci.num_decomposable += 1
     return sp_ind + 1
   else
    sets[k] = COSMO.DensePsdConeTriangle{T}(C.dim)
@@ -272,6 +272,7 @@ function num_cone_decomposition(ws)
     sp = ws.ci.sp_arr[iii]
     num_new_psd_cones += COSMO.num_cliques(sp.sntree)
   end
+  ws.ci.num_decom_psd_cones = ws.ci.num_psd_cones - ws.ci.num_decomposable + num_new_psd_cones
   # the total number is the number of original non-psd cones + number of decomposed psd cones + 1 zeroset for the augmented system
   num_total = num_sets - num_old_psd_cones + num_new_psd_cones + 1
   return num_total, num_new_psd_cones
@@ -303,7 +304,6 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   nO = ws.ci.originalN
 
   H = ws.ci.H
-
   vars = Variables{Float64}(mO, nO, ws.ci.originalC)
   vars.x .= ws.vars.x[1:nO]
   vars.s  .= SplitVector{Float64}(H * ws.vars.s[mO + 1:end], ws.ci.originalC)

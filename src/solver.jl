@@ -55,7 +55,6 @@ function optimize!(ws::COSMO.Workspace)
   if settings.decompose
   	ws.times.graph_time = @elapsed COSMO.chordal_decomposition!(ws)
   end
-
 	# create scaling variables
 	# with scaling    -> uses mutable diagonal scaling matrices
 	# without scaling -> uses identity matrices

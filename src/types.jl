@@ -198,7 +198,9 @@ mutable struct ChordalInfo{T <: Real}
   H::SparseMatrixCSC{T}
   sp_arr::Array{COSMO.SparsityPattern}
   psd_cones_ind::Array{Int64} # stores the position of decomposable psd cones in the composite convex set
-  num_decomp::Int64 #number of decomposable cones
+  num_psd_cones::Int64 # number of psd cones of original problem
+  num_decomposable::Int64 #number of decomposable cones
+  num_decom_psd_cones::Int64 #total number of psd cones after decomposition
   L::SparseMatrixCSC{T} #pre allocate memory for QDLD - Lt
 
   function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
@@ -209,7 +211,7 @@ mutable struct ChordalInfo{T <: Real}
     # allocate sparsity pattern for each cone
     sp_arr = Array{COSMO.SparsityPattern}(undef, num_psd_cones)
 
-    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], 0, spzeros(1, 1))
+    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], num_psd_cones, 0, 0, spzeros(1, 1))
   end
 
 	function ChordalInfo{T}() where{T}
