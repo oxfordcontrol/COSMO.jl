@@ -40,7 +40,7 @@ b_mat = sparse(rand(rng, 10, 1))
     @test typeof(COSMO.Constraint(A_mat, b_mat, COSMO.ZeroSet)) <: COSMO.Constraint
   end
 
-  @testset "Indizes" begin
+  @testset "Indices" begin
     A = rand(rng, 3, 3)
     b = rand(rng, 3)
     ind = 3:5
