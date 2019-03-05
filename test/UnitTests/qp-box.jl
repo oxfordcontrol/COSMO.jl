@@ -91,7 +91,7 @@ end
     constraints = [constraint]
 
     model = COSMO.Model()
-    settings = COSMO.Settings(check_infeasibility=40,scaling=10)  #check = 20 works?
+    settings = COSMO.Settings(check_infeasibility=40,scaling=10)  
     assemble!(model, P, q, constraints,settings = settings)
 
     res = COSMO.optimize!(model)
