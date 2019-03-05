@@ -34,7 +34,7 @@ end
 function scaled_norm_Inf(E::Diagonal, v::Array)
 	norm  = zero(eltype(v))
 	for i = 1:length(v)
-		norm = max(norm, E.diag[i] * v[i])
+		norm = max(norm, abs(E.diag[i] * v[i]))
 	end
 	return norm
 end
@@ -179,4 +179,3 @@ function is_neg_sem_def(X, tol)
    s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
    return s[end] <= tol
 end
-
