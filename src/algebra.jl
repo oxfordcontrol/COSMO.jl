@@ -167,6 +167,16 @@ function symmetrize!(A::AbstractMatrix)
 	nothing
 end
 
+function symmetrize_full!(A::AbstractMatrix)
+	n = size(A, 1)
+	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")
+	@inbounds for j in 1:n, i in 1:j
+ 		A[i, j] = (A[i, j] + A[j, i]) / 2
+ 		A[j, i] = A[i, j]
+	end
+	nothing
+end
+
 # this function assumes real symmetric X and only considers the upper triangular part
 function is_pos_sem_def(X, tol)
     # set option 'N' to only compute eigenvalues, s is ordered from min to max

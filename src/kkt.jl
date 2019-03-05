@@ -1,7 +1,6 @@
 function factor_KKT!(ws::COSMO.Workspace)
 	settings = ws.settings
 	p = ws.p
-
 	if length(ws.M) == 0
 		# KKT matrix
 		ws.M = [p.P + settings.sigma*I SparseMatrixCSC(p.A'); p.A -I]

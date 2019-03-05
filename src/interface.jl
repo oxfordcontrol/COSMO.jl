@@ -28,24 +28,17 @@ COSMO.assemble!(model, P, q, constraints, x0 = x_0)
 
 """
 function assemble!(model::Model{T},
-	P::AbstractMatrix{T},
-	q::AbstractVector{T},
+	P::AbstractMatrix,
+	q::AbstractVector,
 	constraints::Union{Constraint{T},Vector{Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings(),
 	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where{ T<: AbstractFloat}
 
-	# convert inputs
-	#FIX ME : It should not be necessary to force sparsity,
-	#since maybe we would like a dense solver.  Sparse for
-	#now until we get a dense LDL option
-	P_c = convert_copy(P, SparseMatrixCSC{Float64, Int64})
-	q_c = convert_copy(q, Vector{Float64})
 
 	!isa(constraints, Array) && (constraints = [constraints])
-	# model.Flags.INFEASIBILITY_CHECKS = checkConstraintFunctions(constraints)
 
 	merge_constraints!(constraints)
-	model.p.P = P_c
-	model.p.q = q_c
+	model.p.P = P
+	model.p.q = q
 	n = length(q)
 	m = sum(map( x-> x.dim, map( x-> x.convex_set, constraints)))
 
@@ -60,7 +53,7 @@ function assemble!(model::Model{T},
 	sort!(constraints, by = x-> sort_sets(x.convex_set))
 	row_num = 1
 	for con in constraints
-		process_constraint!(model.p, row_num, con.A, con.b, con.convex_set)
+		process_constraint!(model.p, row_num, con.A, con.b, con.convex_set, n)
 		row_num += con.convex_set.dim
 	end
 
@@ -73,26 +66,26 @@ function assemble!(model::Model{T},
 	x0 != nothing && warm_start_primal!(model, x0)
 	s0 != nothing && warm_start_slack!(model, s0)
 	y0 != nothing && warm_start_dual!(model, y0)
-
 	nothing
 end
 
-# Handle 1-D case
-function assemble!(model::COSMO.Model{T},
-	P::Real,q::Real,
-	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings()) where {T}
-	Pm = spzeros(T, 1, 1)
-	qm = zeros(T, 1)
-	Pm[1, 1] = convert(T, P)
-	qm[1] = convert(T, q)
-	assemble!(model, Pm, qm, constraints, settings = settings)
-end
+# function assemble!(model::COSMO.Model{T},
+# 	P::Real,q::Real,
+# 	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings()) where {T}
+# 	Pm = spzeros(T, 1, 1)
+# 	qm = zeros(T, 1)
+# 	Pm[1, 1] = convert(T, P)
+# 	qm[1] = convert(T, q)
+# 	assemble!(model, Pm, qm, constraints, settings = settings)
+# end
 
 # Handle case where q is a 2-dimensional array instead of a 1-dimensional array
-assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractMatrix{T}, constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}) where {T} = assemble!(model, P, vec(q), constraints)
-
-
-
+assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractMatrix{T}, args...; kwargs...) where {T} = assemble!(model, P, vec(q), args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::AbstractVector, q::AbstractArray, args...; kwargs...) where {T} = assemble!(model, P[:, :], q, args...; kwargs...)
+# Handle 1-D cases
+assemble!(model::COSMO.Model{T}, P::Real, q::Real, args...; kwargs...) where {T} = assemble!(model, [P], [q], args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::Real, q::Union{AbstractMatrix, AbstractVector}, args...; kwargs...) where {T} = assemble!(model, [P], q, args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::Union{AbstractMatrix, AbstractVector}, q::Real, args...; kwargs...) where {T} = assemble!(model, P, [q], args...; kwargs...)
 
 """
 	empty_model!(model)
@@ -192,6 +185,10 @@ function check_dimensions(P, q, A, b)
 	nothing
 end
 
+function check_A_dim(A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, n::Int64)
+	size(A, 2) != n && throw(DimensionMismatch("The dimensions of a matrix A (m x $(size(A, 2))) in one of the constraints is inconsistent with the dimension of P ($(n))."))
+end
+
 # convert x into type (which creates a copy) or copy x if type coincides
 function convert_copy(x::AbstractArray, type::Type)
 	if typeof(x) == type
@@ -270,17 +267,10 @@ function sort_sets(C::AbstractConvexSet)
 end
 
 # transform A*x + b in {0}, to A*x + s == b, s in {0}
-function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, b::AbstractVector{<:Real}, C::AbstractConvexSet)
+function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, b::AbstractVector{<:Real}, C::AbstractConvexSet, n::Int64)
+	check_A_dim(A, n)
 	s = row_num
 	e = row_num + C.dim - 1
 	p.A[s:e, :] = -A
 	p.b[s:e, :] = b
-end
-
-# For PsdConeTriangle - sets, one can disregard the lower-triangular entries. However the off-diagonal entries have to be scaled by sqrt(2) to preserve the inner product
-function processConstraint!(model::COSMO.Model,rowNum::Int64,A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}},b::AbstractVector{<:Real},C::PsdConeTriangle)
-  s = rowNum
-  e = rowNum + C.dim - 1
-  model.A[s:e,:] = -A
-  model.b[s:e,:] = b
 end

@@ -96,6 +96,7 @@ function scale_ruiz!(ws::COSMO.Workspace)
 		lmul!(Ework, E)
 	end
 
+	issymmetric(ws.p.P) || symmetrize_full!(ws.p.P)
 	#scale set components
 	scale_sets!(E, ws.p.C)
 
@@ -155,7 +156,6 @@ function scale_data!(P, A, q, b, Ds, Es, cs = 1.)
 	lrmul!(Es, A, Ds) # A[:,:] = Es*A*Ds
 	q[:] = Ds * q
 	b[:] = Es * b
-
 	if cs != 1.
 		P .*= cs
 		q .*= cs
