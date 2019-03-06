@@ -153,7 +153,8 @@ function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
     else
         # symmetrized square view of x
         X    = reshape(x, n, n)
-        symmetrize!(X)
+        #symmetrize!(X)
+        @. X = 0.5 * (X + X')
         _project!(X)
     end
     return nothing
@@ -162,6 +163,7 @@ end
 function _project!(X::AbstractArray)
 	 # below LAPACK function does the following: s, U  = eigen!(Symmetric(X))
      s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
+     #s, U  = eigen!(Symmetric(X))
      # below BLAS function does the following: X .= U*Diagonal(max.(s, 0.0))*U'
      BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
 end
