@@ -34,7 +34,7 @@ end
 function scaled_norm_Inf(E::Diagonal, v::Array)
 	norm  = zero(eltype(v))
 	for i = 1:length(v)
-		norm = max(norm, E.diag[i] * v[i])
+		norm = max(norm, abs(E.diag[i] * v[i]))
 	end
 	return norm
 end
