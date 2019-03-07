@@ -51,26 +51,26 @@ rng = Random.MersenneTwister(9191)
   @test v == [100; 3; 30; 100]
 
   # lmul!()
-  L = Diagonal(rand(rng, 5))
-  Mo = rand(rng, 5, 5)
-  M = deepcopy(Mo)
-  COSMO.lmul!(L, M)
-  @test norm(M -  L * Mo, Inf) <= 1e-10
+  # L = Diagonal(rand(rng, 5))
+  # Mo = rand(rng, 5, 5)
+  # M = deepcopy(Mo)
+  # COSMO.lmul!(L, M)
+  # @test norm(M -  L * Mo, Inf) <= 1e-10
 
-  M = deepcopy(Mo)
-  COSMO.lmul!(I, M)
-  @test M == Mo
+  # M = deepcopy(Mo)
+  # COSMO.lmul!(I, M)
+  # @test M == Mo
 
-  # rmul!()
-  R = Diagonal(rand(rng, 5))
-  Mo = rand(rng, 5, 5)
-  M = deepcopy(Mo)
-  COSMO.rmul!(M, R)
-  @test norm(M -  Mo * R, Inf) <= 1e-10
+  # # rmul!()
+  # R = Diagonal(rand(rng, 5))
+  # Mo = rand(rng, 5, 5)
+  # M = deepcopy(Mo)
+  # COSMO.rmul!(M, R)
+  # @test norm(M -  Mo * R, Inf) <= 1e-10
 
-  M = deepcopy(Mo)
-  COSMO.rmul!(M, I)
-  @test M == Mo
+  # M = deepcopy(Mo)
+  # COSMO.rmul!(M, I)
+  # @test M == Mo
 
   # lrmul!()
   L = Diagonal(rand(rng, 5))

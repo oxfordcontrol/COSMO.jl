@@ -96,35 +96,6 @@ function row_norms!(v::Array{Tf, 1},
 	return v
 end
 
-function lmul!(L::Diagonal, M::SparseMatrixCSC)
-
-	#NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
-	#but this way allocates no memory at all and
-	#is marginally faster
-	m, n = size(M)
-	(m == length(L.diag)) || throw(DimensionMismatch())
-
-	@inbounds for i = 1:(M.colptr[end] - 1)
-	@inbounds M.nzval[i] *= L.diag[M.rowval[i]]
-	end
-	return M
-end
-
-lmul!(L::IdentityMatrix, M::AbstractMatrix) = L.λ ? M : M .= zero(eltype(M))
-
-function rmul!(M::SparseMatrixCSC, R::Diagonal)
-
-	m, n = size(M)
-	(n == length(R.diag)) || throw(DimensionMismatch())
-
-	@inbounds for i = 1:n, j = M.colptr[i]:(M.colptr[i + 1] - 1)
-	@inbounds M.nzval[j] *= R.diag[i]
-	end
-	return M
-end
-
-rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
-
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
 
 	Mnzval  = M.nzval
