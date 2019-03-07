@@ -32,6 +32,19 @@ end
 ResultTimes{T}() where{T} = ResultTimes{T}(0., 0., 0., 0., 0., 0., 0.)
 ResultTimes(T::Type = DefaultFloat) = ResultTimes{T}()
 
+function Base.show(io::IO, obj::ResultTimes)
+  obj.iter_time != 0 ? verbose = true : verbose = false
+  print(io,"Solver time:\t$(round.(obj.solver_time, digits = 4))s ($(round.(obj.solver_time * 1000, digits = 2))ms)\n",
+"Setup time:\t$(round.(obj.setup_time, digits = 4))s ($(round.(obj.setup_time * 1000, digits = 2))ms)\n",
+"Proj time:\t$(round.(obj.proj_time, digits = 4))s ($(round.(obj.proj_time * 1000, digits = 2))ms)\n")
+  if verbose
+    print(io,"Iter time:\t$(round.(obj.iter_time, digits = 4))s ($(round.(obj.iter_time * 1000, digits = 2))ms)\n",
+    "Graph time:\t$(round.(obj.graph_time, digits = 4))s ($(round.(obj.graph_time * 1000, digits = 2))ms)\n",
+    "Factor time:\t$(round.(obj.factor_time, digits = 4))s ($(round.(obj.factor_time * 1000, digits = 2))ms)\n",
+    "Post time:\t$(round.(obj.post_time, digits = 4))s ($(round.(obj.post_time * 1000, digits = 2))ms)\n")
+  end
+end
+
 """
 	ResultInfo{T <: AbstractFloat}
 
