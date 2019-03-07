@@ -3,7 +3,7 @@ module COSMO
 
 using SparseArrays, LinearAlgebra, SuiteSparse
 
-export  assemble!, optimize!, warmStart!, empty_model!, Model, Constraint, ZeroSet, Nonnegatives, SecondOrderCone, PsdCone, PsdConeTriangle, Box
+export  assemble!, warmStart!, empty_model!
 
 const DefaultFloat = Float64
 const DefaultInt   = Int64

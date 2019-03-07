@@ -15,7 +15,7 @@ c = vec(C);
 # define problem in JuMP
 q = -vec(C);
 r = 0.5 * vec(C)' * vec(C);
-m = Model(with_optimizer(COSMO.Optimizer, verbose=true, eps_abs = 1e-4));
+m = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true, eps_abs = 1e-4));
 @variable(m, X[1:n, 1:n], PSD);
 x = vec(X);
 @objective(m, Min, 0.5 * x' * x  + q' * x + r)
