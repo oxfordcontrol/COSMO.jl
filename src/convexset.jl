@@ -1,4 +1,6 @@
+using UnsafeArrays
 import Base: showarg, eltype
+const DSYEVR_ = (BLAS.@blasfunc(dsyevr_),Base.liblapack_name)
 
 
 # ----------------------------------------------------
@@ -127,6 +129,65 @@ end
 # ----------------------------------------------------
 # Positive Semidefinite Cone
 # ----------------------------------------------------
+
+#a type to maintain internal workspace data for the BLAS syevr function
+
+
+mutable struct PsdBlasWorkspace{T}
+    m::Base.RefValue{Int64}
+    w::Vector{T}
+    Z::Matrix{T}
+    isuppz::Vector{BLAS.BlasInt}
+    work::Vector{T}
+    lwork::BLAS.BlasInt
+    iwork::Vector{BLAS.BlasInt}
+    liwork::BLAS.BlasInt
+    info::Base.RefValue{Int64}
+
+    function PsdBlasWorkspace{T}(n::Integer) where{T}
+
+        BlasInt = BLAS.BlasInt
+
+        #workspace data for BLAS
+        m      = Ref{BlasInt}()
+        w      = Vector{T}(undef,n)
+        Z      = Matrix{T}(undef,n,n)
+        isuppz = Vector{BlasInt}(undef, 2*n)
+        work   = Vector{T}(undef, 1)
+        lwork  = BlasInt(-1)
+        iwork  = Vector{BlasInt}(undef, 1)
+        liwork = BlasInt(-1)
+        info   = Ref{BlasInt}()
+
+        new(m,w,Z,isuppz,work,lwork,iwork,liwork,info)
+    end
+end
+
+function _syevr!(A::AbstractMatrix{T}, ws::PsdBlasWorkspace) where{T <: Float64}
+
+    #Float64 only support for now since we call dsyevr_ directly
+    n       = size(A,1)
+    ldz     = n
+    lda     = stride(A,2)
+
+        ccall(DSYEVR_, Cvoid,
+        (Ref{UInt8}, Ref{UInt8}, Ref{UInt8}, Ref{BLAS.BlasInt},
+        Ptr{T}, Ref{BLAS.BlasInt}, Ref{T}, Ref{T},
+        Ref{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ref{T}, Ptr{BLAS.BlasInt},
+        Ptr{T}, Ptr{T}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt},
+        Ptr{T}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt}, Ref{BLAS.BlasInt},
+        Ptr{BLAS.BlasInt}),
+        'V', 'A', 'U', n,
+        A, max(1,lda), 0.0, 0.0,
+        0, 0, -1.0,
+        ws.m, ws.w, ws.Z, ldz, ws.isuppz,
+        ws.work, ws.lwork, ws.iwork, ws.liwork,
+        ws.info)
+        LAPACK.chklapackerror(ws.info[])
+end
+
+
+
 """
     PsdCone(dim)
 
@@ -136,11 +197,12 @@ Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, 
 struct PsdCone{T} <: AbstractConvexCone{T}
 	dim::Int
 	sqrt_dim::Int
+    work::PsdBlasWorkspace{T}
 	function PsdCone{T}(dim::Int) where{T}
 		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
 		iroot = isqrt(dim)
 		iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
-		new(dim, iroot)
+		new(dim, iroot,PsdBlasWorkspace{T}(sqrt_dim))
 	end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
@@ -160,10 +222,34 @@ function project!(x::AbstractVector{T}, cone::PsdCone{T}) where{T}
     return nothing
 end
 
-function _project!(X::AbstractMatrix)
+function _project!(X::AbstractArray, ws::PsdBlasWorkspace{T}) where{T}
+
+     #allocate additional workspace arrays if the ws
+     #work and iwork have not yet been sized
+     if ws.lwork == -1
+         _syevr!(X,ws)
+         ws.lwork = BLAS.BlasInt(real(ws.work[1]))
+         resize!(ws.work, ws.lwork)
+         ws.liwork = ws.iwork[1]
+         resize!(ws.iwork, ws.liwork)
+     end
+
+	 # below LAPACK function does the following: w,Z  = eigen!(Symmetric(X))
+     _syevr!(X,ws)
+     # compute upper triangle of: X .= Z*Diagonal(max.(w, 0.0))*Z'
+     X .= 0
+     for i = 1:length(ws.w)
+         e = ws.w[i]
+         if e > 0
+             v = uview(ws.Z,:,i)
+             BLAS.syr!('U',e,v,X)
+         end
+     end
+end
+
+function _project!(X::AbstractArray)
 	 # below LAPACK function does the following: s, U  = eigen!(Symmetric(X))
-     s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-     #s, U  = eigen!(Symmetric(X))
+     s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0)
      # below BLAS function does the following: X .= U*Diagonal(max.(s, 0.0))*U'
      BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
 end
