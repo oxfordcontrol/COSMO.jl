@@ -186,43 +186,9 @@ function _syevr!(A::AbstractMatrix{T}, ws::PsdBlasWorkspace) where{T <: Float64}
         LAPACK.chklapackerror(ws.info[])
 end
 
+function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
 
-
-"""
-    PsdCone(dim)
-
-Creates the cone of symmetric positive semidefinite matrices ``\\mathcal{S}_+^{dim}``. The entries of the matrix `X` are stored column-by-column in the vector `x` of dimension `dim`.
-Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, where ``X = \\text{mat}(x)``.
-"""
-struct PsdCone{T} <: AbstractConvexCone{T}
-	dim::Int
-	sqrt_dim::Int
-    work::PsdBlasWorkspace{T}
-	function PsdCone{T}(dim::Int) where{T}
-		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
-		iroot = isqrt(dim)
-		iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
-		new(dim, iroot,PsdBlasWorkspace{T}(sqrt_dim))
-	end
-end
-PsdCone(dim) = PsdCone{DefaultFloat}(dim)
-
-function project!(x::AbstractVector{T}, cone::PsdCone{T}) where{T}
-	n = cone.sqrt_dim
-
-    # handle 1D case
-    if length(x) == 1
-        x = max.(x, zero(T))
-    else
-        # symmetrized square view of x
-        X    = reshape(x, n, n)
-        symmetrize_upper!(X)
-        _project!(X)
-    end
-    return nothing
-end
-
-function _project!(X::AbstractArray, ws::PsdBlasWorkspace{T}) where{T}
+    #computes the upper triangular part of the projection of X onto the PSD cone
 
      #allocate additional workspace arrays if the ws
      #work and iwork have not yet been sized
@@ -247,11 +213,53 @@ function _project!(X::AbstractArray, ws::PsdBlasWorkspace{T}) where{T}
      end
 end
 
+
+# direct call to Julia standard BLAS wrappers (for testing)
 function _project!(X::AbstractArray)
 	 # below LAPACK function does the following: s, U  = eigen!(Symmetric(X))
      s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0)
      # below BLAS function does the following: X .= U*Diagonal(max.(s, 0.0))*U'
      BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
+end
+
+
+"""
+    PsdCone(dim)
+
+Creates the cone of symmetric positive semidefinite matrices ``\\mathcal{S}_+^{dim}``. The entries of the matrix `X` are stored column-by-column in the vector `x` of dimension `dim`.
+Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, where ``X = \\text{mat}(x)``.
+"""
+struct PsdCone{T} <: AbstractConvexCone{T}
+	dim::Int
+	sqrt_dim::Int
+    work::PsdBlasWorkspace{T}
+	function PsdCone{T}(dim::Int) where{T}
+		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
+		iroot = isqrt(dim)
+		iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
+		new(dim, iroot,PsdBlasWorkspace{T}(iroot))
+	end
+end
+PsdCone(dim) = PsdCone{DefaultFloat}(dim)
+
+function project!(x::AbstractVector{T}, cone::PsdCone{T}) where{T}
+	n = cone.sqrt_dim
+
+    # handle 1D case
+    if length(x) == 1
+        x = max.(x, zero(T))
+    else
+        # symmetrized square view of x
+        X    = reshape(x, n, n)
+        symmetrize_upper!(X)
+        _project!(X,cone.work)
+
+        #fill in the lower triangular part
+        for j=1:n, i=1:(j-1)
+            X[j,i] = X[i,j]
+        end
+    end
+    return nothing
 end
 
 function in_dual(x::AbstractVector{T}, cone::PsdCone{T}, tol::T) where{T}
@@ -295,15 +303,17 @@ is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corr
 
 """
 struct PsdConeTriangle{T} <: AbstractConvexCone{T}
+
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix
     X::Array{T,2}
+    work::PsdBlasWorkspace{T}
 
     function PsdConeTriangle{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
 
-        new(dim, side_dimension, zeros(side_dimension, side_dimension))
+        new(dim, side_dimension, zeros(side_dimension, side_dimension),PsdBlasWorkspace{T}(side_dimension))
     end
 end
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
@@ -315,7 +325,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangle{T}) where{T}
         x = max.(x,zero(T))
     else
         populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
-        _project!(cone.X)
+        _project!(cone.X,cone.work)
         extract_upper_triangle!(cone.X, x, sqrt(2) )
     end
     return nothing
