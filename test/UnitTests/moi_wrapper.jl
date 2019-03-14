@@ -6,7 +6,7 @@ const MOIB = MOI.Bridges
 const MOIU = MOI.Utilities
 MOIU.@model(COSMOModelData,
         (),
-        (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan),
+        (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
         (MOI.Zeros, MOI.Nonnegatives, MOI.Nonpositives, MOI.SecondOrderCone,
          MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle),
         (),
@@ -98,7 +98,6 @@ MOIU.@model(COSMOModelData,
     iter_cold = optimizer.results.iter
 
     @testset "Warm starting" begin
-
         # Warm start x,y, s at the same time
         optimizer =  COSMO.Optimizer(check_termination = 1);
         MOI.empty!(optimizer);
@@ -119,7 +118,6 @@ MOIU.@model(COSMOModelData,
         MOI.optimize!(optimizer);
         iter_warm_all = optimizer.results.iter
         @test iter_warm_all < iter_cold
-
         # solve the same problem but with a psd triangle constraint (upper triangle)
         A1_t = [1.0; 0; 3; 2; 14; 5];
         A2_t = [0.0; 4; 6; 16; 0; 4];
@@ -184,8 +182,8 @@ MOIU.@model(COSMOModelData,
 
         # solve once to get optimal solution
         x_sol = MOI.get(optimizer, MOI.VariablePrimal(), getindex.(Ref(idxmap), x));
-        y_c1 = MOI.get(optimizer, MOI.ConstraintDual(), idxmap[con1]);
-        y_c2 = MOI.get(optimizer, MOI.ConstraintDual(), idxmap[con2]);
+        y_c1 = MOI.get(optimizer, MOI.ConstraintDual(), con1);
+        y_c2 = MOI.get(optimizer, MOI.ConstraintDual(), con2);
         y_c1_rows = COSMO.constraint_rows(optimizer.rowranges, idxmap[con1]);
         y_c2_rows = COSMO.constraint_rows(optimizer.rowranges, idxmap[con2]);
 
@@ -222,12 +220,12 @@ end
 # MOI - Test sets
 # --------------------
 optimizer = MOIU.CachingOptimizer(MOIU.UniversalFallback(COSMOModelData{Float64}()),
-                                  COSMO.Optimizer(eps_abs = 1e-6, eps_rel = 1e-6 ));
+                                  COSMO.Optimizer(eps_abs = 1e-4, eps_rel = 1e-4 ));
 
 
 config = MOIT.TestConfig(atol=1e-2, rtol=1e-2)
 @testset "Unit" begin
-    MOIT.unittest(MOIB.SplitInterval{Float64}(optimizer), config,
+    MOIT.unittest(optimizer, config,
                   [# Quadratic functions are not supported
                    "solve_qcp_edge_cases", "solve_qp_edge_cases",
                    # Integer and ZeroOne sets are not supported
@@ -236,7 +234,7 @@ end
 
 # FIXME: one test fails for linear12 problem. Take a closer look why
 @testset "Continuous linear problems" begin
-    MOIT.contlineartest(MOIB.SplitInterval{Float64}(optimizer), config, ["linear12"])
+    MOIT.contlineartest(optimizer, config, ["linear12"])
 end
 
 @testset "Continuous quadratic problems" begin

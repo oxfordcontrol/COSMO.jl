@@ -288,6 +288,11 @@ end
 # ----------------------------------------------------
 # Box
 # ----------------------------------------------------
+"""
+    Box(l, u)
+
+Creates a box or intervall with lower boundary vector ``l \\in  \\mathbb{R}^m \\cup \\{-\\infty\\}^m`` and upper boundary vector``u \\in \\mathbb{R}^m\\cup \\{+\\infty\\}^m``.
+"""
 struct Box{T} <: AbstractConvexSet{T}
 	dim::Int
 	l::Vector{T}
