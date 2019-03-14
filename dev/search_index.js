@@ -85,7 +85,7 @@ var documenterSearchIndex = {"docs": [
     "page": "User Guide",
     "title": "Constraints",
     "category": "section",
-    "text": "The COSMO interface expects constraints to have the form A_i x + b_i in mathcalK_i, where mathcalK_i is one of the convex sets defined below:Convex Set Description\nZeroSet(dim) The set  0 ^dim that contains the origin\nNonnegatives(dim) The nonnegative orthant  x in mathbbR^dim  x_i ge 0 forall i=1dotsmathrmdim \nSecondOrderCone(dim) The second-order (Lorenz) cone  (tx) in mathbbR^dim    x_2   leq t \nPsdCone(dim) The vectorized positive semidefinite cone mathcalS_+^dim. x is the vector obtained by stacking the columns of the positive semidefinite matrix X, i.e. X in mathbbS^sqrtdim_+ Rightarrow textvec(X) = x in mathcalS_+^dim\nPsdConeTriangle(dim) The vectorized positive semidefinite cone mathcalS_+^dim. x is the vector obtained by stacking the columns of the upper triangular part of the positive semidefinite matrix X, i.e. X in mathbbS^d_+ Rightarrow textsvec(X) = x in mathcalS_+^dim where d=sqrt14 + 2 textdim - 12The constructor for a constraint expects a matrix A, a vector b and a convex_set.Lets consider a problem with a decision variable x in mathbbR^5. Suppose we want to create the two constraint x_2 + 5 geq 0 and x_3 - 3 geq 0. We can do this either by creating two constraints and adding them to an array:  constraint1 = COSMO.Constraint([0.0 1.0 0.0 0.0 0.0], 5.0, COSMO.Nonnegatives)\n  constraint2 = COSMO.Constraint([0.0 0.0 1.0 0.0 0.0], -3.0, COSMO.Nonnegatives)\n  constraints = [constraint1; constraint2]The second option is to include both in one constraint:constraint1 = COSMO.Constraint([0.0 1.0 0.0 0.0 0.0; 0.0 0.0 1.0 0.0 0.0], [5.0; -3.0], COSMO.Nonnegatives)Another way to construct the constraint is to used the optional arguments dim, the dimension of x, and indices, the elements of x that appear in the constraint. When specifying these arguments, A and b only refer to the elements of x in indices:constraint1 = COSMO.Constraint([1.0 0.0; 0.0 1.0], [5.0; -3.0], COSMO.Nonnegatives, 5, 2:3)Consider as a second example the positive semidefinite constraint on a matrix X in  mathbbS_+^3. Our decision variable is the vector x obtained by stacking the columns of X. We can specify the constraint on x in the following way:I_9 x + 0_9 in mathcalS_+^9or in Julia:constraint1 = COSMO.Constraint(Matrix(1.0I, 9, 9), zeros(9), COSMO.PsdCone)Several constraints can be combined in an array:constraints = [constraint_1, constraint_2, ..., constraint_N]"
+    "text": "The COSMO interface expects constraints to have the form A_i x + b_i in mathcalK_i, where mathcalK_i is one of the convex sets defined below:Convex Set Description\nZeroSet The set  0 ^dim that contains the origin\nNonnegatives The nonnegative orthant  x in mathbbR^dim  x_i ge 0 forall i=1dotsmathrmdim \nBox(u, l) The hyperbox  x in mathbbR^dim  l leq x leq u with vectors l in mathbbR^dim cup -infty and u in mathbbR^dim cup +infty\nSecondOrderCone The second-order (Lorenz) cone  (tx) in mathbbR^dim    x_2   leq t \nPsdCone The vectorized positive semidefinite cone mathcalS_+^dim. x is the vector obtained by stacking the columns of the positive semidefinite matrix X, i.e. X in mathbbS^sqrtdim_+ Rightarrow textvec(X) = x in mathcalS_+^dim\nPsdConeTriangle The vectorized positive semidefinite cone mathcalS_+^dim. x is the vector obtained by stacking the columns of the upper triangular part of the positive semidefinite matrix X, i.e. X in mathbbS^d_+ Rightarrow textsvec(X) = x in mathcalS_+^dim where d=sqrt14 + 2 textdim - 12The constructor for a constraint expects a matrix A, a vector b and a convex_set.Lets consider a problem with a decision variable x in mathbbR^5. Suppose we want to create the two constraint x_2 + 5 geq 0 and x_3 - 3 geq 0. We can do this either by creating two constraints and adding them to an array:  constraint1 = COSMO.Constraint([0.0 1.0 0.0 0.0 0.0], 5.0, COSMO.Nonnegatives)\n  constraint2 = COSMO.Constraint([0.0 0.0 1.0 0.0 0.0], -3.0, COSMO.Nonnegatives)\n  constraints = [constraint1; constraint2]The second option is to include both in one constraint:constraint1 = COSMO.Constraint([0.0 1.0 0.0 0.0 0.0; 0.0 0.0 1.0 0.0 0.0], [5.0; -3.0], COSMO.Nonnegatives)Another way to construct the constraint is to used the optional arguments dim, the dimension of x, and indices, the elements of x that appear in the constraint. When specifying these arguments, A and b only refer to the elements of x in indices:constraint1 = COSMO.Constraint([1.0 0.0; 0.0 1.0], [5.0; -3.0], COSMO.Nonnegatives, 5, 2:3)Consider as a second example the positive semidefinite constraint on a matrix X in  mathbbS_+^3. Our decision variable is the vector x obtained by stacking the columns of X. We can specify the constraint on x in the following way:I_9 x + 0_9 in mathcalS_+^9or in Julia:constraint1 = COSMO.Constraint(Matrix(1.0I, 9, 9), zeros(9), COSMO.PsdCone)Several constraints can be combined in an array:constraints = [constraint_1, constraint_2, ..., constraint_N]"
 },
 
 {
@@ -437,7 +437,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "COSMO.Constraint",
     "category": "type",
-    "text": "Constraint(A, b, convex_set, dim = 0, indices = 0:0)\n\nCreates a COSMO constraint: Ax + b ∈ convex_set.\n\nBy default the following convex sets are supported: ZeroSet, Nonnegatives, SecondOrderCone, PsdCone, PsdConeTriangle.\n\nExamples\n\njulia> Constraint([1 0;0 1], zeros(2), COSMO.Nonnegatives)\nConstraint\nSize of A: (2, 2)\nConvexSet: Nonnegatives{Float64}\n\n\n\nThe optional arguments dim and indices can be used to specify A and b for subparts of variable x. If x has dimension dim = 4, then x[2] and x[3] can be constrained to the zero cone in the following way:\n\nExamples\n\njulia> c = Constraint([1 0;0 1], zeros(2), COSMO.ZeroSet, 4, 2:3)\nConstraint\nSize of A: (2, 4)\nConvexSet: ZeroSet{Float64}\n\nNotice that extra columns of A have been added automatically.\n\njulia>Matrix(c.A)\n2×4 Array{Float64,2}:\n0.0  1.0  0.0  0.0\n0.0  0.0  1.0  0.0\n\n\n\n\n\n"
+    "text": "Constraint(A, b, convex_set_type, dim = 0, indices = 0:0)\n\nCreates a COSMO constraint: Ax + b ∈ convex_set.\n\nBy default the following convex set types are supported: ZeroSet, Nonnegatives, SecondOrderCone, PsdCone, PsdConeTriangle.\n\nExamples\n\njulia> Constraint([1 0;0 1], zeros(2), COSMO.Nonnegatives)\nConstraint\nSize of A: (2, 2)\nConvexSet: Nonnegatives{Float64}\n\nFor convex sets that require their own data, it is possible to pass the pass the instantiated object directly rather than the type name.\n\nExamples\n\njulia> Constraint([1 0;0 1], zeros(2), COSMO.Box([-1.;-1.],[1.;1.]))\nConstraint\nSize of A: (2, 2)\nConvexSet: Box{Float64}\n\n\n\nThe optional arguments dim and indices can be used to specify A and b for subparts of variable x. If x has dimension dim = 4, then x[2] and x[3] can be constrained to the zero cone in the following way:\n\nExamples\n\njulia> c = Constraint([1 0;0 1], zeros(2), COSMO.ZeroSet, 4, 2:3)\nConstraint\nSize of A: (2, 4)\nConvexSet: ZeroSet{Float64}\n\nNotice that extra columns of A have been added automatically.\n\njulia>Matrix(c.A)\n2×4 Array{Float64,2}:\n0.0  1.0  0.0  0.0\n0.0  0.0  1.0  0.0\n\n\n\n\n\n"
 },
 
 {
@@ -454,6 +454,14 @@ var documenterSearchIndex = {"docs": [
     "title": "COSMO.Nonnegatives",
     "category": "type",
     "text": "Nonnegatives(dim)\n\nCreates the nonnegative orthant  x in mathbbR^dim  x ge 0   of dimension dim.\n\n\n\n\n\n"
+},
+
+{
+    "location": "api/#COSMO.Box",
+    "page": "API Reference",
+    "title": "COSMO.Box",
+    "category": "type",
+    "text": "Box(l, u)\n\nCreates a box or intervall with lower boundary vector l in  mathbbR^m cup -infty^m and upper boundary vectoru in mathbbR^mcup +infty^m.\n\n\n\n\n\n"
 },
 
 {
@@ -485,7 +493,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API Reference",
     "title": "Constraints",
     "category": "section",
-    "text": "COSMO.Constraint\nCOSMO.ZeroSet\nCOSMO.Nonnegatives\nCOSMO.SecondOrderCone\nCOSMO.PsdCone\nCOSMO.PsdConeTriangle"
+    "text": "COSMO.Constraint\nCOSMO.ZeroSet\nCOSMO.Nonnegatives\nCOSMO.Box\nCOSMO.SecondOrderCone\nCOSMO.PsdCone\nCOSMO.PsdConeTriangle"
 },
 
 {
