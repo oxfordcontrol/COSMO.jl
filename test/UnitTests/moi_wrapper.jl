@@ -219,9 +219,63 @@ MOIU.@model(COSMOModelData,
         @test MOI.get(optimizer, MOI.DualStatus()) == MOI.NO_SOLUTION
 
     end
-end
-# --------------------
-# MOI - Test sets
+    @testset "Set merging" begin
+        # based on HS21 from Maros Meszaros QP Set but with a range of redundant constraints to test set merging
+        # the original problem is:
+        # min 1/2 x' P x + r
+        # s.t. l <= Ax <= u with the following data
+        P =[0.02 0; 0 2.0]
+        r = -100.;
+        A = [-10.0 1; -1 0; 0 -1]
+        l = [ 10.0; 2; -50];
+        u = [1e20; 50.0; 50.0]
+
+        # the known solution is
+        obj_true = -99.96
+        x_true = [-2.; 0]
+
+        model = COSMOModelData{Float64}();
+        optimizer =  COSMO.Optimizer(verbose = false);
+        x = MOI.add_variables(model, 2);
+        objectiveFunction = MOI.ScalarQuadraticFunction{Float64}([], [MOI.ScalarQuadraticTerm(0.02, x[1], x[1]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])], r);
+        MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(), objectiveFunction);
+        MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE);
+
+        # Add the constraints in an unsorted order to make merging more "challenging"
+        # A[1, :] * x >= 10
+        nn1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A[1, :], x[1:2]), 0.0), MOI.GreaterThan(l[1]));
+        # Redundant SOC constraint: -x[1] >= ||x[2]||_2
+        soc = MOI.add_constraint(model, MOI.VectorAffineFunction(MOI.VectorAffineTerm.( [1; 2], MOI.ScalarAffineTerm.([-1. ;1. ], x[1:2])), zeros(2)), MOI.SecondOrderCone(2));
+        # Interval: 2 <= A[2, :] * x <= 50
+        box1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A[2, :], x[1:2]), 0.0), MOI.Interval(l[2], u[2]));
+        # Equal To: x[1] == - 2
+        zero1 = MOI.add_constraint(model, MOI.SingleVariable(x[1]), MOI.EqualTo(x_true[1]));
+        # Nonpositives: x[1; 2] - [10; 10] <= [0; 0]
+        nn2 = MOI.add_constraint(model, MOI.VectorAffineFunction(MOI.VectorAffineTerm.( [1; 2], MOI.ScalarAffineTerm.([1. ;1. ], x[1:2])), -10. .* ones(2)), MOI.Nonpositives(2));
+        # Interval: -50 <= A[3, :] * x <= 50
+        box2 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A[3, :], x[1:2]), 0.0), MOI.Interval(l[3], u[3]));
+        # ZeroSet: x[1; 2] - x_true == [0; 0]
+        zeroset = MOI.add_constraint(model, MOI.VectorAffineFunction(MOI.VectorAffineTerm.( [1; 2], MOI.ScalarAffineTerm.([1. ;1. ], x[1:2])), -x_true), MOI.Zeros(2));
+
+        # copy model into optimizer
+        MOI.empty!(optimizer);
+        idxmap = MOI.copy_to(optimizer, model);
+        # check that the sets have been merged
+        C = optimizer.inner.p.C
+        @test length(C.sets) == 4
+        @test typeof(C.sets[1]) <: COSMO.ZeroSet
+        @test typeof(C.sets[2]) <: COSMO.Nonnegatives
+        @test typeof(C.sets[3]) <: COSMO.Box
+        @test typeof(C.sets[4]) <: COSMO.SecondOrderCone
+        MOI.optimize!(optimizer);
+        x_sol = MOI.get(optimizer, MOI.VariablePrimal(), getindex.(Ref(idxmap), x))
+        @test isapprox( MOI.get(optimizer, MOI.ObjectiveValue()), obj_true, atol = 1e-3)
+        @test norm(x_sol - x_true, Inf) < 1e-3
+
+     end
+
+# # --------------------
+# # MOI - Test sets
 # --------------------
 optimizer = MOIU.CachingOptimizer(MOIU.UniversalFallback(COSMOModelData{Float64}()),
                                   COSMO.Optimizer(eps_abs = 1e-4, eps_rel = 1e-4 ));
@@ -252,4 +306,6 @@ exclude_conic_test_sets = ["exp", "rootdet", "logdet"]
     MOIT.contconictest(MOIB.RootDet{Float64}(MOIB.LogDet{Float64}(MOIB.GeoMean{Float64}(MOIB.RSOC{Float64}(optimizer)))),
                        config, exclude_conic_test_sets)
 end
-nothing
+
+ end
+

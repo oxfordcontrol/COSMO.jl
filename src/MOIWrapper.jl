@@ -71,6 +71,22 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
     end
 end
 
+function printIdxmap(idxmap::MOIU.IndexMap)
+    println(">>Variable Map with $(length(idxmap.varmap)) entries:")
+    dkeys = collect(keys(idxmap.varmap))
+    dvalues = collect(values(idxmap.varmap))
+    for i=1:length(dkeys)
+        println("i=$(i): $(dkeys[i].value) => $(dvalues[i].value)")
+    end
+
+     println(">>Constraint Map with $(length(idxmap.conmap)) entries:")
+    dkeys = collect(keys(idxmap.conmap))
+    dvalues = collect(values(idxmap.conmap))
+    for i=1:length(dkeys)
+        println("i=$(i): $(dkeys[i].value) => $(dvalues[i].value)")
+    end
+end
+
 function Base.show(io::IO, obj::Optimizer)
     if obj.is_empty
         print(io,"Empty COSMO - Optimizer")
@@ -132,6 +148,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
     !is_pos_semi_def(P) && warn("Your MOI model does not result in a positive semidefinite objective value matrix P. Note that this violates COSMO's assumptions.")
     A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
+    convexSets = COSMO.merge_sets(convexSets)
     COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
     dest.is_empty = false
     dest.idxmap = idxmap
@@ -170,10 +187,19 @@ function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
     idxmap
 end
 
+# This is important for set merging
+sort_sets(s::Union{Type{<: MOI.EqualTo}, Type{<: MOI.Zeros}}) = 1
+sort_sets(s::Union{Type{ <: LessThan}, Type{ <: GreaterThan}, Type{ <: MOI.Nonnegatives}, Type{ <: MOI.Nonpositives}}) = 2
+sort_sets(s::Type{MOI.Interval}) = 3
+sort_sets(s::Type{<: MOI.AbstractSet}) = 4
+
+# this has to be in the right order
 # returns a Dictionary that maps a constraint index to a range
 function assign_constraint_row_ranges!(rowranges::Dict{Int, UnitRange{Int}}, idxmap::MOIU.IndexMap, src::MOI.ModelLike)
     startrow = 1
-    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+    LOCs = MOI.get(src, MOI.ListOfConstraints())
+    sort!(LOCs, by=x-> sort_sets(x[2]))
+    for (F, S) in LOCs
         # Returns Array of constraint indexes that match F,S, each constraint index is just a type-safe wrapper for Int64
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         for ci_src in cis_src
@@ -478,6 +504,67 @@ end
 function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle)
     push!(cs, COSMO.PsdConeTriangle{Float64}(length(rows)))
     nothing
+end
+
+# to reduce function calls combine, individual ZeroSets, Nonnegatives and Box constraints
+# This assumes that C is ordered by set type
+function merge_sets(C::Array{COSMO.AbstractConvexSet{Float64}})
+
+    z_ind = findall(set -> typeof(set) <: COSMO.ZeroSet, C)
+    nn_ind = findall(set -> typeof(set) <: COSMO.Nonnegatives, C)
+    box_ind = findall(set -> typeof(set) <: COSMO.Box, C)
+    other_ind = findall( x-> !in(x, union(z_ind, nn_ind, box_ind)), collect(1:1:length(C)))
+
+    # if none of these sets are present, do nothing
+    length(other_ind) == length(C) && return C
+
+    length(z_ind) > 0 ? (num_z = 1) : (num_z = 0)
+    length(nn_ind) > 0 ? (num_nn = 1) : (num_nn = 0)
+    length(box_ind) > 0 ? (num_box = 1) : (num_box = 0)
+
+
+    num_merged_sets = length(other_ind) + num_z + num_nn + num_box
+    merged_sets = Array{COSMO.AbstractConvexSet{Float64}}(undef, num_merged_sets)
+    set_ind = 1
+    length(z_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, z_ind, C, set_ind, COSMO.ZeroSet{Float64}))
+    length(nn_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, nn_ind, C, set_ind, COSMO.Nonnegatives{Float64}))
+    length(box_ind) > 0 && (set_ind = COSMO.merge_box!(merged_sets, box_ind, C, set_ind))
+
+    for other in other_ind
+        merged_sets[set_ind] = C[other]
+        set_ind += 1
+    end
+    return merged_sets
+end
+
+
+function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{Float64}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet, 1}, set_ind::Int64, set_type::DataType)
+        if length(ind) > 1
+            combined_dim = sum(x -> x.dim, C[ind])
+        else
+            combined_dim = C[ind[1]].dim
+        end
+        merged_sets[set_ind] = set_type(combined_dim)
+        return set_ind + 1
+end
+
+function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{Float64}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet{Float64}, 1}, set_ind::Int64)
+        if length(ind) > 1
+            combined_dim = sum(x -> x.dim, C[ind])
+            l = zeros(Float64, combined_dim)
+            u = zeros(Float64, combined_dim)
+            row = 1
+            for box in C[ind]
+                l[row:row + box.dim - 1] = box.l
+                u[row:row + box.dim - 1] = box.u
+                row += box.dim
+            end
+            merged_sets[set_ind] = COSMO.Box(l, u)
+        else
+            merged_sets[set_ind] = C[ind[1]]
+        end
+
+        return set_ind + 1
 end
 
 function warm_start_primal!(dest, src::MOI.ModelLike, idxmap)
