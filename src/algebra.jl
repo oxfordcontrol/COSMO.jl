@@ -189,4 +189,3 @@ function is_neg_sem_def(X, tol)
    s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
    return s[end] <= tol
 end
-

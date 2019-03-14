@@ -1,31 +1,17 @@
-# sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar
-#                                                 +∞   ,else}
-
-function support_function(y, ws)
-	if in_dual(y, ws.p.C, ws.settings.eps_prim_inf)
-		return dot(y, ws.p.b)
-	else
-		return Inf
-	end
-
-end
-
 function is_primal_infeasible(δy, ws)
+
 	settings = ws.settings
 	# calculate unscaled norm of δy
 	norm_δy = scaled_norm(ws.sm.E, δy, Inf)::eltype(δy)
 
 	# make sure norm is unequal to zero before continuing
 	if norm_δy > settings.eps_prim_inf
-
 		# test condition A'δy = 0
 		A_δy = ws.p.A' * δy
 		A_δy = ws.sm.Dinv * A_δy
-
-		if norm(A_δy, Inf) / norm_δy <= settings.eps_prim_inf
-			# test condition S_K(δy) < 0
-			unit_δy_split = SplitVector(δy / norm_δy, ws.p.C)
-			sF = support_function(unit_δy_split, ws)
+		if norm(A_δy, Inf) <= settings.eps_prim_inf*norm_δy
+			minus_unit_δy = SplitVector(- δy / norm_δy, ws.p.C)
+			sF = support_function(minus_unit_δy, ws.p.C, settings.eps_prim_inf) - dot(minus_unit_δy,ws.p.b)
 			if sF <= settings.eps_prim_inf
 				return true
 			end
