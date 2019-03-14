@@ -142,10 +142,10 @@ function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
     end
     # map model constraint indices to solver constraint indices. For now this is important since solver expects following
     # order: {0}-variables, R+-variables, SOCP cones, psd cones
-    LOCs = MOI.get(src, MOI.ListOfConstraints())
-    #sort!(LOCs, by=x-> sortSets(x[2]))
+    # LOCs = MOI.get(src, MOI.ListOfConstraints())
+    # sort!(LOCs, by=x-> sort_sets(x[2]))
     i = 0
-    for (F, S) in LOCs
+    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         MOI.supports_constraint(dest, F, S) || throw(MOI.UnsupportedConstraint{F, S})
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         for ci in cis_src
@@ -359,7 +359,7 @@ function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSet
         rows = constraint_rows(rowranges, idxmap[ci])
         processConstant!(b, rows, f, s)
         constant[rows] = b[rows]
-        if typeof(s) <: MOI.AbstractScalarSet
+        if typeof(s) <: MOI.AbstractScalarSet && !(typeof(s) <: MOI.Interval)
             set_constant[rows] =  MOIU.getconstant(s)
         end
         processConstraint!(triplets, f, rows, idxmap, s)
@@ -456,6 +456,11 @@ end
 function processSet!(b::Vector, row::Int, cs, s::EqualTo)
     b[row] += s.value
     push!(cs, COSMO.ZeroSet{Float64}(1))
+    nothing
+end
+
+function processSet!(b::Vector, row::Int, cs, s::MOI.Interval)
+    push!(cs, COSMO.Box{Float64}([s.lower], [s.upper]))
     nothing
 end
 
@@ -624,19 +629,18 @@ _unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) 
 _shift(optimizer::Optimizer, offset, value, s) = value
 _shift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value - optimizer.set_constant[offset]
 
-function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
     # offset = constroffset(optimizer, ci)
     # rows = constrrows(optimizer, ci)
     # _unshift(optimizer, offset, unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
-    # ci_dest = optimizer.idxmap[ci_src]
-    rows = constraint_rows(optimizer.rowranges, ci)
+    rows = COSMO.constraint_rows(optimizer.rowranges, ci_src)
     c_primal = unscalecoef(rows, optimizer.results.s[rows], S, length(rows))
     # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))
     return _unshift(optimizer, rows, c_primal, S)
 end
 
-function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
-    rows = constraint_rows(optimizer.rowranges, ci)#optimizer.idxmap[ci])
+function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+    rows = constraint_rows(optimizer.rowranges, ci_src)
     return unscalecoef(rows, optimizer.results.y[rows], S, length(rows))
 end
 
@@ -653,9 +657,9 @@ function MOI.set(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value
 end
 
 MOI.supports(::Optimizer, a::MOI.ConstraintPrimalStart, ::Type{MOI.ConstraintIndex}) = true
-function MOI.set(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+function MOI.set(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci_src::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci_src])
     # this undoes the scaling and shifting that was used in get(MOI.ConstraintPrimal)
     # Off-diagonal entries of slack variable of a PSDTriangle constraint has to be scaled by sqrt(2)
     value = _shift(optimizer, rows, value, S)
@@ -663,9 +667,9 @@ function MOI.set(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MO
 end
 
 MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{MOI.ConstraintIndex}) = true
-function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci_src::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci])
+    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci_src])
     # this undoes the scaling that was used in get(MOI.ConstraintDual)
     # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sqrt(2)
     COSMO.warm_start_dual!(optimizer.inner, _scalecoef(rows, value, false, S, length(rows), false), rows)

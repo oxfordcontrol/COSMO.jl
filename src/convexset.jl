@@ -1,5 +1,6 @@
 import Base: showarg, eltype
 
+
 # ----------------------------------------------------
 # Zero cone
 # ----------------------------------------------------
@@ -17,16 +18,16 @@ end
 ZeroSet(dim) = ZeroSet{DefaultFloat}(dim)
 
 
-function project!(x::SplitView{T}, ::ZeroSet{T}) where{T}
+function project!(x::AbstractVector{T}, ::ZeroSet{T}) where{T}
 	x .= zero(T)
 	return nothing
 end
 
-function in_dual(x::SplitView{T}, ::ZeroSet{T}, tol::T) where{T}
+function in_dual(x::AbstractVector{T}, ::ZeroSet{T}, tol::T) where{T}
 	true
 end
 
-function in_pol_recc(x::SplitView{T}, ::ZeroSet{T}, tol::T) where{T}
+function in_pol_recc(x::AbstractVector{T}, ::ZeroSet{T}, tol::T) where{T}
 	!any( x-> (abs(x) > tol), x)
 end
 
@@ -54,20 +55,20 @@ struct Nonnegatives{T} <: AbstractConvexCone{T}
 end
 Nonnegatives(dim) = Nonnegatives{DefaultFloat}(dim)
 
-function project!(x::SplitView{T}, C::Nonnegatives{T}) where{T}
+function project!(x::AbstractVector{T}, C::Nonnegatives{T}) where{T}
 	x .= max.(x, zero(T))
 	return nothing
 end
 
-function in_dual(x::SplitView{T}, ::Nonnegatives{T}, tol::T) where{T}
+function in_dual(x::AbstractVector{T}, ::Nonnegatives{T}, tol::T) where{T}
 	!any( x-> (x < -tol), x)
 end
 
-function in_pol_recc(x::SplitView{T}, ::Nonnegatives{T}, tol::T) where{T}
+function in_pol_recc(x::AbstractVector{T}, ::Nonnegatives{T}, tol::T) where{T}
 	!any( x-> (x > tol), x)
 end
 
-function scale!(cone::Nonnegatives{T}, ::SplitView{T}) where{T}
+function scale!(cone::Nonnegatives{T}, ::AbstractVector{T}) where{T}
 	return nothing
 end
 
@@ -91,7 +92,7 @@ struct SecondOrderCone{T} <: AbstractConvexCone{T}
 end
 SecondOrderCone(dim) = SecondOrderCone{DefaultFloat}(dim)
 
-function project!(x::SplitView{T}, ::SecondOrderCone{T}) where{T}
+function project!(x::AbstractVector{T}, ::SecondOrderCone{T}) where{T}
 	t = x[1]
 	xt = view(x, 2:length(x))
 	norm_x = norm(xt, 2)
@@ -107,15 +108,15 @@ function project!(x::SplitView{T}, ::SecondOrderCone{T}) where{T}
 	return nothing
 end
 
-function in_dual(x::SplitView{T}, ::SecondOrderCone{T}, tol::T) where{T}
+function in_dual(x::AbstractVector{T}, ::SecondOrderCone{T}, tol::T) where{T}
 	@views norm(x[2:end]) <= (tol + x[1]) #self dual
 end
 
-function in_pol_recc(x::SplitView{T}, ::SecondOrderCone, tol::T) where{T}
+function in_pol_recc(x::AbstractVector{T}, ::SecondOrderCone, tol::T) where{T}
 	@views norm(x[2:end]) <= (tol - x[1]) #self dual
 end
 
-function scale!(cone::SecondOrderCone{T}, ::SplitView{T}) where{T}
+function scale!(cone::SecondOrderCone{T}, ::AbstractVector{T}) where{T}
 	return nothing
 end
 
@@ -144,7 +145,7 @@ struct PsdCone{T} <: AbstractConvexCone{T}
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 
-function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
+function project!(x::AbstractVector{T}, cone::PsdCone{T}) where{T}
 	n = cone.sqrt_dim
 
     # handle 1D case
@@ -160,7 +161,7 @@ function project!(x::AbstractArray, cone::PsdCone{T}) where{T}
     return nothing
 end
 
-function _project!(X::AbstractArray)
+function _project!(X::AbstractMatrix)
 	 # below LAPACK function does the following: s, U  = eigen!(Symmetric(X))
      s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
      #s, U  = eigen!(Symmetric(X))
@@ -168,19 +169,19 @@ function _project!(X::AbstractArray)
      BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
 end
 
-function in_dual(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
+function in_dual(x::AbstractVector{T}, cone::PsdCone{T}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
   return is_pos_sem_def(X, tol)
 end
 
-function in_pol_recc(x::SplitView{T}, cone::PsdCone{T}, tol::T) where{T}
+function in_pol_recc(x::AbstractVector{T}, cone::PsdCone{T}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
 	return is_neg_sem_def(X, tol)
 end
 
-function scale!(cone::PsdCone{T}, ::SplitView{T}) where{T}
+function scale!(cone::PsdCone{T}, ::AbstractVector{T}) where{T}
 	return nothing
 end
 
@@ -235,20 +236,20 @@ function project!(x::AbstractArray, cone::PsdConeTriangle{T}) where{T}
     return nothing
 end
 
-function in_dual(x::SplitView{T}, cone::PsdConeTriangle{T}, tol::T) where{T}
+function in_dual(x::AbstractVector{T}, cone::PsdConeTriangle{T}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     return is_pos_sem_def(cone.X, tol)
 end
 
-function in_pol_recc(x::SplitView{T}, cone::PsdConeTriangle{T}, tol::T) where{T}
+function in_pol_recc(x::AbstractVector{T}, cone::PsdConeTriangle{T}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
     return is_neg_sem_def(cone.X, tol)
 end
 
-function scale!(cone::PsdConeTriangle{T}, ::SplitView{T}) where{T}
+function scale!(cone::PsdConeTriangle{T}, ::AbstractVector{T}) where{T}
     return nothing
 end
 
@@ -289,6 +290,11 @@ end
 # ----------------------------------------------------
 # Box
 # ----------------------------------------------------
+"""
+    Box(l, u)
+
+Creates a box or intervall with lower boundary vector ``l \\in  \\mathbb{R}^m \\cup \\{-\\infty\\}^m`` and upper boundary vector``u \\in \\mathbb{R}^m\\cup \\{+\\infty\\}^m``.
+"""
 struct Box{T} <: AbstractConvexSet{T}
 	dim::Int
 	l::Vector{T}
@@ -301,40 +307,47 @@ struct Box{T} <: AbstractConvexSet{T}
 	end
 	function Box{T}(l::Vector{T}, u::Vector{T}) where{T}
 		length(l) == length(u) || throw(DimensionMismatch("bounds must be same length"))
+        _box_check_bounds(l,u)
+        #enforce consistent bounds
 		new(length(l), l, u)
 	end
 end
 Box(dim) = Box{DefaultFloat}(dim)
 Box(l, u) = Box{DefaultFloat}(l, u)
 
-function project!(x::SplitView{T}, box::Box{T}) where{T}
+function _box_check_bounds(l,u)
+    for i in eachindex(l)
+        l[i] > u[i] && error("Box set: inconsistent lower/upper bounds specified at index i = ", i, ": l[i] = ",l[i],", u[i] = ",u[i])
+    end
+end
+
+function project!(x::AbstractVector{T}, box::Box{T}) where{T}
 	@. x = clip(x, box.l, box.u)
 	return nothing
 end
 
-function in_dual(x::SplitView{T}, box::Box{T}, tol::T) where{T}
-	l = box.l
-	u = box.u
-	for i in eachindex(x)
-		if x[i] >= l[i] - tol || x[i] <= u[i] + tol
-			return false
-		end
-	end
-	return true
+
+function support_function(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
+    s = 0.
+    for i in eachindex(x)
+        s+= ( abs(x[i] > tol) && x[i] > 0) ? x[i]*B.u[i] : x[i]*B.l[i]
+    end
+    return s
 end
 
-function in_pol_recc(x::SplitView{T}, ::Box{T}, tol::T) where{T}
-	true
+
+function in_pol_recc(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
+    !any(XU -> (XU[2] == Inf && XU[1] > tol), zip(x,B.u)) && !any(XL -> (XL[2] == -Inf && XL[1] < -tol), zip(x,B.l))
 end
 
-function scale!(box::Box{T}, e::SplitView{T}) where{T}
+function scale!(box::Box{T}, e::AbstractVector{T}) where{T}
 	@. box.l = box.l * e
 	@. box.u = box.u * e
 	return nothing
 end
 
 function rectify_scaling!(E, work, box::Box{T}) where{T}
-	return false #no correction needed
+	return false #no correction needed since we can scale componentwise
 end
 
 
@@ -354,8 +367,8 @@ function project!(x::SplitVector{T}, C::CompositeConvexSet{T}) where{T}
 	return nothing
 end
 
-function in_dual(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
-	all(xC -> in_dual(xC[1], xC[2], tol),zip(x.views, C.sets))
+function support_function(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
+	sum(xC -> support_function(xC[1], xC[2], tol),zip(x.views, C.sets))
 end
 
 function in_pol_recc(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
@@ -379,6 +392,17 @@ function rectify_scaling!(E::SplitVector{T},
 		any_changed |= rectify_scaling!(E.views[i], work.views[i], C.sets[i])
 	end
 	return any_changed
+end
+
+#-------------------------
+# general AbstractConvexCone operations
+#-------------------------
+
+# sup_{z in K_tilde_b = {-K} x {b} } <z,δy> = { <y,b> ,if y in Ktilde_polar
+#                                                 +∞   ,else}
+
+function support_function(y::SplitView{T}, cone::AbstractConvexCone{T}, tol::T) where{T}
+	in_dual(-y, cone, tol) ? 0. : Inf;
 end
 
 #-------------------------

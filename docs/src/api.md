@@ -18,6 +18,7 @@ COSMO.warm_start_dual!
 COSMO.Constraint
 COSMO.ZeroSet
 COSMO.Nonnegatives
+COSMO.Box
 COSMO.SecondOrderCone
 COSMO.PsdCone
 COSMO.PsdConeTriangle
