@@ -55,6 +55,12 @@ function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace)
 
 	# log rho updates to info variable
 	push!(ws.Info.rho_updates, new_rho)
-	factor_KKT!(ws)
+
+	if ws.settings.verbose_timing
+		ws.times.factor_time += @elapsed update_rho!(ws.kkt_solver,ws.ρvec)
+	else
+		update_rho!(ws.kkt_solver,ws.ρvec)
+	end
+
 	return nothing
 end
