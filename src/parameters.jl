@@ -55,6 +55,6 @@ function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace)
 
 	# log rho updates to info variable
 	push!(ws.Info.rho_updates, new_rho)
-	factor_KKT!(ws)
+	update_rho!(ws.kkt_solver,new_rho)
 	return nothing
 end

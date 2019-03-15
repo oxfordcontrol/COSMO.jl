@@ -8,7 +8,7 @@ function admm_step!(x::Vector{Float64},
 	s_tl::Vector{Float64},
 	ls::Vector{Float64},
 	sol::Vector{Float64},
-	F,
+	kkt_solver::AbstractKKTSolver,
 	q::Vector{Float64},
 	b::Vector{Float64},
 	ρ::Vector{Float64},
@@ -23,7 +23,7 @@ function admm_step!(x::Vector{Float64},
 	# x_tl and ν are automatically updated, since they are views on sol
 	@. ls[1:n] = σ * x - q
 	@. ls[(n + 1):end] = b - s + μ / ρ
-	sol .= F \ ls
+	solve!(kkt_solver,sol,ls)
 
 	# Over relaxattion
 	@. x = α * x_tl + (1.0 - α) * x
@@ -95,7 +95,7 @@ function optimize!(ws::COSMO.Workspace)
 		ws.times.proj_time += admm_step!(
 			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
 			x_tl, s_tl, ls, sol,
-			ws.F, ws.p.q, ws.p.b, ws.ρvec,
+			ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,
 			settings.alpha, settings.sigma,
 			m, n, ws.p.C);
 
@@ -182,4 +182,3 @@ function optimize!(ws::COSMO.Workspace)
 	return result = Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
-

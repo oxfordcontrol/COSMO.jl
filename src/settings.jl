@@ -31,6 +31,7 @@ mutable struct Settings
 	eps_dual_inf::Float64
 	max_iter::Int64
 	verbose::Bool
+	kkt_solver_type::Type{<:AbstractKKTSolver}
 	check_termination::Int64
 	check_infeasibility::Int64
 	scaling::Int64
@@ -57,6 +58,7 @@ mutable struct Settings
 		eps_dual_inf=1e-4,
 		max_iter=2500,
 		verbose=false,
+		kkt_solver_type=QdldlKKTSolver,
 		check_termination=40,
 		check_infeasibility=40,
 		scaling=10,
@@ -73,6 +75,6 @@ mutable struct Settings
 		obj_true = NaN,
 		obj_true_tol = 1e-3
 		)
-	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose,  check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, time_limit, obj_true, obj_true_tol)
+	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver_type, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, time_limit, obj_true, obj_true_tol)
 end
 end
