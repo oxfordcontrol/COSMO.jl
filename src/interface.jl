@@ -98,7 +98,7 @@ function empty_model!(model::COSMO.Model{T}) where {T}
 	model.vars = Variables{T}(1, 1, model.p.C)
 	model.ρ = zero(T)
 	model.ρvec = T[]
-	model.kkt_solver_type = QdldlKKTSolver,
+	model.kkt_solver = nothing
 	model.flags = Flags()
 	model.Info = Info([zero(T)])
 	model.times = ResultTimes()

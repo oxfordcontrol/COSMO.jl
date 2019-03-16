@@ -20,14 +20,16 @@ rng = Random.MersenneTwister(2401)
   x = copy(b)
 
   #test a single solve
-  COSMO.solve!(F,x)
+  COSMO.solve!(F,x,b)
   @test norm(x - J\b) <= 1e-10
 
   #test a rho update and solve
   J = [P+Diagonal(sigma) A'; A -Diagonal(1 ./ rho2)]
   x = copy(b)
   COSMO.update_rho!(F,rho2)
-  COSMO.solve!(F,x)
+  COSMO.solve!(F,x,b)
   @test norm(x - J\b) <= 1e-10
 
 end
+
+nothing
