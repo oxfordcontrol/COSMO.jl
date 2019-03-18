@@ -1,5 +1,5 @@
 using COSMO, Test, LinearAlgebra, SparseArrays, Random
-using QDLDL
+using QDLDL, Pardiso
 rng = Random.MersenneTwister(2401)
 
 function make_test_kkt(P,A,sigma,rho)
@@ -13,11 +13,13 @@ function make_test_kkt(P,A,sigma,rho)
 end
 
 solver_types = [COSMO.QdldlKKTSolver
-                COSMO.CholmodKKTSolver
-                COSMO.PardisoDirectKKTSolver
-                COSMO.PardisoIndirectKKTSolver]
+                COSMO.CholmodKKTSolver]
 
-solver_tols   = [1e-10,1e-10,1e-10,5e-5]
+Pardiso.MKL_PARDISO_LOADED[] && push!(solver_types, COSMO.MKLPardisoKKTSolver)
+Pardiso.PARDISO_LOADED[]     && push!(solver_types, COSMO.PardisoDirectKKTSolver)
+Pardiso.PARDISO_LOADED[]     && push!(solver_types, COSMO.PardisoIndirectKKTSolver)
+
+solver_tols   = [1e-10,1e-10,1e-10,1e-10,5e-5]
 
 @testset "$(solver_types[i]) : KKT solver tests" for i = 1:length(solver_types)
 

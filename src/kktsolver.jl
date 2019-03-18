@@ -144,10 +144,10 @@ end
 abstract type AbstractPardisoKKTSolver end
 
 #---------------------------
-#Direct Solver Configuration
+#Pardiso 5.0 Direct Solver Configuration
 #---------------------------
 
-mutable struct PardisoDirectKKTSolver <: AbstractPardisoKKTSolver
+struct PardisoDirectKKTSolver <: AbstractPardisoKKTSolver
 
     ps::PardisoSolver
     K::SparseMatrixCSC
@@ -158,33 +158,21 @@ mutable struct PardisoDirectKKTSolver <: AbstractPardisoKKTSolver
 
     function PardisoDirectKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
 
-        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho)
+        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho, PardisoSolver)
         rhoidx = _kktutils_rho_index(K,m,n)
 
         set_solver!(ps,Pardiso.DIRECT_SOLVER)
-        pardisoinit(ps)
-
-        # Analyze the matrix and compute a symbolic factorization.
-        set_phase!(ps, Pardiso.ANALYSIS)
-        pardiso(ps, K, work)
-
-        # Compute the numeric factorization.
-        set_phase!(ps, Pardiso.NUM_FACT)
-        pardiso(ps, K, work)
-        _pardiso_check_inertia(ps,m,n)
-
-        ## set phase to solving for iterations
-        set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
+        _kktutils_direct_solver_init(ps,K,work,m,n)
 
         return new(ps,K,m,n,rhoidx,work)
     end
 end
 
 #---------------------------
-#Indirect Solver Configuration
+#Pardiso 5.0 Indirect Solver Configuration
 #---------------------------
 
-mutable struct PardisoIndirectKKTSolver <: AbstractPardisoKKTSolver
+struct PardisoIndirectKKTSolver <: AbstractPardisoKKTSolver
 
     ps::PardisoSolver
     K::SparseMatrixCSC
@@ -195,7 +183,7 @@ mutable struct PardisoIndirectKKTSolver <: AbstractPardisoKKTSolver
 
     function PardisoIndirectKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
 
-        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho)
+        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho, PardisoSolver)
         rhoidx = _kktutils_rho_index(K,m,n)
 
         set_solver!(ps,Pardiso.ITERATIVE_SOLVER)
@@ -208,17 +196,65 @@ mutable struct PardisoIndirectKKTSolver <: AbstractPardisoKKTSolver
     end
 end
 
-function _pardiso_common_init(P,A,sigma,rho)
+#---------------------------
+#MKL Pardiso Solver Configuration
+#---------------------------
+
+struct MKLPardisoKKTSolver <: AbstractPardisoKKTSolver
+
+    ps::MKLPardisoSolver
+    K::SparseMatrixCSC
+    m::Integer
+    n::Integer
+    rhoidx::AbstractArray
+    work::Vector  #working memory for Pardiso
+
+    function MKLPardisoKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
+
+        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho, MKLPardisoSolver)
+        rhoidx = _kktutils_rho_index(K,m,n)
+
+        _kktutils_direct_solver_init(ps,K,work,m,n)
+
+        return new(ps,K,m,n,rhoidx,work)
+    end
+end
+
+#-------------------
+#Pardiso common utils
+
+function _pardiso_common_init(P,A,sigma,rho,Solver::Type)
+
+    #allow Pardiso solvers do this first
 
     m,n  = _kktutils_check_dims(P,A,sigma,rho)
     K    = _kktutils_make_kkt(P,A,sigma,rho,:L)
-    ps   = PardisoSolver()
     work = zeros(eltype(A),m+n)
+    ps   = Solver()
 
     #set to symmetric indefinite
     set_matrixtype!(ps, Pardiso.REAL_SYM_INDEF)
 
     return m, n, K, ps, work
+end
+
+
+function _kktutils_direct_solver_init(ps,K,work,m,n)
+
+    #common initialisation steps for MKL Pardiso and the Pardiso 5.0 direct solver
+    pardisoinit(ps)
+
+    # Analyze the matrix and compute a symbolic factorization.
+    set_phase!(ps, Pardiso.ANALYSIS)
+    pardiso(ps, K, work)
+
+    # Compute the numeric factorization.
+    set_phase!(ps, Pardiso.NUM_FACT)
+    pardiso(ps, K, work)
+    _pardiso_check_inertia(ps,m,n)
+
+    ## set phase to solving for iterations
+    set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
 end
 
 solve!(s::AbstractPardisoKKTSolver, lhs, rhs) = pardiso(s.ps, lhs, s.K, rhs)
@@ -247,3 +283,14 @@ function _pardiso_check_inertia(ps,m,n)
 
     num_neg_eigenvalues == m || throw("P matrix appears to have negative eigenvalues")
 end
+
+
+#number of solver threads active
+get_number_of_threads(s::AbstractPardisoKKTSolver) = get_nprocs(s.ps)
+
+#MKL can set number of threads directly
+set_number_of_threads(s::MKLPardisoKKTSolver,i) =set_nprocs!(s.ps, i)
+
+#Non-MKL can only set number of threads via an environment variable
+set_number_of_threads(s::AbstractPardisoKKTSolver,i) =
+    error("Pardiso 5.0 (non-MKL) must set thread count via environment variable, e.g. ENV[\"OMP_NUM_THREADS\"] = 4")
