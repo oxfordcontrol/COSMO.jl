@@ -141,7 +141,7 @@ end
 # Pardiso
 # -------------------------------------
 
-abstract type AbstractPardisoKKTSolver end
+abstract type AbstractPardisoKKTSolver <: AbstractKKTSolver end
 
 #---------------------------
 #Pardiso 5.0 Direct Solver Configuration
@@ -289,7 +289,7 @@ end
 get_number_of_threads(s::AbstractPardisoKKTSolver) = get_nprocs(s.ps)
 
 #MKL can set number of threads directly
-set_number_of_threads(s::MKLPardisoKKTSolver,i) =set_nprocs!(s.ps, i)
+set_number_of_threads(s::MKLPardisoKKTSolver,i) = set_nprocs!(s.ps, i)
 
 #Non-MKL can only set number of threads via an environment variable
 set_number_of_threads(s::AbstractPardisoKKTSolver,i) =
