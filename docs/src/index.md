@@ -88,6 +88,12 @@ X_sol = JuMP.value.(X)
 obj_value = JuMP.objective_value(m)
 ```
 
+## Presentation Video
+A video of the presentation at JuMP-dev is available here:
+```@raw html
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=VTxPqEzzqlU" target="_blank"><img src="https://raw.githubusercontent.com/migarstka/COSMO_assets/master/jump_dev_video.png" alt="JuMP dev presentation video" width="400" border="10"/></a>
+```
+
 ## Credits
 
 The following people are involved in the development of COSMO:
