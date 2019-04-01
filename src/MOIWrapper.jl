@@ -251,40 +251,10 @@ function symmetrize!(I::Vector{Int}, J::Vector{Int}, V::Vector)
 end
 
 # The following utility functions are from https://github.com/JuliaOpt/SCS.jl
-
-# Vectorized length for matrix dimension n
-sympackedlen(n) = div(n*(n+1), 2)
 # Matrix dimension for vectorized length n
-sympackeddim(n) = div(isqrt(1+8n) - 1, 2)
 trimap(i::Integer, j::Integer) = i < j ? trimap(j, i) : div((i-1)*i, 2) + j
-trimapL(i::Integer, j::Integer, n::Integer) = i < j ? trimapL(j, i, n) : i + div((2n-j) * (j-1), 2)
-function _sympackedto(x, n, mapfrom, mapto)
-    @assert length(x) == sympackedlen(n)
-    y = similar(x)
-    for i in 1:n, j in 1:i
-        y[mapto(i, j)] = x[mapfrom(i, j)]
-    end
-    y
-end
-sympackedUtoL(x, n=sympackeddim(length(x))) = _sympackedto(x, n, trimap, (i, j) -> trimapL(i, j, n))
 
-# function sympackedUtoLidx(x::AbstractVector{<:Integer}, n)
-#     y = similar(x)
-#     map = sympackedLtoU(1:sympackedlen(n), n)
-#     for i in eachindex(y)
-#         y[i] = map[x[i]]
-#     end
-#     y
-# end
 
-orderval(val, s) = val
-function orderval(val, s::MOI.PositiveSemidefiniteConeTriangle)
-    sympackedUtoL(val, s.side_dimension)
-end
-# orderidx(idx, s) = idx
-# function orderidx(idx, s::MOI.PositiveSemidefiniteConeTriangle)
-#     sympackedUtoLidx(idx, s.side_dimension)
-# end
 
 # Scale coefficients depending on rows index
 # rows: List of row indices
@@ -419,7 +389,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, 
     end
     append!(I, rows)
     append!(J, cols)
-    append!(V, scalecoef(rows, orderval(ones(length(rows)), s), true, s))
+    append!(V, scalecoef(rows, ones(length(rows)), true, s))
     nothing
 end
 
