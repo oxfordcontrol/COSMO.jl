@@ -1,5 +1,4 @@
 using  LinearAlgebra
-import LinearAlgebra: lmul!, rmul!
 const  IdentityMatrix = UniformScaling{Bool}
 
 

@@ -59,8 +59,8 @@ function scale_ruiz!(ws::COSMO.Workspace)
 		# Scale the problem data and update the
 		# equilibration matrices
 		scale_data!(P, A, q, b, Dwork, Ework ,1.)
-		lmul!(Dwork, D)        #D[:,:] = Dtemp*D
-		lmul!(Ework, E)        #D[:,:] = Dtemp*D
+		LinearAlgebra.lmul!(Dwork, D)        #D[:,:] = Dtemp*D
+		LinearAlgebra.lmul!(Ework, E)        #D[:,:] = Dtemp*D
 
 		# now use the Dwork array to hold the
 		# column norms of the newly scaled P
@@ -93,7 +93,7 @@ function scale_ruiz!(ws::COSMO.Workspace)
 		#only rescale if the above returns true,
 		#i.e. some cone scalings were rectified
 		scale_data!(P, A, q, b, I, Ework, 1.)
-		lmul!(Ework, E)
+		LinearAlgebra.lmul!(Ework, E)
 	end
 
 	issymmetric(ws.p.P) || symmetrize_full!(ws.p.P)
