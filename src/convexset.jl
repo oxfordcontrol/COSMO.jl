@@ -154,8 +154,7 @@ function project!(x::AbstractVector{T}, cone::PsdCone{T}) where{T}
     else
         # symmetrized square view of x
         X    = reshape(x, n, n)
-        #symmetrize!(X)
-        @. X = 0.5 * (X + X')
+        symmetrize_upper!(X)
         _project!(X)
     end
     return nothing

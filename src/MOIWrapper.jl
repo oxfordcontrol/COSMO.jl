@@ -214,7 +214,7 @@ function processobjective(src::MOI.ModelLike, idxmap)
         else
             throw(MOI.UnsupportedAttribute(MOI.ObjectiveFunction{obj_type}()))
         end
-        sense == MOI.MAX_SENSE && (rmul!(P, -1); rmul!(q, -1); c = -c)
+        sense == MOI.MAX_SENSE && (LinearAlgebra.rmul!(P, -1); LinearAlgebra.rmul!(q, -1); c = -c)
     else
         P = spzeros(n, n)
         q = zeros(n)

@@ -146,18 +146,32 @@ lrmul!(L::IdentityMatrix,
 	R::IdentityMatrix) = (L.λ && R.λ) ? M : M .= zero(eltype(M))
 
 lrmul!(L::Diagonal,
-	M::AbstractMatrix,
+	M::SparseMatrixCSC,
 	R::Diagonal) = lmul!(L, rmul!(M, R))
 
 lrmul!(L::Diagonal,
-	M::AbstractMatrix,
+	M::SparseMatrixCSC,
 	R::IdentityMatrix) = R.λ ? lmul!(L, M) : M .= zero(eltype(M))
+
+lrmul!(L::Diagonal,
+	M::AbstractMatrix,
+	R::Diagonal) = LinearAlgebra.lmul!(L, LinearAlgebra.rmul!(M, R))
+
+lrmul!(L::Diagonal,
+	M::AbstractMatrix,
+	R::IdentityMatrix) = R.λ ? LinearAlgebra.lmul!(L, M) : M .= zero(eltype(M))
+
 
 lrmul!(L::IdentityMatrix,
 	M::AbstractMatrix,
-	R::Diagonal) = L.λ ? rmul!(M,R) : M .= zero(eltype(M))
+	R::Diagonal) = L.λ ? LinearAlgebra.rmul!(M, R) : M .= zero(eltype(M))
 
-function symmetrize!(A::AbstractMatrix)
+"""
+    symmetrize_upper!(A)
+
+Symmetrizes the matrix A by calculating A = 0.5 * (A + A') but only performs the operation on the upper triangular part.
+"""
+function symmetrize_upper!(A::AbstractMatrix)
 	n = size(A, 1)
 	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")
 	@inbounds for j in 1:n, i in 1:j
@@ -166,6 +180,11 @@ function symmetrize!(A::AbstractMatrix)
 	nothing
 end
 
+"""
+    symmetrize_full!(A)
+
+Symmetrizes the matrix A by calculating A = 0.5 * (A + A') and storing the result in-place.
+"""
 function symmetrize_full!(A::AbstractMatrix)
 	n = size(A, 1)
 	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")

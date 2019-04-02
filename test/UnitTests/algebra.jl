@@ -52,7 +52,7 @@ rng = Random.MersenneTwister(9191)
 
   # lmul!()
   L = Diagonal(rand(rng, 5))
-  Mo = rand(rng, 5, 5)
+  Mo = sprand(rng, 5, 5, 0.8)
   M = deepcopy(Mo)
   COSMO.lmul!(L, M)
   @test norm(M -  L * Mo, Inf) <= 1e-10
@@ -63,7 +63,7 @@ rng = Random.MersenneTwister(9191)
 
   # rmul!()
   R = Diagonal(rand(rng, 5))
-  Mo = rand(rng, 5, 5)
+  Mo = sprand(rng, 5, 5, 0.8)
   M = deepcopy(Mo)
   COSMO.rmul!(M, R)
   @test norm(M -  Mo * R, Inf) <= 1e-10
@@ -91,9 +91,9 @@ rng = Random.MersenneTwister(9191)
   # symmetrize!()
   A = rand(rng, 3, 3)
   B = deepcopy(A)
-  COSMO.symmetrize!(A)
+  COSMO.symmetrize_upper!(A)
   @test Symmetric(A) == (0.5 * (B + B'))
-  @test_throws AssertionError COSMO.symmetrize!(rand(2, 3));
+  @test_throws AssertionError COSMO.symmetrize_upper!(rand(2, 3));
 
   # is_pos_sem_def()
   A = Symmetric(randn(rng, 4, 4))
