@@ -201,27 +201,31 @@ function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
      end
 
 	 # below LAPACK function does the following: w,Z  = eigen!(Symmetric(X))
-     _syevr!(X,ws)
-     # compute upper triangle of: X .= Z*Diagonal(max.(w, 0.0))*Z'
-     X .= 0
-     for i = 1:length(ws.w)
-         e = ws.w[i]
-         if e > 0
-             v = uview(ws.Z,:,i)
-             BLAS.syr!('U',e,v,X)
-         end
-     end
+	 	_syevr!(X, ws)
+		# compute upper triangle of: X .= Z*Diagonal(max.(w, 0.0))*Z'
+		rank_k_update!(X, ws)
 end
 
+function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where{T}
+  n = size(X, 1)
+  X .= 0
+  nnz_λ = 0
+  for j = 1:length(ws.w)
+    λ = ws.w[j]
+    if λ > 0
+      nnz_λ += 1
+      @inbounds for i = 1:n
+        ws.Z[i, j] = ws.Z[i, j] * sqrt(λ)
+      end
+    end
+  end
 
-# direct call to Julia standard BLAS wrappers (for testing)
-function _project!(X::AbstractArray)
-	 # below LAPACK function does the following: s, U  = eigen!(Symmetric(X))
-     s, U = LAPACK.syevr!('V', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0)
-     # below BLAS function does the following: X .= U*Diagonal(max.(s, 0.0))*U'
-     BLAS.gemm!('N', 'T', 1.0, U*Diagonal(max.(s, 0.0)), U, 0.0, X)
+  if nnz_λ > 0
+    V = uview(ws.Z, :, (n - nnz_λ + 1):n)
+    BLAS.syrk!('U', 'N', 1.0, V, 1.0, X)
+  end
+  return nothing
 end
-
 
 """
     PsdCone(dim)
