@@ -147,10 +147,6 @@ lrmul!(L::IdentityMatrix,
 
 lrmul!(L::Diagonal,
 	M::SparseMatrixCSC,
-	R::Diagonal) = lmul!(L, rmul!(M, R))
-
-lrmul!(L::Diagonal,
-	M::SparseMatrixCSC,
 	R::IdentityMatrix) = R.λ ? lmul!(L, M) : M .= zero(eltype(M))
 
 lrmul!(L::Diagonal,
