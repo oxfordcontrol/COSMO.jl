@@ -29,26 +29,28 @@ end
 
 function _kktutils_make_kkt(P,A,sigma,rho,shape::Symbol=:F)
 
-    R = length(rho)   == 1 ? ((1.)./rho[1])*I : Diagonal((1.)./rho)
-    S = length(sigma) == 1 ? (sigma[1])*I : Diagonal(sigma)
-
+    S = sigma * I
     n = size(P,1)
     m = size(A,1)
 
     if     shape == :F
         #compute the full KKT matrix
-        K = [P+S A'; A -R]
+        K = [P + S SparseMatrixCSC(A'); A -I]
 
     elseif shape == :U
         #upper triangular
-        K = [triu(P)+S  A'; spzeros(eltype(A),m,n)  -R]
+        K = [triu(P)+S  SparseMatrixCSC(A'); spzeros(eltype(A),m,n)  -I]
 
     elseif shape == :L
         #lower triangular
-        K = [tril(P)+S  spzeros(eltype(A),n,m); A  -R]
+        K = [tril(P)+S  spzeros(eltype(A),n,m); A  -I]
 
     else
         error("Bad matrix shape description")
+    end
+
+    @inbounds @simd for i = (n + 1):(n + m)
+        K[i, i] = -1.0 / rho[i - n]
     end
 
     return K
@@ -116,10 +118,10 @@ mutable struct CholmodKKTSolver <: AbstractKKTSolver
 
     function CholmodKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
 
-        m,n  = _kktutils_check_dims(P,A,sigma,rho)
-        K    = _kktutils_make_kkt(P,A,sigma,rho,:F)
-        fact = ldlt(K)
-        rhoidx = _kktutils_rho_index(K,m,n)
+         m,n  = _kktutils_check_dims(P,A,sigma,rho)
+         K    = _kktutils_make_kkt(P,A,sigma,rho,:F)
+         fact = ldlt(K)
+         rhoidx = _kktutils_rho_index(K,m,n)
 
         return new(fact,K,m,n,rhoidx)
 
