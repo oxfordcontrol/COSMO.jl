@@ -14,10 +14,10 @@ abstract type AbstractKKTSolver end
 # some internal utility functions
 # -------------------------------------
 
-function _kktutils_check_dims(P,A,sigma,rho)
+function _kktutils_check_dims(P, A, sigma, rho)
 
-    n = size(P,1)
-    m = size(A,1)
+    n = size(P, 1)
+    m = size(A, 1)
 
     size(A,2) == n || throw(DimensionMismatch())
 
@@ -27,11 +27,11 @@ function _kktutils_check_dims(P,A,sigma,rho)
     return m, n
 end
 
-function _kktutils_make_kkt(P,A,sigma,rho,shape::Symbol=:F)
+function _kktutils_make_kkt(P, A, sigma, rho, shape::Symbol=:F)
 
     S = sigma * I
-    n = size(P,1)
-    m = size(A,1)
+    n = size(P, 1)
+    m = size(A, 1)
 
     if     shape == :F
         #compute the full KKT matrix
@@ -39,11 +39,11 @@ function _kktutils_make_kkt(P,A,sigma,rho,shape::Symbol=:F)
 
     elseif shape == :U
         #upper triangular
-        K = [triu(P)+S  SparseMatrixCSC(A'); spzeros(eltype(A),m,n)  -I]
+        K = [triu(P) + S  SparseMatrixCSC(A'); spzeros(eltype(A), m, n)  -I]
 
     elseif shape == :L
         #lower triangular
-        K = [tril(P)+S  spzeros(eltype(A),n,m); A  -I]
+        K = [tril(P)+S  spzeros(eltype(A), n, m); A  -I]
 
     else
         error("Bad matrix shape description")
@@ -59,7 +59,7 @@ end
 
 #an index into a KKT matrix indicating where
 #values of 1/rho should be placed
-_kktutils_rho_index(K,m,n) = diagind(K,0)[(n+1):(m+n)]
+_kktutils_rho_index(K, m, n) = diagind(K, 0)[(n+1):(m+n)]
 
 
 
@@ -74,32 +74,32 @@ struct QdldlKKTSolver <: AbstractKKTSolver
     n::Integer
     ldlfact::QDLDL.QDLDLFactorisation
 
-    function QdldlKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
+    function QdldlKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC, sigma, rho)
 
-        m,n = _kktutils_check_dims(P,A,sigma,rho)
+        m,n = _kktutils_check_dims(P, A, sigma, rho)
 
         #NB: qdldl uses triu internally, but it reorders
         #with AMD first.  This way is memory inefficient
         #but saves having to permute the rhs/lhs each
         #time we solve.
-        K   = _kktutils_make_kkt(P,A,sigma,rho,:F)
+        K   = _kktutils_make_kkt(P, A, sigma, rho, :F)
         ldlfact = qdldl(K)
 
         #check for exactly n positive eigenvalues
         positive_inertia(ldlfact) == n || error("Objective function is not convex.")
 
-        new(m,n,ldlfact)
+        new(m, n, ldlfact)
     end
 end
 
 function solve!(s::QdldlKKTSolver, lhs, rhs)
     lhs .= rhs
-    QDLDL.solve!(s.ldlfact,lhs)
+    QDLDL.solve!(s.ldlfact, lhs)
 end
 
 
 function update_rho!(s::QdldlKKTSolver, rho)
-    QDLDL.update_diagonal!(s.ldlfact,(s.n+1):(s.n+s.m),(-1 ./ rho))
+    QDLDL.update_diagonal!(s.ldlfact, (s.n+1):(s.n+s.m),(-1 ./ rho))
 end
 
 
@@ -116,19 +116,19 @@ mutable struct CholmodKKTSolver <: AbstractKKTSolver
     n::Integer
     rhoidx::AbstractArray
 
-    function CholmodKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
+    function CholmodKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC, sigma, rho)
 
-         m,n  = _kktutils_check_dims(P,A,sigma,rho)
-         K    = _kktutils_make_kkt(P,A,sigma,rho,:F)
+         m,n  = _kktutils_check_dims(P, A, sigma, rho)
+         K    = _kktutils_make_kkt(P, A, sigma, rho, :F)
          fact = ldlt(K)
-         rhoidx = _kktutils_rho_index(K,m,n)
+         rhoidx = _kktutils_rho_index(K, m, n)
 
-        return new(fact,K,m,n,rhoidx)
+        return new(fact, K, m, n, rhoidx)
 
     end
 end
 
-solve!(s::CholmodKKTSolver, lhs, rhs) = lhs .= s.fact\rhs
+solve!(s::CholmodKKTSolver, lhs, rhs) = lhs .= s.fact \ rhs
 
 function update_rho!(s::CholmodKKTSolver, rho)
 
@@ -158,15 +158,15 @@ struct PardisoDirectKKTSolver <: AbstractPardisoKKTSolver
     rhoidx::AbstractArray
     work::Vector  #working memory for Pardiso
 
-    function PardisoDirectKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
+    function PardisoDirectKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC, sigma, rho)
 
-        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho, PardisoSolver)
-        rhoidx = _kktutils_rho_index(K,m,n)
+        m, n, K, ps, work = _pardiso_common_init(P, A, sigma, rho, PardisoSolver)
+        rhoidx = _kktutils_rho_index(K, m, n)
 
         set_solver!(ps,Pardiso.DIRECT_SOLVER)
-        _kktutils_direct_solver_init(ps,K,work,m,n)
+        _kktutils_direct_solver_init(ps, K, work, m, n)
 
-        return new(ps,K,m,n,rhoidx,work)
+        return new(ps, K, m, n, rhoidx, work)
     end
 end
 
@@ -183,18 +183,18 @@ struct PardisoIndirectKKTSolver <: AbstractPardisoKKTSolver
     rhoidx::AbstractArray
     work::Vector  #working memory for Pardiso
 
-    function PardisoIndirectKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
+    function PardisoIndirectKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC, sigma, rho)
 
-        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho, PardisoSolver)
-        rhoidx = _kktutils_rho_index(K,m,n)
+        m, n, K, ps, work = _pardiso_common_init(P, A, sigma, rho, PardisoSolver)
+        rhoidx = _kktutils_rho_index(K, m, n)
 
-        set_solver!(ps,Pardiso.ITERATIVE_SOLVER)
+        set_solver!(ps, Pardiso.ITERATIVE_SOLVER)
         pardisoinit(ps)
 
         ## set phase to solving for iterations
         set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
 
-        return new(ps,K,m,n,rhoidx,work)
+        return new(ps, K, m, n, rhoidx, work)
     end
 end
 
@@ -211,27 +211,27 @@ struct MKLPardisoKKTSolver <: AbstractPardisoKKTSolver
     rhoidx::AbstractArray
     work::Vector  #working memory for Pardiso
 
-    function MKLPardisoKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC,sigma,rho)
+    function MKLPardisoKKTSolver(P::SparseMatrixCSC, A::SparseMatrixCSC, sigma, rho)
 
-        m, n, K, ps, work = _pardiso_common_init(P,A,sigma,rho, MKLPardisoSolver)
-        rhoidx = _kktutils_rho_index(K,m,n)
+        m, n, K, ps, work = _pardiso_common_init(P, A, sigma, rho, MKLPardisoSolver)
+        rhoidx = _kktutils_rho_index(K, m, n)
 
-        _kktutils_direct_solver_init(ps,K,work,m,n)
+        _kktutils_direct_solver_init(ps, K, work, m, n)
 
-        return new(ps,K,m,n,rhoidx,work)
+        return new(ps ,K, m, n, rhoidx, work)
     end
 end
 
 #-------------------
 #Pardiso common utils
 
-function _pardiso_common_init(P,A,sigma,rho,Solver::Type)
+function _pardiso_common_init(P, A, sigma, rho, Solver::Type)
 
     #allow Pardiso solvers do this first
 
-    m,n  = _kktutils_check_dims(P,A,sigma,rho)
-    K    = _kktutils_make_kkt(P,A,sigma,rho,:L)
-    work = zeros(eltype(A),m+n)
+    m,n  = _kktutils_check_dims(P, A, sigma, rho)
+    K    = _kktutils_make_kkt(P, A, sigma, rho, :L)
+    work = zeros(eltype(A), m + n)
     ps   = Solver()
 
     #set to symmetric indefinite
@@ -241,19 +241,24 @@ function _pardiso_common_init(P,A,sigma,rho,Solver::Type)
 end
 
 
-function _kktutils_direct_solver_init(ps,K,work,m,n)
+function _kktutils_direct_solver_init(ps, K, work, m, n)
 
-    #common initialisation steps for MKL Pardiso and the Pardiso 5.0 direct solver
-    pardisoinit(ps)
+
+    # set to allow non-default iparams
+    set_iparm!(ps, 1, 1)
+    # set the transpose flag (Pardiso: CSR, Julia CSC)
+    set_iparm!(ps, 12, 1)
+    # print output for debugging purposes
+    # set_msglvl!(ps, Pardiso.MESSAGE_LEVEL_ON)
 
     # Analyze the matrix and compute a symbolic factorization.
     set_phase!(ps, Pardiso.ANALYSIS)
     pardiso(ps, K, work)
 
     # Compute the numeric factorization.
-    set_phase!(ps, Pardiso.NUM_FACT)
-    pardiso(ps, K, work)
-    _pardiso_check_inertia(ps,m,n)
+     set_phase!(ps, Pardiso.NUM_FACT)
+     pardiso(ps, K, work)
+    _pardiso_check_inertia(ps, m, n)
 
     ## set phase to solving for iterations
     set_phase!(ps, Pardiso.SOLVE_ITERATIVE_REFINE)
@@ -271,14 +276,14 @@ function update_rho!(s::AbstractPardisoKKTSolver, rho::Union{Vector,AbstractFloa
         #but skipping the analysis phase
         set_phase!(s.ps, Pardiso.NUM_FACT)
         pardiso(s.ps, s.K, s.work)
-        _pardiso_check_inertia(s.ps,s.m,s.n)
+        _pardiso_check_inertia(s.ps, s.m, s.n)
 
         ## set back to solving phase
         set_phase!(s.ps, Pardiso.SOLVE_ITERATIVE_REFINE)
     end
 end
 
-function _pardiso_check_inertia(ps,m,n)
+function _pardiso_check_inertia(ps, m, n)
 
     num_pos_eigenvalues = get_iparm(ps, 22)
     num_neg_eigenvalues = get_iparm(ps, 23)
@@ -291,8 +296,8 @@ end
 get_number_of_threads(s::AbstractPardisoKKTSolver) = get_nprocs(s.ps)
 
 #MKL can set number of threads directly
-set_number_of_threads(s::MKLPardisoKKTSolver,i) = set_nprocs!(s.ps, i)
+set_number_of_threads(s::MKLPardisoKKTSolver, i) = set_nprocs!(s.ps, i)
 
 #Non-MKL can only set number of threads via an environment variable
-set_number_of_threads(s::AbstractPardisoKKTSolver,i) =
+set_number_of_threads(s::AbstractPardisoKKTSolver, i) =
     error("Pardiso 5.0 (non-MKL) must set thread count via environment variable, e.g. ENV[\"OMP_NUM_THREADS\"] = 4")
