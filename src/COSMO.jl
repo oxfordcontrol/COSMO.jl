@@ -10,6 +10,12 @@ const DefaultInt   = Int64
 
 
 include("./kktsolver.jl")
+# optional dependencies
+if in("Pardiso",keys(Pkg.installed()))
+    include("./kktsolver_pardiso.jl")
+end
+
+
 include("./algebra.jl")
 include("./projections.jl")
 include("./settings.jl")            # TODO: unmodified - revisit
@@ -25,9 +31,5 @@ include("./solver.jl")              # TODO: unmodified - revisit
 include("./interface.jl")           # TODO: unmodified - revisit
 include("./MOIWrapper.jl")
 
-# optional dependencies
-if in("Pardiso",keys(Pkg.installed()))
-    include("./kktsolver_pardiso.jl")
-end
 
 end #end module

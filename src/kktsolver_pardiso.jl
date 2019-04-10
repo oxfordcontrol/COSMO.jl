@@ -148,6 +148,10 @@ function _pardiso_check_inertia(ps, m, n)
     num_neg_eigenvalues == m || throw("P matrix appears to have negative eigenvalues")
 end
 
+function free_memory!(s::AbstractPardisoKKTSolver)
+    set_phase!(s.ps, Pardiso.RELEASE_ALL)
+    pardiso(s.ps)
+end
 
 #number of solver threads active
 get_number_of_threads(s::AbstractPardisoKKTSolver) = get_nprocs(s.ps)

@@ -171,6 +171,7 @@ function optimize!(ws::COSMO.Workspace)
 		cost =  (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
 	end
 
+
 	ws.times.solver_time = time() - solver_time_start
 	settings.verbose_timing && (ws.times.post_time = time() - ws.times.post_time)
 	# print solution to screen
@@ -179,6 +180,14 @@ function optimize!(ws::COSMO.Workspace)
 	# create result object
 	res_info = ResultInfo(r_prim, r_dual)
 	y = -ws.vars.μ
+
+	free_memory!(ws)
+
 	return result = Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
+end
+
+
+function free_memory!(ws)
+	free_memory!(ws.kkt_solver)
 end

@@ -105,9 +105,6 @@ function update_rho!(s::QdldlKKTSolver, rho)
     QDLDL.update_diagonal!(s.ldlfact, (s.n+1):(s.n+s.m),(-1 ./ rho))
 end
 
-
-
-
 # -------------------------------------
 # Julia Native solver (CHOLMOD based)
 # -------------------------------------
@@ -140,3 +137,5 @@ function update_rho!(s::CholmodKKTSolver, rho)
     s.fact = ldlt(s.K)
 
 end
+
+free_memory!(s::AbstractKKTSolver) = nothing
