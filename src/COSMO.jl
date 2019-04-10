@@ -1,7 +1,7 @@
 __precompile__()
 module COSMO
 
-using SparseArrays, LinearAlgebra, SuiteSparse
+using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg
 
 export  assemble!, warmStart!, empty_model!
 
@@ -24,5 +24,10 @@ include("./setup.jl")               # TODO: unmodified - revisit (short - consol
 include("./solver.jl")              # TODO: unmodified - revisit
 include("./interface.jl")           # TODO: unmodified - revisit
 include("./MOIWrapper.jl")
+
+# optional dependencies
+if in("Pardiso",keys(Pkg.installed()))
+    include("./kktsolver_pardiso.jl")
+end
 
 end #end module
