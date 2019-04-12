@@ -29,7 +29,7 @@ mutable struct ResultTimes{T <: AbstractFloat}
 	post_time::T
 end
 
-ResultTimes{T}() where{T} = ResultTimes{T}(0., 0., 0., 0., 0., 0., 0.)
+ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
 ResultTimes(T::Type = DefaultFloat) = ResultTimes{T}()
 
 function Base.show(io::IO, obj::ResultTimes)
@@ -96,7 +96,7 @@ end
 
 function Base.show(io::IO, obj::Result)
 	print(io,">>> COSMO - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.obj_val, digits = 2))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
-	obj.times.iter_time != NaN && print("Avg Iter Time: $(round.((obj.times.iter_time / obj.iter) * 1000, digits = 2))ms")
+	!isnan(obj.times.iter_time) && print("Avg Iter Time: $(round.((obj.times.iter_time / obj.iter) * 1000, digits = 2))ms")
 end
 
 struct Info{T <: AbstractFloat}

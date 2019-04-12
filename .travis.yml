@@ -29,11 +29,11 @@ matrix:
 
 ## uncomment the following lines to override the default test script
 script:
-   - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; Pkg.clone(pwd()); Pkg.build("COSMO"); Pkg.test("COSMO"; coverage=true)';
+  - julia --project --color=yes -e 'using Pkg; Pkg.build(); Pkg.test(coverage=true)'
 
 after_success:
   # push coverage results to Codecov
-  - julia -e 'if VERSION >= v"0.7.0-" using Pkg; end; cd(Pkg.dir("COSMO")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
 
 jobs:
   include:

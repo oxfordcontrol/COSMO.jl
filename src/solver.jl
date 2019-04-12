@@ -58,6 +58,7 @@ function optimize!(ws::COSMO.Workspace)
 	ws.sm = (settings.scaling > 0) ? ScaleMatrices(ws.p.model_size[1], ws.p.model_size[2]) : ScaleMatrices()
 
 	# perform preprocessing steps (scaling, initial KKT factorization)
+	ws.times.factor_time = 0
 	ws.times.setup_time = @elapsed setup!(ws);
 	ws.times.proj_time  = 0. #reset projection time
 
@@ -119,7 +120,7 @@ function optimize!(ws::COSMO.Workspace)
 			end
 
 			# print iteration steps
-			settings.verbose && print_iteration(settings, iter, cost, r_prim, r_dual)
+			settings.verbose && print_iteration(ws, iter, cost, r_prim, r_dual)
 
 			if has_converged(ws, r_prim, r_dual)
 				status = :Solved

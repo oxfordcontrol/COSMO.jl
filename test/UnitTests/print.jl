@@ -1,6 +1,6 @@
 using COSMO, Test, Random
 
-settings = COSMO.Settings()
+ws = COSMO.Workspace()
 iter = 10
 cost = 20.
 r_prim = 1.5e-3
@@ -10,8 +10,8 @@ rt = 0.7
 
 
 @testset "Printing" begin
-   @test COSMO.print_iteration(settings, iter, cost, r_prim, r_dual) == nothing
-   @test COSMO.print_iteration(settings, settings.check_termination, cost, r_prim, r_dual) == nothing
+   @test COSMO.print_iteration(ws, iter, cost, r_prim, r_dual) == nothing
+   @test COSMO.print_iteration(ws, ws.settings.check_termination, cost, r_prim, r_dual) == nothing
    @test COSMO.print_result(status, iter, cost, rt) == nothing
 end
 nothing
