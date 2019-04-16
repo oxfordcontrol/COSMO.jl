@@ -8,19 +8,19 @@ By default the following convex set types are supported: `ZeroSet`, `Nonnegative
 
 # Examples
 ```jldoctest; setup = :(using COSMO)
-julia> Constraint([1 0;0 1], zeros(2), COSMO.Nonnegatives)
+julia> COSMO.Constraint([1 0;0 1], zeros(2), COSMO.Nonnegatives)
 Constraint
 Size of A: (2, 2)
-ConvexSet: Nonnegatives{Float64}
+ConvexSet: COSMO.Nonnegatives{Float64}
 ```
 
 For convex sets that require their own data, it is possible to pass the pass the instantiated object directly rather than the type name.
 # Examples
 ```jldoctest; setup = :(using COSMO)
-julia> Constraint([1 0;0 1], zeros(2), COSMO.Box([-1.;-1.],[1.;1.]))
+julia> COSMO.Constraint([1 0;0 1], zeros(2), COSMO.Box([-1.;-1.],[1.;1.]))
 Constraint
 Size of A: (2, 2)
-ConvexSet: Box{Float64}
+ConvexSet: COSMO.Box{Float64}
 ```
 
 
@@ -31,10 +31,10 @@ then x[2] and x[3] can be constrained to the zero cone in the following way:
 
 # Examples
 ```jldoctest; setup = :(using COSMO)
-julia> c = Constraint([1 0;0 1], zeros(2), COSMO.ZeroSet, 4, 2:3)
+julia> c = COSMO.Constraint([1 0;0 1], zeros(2), COSMO.ZeroSet, 4, 2:3)
 Constraint
 Size of A: (2, 4)
-ConvexSet: ZeroSet{Float64}
+ConvexSet: COSMO.ZeroSet{Float64}
 ```
 Notice that extra columns of A have been added automatically.
 ```
