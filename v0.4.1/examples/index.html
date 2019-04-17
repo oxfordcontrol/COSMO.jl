@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Examples · COSMO.jl</title><script>(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-134239283-1', 'auto');
+ga('send', 'pageview');
+</script><link rel="canonical" href="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/index.html"/><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link href="../assets/documenter.css" rel="stylesheet" type="text/css"/><link href="../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../assets/github_buttons.js"></script></head><body><nav class="toc"><a href="../index.html"><img class="logo" src="../assets/logo.png" alt="COSMO.jl logo"/></a><h1>COSMO.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="../search/"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="../">Home</a></li><li><a class="toctext" href="../guide/">User Guide</a></li><li><a class="toctext" href="../jump/">JuMP Interface</a></li><li><a class="toctext" href="../method/">Method</a></li><li class="current"><a class="toctext" href>Examples</a><ul class="internal"><li><a class="toctext" href="#Linear-Program-1">Linear Program</a></li><li><a class="toctext" href="#Closest-Correlation-Matrix-1">Closest Correlation Matrix</a></li></ul></li><li><a class="toctext" href="../citing/">Citing COSMO</a></li><li><a class="toctext" href="../contributing/">Contributing</a></li><li><a class="toctext" href="../api/">API Reference</a></li></ul></nav><article id="docs"><header><nav><ul><li><a href>Examples</a></li></ul><a class="edit-page" href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/docs/src/examples.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Examples</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Examples-1" href="#Examples-1">Examples</a></h1><p>Some example problems that are solved with COSMO can be found in the <a href="https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples">/examples</a> folder.</p><p>In the first example the native solver interface is used to define and solve a Linear Program. In the second example <code>JuMP</code> is used to describe the problem and COSMO is set as the solver backend.</p><h2><a class="nav-anchor" id="Linear-Program-1" href="#Linear-Program-1">Linear Program</a></h2><p>We want to solve the following linear program with decision variable <code>x</code>:</p><div>\[\begin{array}{ll} \mbox{minimize} &amp;  c^\top x\\
+\mbox{subject to} &amp;  A x \leq b \\
+                  &amp;  x \geq 1 \\
+                  &amp;  x_2 \geq 5 \\
+                  &amp;  x_1 + x_3 \geq 4.
+\end{array}\]</div><p>The problem can be solved with COSMO in the following way:</p><pre><code class="language-julia">using COSMO, LinearAlgebra, SparseArrays, Test
+
+c = [1; 2; 3; 4.]
+A = Matrix(1.0I, 4, 4)
+b = [10; 10; 10; 10]
+n = 4
+# -------------------
+# create constraints A * x + b in set
+# -------------------
+# Ax &lt;= b
+c1 = COSMO.Constraint(-A, b, COSMO.Nonnegatives)
+# x &gt;= 1
+c2 = COSMO.Constraint(Matrix(1.0I, n, n), -ones(n), COSMO.Nonnegatives)
+# x2 &gt;= 5
+c3 = COSMO.Constraint(1, -5, COSMO.Nonnegatives, n, 2:2)
+# x1 + x3 &gt;= 4
+c4 = COSMO.Constraint([1 0 1 0], -4, COSMO.Nonnegatives)
+
+# -------------------
+# define cost function
+# -------------------
+P = spzeros(4, 4)
+q = c
+
+# -------------------
+# assemble solver model
+# -------------------
+settings = COSMO.Settings(max_iter=2500, verbose=true, eps_abs = 1e-4, eps_rel = 1e-5)
+model = COSMO.Model()
+assemble!(model, P, q, [c1; c2; c3; c4], settings = settings)
+res = COSMO.optimize!(model);
+
+@testset &quot;Linear Problem&quot; begin
+  @test isapprox(res.x[1:4], [3; 5; 1; 1], atol=1e-2, norm = (x -&gt; norm(x, Inf)))
+  @test isapprox(res.obj_val, 20.0, atol=1e-2)
+end</code></pre><h2><a class="nav-anchor" id="Closest-Correlation-Matrix-1" href="#Closest-Correlation-Matrix-1">Closest Correlation Matrix</a></h2><p>We consider the problem of finding the closest correlation matrix <code>X</code> to a given random matrix <code>C</code>. With closest correlation matrix we mean a positive semidefinite matrix with ones on the diagonal. The problem is given by:</p><div>\[\begin{array}{ll} \mbox{minimize} &amp;  \frac{1}{2}||X - C||_F^2\\
+\mbox{subject to} &amp;  X_{ii} = 1, \quad i=1,\dots,n \\
+                  &amp;  X \succeq 0.
+\end{array}\]</div><p>Notice how <code>JuMP</code> is used to describe the problem. COSMO is chosen as the backend solver using JuMP&#39;s <code>with_optimizer()</code> function.</p><pre><code class="language-julia">using COSMO, JuMP, LinearAlgebra, SparseArrays, Test, Random
+rng = Random.MersenneTwister(12345);
+
+# create a random test matrix C
+n = 8
+C = -1 .+ rand(rng, n, n) .* 2;
+c = vec(C);
+
+# define problem in JuMP
+q = -vec(C);
+r = 0.5 * vec(C)&#39; * vec(C);
+m = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true, eps_abs = 1e-4));
+@variable(m, X[1:n, 1:n], PSD);
+x = vec(X);
+@objective(m, Min, 0.5 * x&#39; * x  + q&#39; * x + r)
+for i = 1:n
+  @constraint(m, X[i, i] == 1.)
+end
+
+# solve and get results
+status = JuMP.optimize!(m)
+obj_val = JuMP.objective_value(m)
+X_sol = JuMP.value.(X)</code></pre><footer><hr/><a class="previous" href="../method/"><span class="direction">Previous</span><span class="title">Method</span></a><a class="next" href="../citing/"><span class="direction">Next</span><span class="title">Citing COSMO</span></a></footer></article></body></html>
