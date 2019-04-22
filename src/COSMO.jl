@@ -14,7 +14,9 @@ include("./kktsolver.jl")
 if in("Pardiso",keys(Pkg.installed()))
     include("./kktsolver_pardiso.jl")
 end
-
+if in("IterativeSolvers", keys(Pkg.installed())) && in("LinearMaps", keys(Pkg.installed()))
+    include("./kktsolver_indirect.jl")
+end
 
 include("./algebra.jl")
 include("./projections.jl")
