@@ -84,7 +84,7 @@ m = Model(with_optimizer(COSMO.Optimizer));
 @constraint(m, tr(A * X) == b);
 JuMP.optimize!(m);
 
-status = termination_status(m)
+status = JuMP.termination_status(m)
 X_sol = JuMP.value.(X)
 obj_value = JuMP.objective_value(m)
 ```
