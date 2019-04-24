@@ -35,7 +35,7 @@ assemble!(model, P, q, constraints)
 result = COSMO.optimize!(model);
 
 X_sol = reshape(result.x, 2, 2)
-obj_value = result.obj_val</code></pre><p>or we can describe the problem using <code>JuMP</code> and use COSMO as the backend solver:</p><pre><code class="language-julia">using COSMO, JuMP
+obj_value = result.obj_val</code></pre><p>or we can describe the problem using <code>JuMP</code> and use COSMO as the backend solver:</p><pre><code class="language-julia">using COSMO, JuMP, LinearAlgebra
 
 C =  [1 2; 0 2]
 A = [1 0; 5 2]
@@ -45,7 +45,8 @@ m = Model(with_optimizer(COSMO.Optimizer));
 @variable(m, X[1:2, 1:2], PSD)
 @objective(m, Min, tr(C * X));
 @constraint(m, tr(A * X) == b);
-status = JuMP.optimize!(m);
+JuMP.optimize!(m);
 
+status = JuMP.termination_status(m)
 X_sol = JuMP.value.(X)
 obj_value = JuMP.objective_value(m)</code></pre><h2><a class="nav-anchor" id="Presentation-Video-1" href="#Presentation-Video-1">Presentation Video</a></h2><p>A video of the presentation at JuMP-dev is available here:</p><a href="http://www.youtube.com/watch?feature=player_embedded&v=VTxPqEzzqlU" target="_blank"><img src="https://raw.githubusercontent.com/migarstka/COSMO_assets/master/jump_dev_video.png" alt="JuMP dev presentation video" width="400" border="10"/></a><h2><a class="nav-anchor" id="Credits-1" href="#Credits-1">Credits</a></h2><p>The following people are involved in the development of COSMO:</p><ul><li><a href="https://migarstka.github.io">Michael Garstka</a> (main development)</li><li><a href="https://github.com/nrontsis">Nikitas Rontsis</a> (algorithm performance)</li><li><a href="http://users.ox.ac.uk/~engs1373/">Paul Goulart</a> (code architecture, maths and algorithms)</li><li><a href="https://markcannon.github.io">Mark Cannon</a> (maths and algorithms)</li></ul><p>*all contributors are affiliated with the <a href="http://www2.eng.ox.ac.uk/control">University of Oxford</a>.</p><p>If this project is useful for your work please consider</p><ul><li><a href="citing/">Citing</a> the relevant paper</li><li>Leaving a star on the <a href="https://github.com/oxfordcontrol/COSMO.jl">GitHub repository</a></li></ul><h2><a class="nav-anchor" id="Licence-1" href="#Licence-1">Licence</a></h2><p>COSMO.jl is licensed under the Apache License 2.0. For more details click <a href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/LICENSE.md">here</a>.</p><footer><hr/><a class="next" href="guide/"><span class="direction">Next</span><span class="title">User Guide</span></a></footer></article></body></html>
