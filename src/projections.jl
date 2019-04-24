@@ -4,6 +4,10 @@
 abstract type AbstractConvexSet{T} end
 abstract type AbstractConvexCone{T} <: AbstractConvexSet{T} end
 
+function Base.deepcopy(m::Type{<: AbstractConvexSet{T}}) where {T}
+	typeof(m)(deepcopy(m.dim))
+end
+
 
 ## -------------------------------------
 # Composite Convex Set type.

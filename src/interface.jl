@@ -170,8 +170,7 @@ function set!(model::COSMO.Model,
 	model.p.A = A_c
 	model.p.b = b_c
 	model.p.model_size = [m; n]
-	model.p.C = CompositeConvexSet(convex_sets)
-	model.p.C = CompositeConvexSet(convex_sets)
+	model.p.C = CompositeConvexSet(deepcopy(convex_sets))
 	model.vars = Variables{T}(m, n, model.p.C)
  	model.settings = settings
 	nothing

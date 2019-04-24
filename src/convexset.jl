@@ -449,6 +449,11 @@ function rectify_scaling!(E, work, box::Box{T}) where{T}
 	return false #no correction needed since we can scale componentwise
 end
 
+function Base.deepcopy(box::Box{T}) where {T}
+  Box{T}(deepcopy(box.l), deepcopy(box.u))
+end
+
+
 
 # ----------------------------------------------------
 # Composite Set
