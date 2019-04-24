@@ -25,19 +25,18 @@ model = COSMO.Model()
 assemble!(model, P, q, constraint1, settings = settings)
 res = COSMO.optimize!(model);
 
-# solve again by defining the constraints with the help of a box (disable infeasibility checks)
-# constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u))
-# settings = COSMO.Settings(check_infeasibility = 2500, verbose=true, eps_abs = 1e-4, eps_rel = 1e-4)
+# solve again by defining the constraints with the help of a box
+constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u))
 
-# model = COSMO.Model()
-# assemble!(model, P, q, constraint1)
-# res_box = COSMO.optimize!(model, settings);
+model = COSMO.Model()
+assemble!(model, P, q, constraint1, settings = settings)
+res_box = COSMO.optimize!(model);
 
 
 @testset "QP Problem" begin
   @test norm(res.x[1:2] - [0.3; 0.7], Inf) < 1e-3
-  #@test norm(res_box.x[1:2] - [0.3; 0.7], Inf) < 1e-3
+  @test norm(res_box.x[1:2] - [0.3; 0.7], Inf) < 1e-3
   @test abs(res.obj_val - 1.88) < 1e-3
-  #@test abs(res_box.obj_val - 1.88) < 1e-3
+  @test abs(res_box.obj_val - 1.88) < 1e-3
 end
 nothing
