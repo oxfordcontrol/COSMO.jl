@@ -72,7 +72,7 @@ obj_value = result.obj_val
 
 or we can describe the problem using `JuMP` and use COSMO as the backend solver:
 ```julia
-using COSMO, JuMP
+using COSMO, JuMP, LinearAlgebra
 
 C =  [1 2; 0 2]
 A = [1 0; 5 2]
