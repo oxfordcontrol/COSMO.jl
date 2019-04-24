@@ -556,8 +556,10 @@ function MOI.get(optimizer::Optimizer, a::MOI.TerminationStatus)
         return MOI.ITERATION_LIMIT
     elseif status == :Solved
         return MOI.OPTIMAL
+    elseif status == :Time_limit_reached
+        return MOI.TIME_LIMIT
     else
-        return MOI.NO_SOLUTION
+        return MOI.NUMERICAL_ERROR
     end
 end
 
