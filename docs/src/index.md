@@ -72,7 +72,7 @@ obj_value = result.obj_val
 
 or we can describe the problem using `JuMP` and use COSMO as the backend solver:
 ```julia
-using COSMO, JuMP
+using COSMO, JuMP, LinearAlgebra
 
 C =  [1 2; 0 2]
 A = [1 0; 5 2]
@@ -82,8 +82,9 @@ m = Model(with_optimizer(COSMO.Optimizer));
 @variable(m, X[1:2, 1:2], PSD)
 @objective(m, Min, tr(C * X));
 @constraint(m, tr(A * X) == b);
-status = JuMP.optimize!(m);
+JuMP.optimize!(m);
 
+status = JuMP.termination_status(m)
 X_sol = JuMP.value.(X)
 obj_value = JuMP.objective_value(m)
 ```
