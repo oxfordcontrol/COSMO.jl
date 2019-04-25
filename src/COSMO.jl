@@ -6,7 +6,7 @@ using SparseArrays, LinearAlgebra, SuiteSparse
 export  assemble!, warmStart!, empty_model!
 
 const DefaultFloat = Float64
-const DefaultInt   = Int64
+const DefaultInt   = LinearAlgebra.BlasInt
 
 
 
