@@ -1,7 +1,7 @@
 using UnsafeArrays
 import Base: showarg, eltype
 const DSYEVR_ = (BLAS.@blasfunc(dsyevr_),Base.liblapack_name)
-
+const SSYEVR_ = (BLAS.@blasfunc(ssyevr_),Base.liblapack_name)
 
 # ----------------------------------------------------
 # Zero cone
@@ -134,7 +134,7 @@ end
 
 
 mutable struct PsdBlasWorkspace{T}
-    m::Base.RefValue{Int64}
+    m::Base.RefValue{BLAS.BlasInt}
     w::Vector{T}
     Z::Matrix{T}
     isuppz::Vector{BLAS.BlasInt}
@@ -142,7 +142,7 @@ mutable struct PsdBlasWorkspace{T}
     lwork::BLAS.BlasInt
     iwork::Vector{BLAS.BlasInt}
     liwork::BLAS.BlasInt
-    info::Base.RefValue{Int64}
+    info::Base.RefValue{BLAS.BlasInt}
 
     function PsdBlasWorkspace{T}(n::Integer) where{T}
 
@@ -163,28 +163,34 @@ mutable struct PsdBlasWorkspace{T}
     end
 end
 
-function _syevr!(A::AbstractMatrix{T}, ws::PsdBlasWorkspace) where{T <: Float64}
+for (syevr, elty) in
+    ((DSYEVR_,:Float64),
+     (SSYEVR_,:Float32))
+   @eval begin
+        function _syevr!(A::AbstractMatrix{$elty}, ws::PsdBlasWorkspace{$elty})
 
-    #Float64 only support for now since we call dsyevr_ directly
-    n       = size(A,1)
-    ldz     = n
-    lda     = stride(A,2)
+            #Float64 only support for now since we call dsyevr_ directly
+            n       = size(A,1)
+            ldz     = n
+            lda     = stride(A,2)
 
-        ccall(DSYEVR_, Cvoid,
-        (Ref{UInt8}, Ref{UInt8}, Ref{UInt8}, Ref{BLAS.BlasInt},
-        Ptr{T}, Ref{BLAS.BlasInt}, Ref{T}, Ref{T},
-        Ref{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ref{T}, Ptr{BLAS.BlasInt},
-        Ptr{T}, Ptr{T}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt},
-        Ptr{T}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt}, Ref{BLAS.BlasInt},
-        Ptr{BLAS.BlasInt}),
-        'V', 'A', 'U', n,
-        A, max(1,lda), 0.0, 0.0,
-        0, 0, -1.0,
-        ws.m, ws.w, ws.Z, ldz, ws.isuppz,
-        ws.work, ws.lwork, ws.iwork, ws.liwork,
-        ws.info)
-        LAPACK.chklapackerror(ws.info[])
-end
+                ccall($syevr, Cvoid,
+                (Ref{UInt8}, Ref{UInt8}, Ref{UInt8}, Ref{BLAS.BlasInt},
+                Ptr{$elty}, Ref{BLAS.BlasInt}, Ref{$elty}, Ref{$elty},
+                Ref{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ref{$elty}, Ptr{BLAS.BlasInt},
+                Ptr{$elty}, Ptr{$elty}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt},
+                Ptr{$elty}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt}, Ref{BLAS.BlasInt},
+                Ptr{BLAS.BlasInt}),
+                'V', 'A', 'U', n,
+                A, max(1,lda), 0.0, 0.0,
+                0, 0, -1.0,
+                ws.m, ws.w, ws.Z, ldz, ws.isuppz,
+                ws.work, ws.lwork, ws.iwork, ws.liwork,
+                ws.info)
+                LAPACK.chklapackerror(ws.info[])
+        end
+    end #@eval
+end #for
 
 function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
 
