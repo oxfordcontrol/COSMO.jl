@@ -90,9 +90,12 @@ end
         res1 = COSMO.optimize!(model);
         n = 2
         m = 6
-        x0 = res1.x + 0.1 * randn(rng, n)
-        y0 = res1.y + 0.1 * randn(rng, m)
-        s0 = res1.s + 0.1 * randn(rng, m)
+        x0 = res1.x
+        y0 = res1.y
+        s0 = res1.s
+
+        model = COSMO.Model()
+        assemble!(model, p.P, p.q, p.constraints, settings = settings)
         COSMO.warm_start_primal!(model, x0)
         COSMO.warm_start_dual!(model, y0)
         COSMO.warm_start_slack!(model, s0)
