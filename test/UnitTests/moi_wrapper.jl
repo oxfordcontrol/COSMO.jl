@@ -19,7 +19,7 @@ MOIU.@model(COSMOModelData,
 @testset "MOI Wrapper" begin
 
     @testset "Basic properties" begin
-        optimizer =  COSMO.Optimizer(check_termination = 1);
+        optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
         @test sprint(show, optimizer) == string("Empty COSMO - Optimizer")
         @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.SingleVariable}())
         @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}())
@@ -42,7 +42,7 @@ MOIU.@model(COSMOModelData,
     b2 = 19.0;
 
     model = COSMOModelData{Float64}();
-    optimizer =  COSMO.Optimizer(check_termination = 1);
+    optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
     x = MOI.add_variables(model, 9);
     # define objective function:
     objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(vec(C),x[1:9]),0.0);
@@ -99,7 +99,8 @@ MOIU.@model(COSMOModelData,
 
     @testset "Warm starting" begin
         # Warm start x,y, s at the same time
-        optimizer =  COSMO.Optimizer(check_termination = 1);
+        optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
+
         MOI.empty!(optimizer);
         copyresult = MOI.copy_to(optimizer, model);
         MOI.set.(optimizer, MOI.VariablePrimalStart(), x[1:9], x_sol[1:9])
@@ -167,6 +168,8 @@ MOIU.@model(COSMOModelData,
 
         model = MOIU.UniversalFallback(COSMOModelData{Float64}());
         optimizer =  COSMO.Optimizer();
+        MOI.set(optimizer, MOI.Silent(), true)
+
 
         x = MOI.add_variables(model, 2);
         objectiveFunction = MOI.ScalarQuadraticFunction{Float64}([MOI.ScalarAffineTerm(1.0, x[1]); MOI.ScalarAffineTerm(1.0, x[2])], [MOI.ScalarQuadraticTerm(4.0, x[1], x[1]); MOI.ScalarQuadraticTerm(1.0, x[1], x[2]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])] , 0);
@@ -203,6 +206,7 @@ MOIU.@model(COSMOModelData,
     @testset "Small edge cases" begin
         model = COSMOModelData{Float64}();
         optimizer =  COSMO.Optimizer(max_iter = 2);
+        MOI.set(optimizer, MOI.Silent(), true)
 
         x = MOI.add_variables(model, 1);
         objectiveFunction = MOI.ScalarAffineFunction{Float64}([MOI.ScalarAffineTerm(-1.0, x[1])] , 0);
@@ -221,7 +225,7 @@ end
 # --------------------
 optimizer = MOIU.CachingOptimizer(MOIU.UniversalFallback(COSMOModelData{Float64}()),
                                   COSMO.Optimizer(eps_abs = 1e-4, eps_rel = 1e-4 ));
-
+MOI.set(optimizer, MOI.Silent(), true)
 
 config = MOIT.TestConfig(atol=1e-2, rtol=1e-2)
 @testset "Unit" begin

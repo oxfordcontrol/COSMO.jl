@@ -56,6 +56,7 @@ mutable struct Optimizer <: MOI.AbstractOptimizer
 
     function Optimizer(; user_settings...)
         inner = COSMO.Model()
+        set_MOI_default_settings!(inner.settings)
         length(user_settings) > 0 && set_user_settings!(inner, user_settings)
         hasresults = false
         results = COSMO.Result{Float64}()
@@ -85,6 +86,12 @@ function set_user_settings!(inner::COSMO.Model, user_settings)
         !in(k, fieldnames(typeof(inner.settings))) && error("The user setting $(k) is not defined.")
         setfield!(inner.settings, k, v)
     end
+end
+
+# Function to set MOI specific default values from COSMO that are different from plain COSMO
+# the default behaviour for MOI solver is verbose printing turned on
+function set_MOI_default_settings!(settings)
+    settings.verbose = true
 end
 
 
@@ -653,6 +660,10 @@ function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci_src::CI{<:
     # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sqrt(2)
     COSMO.warm_start_dual!(optimizer.inner, _scalecoef(rows, value, false, S, length(rows), false), rows)
     nothing
+end
+
+function MOI.set(optimizer::Optimizer, ::MOI.Silent, value::Bool)
+    optimizer.inner.settings.verbose = !value
 end
 
 
