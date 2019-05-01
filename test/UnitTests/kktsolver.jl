@@ -53,12 +53,16 @@ end
 
 if in("IterativeSolvers",keys(Pkg.installed()))
     using IterativeSolvers
-    push!(solver_types, COSMO.IndirectReducedKKTSolver)#{SparseMatrixCSC{T, Int}, SparseMatrixCSC{T, Int}, T})
-    push!(solver_tols, 1e-6)
+    push!(solver_types, COSMO.IndirectReducedKKTSolver)
+    push!(solver_tols, 1e-3)
     add_kwargs(params, solver=:CG)
 
-    push!(solver_types, COSMO.IndirectReducedKKTSolver)#{SparseMatrixCSC{T, Int}, SparseMatrixCSC{T, Int}, T})
-    push!(solver_tols, 1e-6)
+    push!(solver_types, COSMO.IndirectReducedKKTSolver)
+    push!(solver_tols, 1e-3)
+    add_kwargs(params, solver=:MINRES)
+
+    push!(solver_types, COSMO.IndirectKKTSolver)
+    push!(solver_tols, 1e-3)
     add_kwargs(params, solver=:MINRES)
 end
 
@@ -77,8 +81,8 @@ end
         b = randn(m + n)
 
         F = solver_types[i](P, A, sigma, rho1; params[i]...)
-        if isa(F, COSMO.IndirectReducedKKTSolver)
-            F.iteration_counter = 10^8 # This forces the solution's tolerance to be very small
+        if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
+            F.iteration_counter = 10^4 # This forces CG's/MINRES tolerance to be 1/10^4
         end
         J = make_test_kkt(P, A, sigma, rho1)
         x = copy(b)
@@ -86,6 +90,20 @@ end
         #test a single solve
         COSMO.solve!(F, x, b)
         @test norm(x - J \ b) <= solver_tols[i]
+
+        # Check that warm starting works
+        # Invoking again an indirect solver should result in the solution with only
+        # one matrix vector multiplication
+        if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
+            # The calculation of the residual, and thus the termination criterion, of
+            # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
+            # For this reason we don't check warm starting with MINRES for now :(
+            if F.solver != :MINRES
+                COSMO.solve!(F, x, b)
+                @test F.multiplications[end-1] <= 1 
+                @test norm(x - J \ b) <= solver_tols[i]
+            end
+        end
 
         #test a rho update and solve
         J = make_test_kkt(P, A, sigma, rho2)
