@@ -1,5 +1,9 @@
 using COSMO, Test, LinearAlgebra, SparseArrays, Random, QDLDL, Pkg
+include("COSMOTestUtils.jl")
+
 rng = Random.MersenneTwister(2401)
+
+T = Float64
 
 function make_test_kkt(P, A, sigma, rho)
 
@@ -11,33 +15,71 @@ function make_test_kkt(P, A, sigma, rho)
     return K
 end
 
-solver_types = [COSMO.QdldlKKTSolver
-                COSMO.CholmodKKTSolver]
+function add_kwargs(array; kwargs...)
+    push!(array, kwargs)
+end
+
+solver_types = []
+solver_tols = []
+params = []
+push!(solver_types, COSMO.QdldlKKTSolver)
+push!(solver_tols, 1e-10)
+add_kwargs(params)
+push!(solver_types, COSMO.CholmodKKTSolver)
+push!(solver_tols, 1e-10)
+add_kwargs(params)
+# solver_types = [COSMO.QdldlKKTSolver
+                # COSMO.CholmodKKTSolver]
 
 # optional dependencies
 if in("Pardiso",keys(Pkg.installed()))
     using Pardiso
-    Pardiso.MKL_PARDISO_LOADED[] && push!(solver_types, COSMO.MKLPardisoKKTSolver)
-    Pardiso.PARDISO_LOADED[]     && push!(solver_types, COSMO.PardisoDirectKKTSolver)
-    Pardiso.PARDISO_LOADED[]     && push!(solver_types, COSMO.PardisoIndirectKKTSolver)
+    if Pardiso.MKL_PARDISO_LOADED[] 
+        push!(solver_types, COSMO.MKLPardisoKKTSolver)
+        push!(solver_tols, 1e-10)
+            add_kwargs(params)
+        end
+    if Pardiso.PARDISO_LOADED[] 
+        push!(solver_types, COSMO.PardisoDirectKKTSolver)
+        push!(solver_tols, 1e-10)
+        add_kwargs(params)
+    end
+    if Pardiso.PARDISO_LOADED[]
+        push!(solver_types, COSMO.PardisoIndirectKKTSolver)
+        push!(solver_tols, 5e-5)
+        add_kwargs(params)
+    end
 end
 
-solver_tols   = [1e-10, 1e-10, 1e-10, 1e-10, 5e-5]
+if in("IterativeSolvers",keys(Pkg.installed()))
+    using IterativeSolvers
+    push!(solver_types, COSMO.IndirectReducedKKTSolver)#{SparseMatrixCSC{T, Int}, SparseMatrixCSC{T, Int}, T})
+    push!(solver_tols, 1e-6)
+    add_kwargs(params, solver=:CG)
 
- @testset "$(solver_types[i]) : KKT solver tests" for i = 1:length(solver_types)
+    push!(solver_types, COSMO.IndirectReducedKKTSolver)#{SparseMatrixCSC{T, Int}, SparseMatrixCSC{T, Int}, T})
+    push!(solver_tols, 1e-6)
+    add_kwargs(params, solver=:MINRES)
+end
+
+
+ @testset "$(solver_types[i]) $(params[i]) : KKT solver tests" for i = 1:length(solver_types)
 
     m = 10
     n = 20
 
-    for rho1 in [rand(1), rand(1)[], rand(m)],
-        rho2 in [rand(1), rand(m)],
-        sigma in [rand(1), rand(1)[], rand(n)]
+    for rho1 in [rand(T), rand(T, m)],
+        rho2 in [rand(T), rand(T, m)],
+        sigma in [rand(T)]
 
         P  = sparse(generate_pos_def_matrix(n, rng))
         A  = sprandn(m, n, 0.2)
         b = randn(m + n)
 
-        F = solver_types[i](P, A, sigma, rho1)
+        F = solver_types[i](P, A, sigma, rho1; params[i]...)
+        if isa(F, COSMO.IndirectReducedKKTSolver)
+            F.iteration_counter = 10^8 # This forces the solution's tolerance to be very small
+        end
         J = make_test_kkt(P, A, sigma, rho1)
         x = copy(b)
 
