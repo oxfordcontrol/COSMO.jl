@@ -313,8 +313,6 @@ function _scalecoef(rows, coef, minus, ::Type{MOI.PositiveSemidefiniteConeTriang
         # vector index of diagonal entries of original matrix
         push!(diagidx, trimap(i, i))
     end
-    # normalize rows
-    rows = rows .- first(rows) .+ 1
     for i in 1:length(output)
         if rows[i] in diagidx
             output[i] *= scaling
@@ -329,6 +327,10 @@ scalecoef(rows, coef, minus, s) = _scalecoef(rows, coef, minus, typeof(s), MOI.d
 # Unscale the coefficients in `coef` with respective rows in `rows` for a set of type `S` with dimension `d`
 unscalecoef(rows, coef, S::Type{<:MOI.AbstractSet}, d) = _scalecoef(rows, coef, false, S, d, true)
 
+# This helper function is to provide scale- and unscalecoef with the nomimal rows in the case of at PSDTriangle constraint
+# this is because for _scalecoef the actual row in A doesn't matter, what matters is the row in the upper triangle matrix
+nom_rows(rows, s::Type{MOI.PositiveSemidefiniteConeTriangle}) = 1:length(rows)
+nom_rows(rows, s::Type{<:MOI.AbstractSet}) = rows
 
 output_index(t::MOI.VectorAffineTerm) = t.output_index
 variable_index_value(t::MOI.ScalarAffineTerm) = t.variable_index.value
@@ -398,7 +400,7 @@ end
 
 # process constant for functions VectorAffineFunction{Float64}
 function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine, s)
-        b[rows] = scalecoef(rows, f.constants, false, s)
+        b[rows] = scalecoef(nom_rows(rows, typeof(s)), f.constants, false, s)
     nothing
 end
 
@@ -429,7 +431,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, 
     end
     append!(I, rows)
     append!(J, cols)
-    append!(V, scalecoef(rows, ones(length(rows)), true, s))
+    append!(V, scalecoef(nom_rows(rows, typeof(s)), ones(length(rows)), true, s))
     nothing
 end
 
@@ -442,9 +444,9 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunctio
 
     offset = first(rows) - 1
 
-    append!(I, A_I .+ offset)
     append!(J, A_J)
     append!(V, scalecoef(A_I, A_V, true, s))
+    append!(I, A_I .+ offset)
 end
 
 
@@ -705,16 +707,15 @@ _shift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = 
 function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
     # offset = constroffset(optimizer, ci)
     # rows = constrrows(optimizer, ci)
-    # _unshift(optimizer, offset, unscalecoef(rows, reorderval(optimizer.sol.slack[offset .+ rows], S), S, length(rows)), S)
     rows = COSMO.constraint_rows(optimizer.rowranges, ci_src)
-    c_primal = unscalecoef(rows, optimizer.results.s[rows], S, length(rows))
+    c_primal = unscalecoef(nom_rows(rows, S), optimizer.results.s[rows], S, length(rows))
     # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))
     return _unshift(optimizer, rows, c_primal, S)
 end
 
 function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
     rows = constraint_rows(optimizer.rowranges, ci_src)
-    return unscalecoef(rows, optimizer.results.y[rows], S, length(rows))
+    return unscalecoef(nom_rows(rows, S), optimizer.results.y[rows], S, length(rows))
 end
 
 ## Variable attributes:
@@ -736,7 +737,7 @@ function MOI.set(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci_src::CI{
     # this undoes the scaling and shifting that was used in get(MOI.ConstraintPrimal)
     # Off-diagonal entries of slack variable of a PSDTriangle constraint has to be scaled by sqrt(2)
     value = _shift(optimizer, rows, value, S)
-    COSMO.warm_start_slack!(optimizer.inner, _scalecoef(rows, value, false, S, length(rows), false), rows)
+    COSMO.warm_start_slack!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, length(rows), false), rows)
 end
 
 MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{MOI.ConstraintIndex}) = true
@@ -745,7 +746,7 @@ function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci_src::CI{<:
     rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci_src])
     # this undoes the scaling that was used in get(MOI.ConstraintDual)
     # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sqrt(2)
-    COSMO.warm_start_dual!(optimizer.inner, _scalecoef(rows, value, false, S, length(rows), false), rows)
+    COSMO.warm_start_dual!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, length(rows), false), rows)
     nothing
 end
 
