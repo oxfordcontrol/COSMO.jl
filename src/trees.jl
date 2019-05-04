@@ -333,11 +333,34 @@ end
 # -------------------------------------
 # FUNCTION DEFINITIONS
 # -------------------------------------
+
+# this assumes a sparse lower triangular matrix L
+function connect_graph!(L::SparseMatrixCSC)
+	# unconnected blocks don't have any entries below the diagonal in their right-most column
+	m = size(L, 1)
+	row_val = L.rowval
+	col_ptr = L.colptr
+	for j = 1:m-1
+		connected = false
+		for k in col_ptr[j]:col_ptr[j+1]-1
+			if row_val[k] > j
+				connected  = true
+				break
+			end
+		end
+		if !connected
+			L[j+1, j] = 1
+		end
+	end
+end
+
 function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
 	row_val, col_val = row_ind_to_matrix_indices(rows, N, C)
 	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)
+	# this takes care of the case that QDLDL returns an unconnected adjacency matrix L
+	connect_graph!(F.L)
 	ci.L = F.L
-	return F.p
+	return F.perm
 end
 
 
@@ -408,9 +431,5 @@ function svec_to_mat(ind::Int64)
 	r = Int(ind - k)
 	return r::Int64, c::Int64
 end
-
-
-
-
 
 

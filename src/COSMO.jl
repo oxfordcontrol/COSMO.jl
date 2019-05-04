@@ -1,15 +1,13 @@
 #__precompile__()
 module COSMO
 
-using SparseArrays, LinearAlgebra, SuiteSparse
+using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL
 
 export  assemble!, warmStart!, empty_model!
 
 const DefaultFloat = Float64
 const DefaultInt   = LinearAlgebra.BlasInt
 
-
-include("./QDLDL.jl")
 include("./algebra.jl")
 include("./projections.jl")
 include("./settings.jl")            # TODO: unmodified - revisit

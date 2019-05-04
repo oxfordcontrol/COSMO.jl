@@ -89,6 +89,8 @@ check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
 time_limit | set solver time limit in s | 0.0
+decompose | Activate to decompose chordal psd constraints | false
+complete_dual | Activate to complete the dual variable after decomposition | false
 
 To adjust those values, either pass your preferred option and parameter as a key-value pair to the constructor or edit the corresponding field afterwards. For example if you want to enable verbose printing and increase the solver accuracy, you can type
 ```julia

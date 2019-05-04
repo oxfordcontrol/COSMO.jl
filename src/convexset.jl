@@ -332,7 +332,7 @@ The matrix
 is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corresponding constraint  `PsdConeTriangle(6)`.
 
 """
-struct PsdConeTriangle{T} <: AbstractConvexCone{T}
+mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix
     X::Array{T,2}
@@ -341,7 +341,7 @@ struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     function PsdConeTriangle{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-        new(dim, side_dimension, zeros(side_dimension, side_dimension),PsdBlasWorkspace{T}(side_dimension))
+        new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension))
 
     end
 end
@@ -356,7 +356,7 @@ mutable struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
     function DensePsdConeTriangle{T}(dim::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-        new(dim, side_dimension, zeros(side_dimension, side_dimension)),PsdBlasWorkspace{T}(side_dimension))
+        new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension))
     end
 end
 DensePsdConeTriangle(dim) = DensePsdConeTriangle{DefaultFloat}(dim)

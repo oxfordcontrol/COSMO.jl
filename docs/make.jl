@@ -14,6 +14,7 @@ makedocs(
         "User Guide" => "guide.md",
         "JuMP Interface" => "jump.md",
         "Method" => "method.md",
+        "Chordal Decomposition" => "decomposition.md",
         "Examples" => "examples.md",
         "Citing COSMO" => "citing.md",
         "Contributing" => "contributing.md",
@@ -21,6 +22,6 @@ makedocs(
     ]
 )
 
-# deploydocs(
-#     repo = "github.com/oxfordcontrol/COSMO.jl.git",
-#     target = "build")
+deploydocs(
+    repo = "github.com/oxfordcontrol/COSMO.jl.git",
+    target = "build")
