@@ -1,9 +1,24 @@
-## Upcoming changes
-- Update of PSD decomposition related code to Julia v1.0
+## Version 0.4.2 (5. May 2019)
+This is a major upgrad since it adds the chordal decomposition functionality. The most important changes are listed here:
+- `8dd70eb` Make sure graphs are connected
+- `b44364c` Add chordal decomp info to header printing
+- `5acaf73` Move PSDTriangle memory allocation after decomp
+- `25593b4` Remove graph computation
+- `a115196` Add DensePsdCones to handle non-decomposable cones
+- `dbe70bc` Add PSD completion
+- `4262bfe` Add chordal decomposition algorithm and unit tests
+- `bdebbc5` 🔧 Fix bug in scaling of MOI-PSDTriangle constraint
+- `726d03b` <#55> Implement set merging in MOI Wrapper
+- `2a3957f` 🤫 Add support for MOI.Silent
+- `d0f0e44` Fix bugs in warm starting
+- `f5bd31b` 32 bit BLAS support
+- `aeab91c` Check positive semidefiniteness of P in MOIWrapper
+- `9ad8f36` Fix bug in MOI termination codes
+- `34ebb89` Add deepcopy step for convex sets in set!()
+
 
 ## Version 0.4.1 (16. April 2019)
 The most important changes are listed below:
-
 - (`023f517`) Fix printing of rho
 - (`cb2a483`) Memory efficient projections in BLAS
 - (`c582f83`) Remove lower-triangle legacy code in MOI wrapper
