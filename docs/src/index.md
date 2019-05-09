@@ -9,7 +9,7 @@ with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data 
 
 ## Features
 
-* __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs and semidefinite programs
+* __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs, semidefinite programs and exponential cone programs
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP support__: COSMO supports MathOptInterface and JuMP `v0.19`, which allows you to describe your problem in JuMP
@@ -107,9 +107,6 @@ The following people are involved in the development of COSMO:
 If this project is useful for your work please consider
 * [Citing](citing.md) the relevant paper
 * Leaving a star on the [GitHub repository](https://github.com/oxfordcontrol/COSMO.jl)
-
-
-
 
 
 ## Licence

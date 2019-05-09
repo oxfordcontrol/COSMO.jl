@@ -33,6 +33,8 @@ Box(l, u) | The hyperbox ``\{ x \in \mathbb{R}^{dim} : l \leq x \leq u\}`` with 
 SecondOrderCone | The second-order (Lorenz) cone ``\{ (t,x) \in \mathbb{R}^{dim}  :  \|x\|_2   \leq t \}``
 PsdCone | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{\sqrt{dim}}_+ \Rightarrow \text{vec}(X) = x \in \mathcal{S}_+^{dim}``
 PsdConeTriangle | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the upper triangular part of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{d}_+ \Rightarrow \text{svec}(X) = x \in \mathcal{S}_+^{dim}`` where ``d=\sqrt{1/4 + 2 \text{dim}} - 1/2``
+ExponentialCone | The exponential cone ``\mathcal{K}_{exp} = \{(x, y, z) \mid y \geq 0,  ye^{x/y} ≤ z\} \cup \{ (x,y,z) \mid   x \leq 0, y = 0, z \geq 0 \}``
+
 
 The constructor for a constraint expects a matrix `A`, a vector `b` and a `convex_set`.
 

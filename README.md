@@ -36,7 +36,7 @@ __For more information check the [COSMO.jl Documentation](https://oxfordcontrol.
 
 ## Features
 
-* __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs and semidefinite programs
+* __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs, semidefinite programs and exponential cone programs
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP support__: COSMO supports MathOptInterface and JuMP `v0.19`, which allows you to describe your problem in JuMP

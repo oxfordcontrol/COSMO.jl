@@ -22,6 +22,7 @@ COSMO.Box
 COSMO.SecondOrderCone
 COSMO.PsdCone
 COSMO.PsdConeTriangle
+COSMO.ExponentialCone
 ```
 
 ## Settings

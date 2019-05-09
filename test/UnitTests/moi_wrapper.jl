@@ -8,7 +8,7 @@ MOIU.@model(COSMOModelData,
         (),
         (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
         (MOI.Zeros, MOI.Nonnegatives, MOI.Nonpositives, MOI.SecondOrderCone,
-         MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle),
+         MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone),
         (),
         (MOI.SingleVariable,),
         (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
@@ -301,7 +301,7 @@ end
 end
 
 
-exclude_conic_test_sets = ["exp", "rootdet", "logdet"]
+exclude_conic_test_sets = ["rootdet", "logdet"]
 @testset "Continuous conic problems" begin
     MOIT.contconictest(MOIB.RootDet{Float64}(MOIB.LogDet{Float64}(MOIB.GeoMean{Float64}(MOIB.RSOC{Float64}(optimizer)))),
                        config, exclude_conic_test_sets)

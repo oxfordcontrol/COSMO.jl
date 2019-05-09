@@ -6,6 +6,22 @@ rng = Random.MersenneTwister(13131)
 @testset "Convex Sets" begin
 tol = 1e-4
 
+    @testset "in_cone - functions" begin
+        in_cone_tol = 1e-8
+        @test COSMO.in_cone([-1e-6; 0; 1e-6], COSMO.ExponentialCone(), in_cone_tol)
+        @test !COSMO.in_cone([-1e-6; 0; -1e-6], COSMO.ExponentialCone(), in_cone_tol)
+        x = 2.
+        y = -2.
+        z = y * exp(x/y)
+        @test !COSMO.in_cone([x; y; z], COSMO.ExponentialCone(), in_cone_tol)
+        y = 4
+        z = y * exp(x/y)
+        @test COSMO.in_cone([x; y; z], COSMO.ExponentialCone(), in_cone_tol)
+    end
+
+    showfull(io, x) = show(IOContext(io; compact = false, limit = false), x)
+showfull(x) = showfull(STDOUT, x)
+
 
     @testset "Create and project" begin
 
@@ -55,6 +71,22 @@ tol = 1e-4
     COSMO.project!(xs, C)
     @test norm(x, Inf) == 0.
 
+    # Exponential cones
+    exp_cone = COSMO.ExponentialCone()
+    exp_test_passed = true
+    for i = 1:100
+        x = -25 .+ rand(rng, 3) .* 50
+        x_in = copy(x)
+        COSMO.project!(x, exp_cone)
+        if !COSMO.in_cone(x, exp_cone, 1e-4)
+            display(x_in)
+            display(x)
+        end
+        !COSMO.in_cone(x, exp_cone, 1e-4) && (exp_test_passed = false)
+    end
+    @test exp_test_passed
+
+
     end
 
 
@@ -89,8 +121,8 @@ tol = 1e-4
     # Dual of Positive Semidefinite Cone (Square) (self-dual)
     tol = 1e-4
     X = Symmetric(randn(rng, 4, 4))
-    Xpos = X + 4 * Matrix(1.0I, 4, 4)
-    Xneg = X - 4 * Matrix(1.0I, 4, 4)
+    Xpos = X + 5 * Matrix(1.0I, 4, 4)
+    Xneg = X - 5 * Matrix(1.0I, 4, 4)
     xpos = vec(Xpos)
     xneg = vec(Xneg)
     convex_set = COSMO.PsdCone(16)
@@ -106,10 +138,24 @@ tol = 1e-4
     @test COSMO.in_dual(view(xpos, 1:length(xpos)), convex_set, tol)
     @test !COSMO.in_dual(view(xneg, 1:length(xneg)), convex_set, tol)
 
-
+    # Dual of Exponential Cone
+    convex_set = COSMO.ExponentialCone()
+    xpos = [0; rand(rng, 2)]
+    x = -2.
+    y = 3.
+    z = -x * exp(y / x) / exp(1) + 0.1
+    xpos2 = [x; y; z]
+    xneg = rand(rng, 3)
+    xneg2 = [x; y; z - 0.2]
+    x_test = [0.11146; -3.73348; 13.6657]
+    COSMO.in_dual(x_test, convex_set,tol)
+    @test COSMO.in_dual(xpos, convex_set, tol)
+    @test COSMO.in_dual(xpos2, convex_set, tol)
+    @test !COSMO.in_dual(xneg, convex_set, tol)
+    @test !COSMO.in_dual(xneg2, convex_set, tol)
     end
 
-    @testset "inPolRec Functions" begin
+    @testset "in_pol_recc Functions" begin
 
     # Polar Recession cone of zero cone
     xpos = zeros(10)
@@ -154,6 +200,21 @@ tol = 1e-4
     convex_set = COSMO.PsdConeTriangle(10)
     @test COSMO.in_pol_recc(view(xpos, 1:length(xpos)), convex_set, tol)
     @test !COSMO.in_pol_recc(view(xneg, 1:length(xneg)), convex_set, tol)
+
+    # Polar Recc of Exponential Cone
+    convex_set = COSMO.ExponentialCone()
+    xpos = [0; -rand(rng, 2)]
+    x = 2.
+    y = -3.
+    z = -0.2641699972477976
+    xpos2 = [x; y; z]
+    xneg = -rand(rng, 3)
+    xneg2 = [x; y; -z]
+    @test COSMO.in_pol_recc(xpos, convex_set, tol)
+    @test COSMO.in_pol_recc(xpos2, convex_set, tol)
+    @test !COSMO.in_pol_recc(xneg, convex_set, tol)
+    @test !COSMO.in_pol_recc(xneg2, convex_set, tol)
+
    end
 
    @testset "Set Utilities" begin

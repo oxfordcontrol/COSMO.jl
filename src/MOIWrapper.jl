@@ -33,7 +33,7 @@ const SOC = MOI.SecondOrderCone
 const PSDS = MOI.PositiveSemidefiniteConeSquare
 const PSDT = MOI.PositiveSemidefiniteConeTriangle
 const PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
-const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDS, PSDT}
+const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDS, PSDT, MOI.ExponentialCone}
 
 #export sortSets, assign_constraint_row_ranges!, processconstraints, constraint_rows, processobjective, processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 export Optimizer
@@ -146,7 +146,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     idxmap = MOIU.IndexMap(dest, src)
     assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
     dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
-    !is_pos_semi_def(P) && warn("Your MOI model does not result in a positive semidefinite objective value matrix P. Note that this violates COSMO's assumptions.")
+    !is_pos_semi_def(P) && @warn("Your MOI model does not result in a positive semidefinite objective value matrix P. Note that this violates COSMO's assumptions.")
     A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
     convexSets = COSMO.merge_sets(convexSets)
     COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
@@ -505,6 +505,11 @@ end
 
 function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle)
     push!(cs, COSMO.PsdConeTriangle{Float64}(length(rows)))
+    nothing
+end
+
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.ExponentialCone)
+    push!(cs, COSMO.ExponentialCone{Float64}())
     nothing
 end
 

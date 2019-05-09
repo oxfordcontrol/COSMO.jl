@@ -431,6 +431,148 @@ function extract_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_f
 	nothing
 end
 
+"""
+    ExponentialCone(dim)
+
+Creates the exponential cone ``\\mathcal{K}_{exp} = \\{(x, y, z) \\mid y \\geq 0 ye^{x/y} ≤ z\\} \\cup \\{ (x,y,z) \\mid   x \\leq 0, y = 0, z \\geq 0 \\}``
+"""
+struct ExponentialCone{T} <: AbstractConvexCone{T}
+  dim::Int
+  v0::Vector{T}
+  MAX_ITER::Int64
+  EXP_TOL::Float64
+
+  function ExponentialCone{T}() where{T}
+    MAX_ITERS = 100
+    EXP_TOL = 1e-8
+    new(3, zeros(T, 3), MAX_ITERS, EXP_TOL)
+  end
+end
+
+ExponentialCone() = ExponentialCone{DefaultFloat}()
+function ExponentialCone{T}(dim::Int64) where{T}
+  dim != 3 && warn("Exponential cones are always in R^3.")
+  return ExponentialCone{T}()
+end
+
+function project!(v::AbstractVector{T}, cone::ExponentialCone{T}) where{T}
+
+  # Check the four different cases
+  # 1. v in K_exp => v = v
+  in_cone(v, cone, 0.) && return nothing
+
+  # 2. -v in K_exp^* => v = 0
+  if in_dual(-v, cone, 0.)
+    v .= zero(T)
+    return nothing
+  end
+
+  # 3. x < 0 and y < 0 => v = (x, 0, max(z, 0))
+  if v[1] < 0 && v[2] < 0
+    v[2] = 0.0
+    v[3] = max(v[3], 0)
+    return nothing
+  end
+
+  # 4. Otherwise solve the following minimisation problem
+  # min_w (1/2) ||v - v0||_2^2
+  # s.t.  y * exp(x/y) == z
+  #       y > 0
+  project_exp!(v, cone)
+end
+
+# This is a modified version of the projection code used in SCS
+# https://github.com/cvxgrp/scs/blob/master/src/cones.c
+# We are solving the dual problem g(λ) via a bisection method
+function project_exp!(v::AbstractVector{T}, cone::ExponentialCone{T}) where{T}
+  # save input vector and use v as working variable
+  @. cone.v0 = v
+  l, u = get_bisection_bounds(v, cone.v0, cone.EXP_TOL)
+
+  for k = 1:cone.MAX_ITER
+    λ = (u + l) / 2
+    g = grad_dual!(λ, v, cone.v0, cone.EXP_TOL)
+    g > 0 ? (l = λ) : (u = λ)
+    u - l < cone.EXP_TOL && break
+  end
+end
+
+function get_bisection_bounds(v::AbstractVector{T}, v0::Vector{T}, tol::Float64) where {T <: Real}
+  l = 0.
+  λ = 0.125
+  g = grad_dual!(λ, v, v0, tol)
+  while g > 0
+    l = λ
+    λ *= 2
+    g = grad_dual!(λ, v, v0, tol)
+  end
+  u = λ
+  return l, u
+end
+
+function grad_dual!(λ::T, v::AbstractVector{T}, v0::Vector{T}, tol::Float64) where {T <: Real}
+  find_minimizers!(λ, v, v0, tol)
+  v[2] == 0 ? (g = v[1]) : (g = v[1] + v[2] * log(v[2] / v[3]))
+  return g
+end
+
+function find_minimizers!(λ::T, v::AbstractVector{T}, v0::Vector{T}, tol::Float64) where {T <: Real}
+  v[3] = find_min_t(λ, v0[2], v0[3], tol)
+  # s* = (t - t0) * t / λ
+  v[2] = (1 / λ) * (v[3] - v0[3]) * v[3]
+  # r* = r0 - λ
+  v[1] = v0[1] - λ
+end
+
+# use Newton method to find minimizer t* for given λ, i.e. find the zero of
+# f(t) = t * (t - t0) / lambda - s0 + λ * log( t - t0 / λ) + λ
+# Define Δt = t - t0
+function find_min_t(λ::T, s0::T, t0::T, tol::Float64) where {T <:Real}
+  Δt = max(-t0, tol)
+  for k = 1:150
+    f = Δt * (Δt + t0) / λ^2 - s0 / λ + log(Δt / λ) + 1
+    grad_f = (2 * Δt + t0) / λ^2 + 1 / Δt
+    Δt = Δt - f / grad_f
+
+    if (Δt <= -t0)
+      Δt = -t0
+      break
+    elseif (Δt <= 0)
+      Δt = 0
+      break
+    elseif abs(f) < tol
+      break
+    end
+  end
+  return Δt + t0
+end
+
+function in_cone(v::AbstractVector{T}, cone::ExponentialCone{T}, tol::T) where{T}
+  x = v[1]
+  y = v[2]
+  z = v[3]
+  return (y > 0 && y * exp(x/y) <= z + tol) || (x <= tol &&  y == 0. && z >= -tol )
+end
+# Kexp^* = { (x,y,z) | x < 0, -xe^(y/x) <= e^1 z } cup { (0,y,z) | y >= 0,z >= 0 }
+function in_dual(v::AbstractVector{T}, cone::ExponentialCone{T}, tol::T) where{T}
+  x = v[1]
+  y = v[2]
+  z = v[3]
+  return (x < 0 && -x * exp(y / x) - exp(1) *  z <= tol) || (abs(x) <= tol && y >= -tol && z >= -tol)
+end
+
+function in_pol_recc(v::AbstractVector{T},cone::ExponentialCone{T}, tol::T) where{T}
+  return in_dual(-v, cone, tol)
+end
+
+function rectify_scaling!(E,work,set::ExponentialCone{T}) where{T}
+  return rectify_scalar_scaling!(E,work)
+end
+# TODO: Double check this!
+function scale!(cone::ExponentialCone{T}, ::AbstractVector{T}) where{T}
+  return nothing
+end
+
 # ----------------------------------------------------
 # Box
 # ----------------------------------------------------
@@ -517,7 +659,7 @@ function project!(x::SplitVector{T}, C::CompositeConvexSet{T}) where{T}
 end
 
 function support_function(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
-	sum(xC -> support_function(xC[1], xC[2], tol),zip(x.views, C.sets))
+	sum(xC -> support_function(xC[1], xC[2], tol), zip(x.views, C.sets))
 end
 
 function in_pol_recc(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
@@ -551,7 +693,7 @@ end
 #                                                 +∞   ,else}
 
 function support_function(y::SplitView{T}, cone::AbstractConvexCone{T}, tol::T) where{T}
-	in_dual(-y, cone, tol) ? 0. : Inf;
+  in_dual(-y, cone, tol) ? 0. : Inf;
 end
 
 #-------------------------
