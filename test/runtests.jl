@@ -1,5 +1,5 @@
 
-using COSMO, Random, Test
+using COSMO, Random, Test, Pkg
 rng = Random.MersenneTwister(12345)
 
 include("./UnitTests/COSMOTestUtils.jl")
@@ -9,6 +9,7 @@ include("./UnitTests/COSMOTestUtils.jl")
   include("./UnitTests/simple.jl")
   include("./UnitTests/sets.jl")
   include("./UnitTests/constraints.jl")
+  include("./UnitTests/kktsolver.jl")
   include("./UnitTests/model.jl")
   include("./UnitTests/qp-lasso.jl")
   include("./UnitTests/qp-box.jl")
@@ -22,5 +23,10 @@ include("./UnitTests/COSMOTestUtils.jl")
   include("./UnitTests/chordal_decomposition_triangle.jl")
   include("./UnitTests/psd_completion.jl")
   include("./UnitTests/moi_wrapper.jl")
+
+  # optional unittests
+  if in("Pardiso",keys(Pkg.installed()))
+    include("./UnitTests/options_factory.jl")
+  end
 end
 nothing

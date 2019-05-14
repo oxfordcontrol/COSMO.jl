@@ -1,4 +1,4 @@
-# User Guide
+# Getting Started
 This user guide describes the basic structures and functions to define an optimisation problem, to solve the problem and to analyse the result. If you want to use `JuMP` to describe the problem, see the [JuMP Interface](@ref) section.
 
 COSMO solves optimisation problems in the following format:
@@ -83,6 +83,7 @@ eps\_prim\_inf | Primal infeasibility tolerance | 1e-4
 eps\_dual\_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
+kkt_solver | Linear system solver | QDLDLKKTSolver
 verbose_timing | Verbose timing | false
 check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40

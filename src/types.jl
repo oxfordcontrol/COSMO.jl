@@ -258,8 +258,7 @@ mutable struct Workspace{T}
 	vars::Variables{T}
 	ρ::T
 	ρvec::Vector{T}
-	F::SuiteSparse.CHOLMOD.Factor{T}
-	M::SparseMatrixCSC{T}
+	kkt_solver::Union{AbstractKKTSolver,Nothing}
 	flags::Flags
 	Info::Info
 	times::ResultTimes{Float64} #Always 64 bit regardless of data type?
@@ -269,7 +268,7 @@ mutable struct Workspace{T}
 		sm = ScaleMatrices{T}()
 		vars = Variables{T}(1, 1, p.C)
 		ci = ChordalInfo{T}()
-		return new(p, Settings(), sm, ci, vars, zero(T), T[], ldlt(sparse(1.0I, 1, 1)), spzeros(0, 0), Flags(), Info([zero(T)]), ResultTimes())
+		return new(p, Settings(), sm, ci, vars, zero(T), T[], nothing, Flags(), Info([zero(T)]), ResultTimes())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

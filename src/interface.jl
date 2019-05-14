@@ -98,8 +98,7 @@ function empty_model!(model::COSMO.Model{T}) where {T}
 	model.vars = Variables{T}(1, 1, model.p.C)
 	model.ρ = zero(T)
 	model.ρvec = T[]
-	model.F = ldlt(sparse(1.0I, 1, 1))
-	model.M = spzeros(0, 0)
+	model.kkt_solver = nothing
 	model.flags = Flags()
 	model.Info = Info([zero(T)])
 	model.times = ResultTimes()

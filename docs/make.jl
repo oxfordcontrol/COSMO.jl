@@ -11,10 +11,13 @@ makedocs(
   ),
   pages = [
         "Home" => "index.md",
-        "User Guide" => "guide.md",
+        "User Guide" => Any[
+        "Getting Started" => "getting_started.md",
         "JuMP Interface" => "jump.md",
+        "Linear System Solver" => "lin_solver.md",
+        "Chordal Decomposition" => "decomposition.md"
+        ],
         "Method" => "method.md",
-        "Chordal Decomposition" => "decomposition.md",
         "Examples" => "examples.md",
         "Citing COSMO" => "citing.md",
         "Contributing" => "contributing.md",
