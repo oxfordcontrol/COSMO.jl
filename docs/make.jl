@@ -12,7 +12,7 @@ makedocs(
   pages = [
         "Home" => "index.md",
         "User Guide" => Any[
-        "Getting Started" => "getting_started.md",
+        "Getting Started" =>  "getting_started.md",
         "JuMP Interface" => "jump.md",
         "Linear System Solver" => "lin_solver.md",
         "Chordal Decomposition" => "decomposition.md"
@@ -25,6 +25,6 @@ makedocs(
     ]
 )
 
-# deploydocs(
-#     repo = "github.com/oxfordcontrol/COSMO.jl.git",
-#     target = "build")
+deploydocs(
+    repo = "github.com/oxfordcontrol/COSMO.jl.git",
+    target = "build")
