@@ -83,6 +83,9 @@ function Constraint{T}(
 	A::AbstractMatrix{T},
 	b::AbstractVector{T},
 	set_type::Type{ <: AbstractConvexSet},args...) where{T}
+
+	# this constructor doesnt work with cones that need special arguments like the power cone
+	set_type <: ArgumentCones && error("You can't create a constraint by passing the convex set as a type, if your convex set is a $(set_type). Please pass an object.")
 	# call the appropriate set constructor
 	convex_set = set_type{T}(size(A, 1))
 	Constraint{T}(A, b, convex_set, args...)

@@ -23,6 +23,9 @@ COSMO.SecondOrderCone
 COSMO.PsdCone
 COSMO.PsdConeTriangle
 COSMO.ExponentialCone
+COSMO.DualExponentialCone
+COSMO.PowerCone
+COSMO.DualPowerCone
 ```
 
 ## Settings

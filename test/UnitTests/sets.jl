@@ -6,7 +6,7 @@ rng = Random.MersenneTwister(13131)
 @testset "Convex Sets" begin
 tol = 1e-4
 
-    @testset "in_cone - functions" begin
+    @testset "in_cone Functions" begin
         in_cone_tol = 1e-8
         @test COSMO.in_cone([-1e-6; 0; 1e-6], COSMO.ExponentialCone(), in_cone_tol)
         @test !COSMO.in_cone([-1e-6; 0; -1e-6], COSMO.ExponentialCone(), in_cone_tol)
@@ -17,11 +17,12 @@ tol = 1e-4
         y = 4
         z = y * exp(x/y)
         @test COSMO.in_cone([x; y; z], COSMO.ExponentialCone(), in_cone_tol)
+
+        @test COSMO.in_cone([1e-6; 0; 0], COSMO.PowerCone(0.9), in_cone_tol)
+        @test !COSMO.in_cone([-1e-6; 0; 0], COSMO.PowerCone(0.9), in_cone_tol)
+        @test !COSMO.in_cone([-1.; 1; 1], COSMO.PowerCone(0.5), in_cone_tol)
+        @test COSMO.in_cone([2; 4; 0.1], COSMO.PowerCone(0.5), in_cone_tol)
     end
-
-    showfull(io, x) = show(IOContext(io; compact = false, limit = false), x)
-showfull(x) = showfull(STDOUT, x)
-
 
     @testset "Create and project" begin
 
@@ -78,15 +79,25 @@ showfull(x) = showfull(STDOUT, x)
         x = -25 .+ rand(rng, 3) .* 50
         x_in = copy(x)
         COSMO.project!(x, exp_cone)
-        if !COSMO.in_cone(x, exp_cone, 1e-4)
-            display(x_in)
-            display(x)
-        end
         !COSMO.in_cone(x, exp_cone, 1e-4) && (exp_test_passed = false)
     end
     @test exp_test_passed
 
+    # 3-d Power cones
+    pow_test_passed = true
+    for i = 1:100
+        pow_cone = COSMO.PowerCone(0.1 .+ rand(rng) * 0.85)
+        x = -25 .+ rand(rng, 3) .* 50
+        x_in = copy(x)
+        COSMO.project!(x, pow_cone)
+        if !COSMO.in_cone(x, pow_cone, 1e-4)
+            @show(pow_cone.α)
+            @show(x, x_in)
+        end
 
+        !COSMO.in_cone(x, pow_cone, 1e-4) && (pow_test_passed = false)
+    end
+    @test pow_test_passed
     end
 
 
@@ -147,12 +158,17 @@ showfull(x) = showfull(STDOUT, x)
     xpos2 = [x; y; z]
     xneg = rand(rng, 3)
     xneg2 = [x; y; z - 0.2]
-    x_test = [0.11146; -3.73348; 13.6657]
-    COSMO.in_dual(x_test, convex_set,tol)
     @test COSMO.in_dual(xpos, convex_set, tol)
     @test COSMO.in_dual(xpos2, convex_set, tol)
     @test !COSMO.in_dual(xneg, convex_set, tol)
     @test !COSMO.in_dual(xneg2, convex_set, tol)
+
+    # Dual of Power Cone
+    convex_set = COSMO.PowerCone(0.5)
+    xpos = [1.; 2.; 2.5]
+    xneg = [1.; 2.; 3]
+    @test COSMO.in_dual(xpos, convex_set, tol)
+    @test !COSMO.in_dual(xneg, convex_set, tol)
     end
 
     @testset "in_pol_recc Functions" begin
@@ -170,8 +186,6 @@ showfull(x) = showfull(STDOUT, x)
     convex_set = COSMO.Nonnegatives(10)
     @test COSMO.in_pol_recc(view(xpos,1:length(xpos)), convex_set, tol)
     @test !COSMO.in_pol_recc(view(xneg,1:length(xneg)), convex_set, tol)
-
-    #TODO: Polar Recc of Box [important!]
 
     # Polar Recc of Second Order Cone
     tol = 1e-4
@@ -215,6 +229,8 @@ showfull(x) = showfull(STDOUT, x)
     @test !COSMO.in_pol_recc(xneg, convex_set, tol)
     @test !COSMO.in_pol_recc(xneg2, convex_set, tol)
 
+    # Polar Recc of power Cone
+    @test COSMO.in_pol_recc([-1; -2; -2.5], COSMO.PowerCone(0.5), tol)
    end
 
    @testset "Set Utilities" begin

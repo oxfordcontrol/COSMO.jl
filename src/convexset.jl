@@ -33,13 +33,6 @@ function in_pol_recc(x::AbstractVector{T}, ::ZeroSet{T}, tol::T) where{T}
 	!any( x-> (abs(x) > tol), x)
 end
 
-function scale!(::ZeroSet{T}, ::SplitView{T}) where{T}
-	return nothing
-end
-
-function rectify_scaling!(E,work,set::ZeroSet{T}) where{T}
-	return false
-end
 
 function allocate_memory!(cone::AbstractConvexSet{T}) where {T}
   return nothing
@@ -73,14 +66,6 @@ end
 
 function in_pol_recc(x::AbstractVector{T}, ::Nonnegatives{T}, tol::T) where{T}
 	!any( x-> (x > tol), x)
-end
-
-function scale!(cone::Nonnegatives{T}, ::AbstractVector{T}) where{T}
-	return nothing
-end
-
-function rectify_scaling!(E, work, set::Nonnegatives{T}) where{T}
-	return false
 end
 
 # ----------------------------------------------------
@@ -121,14 +106,6 @@ end
 
 function in_pol_recc(x::AbstractVector{T}, ::SecondOrderCone, tol::T) where{T}
 	@views norm(x[2:end]) <= (tol - x[1]) #self dual
-end
-
-function scale!(cone::SecondOrderCone{T}, ::AbstractVector{T}) where{T}
-	return nothing
-end
-
-function rectify_scaling!(E, work, set::SecondOrderCone{T}) where{T}
-	return rectify_scalar_scaling!(E, work)
 end
 
 # ----------------------------------------------------
@@ -305,13 +282,6 @@ function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{
 end
 
 
-function scale!(cone::Union{PsdCone{T}, DensePsdCone{T}}, ::AbstractVector{T}) where{T}
-	return nothing
-end
-
-function rectify_scaling!(E, work, set::Union{PsdCone{T}, DensePsdCone{T}}) where{T}
-	return rectify_scalar_scaling!(E, work)
-end
 
 # ----------------------------------------------------
 # Positive Semidefinite Cone (Triangle)
@@ -389,14 +359,6 @@ function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, Dense
     return is_neg_sem_def(cone.X, tol)
 end
 
-function scale!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, ::AbstractVector{T}) where{T}
-    return nothing
-end
-
-function rectify_scaling!(E, work, set::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where{T}
-    return rectify_scalar_scaling!(E,work)
-end
-
 function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
   cone.X = zeros(cone.sqrt_dim, cone.sqrt_dim)
 end
@@ -432,7 +394,7 @@ function extract_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_f
 end
 
 """
-    ExponentialCone(dim)
+    ExponentialCone(MAX_ITERS = 100, EXP_TOL = 1e-8)
 
 Creates the exponential cone ``\\mathcal{K}_{exp} = \\{(x, y, z) \\mid y \\geq 0 ye^{x/y} ≤ z\\} \\cup \\{ (x,y,z) \\mid   x \\leq 0, y = 0, z \\geq 0 \\}``
 """
@@ -442,18 +404,12 @@ struct ExponentialCone{T} <: AbstractConvexCone{T}
   MAX_ITER::Int64
   EXP_TOL::Float64
 
-  function ExponentialCone{T}() where{T}
-    MAX_ITERS = 100
-    EXP_TOL = 1e-8
+  function ExponentialCone{T}(dim = 3, MAX_ITERS = 100, EXP_TOL = 1e-8) where{T}
     new(3, zeros(T, 3), MAX_ITERS, EXP_TOL)
   end
 end
+ExponentialCone(args...) = ExponentialCone{DefaultFloat}(args...)
 
-ExponentialCone() = ExponentialCone{DefaultFloat}()
-function ExponentialCone{T}(dim::Int64) where{T}
-  dim != 3 && warn("Exponential cones are always in R^3.")
-  return ExponentialCone{T}()
-end
 
 function project!(v::AbstractVector{T}, cone::ExponentialCone{T}) where{T}
 
@@ -565,13 +521,175 @@ function in_pol_recc(v::AbstractVector{T},cone::ExponentialCone{T}, tol::T) wher
   return in_dual(-v, cone, tol)
 end
 
-function rectify_scaling!(E,work,set::ExponentialCone{T}) where{T}
-  return rectify_scalar_scaling!(E,work)
+
+"""
+    PowerCone(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8)
+
+Creates the 3-d power cone ``\\mathcal{K}_{pow} = \\{(x, y, z) \\mid x^\\alpha y^{(1-\\alpha)} \\geq  \\|z\\|, x \\geq 0, y \\geq 0 \\}`` with ``0 < \\alpha < 1``
+"""
+struct PowerCone{T} <: AbstractConvexCone{T}
+  dim::Int
+  α::Float64
+  MAX_ITER::Int64
+  POW_TOL::Float64
+
+  function PowerCone{T}(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8) where{T}
+    (alpha <= 0 || alpha >= 1) && throw(DomainError("The exponent α of the power cone has to be in (0, 1)."))
+    new(3, alpha, MAX_ITERS, POW_TOL)
+  end
 end
-# TODO: Double check this!
-function scale!(cone::ExponentialCone{T}, ::AbstractVector{T}) where{T}
+PowerCone(args...) = PowerCone{DefaultFloat}(args...)
+
+
+# The projection onto the power cone is described in
+# Hien - Differential properties of Euclidean projections onto power cone (2015)
+function project!(v::AbstractVector{T}, cone::PowerCone{T}) where{T}
+  # Check the special cases first
+  # 1. v in K_pow => v = v
+  in_cone(v, cone, 0.) && return nothing
+
+  # 2. -v in K_pow^* => v .= 0
+  if in_dual(-v, cone, 0.)
+    v .= zero(T)
+    return nothing
+  end
+
+  # 3. v not in K_pow and -v not in K_pow^* and z == 0 => x = max(x, 0), y = max(y, 0)
+  if abs(v[3]) <= cone.POW_TOL
+    v[1] = max(v[1], 0)
+    v[2] = max(v[2], 0)
+    return nothing
+  end
+
+  # 4. Otherwise solve the following problem
+  # find  r
+  # s.t.  sigma(x0, y0, z0, r) == 0
+  # and   0 < r < ||z0||
+  #
+  # x = 0.5 * (x0 + sqrt(x0^2 + 4α*r*(||z0||-r)))
+  # y = 0.5 * (y0 + sqrt(y0^2 + 4(1-α)*r*(||z0||-r)))
+  # z = z0 * r / ||z0||
+  project_pow!(v, cone)
+end
+
+ # find the zero of above condition for r by applying Newton's method
+  function project_pow!(v::AbstractVector{T}, cone::PowerCone{T}) where{T}
+  x0 = v[1]
+  y0 = v[2]
+  z0 = v[3]
+  r = abs(z0) / 2
+  ϕx = zero(T)
+  ϕy = zero(T)
+  # compute a zero of phi(v, r, α)
+  for k = 1:cone.MAX_ITER
+    ϕx = ϕc(x0, z0, r, cone.α)
+    ϕy = ϕc(y0, z0, r, 1 - cone.α)
+    phi = ϕ(ϕx, ϕy, r, cone.α)
+    abs(phi) < cone.POW_TOL && break
+
+    dϕx_dr = dϕc_dr(ϕx, x0, z0, r, cone.α)
+    dϕy_dr = dϕc_dr(ϕy, y0, z0, r, 1 - cone.α)
+    dphi_dr = dϕ_dr(ϕx, ϕy, dϕx_dr, dϕy_dr, r, cone.α)
+    r = r - phi / dphi_dr
+
+    # ensure 0 < r < abs(z0)
+    r = min(max(r, 0), abs(z0))
+  end
+
+  # given a solution r, update the vector components (x, y, z)
+  v[1] = ϕx
+  v[2] = ϕy
+  v[3] = z0 * r / abs(z0)
   return nothing
 end
+
+function ϕc(x0::T, z0::T, r::T, α::T) where{T <: Real}
+  return max(0.5 * (x0 + sqrt(x0^2 + 4 * α * r * (abs(z0) - r))), 1e-10)
+end
+
+function dϕc_dr(ϕx::T, x0::T, z0::T, r::T, α::T) where{T <: Real}
+  return α / (2 * ϕx - x0) * (abs(z0) - 2 * r)
+end
+
+function ϕ(ϕx::T, ϕy::T, r::T, α::T) where{T <: Real}
+  return ϕx^α * ϕy^(1 - α) - r
+end
+
+# dϕ / dr = Π fi^αi * (Σ αi fi' / fi) - 1
+function dϕ_dr(ϕx::T, ϕy::T, ϕx_dr::T, ϕy_dr::T, r::T, α::T) where{T <: Real}
+  return ϕx^α * ϕy^(1-α) * (α * ϕx_dr / ϕx + (1 - α) * ϕy_dr / ϕy) - 1
+end
+
+function in_cone(v::AbstractVector{T}, cone::PowerCone{T}, tol::T) where{T}
+  x = v[1]
+  y = v[2]
+  z = v[3]
+  α = cone.α
+  return x >= 0 && y >= 0 && x^α * y^(1 - α) >= abs(z) - tol
+end
+
+# Kpow^* = { (s, t, w) | (s / α)^α * (t/(1-α))^(1-α) >= abs(w), s >= 0, t >= 0 }
+function in_dual(v::AbstractVector{T}, cone::PowerCone{T}, tol::T) where{T}
+  s = v[1]
+  t = v[2]
+  w = v[3]
+  α = cone.α
+  return s >= -tol && t >= -tol && s^α * t^(1-α) >= abs(w) * α^α * (1-α)^(1-α) - tol
+end
+
+function in_pol_recc(v::AbstractVector{T},cone::PowerCone{T}, tol::T) where{T}
+  return in_dual(-v, cone, tol)
+end
+
+
+"""
+    DualExponentialCone(MAX_ITERS::Int64 = 100, EXP_TOL = 1e-8)
+
+Creates the dual exponential cone ``\\mathcal{K}^*_{exp} = \\{(x, y, z) \\mid x < 0,  -xe^{y/x} \\leq e^1 z \\} \\cup \\{ (0,y,z) \\mid   y \\geq 0, z \\geq 0 \\}``
+"""
+struct DualExponentialCone{T} <: AbstractConvexCone{T}
+  dim::Int
+  v0::Vector{T}
+  primal_cone::ExponentialCone{T}
+
+  function DualExponentialCone{T}(MAX_ITERS::Int64 = 100, EXP_TOL = 1e-8) where{T}
+    new(3, zeros(T, 3), ExponentialCone{T}(dim, MAX_ITERS, EXP_TOL))
+  end
+end
+DualExponentialCone(args...) = DualExponentialCone{DefaultFloat}(args...)
+
+"""
+    DualPowerCone(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8)
+
+Creates the 3-d dual power cone ``\\mathcal{K}^*_{pow} = \\{(u, v, w) \\mid \\left( \\frac{u}{\\alpha}\\right)^\\alpha \\left( \\frac{v}{1-\\alpha}\\right)^{(1-\\alpha)} \\geq  \\|w\\|, u \\geq 0, v \\geq 0 \\}`` with ``0 < \\alpha < 1``
+"""
+struct DualPowerCone{T} <: AbstractConvexCone{T}
+  dim::Int
+  v0::Vector{T}
+  primal_cone::PowerCone{T}
+
+  function DualPowerCone{T}(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8) where{T}
+    (alpha <= 0 || alpha >= 1) && throw(DomainError, "The exponent α of the dual power cone has to be in (0, 1).")
+    new(3, zeros(T,3), PowerCone{T}(alpha, MAX_ITERS, POW_TOL))
+  end
+end
+DualPowerCone(args...) = DualPowerCone{DefaultFloat}(args...)
+DualCones = Union{DualExponentialCone, DualPowerCone}
+in_cone(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(v, typeof(cone.primal_cone), tol)
+in_dual(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_cone(v, typeof(cone.primal_cone), tol)
+in_pol_recc(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(-v, cone, tol)
+
+# Project dual cones by using Moreau decomposition: Proj^*(v) = v + Proj(-v)
+function project!(v::AbstractVector{T}, cone::DualCones) where{T}
+  @. cone.v0 = v
+  @. v *= -1.0
+  project!(v, cone.primal_cone)
+  @. v += cone.v0
+end
+
+# Union for all types where the user has to provide extra information to create the cone
+ArgumentCones = Union{PowerCone, DualPowerCone}
+
 
 # ----------------------------------------------------
 # Box
@@ -621,7 +739,6 @@ function support_function(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
     return s
 end
 
-
 function in_pol_recc(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
     !any(XU -> (XU[2] == Inf && XU[1] > tol), zip(x,B.u)) && !any(XL -> (XL[2] == -Inf && XL[1] < -tol), zip(x,B.l))
 end
@@ -630,10 +747,6 @@ function scale!(box::Box{T}, e::AbstractVector{T}) where{T}
 	@. box.l = box.l * e
 	@. box.u = box.u * e
 	return nothing
-end
-
-function rectify_scaling!(E, work, box::Box{T}) where{T}
-	return false #no correction needed since we can scale componentwise
 end
 
 function Base.deepcopy(box::Box{T}) where {T}
@@ -695,6 +808,15 @@ end
 function support_function(y::SplitView{T}, cone::AbstractConvexCone{T}, tol::T) where{T}
   in_dual(-y, cone, tol) ? 0. : Inf;
 end
+
+function scale!(cone::AbstractConvexCone{T}, ::AbstractVector{T}) where{T}
+  return nothing
+end
+
+function rectify_scaling!(E, work, set::Union{SecondOrderCone{T}, PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, DensePsdConeTriangle{T}, PowerCone{T}, DualPowerCone{T}, ExponentialCone{T}, DualExponentialCone{T}}) where{T}
+  return rectify_scalar_scaling!(E, work)
+end
+rectify_scaling!(E, work, set::Union{ZeroSet{<:Real}, Nonnegatives{<:Real}, Box{<:Real}}) = false
 
 #-------------------------
 # generic set operations

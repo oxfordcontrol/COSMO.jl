@@ -93,10 +93,6 @@ using COSMO
         @test res.status == :Primal_infeasible
     end
 
-
-
-
-
     @testset "Dual infeasible" begin
         # max z
         # s.t. y * exp(x / y) <= z
@@ -117,6 +113,37 @@ using COSMO
         @test res.status == :Dual_infeasible
     end
 
+end
+
+@testset "Dual Exponential cone problems" begin
+
+    @testset "Feasible" begin
+
+        # solve the following dual exponential cone problem
+        # min  y
+        # s.t. -x * exp(y / x) <= z
+        #      x == -1, z == exp(5)
+
+        P = spzeros(3, 3)
+        q = [0; 1.; 0]
+
+        # -x * exp( y / x) <= z
+        A1 = sparse(Matrix(1.0I, 3, 3))
+        b1 = zeros(3)
+        cs1 = COSMO.Constraint(A1, b1, COSMO.DualExponentialCone)
+
+        # y == 1 and z == exp(5)
+        A2 = sparse([1. 0 0; 0 0 1])
+        b2 = [1.; -exp(5)]
+        cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
+
+        model = COSMO.Model()
+        assemble!(model, P, q, [cs1; cs2])
+
+        res = COSMO.optimize!(model)
+        @test res.status == :Solved
+        @test isapprox(res.obj_val, -6., atol=1e-3)
+    end
 end
 
 

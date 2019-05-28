@@ -33,7 +33,7 @@ const SOC = MOI.SecondOrderCone
 const PSDS = MOI.PositiveSemidefiniteConeSquare
 const PSDT = MOI.PositiveSemidefiniteConeTriangle
 const PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
-const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDS, PSDT, MOI.ExponentialCone}
+const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDS, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
 
 #export sortSets, assign_constraint_row_ranges!, processconstraints, constraint_rows, processobjective, processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 export Optimizer
@@ -512,6 +512,22 @@ function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.ExponentialCone
     push!(cs, COSMO.ExponentialCone{Float64}())
     nothing
 end
+
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualExponentialCone)
+    push!(cs, COSMO.DualExponentialCone{Float64}())
+    nothing
+end
+
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PowerCone)
+    push!(cs, COSMO.PowerCone{Float64}(s.exponent))
+    nothing
+end
+
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualPowerCone)
+    push!(cs, COSMO.DualPowerCone{Float64}(s.exponent))
+    nothing
+end
+
 
 # to reduce function calls combine, individual ZeroSets, Nonnegatives and Box constraints
 # This assumes that C is ordered by set type

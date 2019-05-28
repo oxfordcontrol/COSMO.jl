@@ -26,7 +26,7 @@ To set the objective function of your optimisation problem simply define the squ
 The COSMO interface expects constraints to have the form ``A_i x + b_i \in \mathcal{K}_i``, where ``\mathcal{K}_i`` is one of the convex sets defined below:
 
 Convex Set | Description
---- | ---
+----- |   :-----
 ZeroSet | The set ``\{ 0 \}^{dim}`` that contains the origin
 Nonnegatives | The nonnegative orthant ``\{ x \in \mathbb{R}^{dim} : x_i \ge 0, \forall i=1,\dots,\mathrm{dim} \}``
 Box(l, u) | The hyperbox ``\{ x \in \mathbb{R}^{dim} : l \leq x \leq u\}`` with vectors ``l \in \mathbb{R}^{dim} \cup \{-\infty\}`` and ``u \in \mathbb{R}^{dim} \cup \{+\infty\}``
@@ -34,7 +34,9 @@ SecondOrderCone | The second-order (Lorenz) cone ``\{ (t,x) \in \mathbb{R}^{dim}
 PsdCone | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{\sqrt{dim}}_+ \Rightarrow \text{vec}(X) = x \in \mathcal{S}_+^{dim}``
 PsdConeTriangle | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the upper triangular part of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{d}_+ \Rightarrow \text{svec}(X) = x \in \mathcal{S}_+^{dim}`` where ``d=\sqrt{1/4 + 2 \text{dim}} - 1/2``
 ExponentialCone | The exponential cone ``\mathcal{K}_{exp} = \{(x, y, z) \mid y \geq 0,  ye^{x/y} ≤ z\} \cup \{ (x,y,z) \mid   x \leq 0, y = 0, z \geq 0 \}``
-
+DualExponentialCone | The dual exponential cone ``\mathcal{K}^*_{exp} = \{(x, y, z) \mid x < 0,  -xe^{y/x} \leq e^1 z \} \cup \{ (0,y,z) \mid   y \geq 0, z \geq 0 \}``
+PowerCone(alpha) | The 3d power cone ``\mathcal{K}_{pow} = \{(x, y, z) \mid x^\alpha y^{(1-\alpha)} \geq  \|z\|, x \geq 0, y \geq 0 \}`` with ``0 < \alpha < 1``
+DualPowerCone(alpha) | The 3d dual power cone ``\mathcal{K}^*_{pow} = \{(u, v, w) \mid \left( \frac{u}{\alpha}\right)^\alpha \left( \frac{v}{1-\alpha}\right)^{(1-\alpha)} \geq  \|w\|, u \geq 0, v \geq 0 \}`` with ``0 < \alpha < 1``
 
 The constructor for a constraint expects a matrix `A`, a vector `b` and a `convex_set`.
 
@@ -66,6 +68,18 @@ Several constraints can be combined in an array:
 constraints = [constraint_1, constraint_2, ..., constraint_N]
 ```
 
+It is usually enough to pass the `convex_set` as a type. However, some convex sets like `Box`, `PowerCone` and `DualPowerCone` require more information to be created. In that case you have to pass an object to the constructor, e.g.
+```julia
+l = -ones(2)
+u = ones(2)
+constraint = COSMO.Constraint(Matrix(1.0I, 2, 2), zeros(2), COSMO.Box(l, u))
+```
+
+or in the case of a power Cone you specify the `alpha`:
+```julia
+constraint = COSMO.Constraint(Matrix(1.0I, 3, 3), zeros(3), COSMO.PowerCone(0.6))
+```
+
 ## Settings
 
 The solver settings are stored in a `Settings` object and can be adjusted by the user. To create a `Settings` object just call the constructor:
@@ -75,7 +89,7 @@ settings = COSMO.Settings()
 The settings object holds the following options and default values:
 
 Argument | Description | Values (default)
---- | --- | ---
+:---: | :--- | :---:
 rho | ADMM rho step | 0.1
 sigma | ADMM sigma step | 1e-6
 alpha | Relaxation parameter | 1.6

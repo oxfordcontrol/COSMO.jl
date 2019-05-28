@@ -8,7 +8,7 @@ MOIU.@model(COSMOModelData,
         (),
         (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
         (MOI.Zeros, MOI.Nonnegatives, MOI.Nonpositives, MOI.SecondOrderCone,
-         MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone),
+         MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone),
         (),
         (MOI.SingleVariable,),
         (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
@@ -279,32 +279,32 @@ MOIU.@model(COSMOModelData,
 # --------------------
 optimizer = MOIU.CachingOptimizer(MOIU.UniversalFallback(COSMOModelData{Float64}()),
                                   COSMO.Optimizer(eps_abs = 1e-4, eps_rel = 1e-4 ));
+
 MOI.set(optimizer, MOI.Silent(), true)
+bridged = MOIB.full_bridge_optimizer(optimizer, Float64);
 
 config = MOIT.TestConfig(atol=1e-2, rtol=1e-2)
 @testset "Unit" begin
-    MOIT.unittest(optimizer, config,
+    MOIT.unittest(bridged, config,
                   [# Quadratic functions are not supported
                    "solve_qcp_edge_cases", "solve_qp_edge_cases",
                    # Integer and ZeroOne sets are not supported
                    "solve_integer_edge_cases", "solve_objbound_edge_cases"])
 end
 
-# FIXME: one test fails for linear12 problem. Take a closer look why
 @testset "Continuous linear problems" begin
-    MOIT.contlineartest(optimizer, config, ["linear12"])
+    MOIT.contlineartest(bridged, config, ["linear12"])
 end
 
 @testset "Continuous quadratic problems" begin
-    exclude_qt_test_sets = ["qcp", "socp"]
-    MOIT.contquadratictest(optimizer, config, exclude_qt_test_sets)
+    exclude_qt_test_sets = []#["qcp", "socp"]
+    MOIT.contquadratictest(bridged, config, ["socp1"])
 end
 
 
 exclude_conic_test_sets = ["rootdet", "logdet"]
 @testset "Continuous conic problems" begin
-    MOIT.contconictest(MOIB.RootDet{Float64}(MOIB.LogDet{Float64}(MOIB.GeoMean{Float64}(MOIB.RSOC{Float64}(optimizer)))),
-                       config, exclude_conic_test_sets)
+    MOIT.contconictest(bridged, config, exclude_conic_test_sets)
 end
 
  end
