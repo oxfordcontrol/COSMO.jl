@@ -1,3 +1,5 @@
 *.mem
 *.cov
+*.out
+*scratch*.jl
 /docs/build
