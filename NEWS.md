@@ -1,3 +1,13 @@
+## Version 0.4.3 (3. June 2019)
+We add the exponential cone, the power cone and their dual cones. Furthermore, we offer the option to use different linear
+system solvers. The most important changes are listed here:
+
+- `eb7cb68` Add power cone and dual exp and pow cone
+- `f3b5c2f` Add a logistic regression example
+- `44cc8b3` Implement exponential cone constraints
+- `4c3428c` Merge pull request #65 from oxfordcontrol/pg/lin_solvers
+- `863168a` <#65> Support custom linear system solver
+
 ## Version 0.4.2 (5. May 2019)
 This is a major upgrad since it adds the chordal decomposition functionality. The most important changes are listed here:
 - `8dd70eb` Make sure graphs are connected
