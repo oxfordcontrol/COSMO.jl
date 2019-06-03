@@ -652,7 +652,7 @@ struct DualExponentialCone{T} <: AbstractConvexCone{T}
   v0::Vector{T}
   primal_cone::ExponentialCone{T}
 
-  function DualExponentialCone{T}(MAX_ITERS::Int64 = 100, EXP_TOL = 1e-8) where{T}
+  function DualExponentialCone{T}(dim::Int64 = 3, MAX_ITERS::Int64 = 100, EXP_TOL = 1e-8) where{T}
     new(3, zeros(T, 3), ExponentialCone{T}(dim, MAX_ITERS, EXP_TOL))
   end
 end
