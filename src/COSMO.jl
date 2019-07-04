@@ -33,5 +33,6 @@ include("./solver.jl")              # TODO: unmodified - revisit
 include("./interface.jl")           # TODO: unmodified - revisit
 include("./MOIWrapper.jl")
 
+export extract_upper_triangle, populate_upper_triangle
 
 end #end module

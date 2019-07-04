@@ -203,3 +203,48 @@ function is_neg_sem_def(X, tol)
    s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
    return s[end] <= tol
 end
+
+function populate_upper_triangle!(A::AbstractMatrix{T}, x::AbstractVector{T}, scaling_factor::T=T(1/sqrt(2))) where T
+	k = 0
+	 for j in 1:size(A, 2)
+		for i in 1:j
+		   k += 1
+		   if i != j
+			   A[i, j] = scaling_factor * x[k]
+		   else
+			   A[i, j] = x[k]
+		   end
+		 end
+	 end
+	 nothing
+end
+
+function extract_upper_triangle!(A::AbstractMatrix{T}, x::AbstractVector{T}, scaling_factor::T=T(sqrt(2))) where T
+   k = 0
+	 for j in 1:size(A, 2)
+		for i in 1:j
+		   k += 1
+		   if i != j
+			   x[k] = scaling_factor * A[i, j]
+		   else
+			   x[k] = A[i, j]
+		   end
+		 end
+	 end
+   nothing
+end
+
+function populate_upper_triangle(x::AbstractVector{T}, scaling_factor::T=T(1/sqrt(2))) where T
+	n = Int(1/2*(sqrt(8*length(x) + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
+	A = zeros(n, n)
+	@show scaling_factor
+	populate_upper_triangle!(A, x, scaling_factor)
+	return Symmetric(A)
+end
+
+function extract_upper_triangle(A::AbstractMatrix{T}, scaling_factor::T=T(sqrt(2))) where T
+	n = size(A, 2)
+	x = zeros(Int(n*(n + 1)/2))
+	extract_upper_triangle!(A, x, scaling_factor)
+	return x
+end

@@ -1,5 +1,6 @@
 using UnsafeArrays
 import Base: showarg, eltype
+include("lanczos_projection.jl")
 const DSYEVR_ = (BLAS.@blasfunc(dsyevr_),Base.liblapack_name)
 const SSYEVR_ = (BLAS.@blasfunc(ssyevr_),Base.liblapack_name)
 
@@ -221,7 +222,7 @@ Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, 
 """
 struct PsdCone{T} <: AbstractConvexCone{T}
 	dim::Int
-	sqrt_dim::Int
+	n::Int
     work::PsdBlasWorkspace{T}
 	function PsdCone{T}(dim::Int) where{T}
 		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
@@ -235,7 +236,7 @@ PsdCone(dim) = PsdCone{DefaultFloat}(dim)
 
 struct DensePsdCone{T} <: AbstractConvexCone{T}
   dim::Int
-  sqrt_dim::Int
+  n::Int
   work::PsdBlasWorkspace{T}
   function DensePsdCone{T}(dim::Int) where{T}
     dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
@@ -249,7 +250,7 @@ DensePsdCone(dim) = DensePsdCone{DefaultFloat}(dim)
 
 
 function project!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}) where{T}
-	n = cone.sqrt_dim
+	n = cone.n
 
     # handle 1D case
     if length(x) == 1
@@ -270,13 +271,13 @@ end
 
 
 function in_dual(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
-	n = cone.sqrt_dim
+	n = cone.n
 	X = reshape(x, n, n)
   return is_pos_sem_def(X, tol)
 end
 
 function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
-	n = cone.sqrt_dim
+	n = cone.n
 	X = reshape(x, n, n)
 	return is_neg_sem_def(X, tol)
 end
@@ -304,7 +305,7 @@ is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corr
 """
 mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
-    sqrt_dim::Int # side length of matrix
+    n::Int # side length of matrix
     X::Array{T,2}
     work::PsdBlasWorkspace{T}
 
@@ -319,7 +320,7 @@ PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
 
 mutable struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
-    sqrt_dim::Int # side length of matrix
+    n::Int # side length of matrix
     X::Array{T,2}
     work::PsdBlasWorkspace{T}
 
@@ -346,52 +347,23 @@ function project!(x::AbstractArray, cone::Union{PsdConeTriangle{T}, DensePsdCone
 end
 
 
-function in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
-    n = cone.sqrt_dim
+function in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLanczos{T}}, tol::T) where{T}
+    n = cone.n
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     return is_pos_sem_def(cone.X, tol)
 end
 
-function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
-    n = cone.sqrt_dim
+function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLanczos{T}}, tol::T) where{T}
+    n = cone.n
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
     return is_neg_sem_def(cone.X, tol)
 end
 
-function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
-  cone.X = zeros(cone.sqrt_dim, cone.sqrt_dim)
+function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLanczos{T}}) where {T}
+  cone.X = zeros(cone.n, cone.n)
 end
 
-function populate_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
- 	k = 0
-  	for j in 1:size(A, 2)
-     	for i in 1:j
-        	k += 1
-        	if i != j
-        		A[i, j] = scaling_factor * x[k]
-        	else
-        		A[i, j] = x[k]
-        	end
-      	end
-  	end
-  	nothing
-end
-
-function extract_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
-	k = 0
-  	for j in 1:size(A, 2)
-     	for i in 1:j
-        	k += 1
-        	if i != j
-        		x[k] = scaling_factor * A[i, j]
-        	else
-        		x[k] = A[i, j]
-        	end
-      	end
-  	end
-	nothing
-end
 
 """
     ExponentialCone(MAX_ITERS = 100, EXP_TOL = 1e-8)
@@ -813,7 +785,7 @@ function scale!(cone::AbstractConvexCone{T}, ::AbstractVector{T}) where{T}
   return nothing
 end
 
-function rectify_scaling!(E, work, set::Union{SecondOrderCone{T}, PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, DensePsdConeTriangle{T}, PowerCone{T}, DualPowerCone{T}, ExponentialCone{T}, DualExponentialCone{T}}) where{T}
+function rectify_scaling!(E, work, set::Union{SecondOrderCone{T}, PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, PsdConeTriangleLanczos{T}, DensePsdConeTriangle{T}, PowerCone{T}, DualPowerCone{T}, ExponentialCone{T}, DualExponentialCone{T}}) where{T}
   return rectify_scalar_scaling!(E, work)
 end
 rectify_scaling!(E, work, set::Union{ZeroSet{<:Real}, Nonnegatives{<:Real}, Box{<:Real}}) = false
