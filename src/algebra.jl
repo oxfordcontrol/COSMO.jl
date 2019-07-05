@@ -248,3 +248,17 @@ function extract_upper_triangle(A::AbstractMatrix{T}, scaling_factor::T=T(sqrt(2
 	extract_upper_triangle!(A, x, scaling_factor)
 	return x
 end
+
+function colnorms(A::AbstractArray)
+    T = eltype(A)
+    return colnorms!(zeros(T, size(A, 2)), A)
+end
+
+function colnorms!(v::Array{Tf,1}, A::AbstractArray; reset::Bool = true) where{Tf<:AbstractFloat}
+    if(reset) v.= 0 end
+
+    for i=1:size(A,2)
+        v[i] = max(v[i],norm(view(A,:,i),Inf))
+    end
+    return v
+end

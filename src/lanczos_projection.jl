@@ -86,7 +86,8 @@ function generate_subspace_chol(X::Symmetric{T, Matrix{T}}, cone::PsdConeTriangl
   if size(VXV, 2) == 0
       return cone.Z, XZ
   end
-  R = cholesky([I VXV; VXV' VX2V]; check=false)
+  R = cholesky([I VXV; VXV' VX2V], Val(true)) #check=false)
+  #=
   if !issuccess(R) || abs(logdet(R)) > 100
       #=
       λ, U = eigen(Symmetric(ZXZ))
@@ -100,6 +101,7 @@ function generate_subspace_chol(X::Symmetric{T, Matrix{T}}, cone::PsdConeTriangl
       W = Array(qr([cone.Z XZ]).Q)
       return W, X*W
   end
+  =#
   @show logdet(R)
   W = (R.L\[V XV]')';
   @show norm(W'*W - I)
@@ -123,7 +125,8 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   populate_upper_triangle!(cone.X, x)
   X = Symmetric(cone.X)
 
-  W, XW = generate_subspace(X, cone)
+  # W, XW = generate_subspace(X, cone)
+  W, XW = generate_subspace_chol(X, cone)
   Xsmall = W'*XW
   l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), 1e-10);
 
