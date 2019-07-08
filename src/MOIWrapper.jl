@@ -134,19 +134,12 @@ MOI.is_empty(optimizer::Optimizer) = optimizer.is_empty
 # MODEL --> SOLVER FORMAT FUNCTIONS
 ##############################
 
-is_pos_semi_def(A::Number) = imag(A)==0 && real(A) >= 0
-function is_pos_semi_def(A::AbstractMatrix)
- !ishermitian(A) && return false
- return minimum(eigvals(Matrix(A))) >= 0
-end
-
 function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     copy_names && error("Copying names is not supported.")
     MOI.empty!(dest)
     idxmap = MOIU.IndexMap(dest, src)
     assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
     dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
-    !is_pos_semi_def(P) && @warn("Your MOI model does not result in a positive semidefinite objective value matrix P. Note that this violates COSMO's assumptions.")
     A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
     convexSets = COSMO.merge_sets(convexSets)
     COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
