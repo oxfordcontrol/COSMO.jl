@@ -1,4 +1,6 @@
 using  LinearAlgebra
+import LinearAlgebra.rmul!
+import SparseArrays.rmul!
 const  IdentityMatrix = UniformScaling{Bool}
 
 
@@ -237,7 +239,6 @@ end
 function populate_upper_triangle(x::AbstractVector{T}, scaling_factor::T=T(1/sqrt(2))) where T
 	n = Int(1/2*(sqrt(8*length(x) + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
 	A = zeros(n, n)
-	@show scaling_factor
 	populate_upper_triangle!(A, x, scaling_factor)
 	return Symmetric(A)
 end

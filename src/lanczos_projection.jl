@@ -1,4 +1,5 @@
 using Arpack, LinearMaps, LinearAlgebra
+
 # ----------------------------------------------------
 # Positive Semidefinite Cone
 # ----------------------------------------------------
@@ -7,10 +8,9 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
   n::Int
   positive_subspace::Bool
   X::Matrix{T}  # Matrix under projection
-  Z::Matrix{T}  # Ritz vectors
-  λ::Vector{T}  # Ritz values
-  λ_rem::T
-  z_rem::Vector{T}
+  Z::UpdatableQ{T}  # Subspace
+  z_rem::Matrix{T} # Largest eigenvector(s) from the discarded subspace (N.B. z_rem might have been appended to Z)
+  λ::Vector{T} # Previous eigenvalue estimates of the subspace
   buffer_size::Int
   iter_number::Int
   # History
@@ -25,10 +25,9 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
       n*(n + 1)/2 == dim || throw(DomainError(dim, "dimension must be a square"))
       new(dim, n, true,
         zeros(T, n, n), # X
-        zeros(T, n, 0), # Ζ
-        zeros(T, n), # λ
-        zero(T), # λ_rem
-        randn(T, n), # z_rem
+        UpdatableQ(zeros(T, n, 0)), # Ζ
+        randn(T, n, 1),
+        zeros(T, 0),
         3, # buffer_size
         0, # iter_number
         zeros(T, 0), # residual_history
@@ -47,7 +46,7 @@ function project_to_nullspace!(x::AbstractVector{T}, tmp::AbstractVector{T}, U::
   BLAS.gemv!('N', -one(T), U, tmp, one(T), x)
 end
 
-function estimate_λ_rem(X::Symmetric{T, Matrix{T}}, U::Matrix{T}, n::Int, x0::Vector{T}) where T
+function estimate_λ_rem(X::Symmetric{T, Matrix{T}}, U::Matrix{T}, x0::Vector{T}=randn(T, size(X, 1)), n::Int=1) where T
   # Estimates largest eigenvalue of the Symmetric X on the subspace we discarded
   # Careful, we need to enforce all iterates to be orthogonal to the range of U
   tmp = zeros(T, size(U, 2))
@@ -60,61 +59,29 @@ function estimate_λ_rem(X::Symmetric{T, Matrix{T}}, U::Matrix{T}, n::Int, x0::V
       project_to_nullspace!(y, tmp, U)
       axpy!(offset, x, y)
   end
+  # V = Matrix(qr(U).Q*Matrix(I, size(U, 1), size(U, 1)))[:, size(U, 2)+1:end]
+  # @show sort(eigvals(Symmetric(V'*(X + offset*I)*V)))
   project_to_nullspace!(x0, tmp, U)
   A = LinearMap{T}(custom_mul!, size(X, 1); ismutating=true, issymmetric=true)
-  λ_rem, v_rem, nconv, niter, nmult, resid = eigs(A, nev=n, ncv=20, which=:LR, tol=1e-4, v0=x0)
+  λ_rem, v_rem, nconv, niter, nmult, resid = eigs(A, nev=n, ncv=20, which=:LR, tol=1e-1, v0=x0)
   return λ_rem .- offset, v_rem, nmult
 end
 
-function generate_subspace(X::Symmetric{T, Matrix{T}}, cone::PsdConeTriangleLanczos{T}) where {T}
-  W = Array(qr([cone.Z X*cone.Z]).Q)
-  XW = X*W
-  return W, XW
-end
+function expand_subspace(X::Symmetric{T, Matrix{T}}, cone::PsdConeTriangleLanczos{T}) where {T}
+  m = size(cone.Z.Q1, 2)
+  XZ = X*cone.Z.Q1
+  add_columns!(cone.Z, XZ)
 
-function propagate_subspace(Z, XZ, ZXZ, λ, tol=1e-5)
-  res_norms = colnorms(XZ - Z*Diagonal(λ)) 
-  XV = XZ[:, res_norms .> tol]
-  VXV = ZXZ[:, res_norms .> tol]
-  VX2V = XV'*XV;
-  return Z, XV, VXV, VX2V
-end
-
-function generate_subspace_chol(X::Symmetric{T, Matrix{T}}, cone::PsdConeTriangleLanczos{T}) where {T}
-  XZ = X*cone.Z; ZXZ = cone.Z'*XZ
-  V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ, ZXZ, cone.λ)
-  if size(VXV, 2) == 0
-      return cone.Z, XZ
-  end
-  R = cholesky([I VXV; VXV' VX2V], Val(true)) #check=false)
-  #=
-  if !issuccess(R) || abs(logdet(R)) > 100
-      #=
-      λ, U = eigen(Symmetric(ZXZ))
-      V, XV, VXV, VX2V = propagate_subspace(cone.Z, XZ*U, ZXZ*U, λ)
-      if size(VXV, 2) == 0
-          return cone.Z, XZ
-      end
-      R = cholesky([I VXV; VXV' VX2V])
-      =#
-      @show "QR!"
-      W = Array(qr([cone.Z XZ]).Q)
-      return W, X*W
-  end
-  =#
-  @show logdet(R)
-  W = (R.L\[V XV]')';
-  @show norm(W'*W - I)
-  XW = X*W
-
-  return W, XW
+  XW = [XZ X*view(cone.Z.Q, :, m+1:size(cone.Z.Q1, 2))]
+  # @assert norm(XW - X*cone.Z.Q1) <= 1e-9
+  return cone.Z.Q1, XW
 end
 
 function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   n = cone.n
   cone.iter_number += 1
 
-  if mod(cone.iter_number, 40) == 0 || size(cone.Z, 2) == 0 || size(cone.Z, 2) >= cone.n/2 || n == 1
+  if mod(cone.iter_number, 40) == 0 || size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/2 || n == 1
       append!(cone.λ_rem_multiplications, 0)
       return project_exact!(x, cone)
   end
@@ -125,8 +92,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   populate_upper_triangle!(cone.X, x)
   X = Symmetric(cone.X)
 
-  # W, XW = generate_subspace(X, cone)
-  W, XW = generate_subspace_chol(X, cone)
+  W, XW = expand_subspace(X, cone)
   Xsmall = W'*XW
   l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), 1e-10);
 
@@ -137,39 +103,38 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   buffer_idx = max(first_negative-cone.buffer_size-1,1):max(first_negative,0)
   Ub = W*V[:, buffer_idx]; λb = l[buffer_idx]
 
-  # Projection
-  Xπ = Symmetric(U*Diagonal(λ)*U');
-  
   # Residual Calculation
-  # R = XW*Vp - U*Diagonal(λ)
-  R = X*U - U*Diagonal(λ)
+  R = XW*Vp - U*Diagonal(λ)
+  # R = X*U - U*Diagonal(λ)
+  append!(cone.residual_history, norm(R))
+  set_Q!(cone.Z, U)
+  add_columns!(cone.Z, Ub) # Buffer
+  cone.λ = [λ; λb]
 
   # Important: why not [U Ub]?
-  λ_rem, z_rem, nmult = estimate_λ_rem(X, U, 1, cone.z_rem)
+  λ_rem, cone.z_rem, nmult = estimate_λ_rem(X, U, cone.z_rem[:, 1])
+  # λ_rem = [0.0]; cone.z_rem = randn(size(U, 1), 1); nmult = 0
   append!(cone.λ_rem_multiplications, nmult)
   append!(cone.λ_rem_history, maximum(λ_rem))
   λ_rem .= max.(λ_rem, 0.0)
   eig_sum = sum(λ_rem).^2 + (n - size(W, 2) - length(λ_rem))*minimum(λ_rem).^2
   residual = sqrt(2*norm(R)^2 + eig_sum)
-  #=
-  @show norm(R, 2)
-  @show sqrt(eig_sum)
-  =#
-  
-  if !cone.positive_subspace
-    @inbounds for j in 1:n, i in 1:j
-      Xπ.data[i, j] -= X[i, j]
-    end
+
+  if true # || any(λ_rem .> 0)
+    append!(cone.λ, λ_rem[λ_rem .> 0]) # Positive eigenvalues, buffer and remainder's eigenvalue (the last one will be very crude)
+    add_columns!(cone.Z, cone.z_rem[:, λ_rem .> 0])
   end
-  extract_upper_triangle!(Xπ, x)
+  append!(cone.subspace_dim_history, size(cone.Z.Q1, 2))
+  
+  # Reconstruct projection
+  rmul!(U, Diagonal(sqrt.(λ)))
+  if cone.positive_subspace
+    BLAS.syrk!('U', 'N', 1.0, U, 0.0, cone.X)
+  else
+    BLAS.syrk!('U', 'N', 1.0, U, -1.0, cone.X)
+  end
 
-  # It should be [U ub z_rem]
-  cone.Z = [U z_rem]
-  # cone.z_rem = randn(size(U, 1))
-  cone.λ = [λ; λ_rem]
-
-  append!(cone.residual_history, norm(R))
-  append!(cone.subspace_dim_history, size(cone.Z, 2))
+  extract_upper_triangle!(cone.X, x)
 end
 
 function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) where{T}
@@ -180,53 +145,45 @@ function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) wh
       x = max.(x,zero(T))
   else
       # symmetrized square view of x
-      X = cone.X
-      populate_upper_triangle!(X, x)
+      populate_upper_triangle!(cone.X, x)
 
       # compute eigenvalue decomposition
       # then round eigs up and rebuild
-      λ, U  = eigen!(Symmetric(X))
+      λ, U  = eigen!(Symmetric(cone.X))
       Up = U[:, λ .> 0]
       sqrt_λp = sqrt.(λ[λ .> 0])
       if length(sqrt_λp) > 0
-          # rmul!(Up, Diagonal(sqrt_λp))
-          # mul!(X, Up, Up')
-          X = Up*Diagonal(λ[λ .> 0])*Up'
+          rmul!(Up, Diagonal(sqrt_λp))
+          BLAS.syrk!('U', 'N', 1.0, Up, 0.0, cone.X)
+          # X = Up*Diagonal(λ[λ .> 0])*Up'
       else
           X .= 0
           return nothing
           #ToDo: Handle this case with lanczos
       end
-      extract_upper_triangle!(X, x)
+      extract_upper_triangle!(cone.X, x)
       
-      # @show λ
-      # Save the subspace we will be tracking
+      # Save the subspace that we will be tracking
       if sum(λ .> 0) <= sum(λ .< 0)
-          sorted_idx = sortperm(λ)
-          cone.positive_subspace = true
-          idx = findfirst(λ[sorted_idx] .> 0) # First positive index
-          if isa(idx, Nothing)
-              idx = length(λ) + 1
-          end
+        cone.positive_subspace = true
       else
-          sorted_idx = sortperm(-λ)
-          cone.positive_subspace = false
-          idx = findfirst(λ[sorted_idx] .< 0) # First negative index
-          if isa(idx, Nothing)
-              idx = length(λ) + 1
-          end
+        λ .= -λ # Equivalent to considering -X instead of X
+        cone.positive_subspace = false
       end
-      # Take also a few vectors from the other discarted eigenspace
+      sorted_idx = sortperm(λ)
+      idx = findfirst(λ[sorted_idx] .> 0) # First positive index
+      if isa(idx, Nothing)
+          idx = length(λ) + 1
+      end
+      # Take also a few vectors from the discarted eigenspace
       idx = max(idx - cone.buffer_size, 1)
-      cone.Z = U[:, sorted_idx[idx:end]]
+      set_Q!(cone.Z, U[:, sorted_idx[idx:end]])
       cone.λ = λ[sorted_idx[idx:end]]
-      if sum(λ .> 0) >= sum(λ .< 0)
-          cone.λ = -cone.λ
-      end
   end
   append!(cone.residual_history, 0.0)
   append!(cone.λ_rem_history, 0.0)
-  append!(cone.subspace_dim_history, size(cone.Z, 2))
+  append!(cone.subspace_dim_history, size(cone.Z.Q1, 2))
+  cone.z_rem .= randn(n)
   return nothing
 end
 

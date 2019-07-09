@@ -15,7 +15,11 @@ include("./kktsolver.jl")
 if in("Pardiso",keys(Pkg.installed()))
     include("./kktsolver_pardiso.jl")
 end
+if in("IterativeSolvers", keys(Pkg.installed())) && in("LinearMaps", keys(Pkg.installed()))
+    include("./kktsolver_indirect.jl")
+end
 
+include("./q.jl")
 include("./algebra.jl")
 include("./projections.jl")
 include("./settings.jl")            # TODO: unmodified - revisit
@@ -33,6 +37,6 @@ include("./solver.jl")              # TODO: unmodified - revisit
 include("./interface.jl")           # TODO: unmodified - revisit
 include("./MOIWrapper.jl")
 
-export extract_upper_triangle, populate_upper_triangle
+export extract_upper_triangle, populate_upper_triangle, UpdatableQ, add_column!, add_columns!
 
 end #end module

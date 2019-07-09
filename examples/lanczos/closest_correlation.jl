@@ -31,41 +31,67 @@ end
 rng = Random.MersenneTwister(12345)
 xMin = -1.
 xMax = 1.
-n = 1000
+n = 200 
 C = xMin .+ randn(rng, n, n)*(xMax - xMin)
 C = Symmetric(C)
 
 isposdef(C) && warn("The perturbed correlation matrix is still pos def.")
 
-
 n2 = Int(n * (n + 1)/2)
 m = n + n2
-
 P = sparse(1.0I, n2, n2)
-q = -extract_upper_triangle(C)
+q = -COSMO.extract_upper_triangle(C)
 r = 0.5*dot(q, q)
 
 A1 = create_diagonal_extractor(n)
 b1 = -ones(n)
-cs1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
-
 A2 = sparse(1.0I, n2, n2)
 b2 = zeros(n2)
-cs2 = COSMO.Constraint(A2, b2, COSMO.PsdConeTriangleLanczos)
-constraints = [cs1; cs2]
+
+function solve_problem(C, n, lanczos=true)
+    cs1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
+    if lanczos
+        cs2 = COSMO.Constraint(A2, b2, COSMO.PsdConeTriangleLanczos)
+    else
+        cs2 = COSMO.Constraint(A2, b2, COSMO.PsdConeTriangle)
+    end
+    constraints = [cs1; cs2]
 
 
-settings = COSMO.Settings(verbose=true)
-model = COSMO.Model()
-assemble!(model, P, q, constraints, settings=settings)
+    settings = COSMO.Settings(verbose=true, verbose_timing=true)
+    model = COSMO.Model()
+    COSMO.assemble!(model, P, q, constraints, settings=settings)
 
-res = COSMO.optimize!(model)
+    res = COSMO.optimize!(model)
+    return res, model
+end
 
-Xsol = populate_upper_triangle(res.x)
-set = model.p.C.sets[2]
-@show set.subspace_dim_history
 # @show Xsol
 
+#=
+using Profile, ProfileView
+Profile.init(n = 10^7, delay = 0.0001)
+Profile.clear()		
+Profile.@profile res, model = solve_problem(C, n)
+Profile.clear()		
+Profile.@profile res, model = solve_problem(C, n)
+Profile.clear()		
+Profile.@profile res, model = solve_problem(C, n)
+ProfileView.view()		
+println("Press enter to continue...")		
+readline(stdin)	
+=#
+
+using BenchmarkTools
+
+res, model = solve_problem(C, n)
+res, model = solve_problem(C, n)
+solve_problem(C, n, false)
+solve_problem(C, n, false)
+
+Xsol = COSMO.populate_upper_triangle(res.x)
+set = model.p.C.sets[2]
+@show set.subspace_dim_history
 @testset "Closest Correlation Matrix - SDP Problems" begin
 @test res.status == :Solved
 @test diagonal_equal_one(Xsol, 1e-5)
