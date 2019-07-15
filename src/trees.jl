@@ -291,7 +291,7 @@ function find_cliques(L, snodes::Array{Int64,1}, snptr::Array{Int64,1}, supernod
 
 end
 
-" Given a sparse lower triangular matrix L find the neighboring vertices of v"
+# Given a sparse lower triangular matrix L find the neighboring vertices of v
 function find_neighbors(L::SparseMatrixCSC, v::Int64)
 	L = Symmetric(L)
 	col_ptr = L.colptr
