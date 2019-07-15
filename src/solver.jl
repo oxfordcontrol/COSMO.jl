@@ -62,8 +62,8 @@ function optimize!(ws::COSMO.Workspace)
 
 	# perform preprocessing steps (scaling, initial KKT factorization)
 	ws.times.factor_time = 0
-	ws.times.setup_time = @elapsed setup!(ws);
 	ws.times.proj_time  = 0. #reset projection time
+	ws.times.setup_time = @elapsed setup!(ws);
 
 	# instantiate variables
 	num_iter = 0
@@ -192,7 +192,7 @@ function optimize!(ws::COSMO.Workspace)
 	y = -ws.vars.μ
 	free_memory!(ws)
 
-	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
+	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times), ws;
 
 end
 

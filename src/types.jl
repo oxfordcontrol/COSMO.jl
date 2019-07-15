@@ -176,18 +176,24 @@ mutable struct SparsityPattern
   reverse_ordering::Array{Int64}
 
   # constructor for sparsity pattern
-  function SparsityPattern(L, N::Int64, ordering)
+  function SparsityPattern(L, N::Int64, ordering, merge_strategy)
 
     reverse_ordering = zeros(length(ordering))
     for i = 1:N
       reverse_ordering[ordering[i]] = i
     end
-    sntree = SuperNodeTree(L)
+    merge_strategy = merge_strategy()
+    sntree = SuperNodeTree(L, merge_strategy)
+
+    # clique merging
+    sntree.num > 1 && merge_cliques!(sntree, merge_strategy)
+
+    calculate_block_dimensions!(sntree, merge_strategy)
+
     return new(sntree, ordering, reverse_ordering)
   end
 end
 
-# To handle the case where a PSD cone is dense
 # -------------------------------------
 # Chordal Decomposition Information
 # -------------------------------------

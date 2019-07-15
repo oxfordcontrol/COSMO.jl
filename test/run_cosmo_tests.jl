@@ -22,6 +22,7 @@ include("./UnitTests/COSMOTestUtils.jl")
   include("./UnitTests/interface.jl")
   include("./UnitTests/chordal_decomposition_triangle.jl")
   include("./UnitTests/psd_completion.jl")
+  include("./UnitTests/clique_merging_example.jl")
 
     # optional unittests
   if in("Pardiso",keys(Pkg.installed()))

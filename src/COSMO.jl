@@ -1,7 +1,7 @@
 __precompile__()
 module COSMO
 
-using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg
+using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures
 
 
 export assemble!, warmStart!, empty_model!
@@ -18,8 +18,9 @@ end
 
 include("./algebra.jl")
 include("./projections.jl")
-include("./settings.jl")            # TODO: unmodified - revisit
 include("./trees.jl")
+include("./clique_merging.jl")
+include("./settings.jl")            # TODO: unmodified - revisit
 include("./types.jl")               # some types still need tidying
 include("./constraint.jl")          # TODO: unmodified - revisit
 include("./parameters.jl")          # TODO: unmodified - revisit

@@ -1,15 +1,57 @@
+export print_merge_logs, print_clique_sizes
 
+"""
+    AbstractMergeStrategy
+
+A merge strategy determines how the cliques in a clique tree are merged to improve computation time of the projection. Each merge receipt should
+implement the following functions:
+
+ - initialise!: Initialise the graph / tree from the input clique tree, allocate memory
+ - traverse: A method that determines how the clique tree / graph is traversed
+ - evaluate: A method that decides whether to merge two cliques
+ - update!: A method to update local strategy-related information after a merge
+"""
+abstract type AbstractMergeStrategy end
+
+
+
+abstract type AbstractTreeBasedMerge <: AbstractMergeStrategy end
+abstract type AbstractGraphBasedMerge <: AbstractMergeStrategy end
+
+
+"""
+		MergeLog
+
+A struct to analyse the clique merges. Introduced for debugging purposes.
+"""
+mutable struct MergeLog
+	num::Int64 # number of merges
+	clique_pairs::Array{Int64, 2} # ordered pair merges
+	decisions::Array{Bool, 1} # at what step was merged
+	function MergeLog()
+		new(0, zeros(0, 2), Array{Bool}(undef, 0))
+	end
+end
+
+
+"""
+		SuperNodeTree
+
+A structure to represent and analyse the sparsity pattern of the input matrix L.
+"""
 mutable struct SuperNodeTree
-	snd::Array{Int64,1} #vertices of supernodes stored in one array
-	snptr::Array{Int64,1} # vertices of supernode i are stored in snd[snptr[i]:snptr[i+1]-1]
+	snd::Array{Array{Int64,1},1} #vertices of supernodes stored in one array (also called residuals)
 	snd_par::Array{Int64,1}  # parent of supernode k is supernode j=snd_par[k]
 	snd_post::Array{Int64,1} # post order of supernodal elimination tree
+	snd_child::Array{Array{Int64,1},1}
 	post::Array{Int64} # post ordering of the vertices in elim tree σ(j) = v
 	par::Array{Int64}
-	cliques::Array{Int64,1} #vertices of cliques stored in one array
-	chptr::Array{Int64,1} #points to the indizes where new clique starts in cliques array
-	nBlk::Array{Int64,1} #sizes of submatrizes defined by each clique
-	function SuperNodeTree(L)
+	sep::Array{Array{Int64,1},1} #vertices of clique seperators
+	nBlk::Array{Int64,1} #sizes of submatrizes defined by each clique, sorted by post-ordering, e.g. size of clique with order 3 => nBlk[3]
+	num::Int64 # number of supernodes / cliques in tree
+	merge_log::MergeLog
+	strategy::AbstractMergeStrategy
+	function SuperNodeTree(L, merge_strategy::AbstractMergeStrategy)
 		par = etree(L)
 		child = child_from_par(par)
 		post = post_order(par, child)
@@ -18,19 +60,35 @@ mutable struct SuperNodeTree
 		sort_children!(child, post)
 		# faster algorithm according to Vandenberghe p.308
 		degrees = higher_degrees(L)
-		snd, snptr, snd_par = find_supernodes(par, child, post, degrees)
+		snd, snd_par = find_supernodes(par, child, post, degrees)
 
-		# TODO: amalgamate supernodes
 		snd_child = child_from_par(snd_par)
 		# # a post-ordering of the elimination tree is needed to make sure that in the
 		# # psd completion step the matrix is completed from lower-right to top-left
-		 snd_post = post_order(snd_par, snd_child)
+	 	snd_post = post_order(snd_par, snd_child)
 
-		cliques, chptr, nBlk = find_cliques(L, snd, snptr, snd_par, post)
+	 	# If the merge strategy is tree based keep the supernodes and separators in to different locations
+	 	if typeof(merge_strategy) <: AbstractTreeBasedMerge
+	 		# given the supernodes (clique residuals) find the clique separators
+			sep = find_separators(L, snd, snd_par, post)
+			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
 
-		new(snd, snptr, snd_par, snd_post, post, par, cliques, chptr, nBlk)
+		# If the merge strategy is clique graph-based, we give up the tree structure and add the seperators to the supernodes
+		# the supernodes then represent the full clique
+		# after the clique merging a new clique tree will be computed before psd completion is performed
+		else
+			add_separators!(L, snd, snd_par, post)
+			@. snd_par = -1
+			new(snd, snd_par, snd_post, snd_child, post, par, [[0]], [0], length(snd_post), MergeLog(), merge_strategy)
+		end
 	end
 
+
+	# FIXME: only for debugging purposes
+	function SuperNodeTree(res, par, snd_post, sep, merge_strategy; post::Array{Int64, 1} = [1])
+		child = child_from_par(par)
+  	new(res, par, snd_post, child, post, [1], sep, [1], length(res), MergeLog(), merge_strategy)
+	end
 end
 
 function sort_children!(child, post)
@@ -50,9 +108,6 @@ function invert_order(sigma::Array{Int64,1})
 	return sigma_inv
 end
 
-function num_cliques(sntree::SuperNodeTree)
-	return length(sntree.chptr)
-end
 
 # elimination tree algorithm from H.Liu - A Compact Row Storage Scheme for Cholesky Factors Using Elimination Trees
 # function etree_liu(g)
@@ -87,8 +142,6 @@ function etree(L)
 	par = zeros(Int64, N)
 	# loop over Vertices of graph
 	for i=1:N
-		value = i
-		# number of i-neighbors with order higher than order of node i
 		par_ = find_parent_direct(L, i)
 		par[i] = par_
 	end
@@ -96,12 +149,14 @@ function etree(L)
 end
 
 # perform a depth-first-search to determine the post order of the tree defined by parent and children vectors
-function post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}})
-	N = length(par)
-	order = zeros(Int64, N)
+# FIXME: This can be made a lot faster for the case that merges happened, i.e. Nc != length(par)
+
+function post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}}, Nc::Int64)
+
+	order = (Nc + 1) * ones(Int64, length(par))
 	root = findall(x ->x == 0, par)[1]
 	stack = Array{Int64}(undef, 0)
-	iii = N
+	iii = Nc
 	push!(stack, root)
 	while !isempty(stack)
 		v = pop!(stack)
@@ -109,11 +164,14 @@ function post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}})
 		iii -= 1
 		push!(stack, child[v]...)
 	end
-	post = collect(1:N)
+	post = collect(1:length(par))
 	sort!(post, by = x-> order[x])
+
+	# if merges happened, remove the entries pointing to empty arrays / cliques
+	Nc != length(par) && resize!(post, Nc)
 	return post
 end
-
+post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}}) = post_order(par, child, length(par))
 
 
 function child_from_par(par::Array{Int64,1})
@@ -126,51 +184,120 @@ function child_from_par(par::Array{Int64,1})
 	return child
 end
 
+# ------------------------------------------
+# Interfaces function to SuperNodeTree
+# ------------------------------------------
+
+function num_cliques(sntree::SuperNodeTree)
+	return sntree.num
+end
+
+function get_post_order(sntree::SuperNodeTree)
+	return sntree.snd_post
+end
+
+function get_post_order(sntree::SuperNodeTree, i::Int64)
+	return sntree.snd_post[i]
+end
+# Using the post order ensures that no empty arrays from the clique merging are returned
 function get_snd(sntree::SuperNodeTree, ind::Int64)
-	N = length(sntree.snptr)
-	if ind == N
-		return sntree.snd[sntree.snptr[ind]:end]
-	else
-		return sntree.snd[sntree.snptr[ind]:sntree.snptr[ind + 1] - 1]
-	end
+		return sntree.snd[sntree.snd_post[ind]]
 end
 
-function get_clique(sntree::SuperNodeTree, ind::Int64)
-	N = length(sntree.chptr)
-	if ind == N
-		return sntree.cliques[sntree.chptr[ind]:end]
-	else
-		return sntree.cliques[sntree.chptr[ind]:sntree.chptr[ind + 1] - 1]
-	end
+function get_sep(sntree::SuperNodeTree, ind::Int64)
+		return sntree.sep[sntree.snd_post[ind]]
 end
 
-function print_cliques(sntree::SuperNodeTree)
-	N = length(sntree.chptr)
-	chptr = sntree.chptr
+# the block sizes are stored in post order, e.g. if clique 4 (stored in pos 4) has order 2, then nBlk[2] represents the size of clique 4
+function get_nBlk(sntree::SuperNodeTree, ind::Int64)
+		return sntree.nBlk[ind]
+end
+
+# return the cliques in a post order (prevents returning empty arrays due to clique merging)
+get_clique(sntree::SuperNodeTree, ind::Int64) = get_clique(sntree, ind, sntree.strategy)
+function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractTreeBasedMerge)
+	c = sntree.snd_post[ind]
+	return union(sntree.snd[c], sntree.sep[c])
+end
+
+function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractGraphBasedMerge)
+	c = sntree.snd_post[ind]
+	return sntree.snd[c]
+end
+
+print_cliques(sntree::SuperNodeTree) = print_cliques(sntree, sntree.strategy)
+function print_cliques(sntree::SuperNodeTree, strategy::AbstractTreeBasedMerge)
+	Nsnd = length(sntree.snd)
 	println("Cliques of Graph:")
-	for iii = 1:N
-		if iii != N
-			clique = sntree.cliques[chptr[iii]:chptr[iii + 1] - 1]
-		else
-			clique = sntree.cliques[chptr[iii]:end]
-		end
-		println("$(iii): $(clique)")
+	for iii = 1:Nsnd
+			println("$(iii): res: $(sntree.snd[iii]), sep: $(sntree.sep[iii])")
 	end
 end
 
-function print_supernodes(sntree::SuperNodeTree)
-	N = length(sntree.snptr)
-	snptr = sntree.snptr
-	println("Supernodes of Graph:")
-	for iii = 1:N
-		if iii != N
-			sn = sntree.snd[snptr[iii]:snptr[iii + 1] - 1]
-		else
-			sn = sntree.snd[snptr[iii]:end]
-		end
-		println("$(iii): $(sn)")
+function print_clique_orders(sntree::SuperNodeTree, strategy::AbstractTreeBasedMerge)
+	Nsnd = length(sntree.snd)
+	println("Cliques of Graph:")
+	for iii = 1:Nsnd
+		post = sntree.post
+		postInv = invert_order(post) #σ-1(v) = j
+
+  	snd_ip = map(x -> postInv[x], sntree.snd[iii])
+  	sep_ip = map(x -> postInv[x], sntree.sep[iii])
+		println("$(iii): res: $(snd_ip), sep: $(sep_ip)")
 	end
 end
+
+function print_cliques(sntree::SuperNodeTree, strategy::AbstractGraphBasedMerge)
+	Nsnd = length(sntree.snd)
+	println("Cliques of Graph:")
+	for iii = 1:Nsnd
+			println("$(iii): clique: $(sntree.snd[iii])")
+	end
+end
+
+
+function print_clique_sizes(ws)
+  sp_arr = ws.ci.sp_arr
+  # print the merge logs for each sparsity pattern
+  println(">>> Clique Dimensions:")
+  for (iii, sp) in enumerate(sp_arr)
+    println("Sparsity Pattern Nr. $(iii), Graph Size: $(length(sp.sntree.par))")
+
+    t = sp.sntree
+    Nc = length(t.snd_post)
+    # block sizes
+    sizes = zeros(Int64, Nc)
+    # occurences of block size
+    occ = zeros(Int64, Nc)
+    for jjj = 1:Nc
+      c = t.snd_post[jjj]
+      dim = length(t.snd[c]) + length(t.sep[c])
+      # try to check if that dimension occured before, if not add, otherwise increment occ
+      ind = findfirst(x -> x == dim, sizes)
+
+      if ind != nothing
+        occ[ind] = occ[ind] + 1
+      else
+        sizes[jjj] = dim
+        occ[jjj] = 1
+      end
+    end
+
+    # consolidate
+    filter!(x -> x != 0, occ)
+    filter!(x -> x != 0, sizes)
+
+    # sort sizes
+    p = sortperm(sizes)
+    sizes = sizes[p]
+    occ = occ[p]
+
+    for (jjj, dim) in enumerate(sizes)
+      println("$(occ[jjj])x dim:$(dim)")
+    end
+  end
+end
+
 
 
 function check_degree_condition(v::Int64, w::Int64, degrees::Array{Int64,1})
@@ -234,69 +361,60 @@ function find_supernodes(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post
 	N = length(par)
 	# number of representative vertices == number of supernodes
 	Nrep = length(supernode_par)
-
-	snode = zeros(Int64, N)
-	snode_list = [Array{Int64}(undef, 0) for i = 1:N]
-	snptr = zeros(Int64,Nrep)
+	snode = [Array{Int64}(undef, 0) for i = 1:N]
 
 	for iii in post
 		f = snInd[iii]
 		if f < 0
-			push!(snode_list[iii], iii)
+			push!(snode[iii], iii)
 
 		else
-			push!(snode_list[f], iii)
+			push!(snode[f], iii)
 		end
 	end
-
-	kkk = 1
-	jjj = 1
-	for (iii, list) in enumerate(snode_list)
-		len = length(list)
-		if len > 0
-			snptr[jjj] = kkk
-			snode[kkk:kkk + len - 1] = list
-			kkk += len
-			jjj += 1
-		end
-	end
-	return snode, snptr, supernode_par
+	filter!(x -> !isempty(x), snode)
+	return snode, supernode_par
 
 end
 
-function find_cliques(L, snodes::Array{Int64,1}, snptr::Array{Int64,1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
+function find_separators(L, snodes::Array{Array{Int64,1},1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
 	postInv = invert_order(post)
 
 	Nc = length(supernode_par)
-	cliques = Array{Int64}(undef, 0)
-	nBlk = zeros(Int64, Nc)
-	chptr = zeros(Int64, Nc)
-	jjj = 1
+	sep = [Array{Int64}(undef, 0) for i = 1:Nc]
 
 	for iii = 1:Nc
-		if iii < Nc
-			vRep = snodes[snptr[iii]:snptr[iii + 1] - 1][1]
-		else
-			vRep = snodes[snptr[iii]:end][1]
-		end
+		vRep = snodes[iii][1]
+
 		adjPlus = find_higher_order_neighbors(L, vRep)
 		deg = length(adjPlus) + 1
-		cliques = [cliques; vRep; adjPlus]
-		chptr[iii] = jjj
-		nBlk[iii] = Base.power_by_squaring(length(adjPlus) + 1, 2)
-		jjj += deg
+		sep[iii] = adjPlus
+		setdiff!(sep[iii], snodes[iii])
+
 	end
 
-	return cliques, chptr, nBlk
+	return sep
 
 end
 
-# Given a sparse lower triangular matrix L find the neighboring vertices of v
-function find_neighbors(L::SparseMatrixCSC, v::Int64)
-	L = Symmetric(L)
-	col_ptr = L.colptr
-	row_val = L.rowval
-	return row_val[col_ptr[v]:col_ptr[v + 1] - 1]
+function add_separators!(L::SparseMatrixCSC, snodes::Array{Array{Int64,1},1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
+	postInv = invert_order(post)
+
+	Nc = length(supernode_par)
+
+	for iii = 1:Nc
+		snode = snodes[iii]
+		vRep = snode[1]
+
+		adjPlus = find_higher_order_neighbors(L, vRep)
+		for neighbor in adjPlus
+			if !in(neighbor, snode)
+				push!(snode, neighbor)
+			end
+		end
+		sort!(snode)
+	end
+	return nothing
 end
 
 function find_higher_order_neighbors(L::SparseMatrixCSC, v::Int64)
@@ -355,8 +473,8 @@ function connect_graph!(L::SparseMatrixCSC)
 end
 
 function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
-	row_val, col_val = row_ind_to_matrix_indices(rows, N, C)
-	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)
+	row_val, col_val = COSMO.row_ind_to_matrix_indices(rows, N, C)
+	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)#, perm = collect(1:N))
 	# this takes care of the case that QDLDL returns an unconnected adjacency matrix L
 	connect_graph!(F.L)
 	ci.L = F.L
@@ -431,5 +549,3 @@ function svec_to_mat(ind::Int64)
 	r = Int(ind - k)
 	return r::Int64, c::Int64
 end
-
-
