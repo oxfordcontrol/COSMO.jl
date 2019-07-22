@@ -166,7 +166,15 @@ function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64, C::COSMO.Abstract
   return set_ind + 1, sp_ind, col + C.dim
 end
 
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdCone{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
+get_blk_length(nBlk::Int64, C::COSMO.PsdCone{Float64}) = isqrt(nBlk)
+function get_blk_length(nBlk::Int64, C::COSMO.PsdConeTriangle{Float64})
+    d = isqrt(nBlk)
+    return div((d + 1) * d, 2)
+end
+get_blk_rows(d::Int64, C::COSMO.PsdCone{Float64}) = d^2
+get_blk_rows(d::Int64, C::COSMO.PsdConeTriangle{Float64}) = d
+
+function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   # original matrix size
@@ -174,39 +182,17 @@ function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdCone
 
   for iii = 1:num_cliques(sntree)
     # new stacked size
-    block_size = isqrt(sntree.nBlk[iii])
+    block_length = get_blk_length(sntree.nBlk[iii], C)
 
     c = COSMO.get_clique(sntree, iii)
     # the graph and tree algorithms determined the cliques vertices of an AMD-permuted matrix. Since the location of the data hasn't changed in reality, we have to map the clique vertices back
     c = map(v -> sparsity_pattern.ordering[v], c)
     sort!(c)
-    col_start = COSMO.add_subblock_map!(H, c, block_size, original_size, row_start, col_start, C)
+    col_start = COSMO.add_subblock_map!(H, c, block_length, original_size, row_start, col_start, C)
 
     # create and add new cone for subblock
-    C_new[set_ind] = COSMO.PsdCone(block_size^2)
-    set_ind += 1
-  end
-  return set_ind, sp_ind + 1, col_start
-end
-
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdConeTriangle{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
-  sparsity_pattern = sp_arr[sp_ind]
-  sntree = sparsity_pattern.sntree
-  original_size = C.sqrt_dim
-
-  for iii = 1:num_cliques(sntree)
-    # new stacked size
-    d = isqrt(sntree.nBlk[iii])
-    block_dim = div((d + 1) * d, 2)
-
-    c = COSMO.get_clique(sntree, iii)
-    c = map(v -> sparsity_pattern.ordering[v], c)
-
-    sort!(c)
-    col_start = COSMO.add_subblock_map!(H, c, block_dim, original_size, row_start, col_start, C)
-
-    # create and add new cone for subblock
-    C_new[set_ind] = COSMO.PsdConeTriangle(block_dim)
+    num_rows = get_blk_rows(block_length, C)
+    C_new[set_ind] = typeof(C)(num_rows)
     set_ind += 1
   end
   return set_ind, sp_ind + 1, col_start
