@@ -9,7 +9,7 @@ function print_header(ws::COSMO.Workspace)
 	nnz_in_M = 2*count(!iszero,ws.p.A) + nnz_in_P + m
 	println("-"^66 * "\n" * " "^10 * "COSMO v0.4.3 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2019\n" * "-"^66 * "\n")
 
-	println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero, ws.p.A)) nnz), b ∈ R^{$(m)},\n          matrix size to factor: $(n + m)x$(n + m) ($((n + m)^2) elem, $(nnz_in_M) nnz)")
+	println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero, ws.p.A)) nnz),\n          matrix size to factor: $(n + m)x$(n + m) ($(nnz_in_M) nnz)")
 	for (iii, set) in enumerate(sort(ws.p.C.sets, by = x -> -x.dim))
 		set_name = split(string(typeof(set)), ".")[end]
 		iii == 1 ? println("Sets:"*" "^5*"$(set_name) of dim: $(set.dim)") : println(" "^10*"$(set_name) of dim: $(set.dim)")
