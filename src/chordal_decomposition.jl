@@ -42,8 +42,8 @@ end
 
 function analyse_sparsity_pattern!(ci, csp, sets, C::PsdCone{T}, k, sp_ind) where {T <: Real}
   if length(csp) < C.dim
-    ordering = find_graph!(ci, csp, C.sqrt_dim, C)
-    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering)
+    ordering = find_graph!(ci, csp, C.n, C)
+    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.n, ordering)
     push!(ci.psd_cones_ind, k)
     ci.num_decomposable += 1
     return sp_ind + 1
@@ -55,8 +55,8 @@ end
 
 function analyse_sparsity_pattern!(ci, csp, sets, C::PsdConeTriangle{T}, k, sp_ind) where {T <: Real}
   if length(csp) < C.dim
-    ordering = find_graph!(ci, csp, C.sqrt_dim, C)
-    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering)
+    ordering = find_graph!(ci, csp, C.n, C)
+    ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.n, ordering)
     push!(ci.psd_cones_ind, k)
     ci.num_decomposable += 1
     return sp_ind + 1
@@ -170,7 +170,7 @@ function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdCone
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   # original matrix size
-  original_size = C.sqrt_dim
+  original_size = C.n
 
   for iii = 1:num_cliques(sntree)
     # new stacked size
@@ -192,7 +192,7 @@ end
 function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::COSMO.PsdConeTriangle{Float64}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
-  original_size = C.sqrt_dim
+  original_size = C.n
 
   for iii = 1:num_cliques(sntree)
     # new stacked size
@@ -354,8 +354,8 @@ complete!(μ::AbstractVector, ::AbstractConvexSet, sp_arr::Array{SparsityPattern
 
 function complete!(μ::AbstractVector, C::PsdCone{<: Real}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
   sp = sp_arr[sp_ind]
-  M = reshape(view(μ, rows), C.sqrt_dim, C.sqrt_dim)
-  psd_complete!(M, C.sqrt_dim, sp.sntree, sp.ordering)
+  M = reshape(view(μ, rows), C.n, C.n)
+  psd_complete!(M, C.n, sp.sntree, sp.ordering)
   return sp_ind + 1
 end
 
@@ -364,7 +364,7 @@ function complete!(μ::AbstractVector, C::PsdConeTriangle{<: Real}, sp_arr::Arra
 
   μ_view = view(μ, rows)
   populate_upper_triangle!(C.X, μ_view, 1. / sqrt(2))
-  psd_complete!(C.X, C.sqrt_dim, sp.sntree, sp.ordering)
+  psd_complete!(C.X, C.n, sp.sntree, sp.ordering)
   extract_upper_triangle!(C.X, μ_view, sqrt(2))
   return sp_ind + 1
 end

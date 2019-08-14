@@ -6,6 +6,7 @@ mutable struct UpdatableQ{T} <: Factorization{T}
     Q::Matrix{T}
     n::Int
     m::Int
+    reset_counter::Int
 
     Q1::SubArray{T, 2, Matrix{T}, Tuple{Base.Slice{Base.OneTo{Int}}, UnitRange{Int}}, true}
 
@@ -17,7 +18,7 @@ mutable struct UpdatableQ{T} <: Factorization{T}
         Q = zeros(T, n, n)
         Q[:, 1:m] .= Matrix(F.Q)
 
-        new{T}(Q, n, m, view(Q, :, 1:m))
+        new{T}(Q, n, m, 0, view(Q, :, 1:m))
     end
 end
 
@@ -58,8 +59,19 @@ function update_views!(F::UpdatableQ{T}) where {T}
 end
 
 function add_columns!(F::UpdatableQ{T}, A::AbstractMatrix{T}) where {T}
-    for i = 1:size(A, 2)
-        add_column!(F, view(A, :, i))
+    if F.reset_counter < 10
+        F.reset_counter += 1
+        for i = 1:size(A, 2)
+            add_column!(F, view(A, :, i))
+        end
+        return false
+    else
+        F.reset_counter = 0
+        Q1 = Matrix(qr([F.Q1 A]).Q)
+        # @show norm(F.Q1 - Q1[:, 1:F.m])
+        F.m += size(A, 2)
+        update_views!(F)
+        F.Q1 .= Q1
+        return true
     end
-    nothing
 end
