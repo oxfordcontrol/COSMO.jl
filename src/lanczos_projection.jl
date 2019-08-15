@@ -74,7 +74,7 @@ end
 
 function expand_subspace(X::Symmetric{T, Matrix{T}}, XZ::Matrix{T}, cone::PsdConeTriangleLanczos{T}) where {T}
   m = size(cone.Z.Q1, 2)
-  reset = add_columns!(cone.Z, XZ)
+  reset = add_columns!(cone.Z, XZ, allow_reset=true)
   # @show norm(cone.Z.Q1'*cone.Z.Q1 - I)
   if !reset
     XW = [XZ X*view(cone.Z.Q, :, m+1:size(cone.Z.Q1, 2))]
@@ -101,7 +101,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   R = (XU - cone.Z.Q1*Diagonal(cone.λ))[:, 1:end-cone.buffer_size] .+ 1e7 # adding 
   tol = 1e-12
   lanczos_iterations = 0
-  while lanczos_iterations == 0 || (norm(R) > tol && lanczos_iterations < 1) # || lanczos_iterations < 2
+  while lanczos_iterations == 0 || (norm(R) > tol && lanczos_iterations < 2) # || lanczos_iterations < 2
     lanczos_iterations += 1
     if size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/2 || n == 1 || mod(cone.iter_number, 1000) == 0
       # Perform "exact" projection

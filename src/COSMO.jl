@@ -19,7 +19,7 @@ if in("IterativeSolvers", keys(Pkg.installed())) && in("LinearMaps", keys(Pkg.in
     include("./kktsolver_indirect.jl")
 end
 
-include("./q.jl")
+include("./updatable_thin_qr.jl")
 include("./algebra.jl")
 include("./projections.jl")
 include("./settings.jl")            # TODO: unmodified - revisit

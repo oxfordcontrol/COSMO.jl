@@ -58,8 +58,8 @@ function update_views!(F::UpdatableQ{T}) where {T}
     F.Q1 = view(F.Q, :, 1:F.m)
 end
 
-function add_columns!(F::UpdatableQ{T}, A::AbstractMatrix{T}) where {T}
-    if F.reset_counter < 10
+function add_columns!(F::UpdatableQ{T}, A::AbstractMatrix{T}; allow_reset=false) where {T}
+    if F.reset_counter < 10 || !allow_reset
         F.reset_counter += 1
         for i = 1:size(A, 2)
             add_column!(F, view(A, :, i))
