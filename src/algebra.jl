@@ -60,6 +60,10 @@ function col_norms!(v::Array{Tf, 1},
 	return v
 end
 
+function col_norms(A::Matrix{Tf}) where{Tf <: AbstractFloat}
+	return col_norms!(zeros(size(A, 2)), A)
+end
+
 function col_norms!(v::Array{Tf, 1},
 	A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where{Tf <: AbstractFloat, Ti <: Integer}
 

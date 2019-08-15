@@ -85,6 +85,10 @@ function expand_subspace(X::Symmetric{T, Matrix{T}}, XZ::Matrix{T}, cone::PsdCon
   return cone.Z.Q1, XW
 end
 
+function get_tolerance(cone::PsdConeTriangleLanczos{T}) where T
+  return T(100/cone.iter_number^(1.1))
+end
+
 function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   n = cone.n
   cone.iter_number += 1
@@ -95,15 +99,16 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   populate_upper_triangle!(cone.X, x)
   X = Symmetric(cone.X)
 
-  U = cone.Z.Q1; λ = cone.λ
+  U = zeros(T, 0, 0); Ub = zeros(T, 0, 0);
+  XW = zeros(T, 0, 0); R = zeros(T, 0, 0)
+  λ = zeros(T, 0); λb = zeros(T, 0);
 
-  XU = X*cone.Z.Q1
-  R = (XU - cone.Z.Q1*Diagonal(cone.λ))[:, 1:end-cone.buffer_size] .+ 1e7 # adding 
-  tol = 1e-12
+  tol = get_tolerance(cone)
   lanczos_iterations = 0
-  while lanczos_iterations == 0 || (norm(R) > tol && lanczos_iterations < 2) # || lanczos_iterations < 2
+  while lanczos_iterations == 0 || (norm(R) > tol && lanczos_iterations < 500) # || lanczos_iterations < 2
+    # @show lanczos_iterations, norm(R), tol, size(cone.Z.Q1, 2), cone.n
     lanczos_iterations += 1
-    if size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/2 || n == 1 || mod(cone.iter_number, 1000) == 0
+    if size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/3 || n == 1 # || mod(cone.iter_number, 40) == 0
       # Perform "exact" projection
       if !cone.positive_subspace
         # revert flipping
@@ -113,9 +118,13 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
       return project_exact!(x, cone)
     end
 
-    W, XW = expand_subspace(X, XU, cone)
+    if lanczos_iterations == 1
+      XW = X*cone.Z.Q1
+    end
+
+    W, XW = expand_subspace(X, XW, cone)
     Xsmall = W'*XW
-    l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), 1e-10);
+    l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), tol/2);
 
     # Positive Ritz pairs
     Vp = V[:, first_positive:end]
@@ -125,14 +134,12 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
     Ub = W*V[:, buffer_idx]; λb = l[buffer_idx]
 
     # Residual Calculation
-    XU = XW*Vp
-    R = XU - U*Diagonal(λ)
-    # R = X*U - U*Diagonal(λ)
-    set_Q!(cone.Z, U)
-    add_columns!(cone.Z, Ub) # Buffer
-    XU = [XU X*Ub]
-    cone.λ = [λ; λb]
+    R = XW*Vp - U*Diagonal(λ)
   end
+  # @show "Done with:", lanczos_iterations, norm(R), tol, size(cone.Z.Q1, 2), cone.n
+  set_Q!(cone.Z, U)
+  add_columns!(cone.Z, Ub) # Buffer
+  cone.λ = [λ; λb]
 
   # λ_rem, cone.z_rem, nmult = estimate_λ_rem(X, cone.Z.Q1) # , cone.z_rem[:, 1])
   λ_rem = [0.0]; cone.z_rem = randn(size(U, 1), 1); nmult = 0
