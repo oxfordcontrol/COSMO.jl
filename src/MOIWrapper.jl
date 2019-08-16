@@ -2,7 +2,6 @@
 # https://github.com/oxfordcontrol/OSQP.jl/blob/master/src/MathOptInterfaceOSQP.jl
 # certain utility function are taken from the SCS  MathOptInterface:
 # https://github.com/JuliaOpt/SCS.jl
-
 using MathOptInterface
 
 const MOI = MathOptInterface
@@ -140,6 +139,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     idxmap = MOIU.IndexMap(dest, src)
     assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
     dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
+    # !is_pos_semi_def(P) && @warn("Your MOI model does not result in a positive semidefinite objective value matrix P. Note that this violates COSMO's assumptions.")
     A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
     convexSets = COSMO.merge_sets(convexSets)
     COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
@@ -284,10 +284,6 @@ function symmetrize!(I::Vector{Int}, J::Vector{Int}, V::Vector)
 end
 
 # The following utility functions are from https://github.com/JuliaOpt/SCS.jl
-# Matrix dimension for vectorized length n
-trimap(i::Integer, j::Integer) = i < j ? trimap(j, i) : div((i-1)*i, 2) + j
-
-
 
 # Scale coefficients depending on rows index
 # rows: List of row indices
@@ -295,19 +291,17 @@ trimap(i::Integer, j::Integer) = i < j ? trimap(j, i) : div((i-1)*i, 2) + j
 # minus: if true, multiply the result by -1
 # d: dimension of set
 # rev: if true, we unscale instead (e.g. divide by √2 instead of multiply for PSD cone)
-_scalecoef(rows, coef, minus, ::Type{<:MOI.AbstractSet}, d, rev) = minus ? -coef : coef
-_scalecoef(rows, coef, minus, ::Union{Type{<:MOI.LessThan}, Type{<:MOI.Nonpositives}, Type{<:MOI.EqualTo}}, d, rev) = minus ? coef : -coef
-function _scalecoef(rows, coef, minus, ::Type{MOI.PositiveSemidefiniteConeTriangle}, d, rev)
+_scalecoef(rows, coef, minus, ::Type{<:MOI.AbstractSet}, rev) = minus ? -coef : coef
+_scalecoef(rows, coef, minus, ::Union{Type{<:MOI.LessThan}, Type{<:MOI.Nonpositives}, Type{<:MOI.EqualTo}}, rev) = minus ? coef : -coef
+function _scalecoef(rows, coef, minus, ::Type{MOI.PositiveSemidefiniteConeTriangle}, rev)
     scaling = minus ? -1 : 1
     scaling2 = rev ? scaling / √2 : scaling * √2
     output = copy(coef)
-    diagidx = BitSet()
-    for i in 1:d
-        # vector index of diagonal entries of original matrix
-        push!(diagidx, trimap(i, i))
-    end
+    idx = 0
     for i in 1:length(output)
-        if rows[i] in diagidx
+        # See https://en.wikipedia.org/wiki/Triangular_number#Triangular_roots_and_tests_for_triangular_numbers
+        is_diagonal_index = isinteger(sqrt(8*rows[i] + 1))
+        if is_diagonal_index
             output[i] *= scaling
         else
             output[i] *= scaling2
@@ -316,9 +310,9 @@ function _scalecoef(rows, coef, minus, ::Type{MOI.PositiveSemidefiniteConeTriang
     output
 end
 # Unscale the coefficients in `coef` with respective rows in `rows` for a set `s` and multiply by `-1` if `minus` is `true`.
-scalecoef(rows, coef, minus, s) = _scalecoef(rows, coef, minus, typeof(s), MOI.dimension(s), false)
+scalecoef(rows, coef, minus, s) = _scalecoef(rows, coef, minus, typeof(s), false)
 # Unscale the coefficients in `coef` with respective rows in `rows` for a set of type `S` with dimension `d`
-unscalecoef(rows, coef, S::Type{<:MOI.AbstractSet}, d) = _scalecoef(rows, coef, false, S, d, true)
+unscalecoef(rows, coef, S::Type{<:MOI.AbstractSet}) = _scalecoef(rows, coef, false, S, true)
 
 # This helper function is to provide scale- and unscalecoef with the nomimal rows in the case of at PSDTriangle constraint
 # this is because for _scalecoef the actual row in A doesn't matter, what matters is the row in the upper triangle matrix
