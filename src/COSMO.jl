@@ -37,6 +37,4 @@ include("./solver.jl")              # TODO: unmodified - revisit
 include("./interface.jl")           # TODO: unmodified - revisit
 include("./MOIWrapper.jl")
 
-export extract_upper_triangle, populate_upper_triangle, UpdatableQ, add_column!, add_columns!
-
 end #end module
