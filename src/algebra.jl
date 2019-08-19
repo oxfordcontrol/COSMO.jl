@@ -245,23 +245,20 @@ function extract_upper_triangle(A::SparseMatrixCSC{Tv, Ti}, scaling_factor::Tv=T
 	nzind = zeros(Ti, result_nnz)
 	nzval = zeros(Tv, result_nnz)
 	n = size(A, 1)
-	counter = 0
-	@inbounds for j in 1:n, idx in A.colptr[j]:A.colptr[j+1]-1
-		i = A.rowval[idx]
+    counter = 0
+	for j in 1:n, idx in A.colptr[j]:A.colptr[j+1]-1
+        i = A.rowval[idx]
 		if i <= j
-			counter += 1
-			append!(nzind, Int(j*(j-1)/2) + i)
-			if i == j
-				append!(nzval, A.nzval[idx])
-			else
-				append!(nzval, scaling_factor*A.nzval[idx])
+            counter += 1
+            nzind[counter] = Ti(j*(j-1)/2 + i)
+            if i == j
+                nzval[counter] = A.nzval[idx]
+            else
+                nzval[counter] = scaling_factor*A.nzval[idx]
 			end
 		end
-	end
-	@assert counter == result_nnz
-
-	result = SparseVector(Int(n*(n+1)/2), nzind, nzval)
-	return result
+    end
+	return SparseVector{Tv, Ti}(Ti(n*(n + 1)/2), nzind, nzval)
 end
 
 function populate_upper_triangle(x::AbstractVector{T}, scaling_factor::T=T(1/sqrt(2))) where T
