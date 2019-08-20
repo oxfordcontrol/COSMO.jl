@@ -20,7 +20,6 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
   λ_rem_multiplications::Vector{Int}
 
   function PsdConeTriangleLanczos{T}(dim::Int) where{T}
-      println("Using Block Lanczos projection.")
       dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
       n = Int(1/2*(sqrt(8*dim + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
       n*(n + 1)/2 == dim || throw(DomainError(dim, "dimension must be a square"))
@@ -86,7 +85,7 @@ function expand_subspace(X::Symmetric{T, Matrix{T}}, XZ::Matrix{T}, cone::PsdCon
 end
 
 function get_tolerance(cone::PsdConeTriangleLanczos{T}) where T
-  return T(100/cone.iter_number^(1.1))
+  return T(100/cone.iter_number^(1.01))
 end
 
 function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
@@ -106,7 +105,6 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   tol = get_tolerance(cone)
   lanczos_iterations = 0
   while lanczos_iterations == 0 || (norm(R) > tol && lanczos_iterations < 500) # || lanczos_iterations < 2
-    # @show lanczos_iterations, norm(R), tol, size(cone.Z.Q1, 2), cone.n
     lanczos_iterations += 1
     if size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/3 || n == 1 # || mod(cone.iter_number, 40) == 0
       # Perform "exact" projection
@@ -121,10 +119,10 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
     if lanczos_iterations == 1
       XW = X*cone.Z.Q1
     end
-
+    # @show cone.positive_subspace, lanczos_iterations, norm(R), tol, size(cone.Z.Q1, 2), length(λ), cone.n
     W, XW = expand_subspace(X, XW, cone)
     Xsmall = W'*XW
-    l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), tol/2);
+    l, V, first_positive, first_negative = eigen_sorted(Symmetric(Xsmall), 1e-6)#tol/2);
 
     # Positive Ritz pairs
     Vp = V[:, first_positive:end]
@@ -207,6 +205,7 @@ function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) wh
   append!(cone.residual_history, 0.0)
   append!(cone.λ_rem_history, 0.0)
   append!(cone.subspace_dim_history, size(cone.Z.Q1, 2))
+  #@show "Done with Exact projection", size(cone.Z.Q1, 2), cone.n
   cone.z_rem .= randn(n)
   return nothing
 end

@@ -30,6 +30,7 @@ function print_header(ws::COSMO.Workspace)
 
 	println("Setup Time: $(round.(ws.times.setup_time*1000; digits=2))ms\n")
 	println("Iter:\tObjective:\tPrimal Res:\tDual Res:\tRho:\t\tTime (s):")
+	flush(stdout)
 	nothing
 end
 
@@ -42,6 +43,7 @@ function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::Float64, r_prim
 			@printf("%d\t%.4e\t ---\t\t\t---\t%.2e\n", iter, cost, running_time)
 		end
 	end
+	flush(stdout)
 	nothing
 end
 

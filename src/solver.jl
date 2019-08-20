@@ -91,6 +91,8 @@ function optimize!(ws::COSMO.Workspace)
 
 	for iter = 1:settings.max_iter
 
+		# NR: Why do we have both num_iter and iter?
+		ws.iterations = iter
 		num_iter+= 1
 
 		@. δx = ws.vars.x
