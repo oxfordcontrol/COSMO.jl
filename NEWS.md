@@ -1,3 +1,12 @@
+## Version 0.4.4 (23. August 2019)
+
+- `b514287` Fix memory issue in MOI's interface (PR #87)
+- `cc32a30` Remove parameter printing for sets
+- `d31e501` Code refactoring in chordal decomposition
+- `128b409` Remove num of elem in A and size of b from header
+- `b267b1c` Remove eigendecomposition of P in MOI wrapper
+- `21eb8da` Move PowerCone to typed set in MOI wrapper test
+
 ## Version 0.4.3 (3. June 2019)
 We add the exponential cone, the power cone and their dual cones. Furthermore, we offer the option to use different linear
 system solvers. The most important changes are listed here:
