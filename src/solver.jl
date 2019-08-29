@@ -148,7 +148,7 @@ function optimize!(ws::COSMO.Workspace)
 		end
 
 		# adapt rhoVec if enabled
-		if settings.adaptive_rho && (mod(iter, settings.adaptive_rho_interval) == 0) && (settings.adaptive_rho_interval > 0)
+		if settings.adaptive_rho && ((mod(iter, settings.adaptive_rho_interval) == 0) || iter == 40) && (settings.adaptive_rho_interval > 0)
 			adapt_rho_vec!(ws)
 		end
 

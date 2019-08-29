@@ -1,6 +1,8 @@
 using UnsafeArrays
 import Base: showarg, eltype
-include("lanczos_projection.jl")
+# include("lanczos_projection.jl")
+include("lobpcg_project.jl")
+include("lobpcg_projection.jl")
 const DSYEVR_ = (BLAS.@blasfunc(dsyevr_),Base.liblapack_name)
 const SSYEVR_ = (BLAS.@blasfunc(ssyevr_),Base.liblapack_name)
 
@@ -360,8 +362,12 @@ function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, Dense
     return is_neg_sem_def(cone.X, tol)
 end
 
-function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLanczos{T}}) where {T}
+function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
   cone.X = zeros(cone.n, cone.n)
+end
+
+function allocate_memory!(cone::PsdConeTriangleLanczos{T}) where {T}
+  nothing
 end
 
 
