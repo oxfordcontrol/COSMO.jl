@@ -2,7 +2,6 @@ using MathOptInterface, COSMO, Test, LinearAlgebra
 const MOI = MathOptInterface
 const MOIT = MOI.Test
 const MOIB = MOI.Bridges
-
 const MOIU = MOI.Utilities
 MOIU.@model(COSMOModelData,
         (),
@@ -10,7 +9,7 @@ MOIU.@model(COSMOModelData,
         (MOI.Zeros, MOI.Nonnegatives, MOI.Nonpositives, MOI.SecondOrderCone,
          MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone, MOI.DualExponentialCone),
         (MOI.PowerCone, MOI.DualPowerCone),
-        (MOI.SingleVariable,),
+        (),
         (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
         (MOI.VectorOfVariables,),
         (MOI.VectorAffineFunction,),);
@@ -211,7 +210,7 @@ MOIU.@model(COSMOModelData,
         x = MOI.add_variables(model, 1);
         objectiveFunction = MOI.ScalarAffineFunction{Float64}([MOI.ScalarAffineTerm(-1.0, x[1])] , 0);
         MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(), objectiveFunction);
-        MOI.add_constraint(model, MOI.SingleVariable(x[1]), MOI.GreaterThan{Float64}(10.));
+        MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.([1.0], x[1:1]), 0.0), MOI.GreaterThan{Float64}(10.));
         idxmap = MOI.copy_to(optimizer, model);
         MOI.optimize!(optimizer);
         @test MOI.get(optimizer, MOI.TerminationStatus()) == MOI.ITERATION_LIMIT
@@ -249,7 +248,7 @@ MOIU.@model(COSMOModelData,
         # Interval: 2 <= A[2, :] * x <= 50
         box1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A[2, :], x[1:2]), 0.0), MOI.Interval(l[2], u[2]));
         # Equal To: x[1] == - 2
-        zero1 = MOI.add_constraint(model, MOI.SingleVariable(x[1]), MOI.EqualTo(x_true[1]));
+        zero1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.([1.0], x[1:1]), 0.0), MOI.EqualTo(x_true[1]));
         # Nonpositives: x[1; 2] - [10; 10] <= [0; 0]
         nn2 = MOI.add_constraint(model, MOI.VectorAffineFunction(MOI.VectorAffineTerm.( [1; 2], MOI.ScalarAffineTerm.([1. ;1. ], x[1:2])), -10. .* ones(2)), MOI.Nonpositives(2));
         # Interval: -50 <= A[3, :] * x <= 50
@@ -274,38 +273,49 @@ MOIU.@model(COSMOModelData,
 
      end
 
-# # --------------------
-# # MOI - Test sets
-# --------------------
-optimizer = MOIU.CachingOptimizer(MOIU.UniversalFallback(COSMOModelData{Float64}()),
-                                  COSMO.Optimizer(eps_abs = 1e-4, eps_rel = 1e-4 ));
+    # # -------------------
+    # # MOI - Test sets
+    # --------------------
 
-MOI.set(optimizer, MOI.Silent(), true)
-bridged = MOIB.full_bridge_optimizer(optimizer, Float64);
+    optimizer = COSMO.Optimizer(eps_abs = 1e-5, eps_rel = 1e-5, check_termination = 25, check_infeasibility = 50)
+    MOI.set(optimizer, MOI.Silent(), true)
 
-config = MOIT.TestConfig(atol=1e-2, rtol=1e-2)
-@testset "Unit" begin
-    MOIT.unittest(bridged, config,
-                  [# Quadratic functions are not supported
-                   "solve_qcp_edge_cases", "solve_qp_edge_cases",
-                   # Integer and ZeroOne sets are not supported
-                   "solve_integer_edge_cases", "solve_objbound_edge_cases"])
-end
-
-@testset "Continuous linear problems" begin
-    MOIT.contlineartest(bridged, config, ["linear12"])
-end
-
-@testset "Continuous quadratic problems" begin
-    exclude_qt_test_sets = []#["qcp", "socp"]
-    MOIT.contquadratictest(bridged, config, ["socp1"])
-end
+    cache = MOIU.UniversalFallback(MOIU.Model{Float64}())
+    cached = MOIU.CachingOptimizer(cache, optimizer)
+    bridged = MOIB.full_bridge_optimizer(cached, Float64)
+    config = MOIT.TestConfig(atol = 1e-3, rtol = 1e-3, duals = false)
 
 
-exclude_conic_test_sets = ["rootdet", "logdet"]
-@testset "Continuous conic problems" begin
-    MOIT.contconictest(bridged, config, exclude_conic_test_sets)
-end
+    @testset "Unit" begin
+        MOIT.unittest(bridged, config,
+                        [# Quadratic constraints are not supported
+                        "solve_qcp_edge_cases",
+                       # ArgumentError: The number of constraints in SCSModel must be greater than 0
+                        "solve_unbounded_model",
+                       # Integer and ZeroOne sets are not supported
+                       "solve_integer_edge_cases", "solve_objbound_edge_cases",
+                        "solve_zero_one_with_bounds_1",
+                        "solve_zero_one_with_bounds_2",
+                        "solve_zero_one_with_bounds_3"])
+    end
+
+    @testset "Continuous Linear" begin
+        MOIT.contlineartest(bridged, config, [
+            "linear8a", # It expects `ResultCount` to be 0 as we disable `duals`.
+            ])
+    end
+
+    @testset "Continuous Quadratic" begin
+
+        MOIT.contquadratictest(bridged, config, [ "socp",
+                                                 "ncqcp"])
+    end
+
+
+    exclude_conic_test_sets = ["rootdet", "logdet"]
+    @testset "Continuous Conic" begin
+        MOIT.contconictest(bridged, config, exclude_conic_test_sets)
+    end
 
  end
 

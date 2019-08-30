@@ -14,7 +14,6 @@ const SparseTriplets = Tuple{Vector{Int}, Vector{Int}, Vector{<:Any}}
 const SingleVariable = MOI.SingleVariable
 const Affine = MOI.ScalarAffineFunction{Float64}
 const Quadratic = MOI.ScalarQuadraticFunction{Float64}
-const AffineConvertible = Union{Affine, SingleVariable}
 const VectorOfVariables = MOI.VectorOfVariables
 const VectorAffine = MOI.VectorAffineFunction{Float64}
 
@@ -358,7 +357,7 @@ function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSet
         processConstant!(b, rows, f, s)
         constant[rows] = b[rows]
         if typeof(s) <: MOI.AbstractScalarSet && !(typeof(s) <: MOI.Interval)
-            set_constant[rows] =  MOIU.getconstant(s)
+            set_constant[rows] =  MOI.constant(s)
         end
         processConstraint!(triplets, f, rows, idxmap, s)
         processSet!(b, rows, COSMOconvexSets, s)
@@ -374,7 +373,7 @@ constant(f::MOI.ScalarAffineFunction) = f.constant
 
 
 # process constant for functions Union{Affine, SingleVariable}
-function processConstant!(b, row::Int, f::AffineConvertible, s)
+function processConstant!(b, row::Int, f::Affine, s)
     b[row] = scalecoef(row, constant(f), false, s)
     nothing
 end
@@ -390,14 +389,6 @@ function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine, s)
     nothing
 end
 
-# process function like f(x)= x1
-function processConstraint!(triplets::SparseTriplets, f::MOI.SingleVariable, row::Int, idxmap, s::MOI.AbstractSet)
-    (I, J, V) = triplets
-    push!(I, row)
-    push!(J, idxmap[f.variable].value)
-    push!(V, scalecoef(row, 1, true, s))
-    nothing
-end
 
 # process function like f(x) = coeff*x_1
 function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap, s::MOI.AbstractSet)
@@ -705,6 +696,12 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
     end
 end
 
+function MOI.get(optimizer::Optimizer, ::MOI.RawStatusString)
+    return String(optimizer.results.status)
+end
+
+
+
 
 _unshift(optimizer::Optimizer, offset, value, s) = value
 _unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value + optimizer.set_constant[offset]
@@ -752,13 +749,42 @@ function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci_src::CI{<:
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci_src])
     # this undoes the scaling that was used in get(MOI.ConstraintDual)
-    # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sqrt(2)
+    # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sfqrt(2)
     COSMO.warm_start_dual!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, false), rows)
     nothing
 end
 
+
+ MOI.supports(::Optimizer, ::MOI.RawParameter) = true
+function MOI.set(optimizer::Optimizer, p::MOI.RawParameter, value)
+    setfield!(optimizer.inner.settings, Symbol(p.name), value)
+end
+
+function MOI.get(optimizer::Optimizer, p::MOI.RawParameter)
+    if in(Symbol(p.name), fieldnames(typeof(optimizer.inner.settings)))
+        return getfield(optimizer.inner.settings, Symbol(p.name))
+    end
+    error("RawParameter with name $(p.name) is not set.")
+end
+
+
+# MOI.Silent == COSMO.Settings.verbose = false
+MOI.supports(::Optimizer, ::MOI.Silent) = true
 function MOI.set(optimizer::Optimizer, ::MOI.Silent, value::Bool)
     optimizer.inner.settings.verbose = !value
+end
+MOI.get(optimizer::Optimizer, ::MOI.Silent) = !optimizer.inner.settings.verbose
+
+MOI.supports(::Optimizer, ::MOI.TimeLimitSec) = true
+function MOI.set(optimizer::Optimizer, ::MOI.TimeLimitSec, value::Real)
+    MOI.set(optimizer, MOI.RawParameter("time_limit"), Float64(value))
+end
+
+function MOI.set(optimizer::Optimizer, attr::MOI.TimeLimitSec, ::Nothing)
+    MOI.set(optimizer, MOI.RawParameter("time_limit"), 0.0)
+end
+function MOI.get(optimizer::Optimizer, ::MOI.TimeLimitSec)
+    return MOI.get(optimizer, MOI.RawParameter("time_limit"))
 end
 
 
@@ -772,7 +798,7 @@ MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
 
 ## Supported Constraints
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:AffineConvertible}, ::Type{<:IntervalConvertible}) = true
+MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<:IntervalConvertible}) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
 
 
