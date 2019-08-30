@@ -1,5 +1,6 @@
 using LinearAlgebra, Statistics
 using Printf
+using Random
 
 mutable struct LOBPCGIterable{T}
     n::Int
@@ -21,6 +22,7 @@ mutable struct LOBPCGIterable{T}
     verbosity::Int
     is_restarted::Bool
     buffer_size::Int
+    largest::Bool
 
     _memoryGramm::Matrix{T}
     _memoryR::Matrix{T}
@@ -31,7 +33,8 @@ mutable struct LOBPCGIterable{T}
     function LOBPCGIterable(A::Matrix{T};
         tol::T=T(1e-4), verbosity=1,
         buffer_size::Int=max(Int(floor(size(A, 1) / 50)), 3),
-        max_dim=Int(ceil(size(A, 1)/5))
+        max_dim=Int(ceil(size(A, 1)/5)),
+        largest=true
         ) where T
         n = size(A, 1)
         @assert max_dim <= Int(ceil(n/5)) "Too many (max) requested eigenvalues. Use exact eigendecomposition or use exact eigendecomposition"
@@ -46,6 +49,7 @@ mutable struct LOBPCGIterable{T}
             tol, verbosity,
             true, # is_restarted
             buffer_size, # buffer
+            largest,
             Matrix{T}(undef, 3*max_dim, 6*max_dim), # _memoryGramm
             Matrix{T}(undef, n, max_dim), Matrix{T}(undef, n, max_dim), # _memoryR/P
             Matrix{T}(undef, n, max_dim), Matrix{T}(undef, n, max_dim)  # _memoryAR/AP
@@ -167,7 +171,8 @@ function iterate!(data::LOBPCGIterable{T}) where T
     push!(data.condition_estimates, condition_estimate)
 
     λ, W = eigen!(G, Q) # 2nd most computationally intensive line
-    update_subspaces!(data, λ, W, R, AR, P, AP)
+    flag = update_subspaces!(data, λ, W, R, AR, P, AP)
+    flag && return :excessive_columns
     
     return :not_converged
 end
@@ -180,9 +185,8 @@ function restart!(data::LOBPCGIterable{T}) where T
 end
 
 function update_subspaces!(data::LOBPCGIterable{T}, λ, W, R, AR, P, AP) where T
-    largest = false
-    if largest
-        m_new = min(max(sum(λ .> 1e-6) + data.buffer_size, data.m), length(λ))
+    if data.largest
+        m_new = min(max(sum(λ .> -1e-6) + data.buffer_size, data.m), length(λ))
         data.λ = λ[end-m_new+1:end]
         W = view(W, :, size(W, 2) - m_new + 1:size(W,2))
     else
@@ -190,7 +194,7 @@ function update_subspaces!(data::LOBPCGIterable{T}, λ, W, R, AR, P, AP) where T
         data.λ = λ[1:m_new]
         W = view(W, :, 1:m_new)
     end
-    m_new > min(data.n/5, data.m_max) && throw(ArgumentError("Too many positive eigenvalues - use exact projection."))
+    m_new > min(data.n/5, data.m_max) && return true
 
     data.P = [R P] * W[data.m+1:end, :]
     data.X = data.X * W[1:data.m, :] + data.P
@@ -202,6 +206,7 @@ function update_subspaces!(data::LOBPCGIterable{T}, λ, W, R, AR, P, AP) where T
         restart!(data)
     end
     data.m = m_new
+    return false
 end
 
 function compute_gramm_matrix!(data::LOBPCGIterable{T}, explicit_gram::Bool, R, P, AR, AP) where T
