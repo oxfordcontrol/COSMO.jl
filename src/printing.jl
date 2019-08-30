@@ -40,7 +40,7 @@ function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::Float64, r_prim
 		if mod(iter, settings.check_termination) == 0
 			lanczos_dims = Int[]
 			for set in ws.p.C.sets
-				if isa(set, COSMO.PsdConeTriangleLanczos)
+				if length(lanczos_dims) < 3 && isa(set, COSMO.PsdConeTriangleLanczos)
 					append!(lanczos_dims, set.subspace_dim_history[end])
 					if !set.positive_subspace
 						lanczos_dims[end] *= -1
@@ -48,7 +48,6 @@ function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::Float64, r_prim
 				end
 			end
 			@printf("%d\t%.4e\t%.4e\t%.4e\t%.4e\t%.2e\t%s\n", iter, cost, r_prim, r_dual, ws.ρ, running_time, lanczos_dims)
-			
 		else
 			@printf("%d\t%.4e\t ---\t\t\t---\t%.2e\n", iter, cost, running_time)
 		end
