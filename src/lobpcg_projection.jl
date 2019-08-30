@@ -1,4 +1,4 @@
-using LinearMaps, LinearAlgebra, Random
+using LinearMaps, LinearAlgebra
 
 # ----------------------------------------------------
 # Positive Semidefinite Cone
@@ -22,11 +22,10 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
         n = Int(1 / 2 * (sqrt(8 * dim + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
         n * (n + 1) / 2 == dim || throw(DomainError(dim, "dimension must be a square"))
         initial_dim = max(10, Int(floor(n / 50)))
-        rng = MersenneTwister(1)
         data = LOBPCGIterable(zeros(T, n, n), verbosity = 1)
         new(dim, n, 0, true,
             zeros(T, n, n), # X
-            randn(rng, T, n, initial_dim), # U
+            zeros(T, n, 0), # U
             data,
             zeros(T, 0), # residual_history
             zeros(T, 0), # λ_rem_history
@@ -38,20 +37,28 @@ end
 PsdConeTriangleLanczos(dim) = PsdConeTriangleLanczos{DefaultFloat}(dim)
 
 function get_tolerance(cone::PsdConeTriangleLanczos{T}) where T
-    return T(sqrt(cone.n) / cone.iter_number^(1.05)) * 10
+    return max(T(sqrt(cone.n) / cone.iter_number^(1.01)) * 10, 1e-7)
 end
 
 function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
     n = cone.n
     cone.iter_number += 1
     
-    if size(cone.U, 2) < cone.data.m_max && cone.n > 50
+    if size(cone.U, 2) < cone.data.m_max && cone.n > 50 && cone.iter_number > 1
         populate_upper_triangle!(cone.X, x)
         tol = get_tolerance(cone)
         initialize!(cone.data, cone.X, cone.U)
         cone.data.largest = cone.positive_subspace
         cone.data.tol = tol
-        cone.data, status = lobpcg!(cone.data, 10)
+        try
+            cone.data, status = lobpcg!(cone.data, 10)
+        catch e
+            if isa(e, PosDefException)
+                status = :error
+            else
+                throw(e)
+            end
+        end
     else
         status = :excessive_columns
     end
@@ -60,11 +67,11 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
         return project_exact!(x, cone)
     else
         if cone.positive_subspace
-            first_idx = max(sum(cone.data.λ .< 1e-6) - cone.data.buffer_size, 1)
+            first_idx = max(sum(cone.data.λ .< 0) - cone.data.buffer_size, 1)
             cone.U = cone.data.X[:, first_idx:end]
             λ = cone.data.λ[first_idx:end]
         else
-            last_idx = min(sum(cone.data.λ .< -1e-6) + cone.data.buffer_size, length(cone.data.λ))
+            last_idx = min(sum(cone.data.λ .< 0) + cone.data.buffer_size, length(cone.data.λ))
             cone.U = cone.data.X[:, 1:last_idx]
             λ = -cone.data.λ[1:last_idx]
         end
@@ -93,22 +100,27 @@ function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) wh
         # compute eigenvalue decomposition
         # then round eigs up and rebuild
         λ, U  = eigen!(Symmetric(cone.X))
-        Up = U[:, λ .> 0]
-        sqrt_λp = sqrt.(λ[λ .> 0])
+        first_positive = findfirst(x -> x > 0, λ)
+        if first_positive === nothing
+            first_positive = length(λ) + 1
+        end
+        Up = U[:, first_positive:end]
+        sqrt_λp = sqrt.(λ[first_positive:end])
         rmul!(Up, Diagonal(sqrt_λp))
         BLAS.syrk!('U', 'N', 1.0, Up, 0.0, cone.X)
         extract_upper_triangle!(cone.X, x)
 
         # Save the subspace that we will be tracking
-        if sum(λ .> 1e-6) <= sum(λ .< -1e-6)
+        if first_positive > n/2
+            # @show sum((λ .> 0) .& (λ .< 1e-6))
             cone.positive_subspace = true
         else
+            # @show sum((λ .> -1e-6) .& (λ .< 0))
             λ = -λ # Equivalent to considering -cone.X instead of cone.X
             cone.positive_subspace = false
         end
-        idx = sum(λ .<= 1e-6) # First positive index
         # Take also a few vectors from the discarted eigenspace
-        idx = max(idx - cone.data.buffer_size, 1)
+        idx = max(first_positive - cone.data.buffer_size, 1)
         cone.U = U[:, idx:end]
     end
     append!(cone.subspace_dim_history, size(cone.U, 2))

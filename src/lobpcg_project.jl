@@ -33,11 +33,11 @@ mutable struct LOBPCGIterable{T}
     function LOBPCGIterable(A::Matrix{T};
         tol::T=T(1e-4), verbosity=1,
         buffer_size::Int=max(Int(floor(size(A, 1) / 50)), 3),
-        max_dim=Int(ceil(size(A, 1)/5)),
+        max_dim=Int(ceil(size(A, 1)/4)),
         largest=true
         ) where T
         n = size(A, 1)
-        @assert max_dim <= Int(ceil(n/5)) "Too many (max) requested eigenvalues. Use exact eigendecomposition or use exact eigendecomposition"
+        @assert max_dim <= Int(ceil(n/4)) "Too many (max) requested eigenvalues. Use exact eigendecomposition or use exact eigendecomposition"
 
         new{T}(n, 0, max_dim, 0, A,
             Matrix{T}(undef, n, 0), # X
@@ -186,15 +186,15 @@ end
 
 function update_subspaces!(data::LOBPCGIterable{T}, λ, W, R, AR, P, AP) where T
     if data.largest
-        m_new = min(max(sum(λ .> -1e-6) + data.buffer_size, data.m), length(λ))
+        m_new = min(max(sum(λ .> 0) + data.buffer_size, data.m), length(λ))
         data.λ = λ[end-m_new+1:end]
         W = view(W, :, size(W, 2) - m_new + 1:size(W,2))
     else
-        m_new = min(max(sum(λ .< -1e-6) + data.buffer_size, data.m), length(λ))
+        m_new = min(max(sum(λ .< 0) + data.buffer_size, data.m), length(λ))
         data.λ = λ[1:m_new]
         W = view(W, :, 1:m_new)
     end
-    m_new > min(data.n/5, data.m_max) && return true
+    m_new > min(data.n/4, data.m_max) && return true
 
     data.P = [R P] * W[data.m+1:end, :]
     data.X = data.X * W[1:data.m, :] + data.P

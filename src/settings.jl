@@ -89,7 +89,7 @@ mutable struct Settings
 		MIN_SCALING = 1e-4,
 		MAX_SCALING = 1e4,
 		adaptive_rho = true,
-		adaptive_rho_interval = 80,
+		adaptive_rho_interval = 40,
 		adaptive_rho_tolerance = 5,
 		verbose_timing = false,
 		RHO_MIN = 1e-6,
