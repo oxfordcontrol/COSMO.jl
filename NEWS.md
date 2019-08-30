@@ -1,3 +1,7 @@
+## Version 0.5.0 (30. August 2019)
+
+- `8986827` Update to support MOI v0.9
+
 ## Version 0.4.4 (23. August 2019)
 
 - `b514287` Fix memory issue in MOI's interface (PR #87)
