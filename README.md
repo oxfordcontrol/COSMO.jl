@@ -14,7 +14,7 @@
   <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg"></a>
   <a href="https://oxfordcontrol.github.io/COSMO.jl/stable"><img src="https://img.shields.io/badge/Documentation-stable-purple.svg"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
-  <a href="https://github.com/oxfordcontrol/COSMO.jl/releases"><img src="https://img.shields.io/badge/Release-v0.4.4-blue.svg"></a>
+  <a href="https://github.com/oxfordcontrol/COSMO.jl/releases"><img src="https://img.shields.io/badge/Release-v0.5.0-blue.svg"></a>
 </p>
 
 <p align="center">
