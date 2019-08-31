@@ -18,6 +18,8 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
   λ_rem_history::Vector{T}
   subspace_dim_history::Vector{Int}
   λ_rem_multiplications::Vector{Int}
+  exact_projections::Int
+  lanczos_iterations::Int
 
   function PsdConeTriangleLanczos{T}(dim::Int) where{T}
       dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
@@ -34,7 +36,8 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
         zeros(T, 0), # residual_history
         zeros(T, 0), # λ_rem_history
         zeros(Int, 0), # subspace_dim_history
-        zeros(Int, 0) # λ_rem_multiplications
+        zeros(Int, 0), # λ_rem_multiplications
+        0, 0
         )
   end
 end
@@ -106,7 +109,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
   lanczos_iterations = 0
   while lanczos_iterations == 0 || (norm(R) > tol && lanczos_iterations < 500) # || lanczos_iterations < 2
     lanczos_iterations += 1
-    if size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/3 || n == 1 # || mod(cone.iter_number, 40) == 0
+    if size(cone.Z.Q1, 2) == 0 || size(cone.Z.Q1, 2) >= cone.n/4 || n == 1  || cone.iter_number == 1
       # Perform "exact" projection
       if !cone.positive_subspace
         # revert flipping
@@ -167,6 +170,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where{T}
 end
 
 function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) where{T}
+  cone.exact_projections += 1
   n = cone.n
 
   # handle 1D case

@@ -23,8 +23,7 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         n = Int(1 / 2 * (sqrt(8 * dim + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
         n * (n + 1) / 2 == dim || throw(DomainError(dim, "dimension must be a square"))
-        initial_dim = max(10, Int(floor(n / 50)))
-        data = LOBPCGIterable(zeros(T, n, n), verbosity = 1)
+        data = LOBPCGIterable(zeros(T, n, n), verbosity = 1, buffer_size = 3)
         new(dim, n, 0, true,
             zeros(T, n, n), # X
             zeros(T, n, 0), # U
@@ -41,7 +40,7 @@ PsdConeTriangleLanczos(dim) = PsdConeTriangleLanczos{DefaultFloat}(dim)
 
 function get_tolerance(cone::PsdConeTriangleLanczos{T}) where T
     # return T(max(sqrt(cone.n) / (cone.iter_number/5)^(1.05), 1e-7))
-    return T(max(sqrt(cone.n) / cone.iter_number^(1.005) * 10, 1e-7))
+    return T(max(sqrt(cone.n) / cone.iter_number^(1.01) * 10, 1e-7))
 end
 
 function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
