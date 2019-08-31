@@ -16,6 +16,8 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
     λ_rem_history::Vector{T}
     subspace_dim_history::Vector{Int}
     λ_rem_multiplications::Vector{Int}
+    exact_projections::Int
+    lanczos_iterations::Int
 
     function PsdConeTriangleLanczos{T}(dim::Int) where {T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
@@ -30,28 +32,31 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
             zeros(T, 0), # residual_history
             zeros(T, 0), # λ_rem_history
             zeros(Int, 0), # subspace_dim_history
-            zeros(Int, 0)
+            zeros(Int, 0),
+            0, 0
         )
     end
 end
 PsdConeTriangleLanczos(dim) = PsdConeTriangleLanczos{DefaultFloat}(dim)
 
 function get_tolerance(cone::PsdConeTriangleLanczos{T}) where T
-    return max(T(sqrt(cone.n) / cone.iter_number^(1.01)) * 10, 1e-7)
+    # return T(max(sqrt(cone.n) / (cone.iter_number/5)^(1.05), 1e-7))
+    return T(max(sqrt(cone.n) / cone.iter_number^(1.005) * 10, 1e-7))
 end
 
 function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
     n = cone.n
     cone.iter_number += 1
-    
-    if size(cone.U, 2) < cone.data.m_max && cone.n > 50 && cone.iter_number > 1
+
+    tol = get_tolerance(cone)
+    if size(cone.U, 2) < cone.data.m_max && cone.n > 50 && cone.iter_number > 1 && tol > 1e-6
         populate_upper_triangle!(cone.X, x)
-        tol = get_tolerance(cone)
         initialize!(cone.data, cone.X, cone.U)
         cone.data.largest = cone.positive_subspace
         cone.data.tol = tol
         try
             cone.data, status = lobpcg!(cone.data, 10)
+            cone.lanczos_iterations += cone.data.iteration - 1
         catch e
             if isa(e, PosDefException)
                 status = :error
@@ -67,11 +72,11 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
         return project_exact!(x, cone)
     else
         if cone.positive_subspace
-            first_idx = max(sum(cone.data.λ .< 0) - cone.data.buffer_size, 1)
+            first_idx = max(sum(cone.data.λ .< 1e-6) - cone.data.buffer_size, 1)
             cone.U = cone.data.X[:, first_idx:end]
             λ = cone.data.λ[first_idx:end]
         else
-            last_idx = min(sum(cone.data.λ .< 0) + cone.data.buffer_size, length(cone.data.λ))
+            last_idx = min(sum(cone.data.λ .< -1e-6) + cone.data.buffer_size, length(cone.data.λ))
             cone.U = cone.data.X[:, 1:last_idx]
             λ = -cone.data.λ[1:last_idx]
         end
@@ -88,6 +93,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
 end
 
 function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) where {T}
+    cone.exact_projections += 1
     # @show "exact"
     n = cone.n
 
@@ -120,7 +126,7 @@ function project_exact!(x::AbstractArray{T}, cone::PsdConeTriangleLanczos{T}) wh
             cone.positive_subspace = false
         end
         # Take also a few vectors from the discarted eigenspace
-        idx = max(first_positive - cone.data.buffer_size, 1)
+        idx = max(sum(λ .< 1e-6) - cone.data.buffer_size, 1)
         cone.U = U[:, idx:end]
     end
     append!(cone.subspace_dim_history, size(cone.U, 2))
