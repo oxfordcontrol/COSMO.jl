@@ -23,7 +23,7 @@ mutable struct PsdConeTriangleLanczos{T} <: AbstractConvexCone{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         n = Int(1 / 2 * (sqrt(8 * dim + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
         n * (n + 1) / 2 == dim || throw(DomainError(dim, "dimension must be a square"))
-        data = LOBPCGIterable(zeros(T, n, n), verbosity = 1, buffer_size = 3)
+        data = LOBPCGIterable(zeros(T, n, n), verbosity = 1, buffer_size = Int(floor(min(max(n / 50, 3), 20))))
         new(dim, n, 0, true,
             zeros(T, n, n), # X
             zeros(T, n, 0), # U
