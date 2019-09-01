@@ -48,7 +48,7 @@ function project!(x::AbstractArray, cone::PsdConeTriangleLanczos{T}) where {T}
     cone.iter_number += 1
 
     tol = get_tolerance(cone)
-    if size(cone.U, 2) < cone.data.m_max && cone.n > 50 && cone.iter_number > 1 && tol > 1e-6
+    if size(cone.U, 2) < cone.data.m_max && cone.n > 50 && cone.iter_number > 1 && tol > 1e-6 && mod(cone.iter_number, 40) != 0
         populate_upper_triangle!(cone.X, x)
         initialize!(cone.data, cone.X, cone.U)
         cone.data.largest = cone.positive_subspace
