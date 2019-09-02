@@ -31,12 +31,11 @@ COSMO also allows you to pass in solver-specific options with the `with_options(
 settings = COSMO.Settings(kkt_solver = with_options(PardisoDirectKKTSolver, msg_level_on = true))
 ```
 
-Likewise, IndirectReducedKKTSolver and IndirectKKTSolver are also parametrizable with the `with_options(solver_type, args...; kwargs...)` and the accept the following arguments.
-Further options are described as below:
+Likewise, IndirectReducedKKTSolver and IndirectKKTSolver are also parametrizable with the `with_options(solver_type, args...; kwargs...)` and accept the following arguments:
 Keyword Argument | Description
 -------------- |   :-----
 solver_type::Symbol | The iterative solver used for the solution of the linear system. Possible values are :MINRES or :CG for IndirectReducedKKTSolver and :CG for IndirectKKTSolver.
-tol_constant::T and tol_exponent::T | Parameter that defines the solution tolerance for the iterative solvers accross iterations. In particular, the solution tolerance at every iteration is defined as `\text{tol_constant} \text{iteration}^\text{tol_exponent}`
+tol_constant::T=T(1.0) and tol_exponent::T=T(1.5) | Parameter that defines the solution tolerance for the iterative solvers accross iterations. In particular, the solution tolerance at every iteration is defined as `\text{tol_constant} \text{iteration}^\text{tol_exponent}`
  | 
 
 
