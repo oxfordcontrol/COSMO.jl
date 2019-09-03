@@ -51,7 +51,7 @@ if in("Pardiso",keys(Pkg.installed()))
     end
 end
 
-if in("IterativeSolvers",keys(Pkg.installed()))
+if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed())) 
     using IterativeSolvers
     push!(solver_types, COSMO.IndirectReducedKKTSolver)
     push!(solver_tols, 1e-3)
@@ -67,7 +67,7 @@ if in("IterativeSolvers",keys(Pkg.installed()))
 end
 
 
- @testset "$(solver_types[i]) $(params[i]) : KKT solver tests" for i = 1:length(solver_types)
+@testset "$(solver_types[i]) $(params[i]) : KKT solver tests" for i = 1:length(solver_types)
 
     m = 10
     n = 20
@@ -81,11 +81,13 @@ end
         b = randn(m + n)
 
         F = solver_types[i](P, A, sigma, rho1; params[i]...)
-        if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
-            # Technically, we should have been able to set the tolerance even lower
-            # But, currently, issues in IterativeSolvers.jl do not allow this
-            # See: https://github.com/JuliaMath/IterativeSolvers.jl/pull/244
-            F.iteration_counter = 10^4 # This forces CG's/MINRES tolerance to be 1/10^4
+        if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
+            if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
+                # Technically, we should have been able to set the tolerance even lower
+                # But, currently, issues in IterativeSolvers.jl do not allow this
+                # See: https://github.com/JuliaMath/IterativeSolvers.jl/pull/244
+                F.iteration_counter = 10^4 # This forces CG's/MINRES tolerance to be 1/10^4
+            end
         end
         J = make_test_kkt(P, A, sigma, rho1)
         x = copy(b)
@@ -97,15 +99,17 @@ end
         # Check that warm starting works
         # Invoking again an indirect solver should result in the solution with only
         # one matrix vector multiplication
-        if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
-            # The calculation of the residual, and thus the termination criterion, of
-            # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
-            # For this reason we don't check warm starting with MINRES for now :(
-            if F.solver_type != :MINRES
-                COSMO.solve!(F, x, b)
-                @show F.multiplications
-                @test F.multiplications[end] <= 1 
-                @test norm(x - J \ b) <= solver_tols[i]
+        if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed())) &&
+            if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
+                # The calculation of the residual, and thus the termination criterion, of
+                # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
+                # For this reason we don't check warm starting with MINRES for now :(
+                if F.solver_type != :MINRES
+                    COSMO.solve!(F, x, b)
+                    @show F.multiplications
+                    @test F.multiplications[end] <= 1 
+                    @test norm(x - J \ b) <= solver_tols[i]
+                end
             end
         end
 
