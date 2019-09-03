@@ -189,9 +189,8 @@ function optimize!(ws::COSMO.Workspace)
 	y = -ws.vars.μ
 	free_memory!(ws)
 
-	return result = Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
+	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
-	return Result{Float64}(ws.vars.x, -ws.vars.μ, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 end
 
 

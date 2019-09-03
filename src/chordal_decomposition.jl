@@ -139,7 +139,8 @@ function find_decomposition_matrix!(ws)
 
   # allocate H and new decomposed cones
   n = COSMO.find_H_col_dimension(ws.p.C.sets, ws.ci.sp_arr)
-  ws.ci.H = spzeros(ws.ci.originalM, n)
+  H_I = zeros(Int64, n)
+
 
   # find number of decomposed and total sets and allocate structure for new compositve convex set
   num_total, num_new_psd_cones = COSMO.num_cone_decomposition(ws)
@@ -149,21 +150,27 @@ function find_decomposition_matrix!(ws)
 
   # loop over all convex sets and fill H and composite convex set accordingly
   row = 1
-  col = 1
+  entry = 1
   sp_ind = 1
   set_ind = 2
   for (kkk, C) in enumerate(ws.p.C.sets)
-    set_ind, sp_ind, col = COSMO.decompose!(ws.ci.H, C_new, set_ind, C, row, col, ws.ci.sp_arr, sp_ind)
+    set_ind, sp_ind, entry = COSMO.decompose!(H_I, C_new, set_ind, C, entry, row, ws.ci.sp_arr, sp_ind)
     row += C.dim
   end
   ws.p.C = COSMO.CompositeConvexSet(C_new)
+  ws.ci.H = sparse(H_I, collect(1:n), ones(n))
 end
 
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64, C::COSMO.AbstractConvexSet, row::Int64, col::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
-  H[row:row + C.dim - 1, col:col + C.dim - 1] = sparse(1.0I, C.dim, C.dim)
+
+function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64, C::COSMO.AbstractConvexSet, entry::Int64, row::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
+  #H[row:row + C.dim - 1, col:col + C.dim - 1] = sparse(1.0I, C.dim, C.dim)
+  for i = 1:C.dim
+    H_I[entry] = row + i - 1
+    entry += 1
+  end
   C_new[set_ind] = C
 
-  return set_ind + 1, sp_ind, col + C.dim
+  return set_ind + 1, sp_ind, entry
 end
 
 get_blk_length(nBlk::Int64, C::COSMO.PsdCone{Float64}) = isqrt(nBlk)
@@ -174,7 +181,7 @@ end
 get_blk_rows(d::Int64, C::COSMO.PsdCone{Float64}) = d^2
 get_blk_rows(d::Int64, C::COSMO.PsdConeTriangle{Float64}) = d
 
-function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, row_start::Int64, col_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
+function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64,  C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, entry::Int64, row_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   # original matrix size
@@ -188,54 +195,52 @@ function decompose!(H::SparseMatrixCSC, C_new, set_ind::Int64,  C::Union{PsdCone
     # the graph and tree algorithms determined the cliques vertices of an AMD-permuted matrix. Since the location of the data hasn't changed in reality, we have to map the clique vertices back
     c = map(v -> sparsity_pattern.ordering[v], c)
     sort!(c)
-    col_start = COSMO.add_subblock_map!(H, c, block_length, original_size, row_start, col_start, C)
+    entry = COSMO.add_subblock_map!(H_I, c, block_length, original_size, entry, row_start, C)
 
     # create and add new cone for subblock
     num_rows = get_blk_rows(block_length, C)
     C_new[set_ind] = typeof(C)(num_rows)
     set_ind += 1
   end
-  return set_ind, sp_ind + 1, col_start
+  return set_ind, sp_ind + 1, entry
 end
 
 
 
 # fills the corresponding entries of H for clique c
-function add_subblock_map!(H::SparseMatrixCSC, clique_vertices::Array{Int64}, block_size::Int64, original_size::Int64, row_shift::Int64, col_shift::Int64, ::PsdCone{<: Real})
-  num = 1
+function add_subblock_map!(H_I::Vector{Int64}, clique_vertices::Array{Int64}, block_size::Int64, original_size::Int64, entry::Int64, row_start::Int64, ::PsdCone{<: Real})
   for vj in clique_vertices
     for vi in clique_vertices
       row = mat_to_vec_ind(vi, vj, original_size)
-      H[row_shift + row - 1, col_shift + num - 1] = 1.
-      num += 1
+      H_I[entry] = row_start + row - 1
+      entry += 1
     end
   end
-  return (col_shift + block_size^2)::Int64
+  return entry::Int64
 end
 
-function add_subblock_map!(H::SparseMatrixCSC, clique_vertices::Array{Int64}, block_dim::Int64, original_size::Int64, row_shift::Int64, col_shift::Int64, ::PsdConeTriangle{<: Real})
-  num = 1
+function add_subblock_map!(H_I::Vector{Int64}, clique_vertices::Array{Int64}, block_dim::Int64, original_size::Int64, entry::Int64,  row_start::Int64, ::PsdConeTriangle{<: Real})
   for vj in clique_vertices
     for vi in clique_vertices
       if vi <= vj
         row = mat_to_svec_ind(vi, vj)
-        H[row_shift + row - 1, col_shift + num - 1] = 1.
-        num += 1
+        H_I[entry] = row_start + row - 1
+        entry += 1
       end
     end
   end
-  return (col_shift + block_dim)::Int64
+  return entry::Int64
 end
 
 
 function find_H_col_dimension(sets, sp_arr)
-  num_cols = 0
+  sum_cols = 0
   sp_arr_ind = 1
   for C in sets
     dim, sp_arr_ind = decomposed_dim(C, sp_arr, sp_arr_ind)
-    num_cols += dim
+    sum_cols += dim
   end
-  return num_cols::Int64
+  return sum_cols::Int64
 end
 
 decomposed_dim(C::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64) = (C.dim, sp_arr_ind)
