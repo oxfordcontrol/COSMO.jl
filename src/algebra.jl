@@ -206,5 +206,32 @@ function is_pos_sem_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
 	return F.rank == size(F.factors, 1)
 end
 
+function is_pos_sem_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+	# See https://math.stackexchange.com/a/13311
+	# https://math.stackexchange.com/questions/13282/determining-whether-a-symmetric-matrix-is-positive-definite-algorithm#comment34777_15682 
+	# https://software.intel.com/en-us/mkl-developer-reference-c-pstrf
+	# Analysis of the Cholesky Decomposition of a Semi-Definite Matrix - Nicholas J. Higham
+	# and the comments on the above stack exchange threads
+	@inbounds for i = 1:size(X, 1)
+		X[i, i] += tol
+	end
+	F = cholesky!(Symmetric(X), Val(true), check = false)
+	# See source code of LinearAlgebra.chkfullrank for the following line
+	return F.rank == size(F.factors, 1)
+end
+
+function psd_check_cholesky(X::Matrix)
+	# Pivoted cholesky is supposed to be more robust than standard in semidefinite cases
+	F = cholesky!(Symmetric(X), Val(true), check = false)
+	# See source code of LinearAlgebra.chkfullrank for the following line
+	return F.rank == size(F.factors, 1)
+end
+
+function psd_check_cholesky(X::SparseMatrixCSC)
+	# For sparse matrices pivoting in cholesky is on by default
+	F = cholesky!(Symmetric(X), check = false)
+	return issuccess(F)
+end
+
 is_pos_sem_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_sem_def!(copy(X), tol)
 is_neg_sem_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_sem_def!(-X, tol)
