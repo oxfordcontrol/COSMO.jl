@@ -192,14 +192,19 @@ function symmetrize_full!(A::AbstractMatrix)
 end
 
 # this function assumes real symmetric X and only considers the upper triangular part
-function is_pos_sem_def(X, tol)
-    # set option 'N' to only compute eigenvalues, s is ordered from min to max
-   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-   return s[1] >= -tol
+function is_pos_sem_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+	# See https://math.stackexchange.com/a/13311
+	# https://math.stackexchange.com/questions/13282/determining-whether-a-symmetric-matrix-is-positive-definite-algorithm#comment34777_15682 
+	# https://software.intel.com/en-us/mkl-developer-reference-c-pstrf
+	# Analysis of the Cholesky Decomposition of a Semi-Definite Matrix - Nicholas J. Higham
+	# and the comments on the above stack exchange threads
+	@inbounds for i = 1:size(X, 1)
+		X[i, i] += tol
+	end
+	F = cholesky!(Symmetric(X), Val(true), check = false)
+	# See source code of LinearAlgebra.chkfullrank for the following line
+	return F.rank == size(F.factors, 1)
 end
 
-function is_neg_sem_def(X, tol)
-    # set option 'N' to only compute eigenvalues, s is ordered from min to max
-   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-   return s[end] <= tol
-end
+is_pos_sem_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_sem_def!(copy(X), tol)
+is_neg_sem_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_sem_def!(-X, tol)
