@@ -272,13 +272,13 @@ end
 function in_dual(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
-  return is_pos_sem_def(X, tol)
+  return is_pos_def(X, tol)
 end
 
 function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
-	return is_neg_sem_def(X, tol)
+	return is_neg_def(X, tol)
 end
 
 
@@ -349,14 +349,14 @@ end
 function in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
-    return is_pos_sem_def(cone.X, tol)
+    return is_pos_def(cone.X, tol)
 end
 
 function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
-    return is_neg_sem_def(cone.X, tol)
+    return is_neg_def(cone.X, tol)
 end
 
 function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}

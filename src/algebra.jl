@@ -192,14 +192,20 @@ function symmetrize_full!(A::AbstractMatrix)
 end
 
 # this function assumes real symmetric X and only considers the upper triangular part
-function is_pos_sem_def(X, tol)
-    # set option 'N' to only compute eigenvalues, s is ordered from min to max
-   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-   return s[1] >= -tol
+function is_pos_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+	# See https://math.stackexchange.com/a/13311
+	@inbounds for i = 1:size(X, 1)
+		X[i, i] += tol
+	end
+	F = cholesky!(Symmetric(X), check = false)
+	return issuccess(F)
 end
 
-function is_neg_sem_def(X, tol)
-    # set option 'N' to only compute eigenvalues, s is ordered from min to max
-   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-   return s[end] <= tol
+function is_pos_def!(X::SparseMatrixCSC{T}, tol::T=zero(T)) where T
+	# For sparse matrices pivoting in cholesky is on by default
+	F = cholesky!(Symmetric(X), shift = tol, check = false)
+	return issuccess(F)
 end
+
+is_pos_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(copy(X), tol)
+is_neg_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(-X, tol)
