@@ -111,6 +111,16 @@ end
 
 lmul!(L::IdentityMatrix, M::AbstractMatrix) = L.λ ? M : M .= zero(eltype(M))
 
+function lmul!(L::Diagonal, x::AbstractVector)
+	(length(L.diag) == length(x)) || throw(DimensionMismatch())
+	@. x = x * L.diag
+	return nothing
+end
+
+lmul!(L::IdentityMatrix, x::AbstractVector) = L.λ ? x : x .= zero(eltype(x))
+
+
+
 function rmul!(M::SparseMatrixCSC, R::Diagonal)
 
 	m, n = size(M)
@@ -192,14 +202,19 @@ function symmetrize_full!(A::AbstractMatrix)
 end
 
 # this function assumes real symmetric X and only considers the upper triangular part
-function is_pos_sem_def(X, tol)
-    # set option 'N' to only compute eigenvalues, s is ordered from min to max
-   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-   return s[1] >= -tol
+function is_pos_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+	# See https://math.stackexchange.com/a/13311
+	@inbounds for i = 1:size(X, 1)
+		X[i, i] += tol
+	end
+	F = cholesky!(Symmetric(X), check = false)
+	return issuccess(F)
 end
 
-function is_neg_sem_def(X, tol)
-    # set option 'N' to only compute eigenvalues, s is ordered from min to max
-   s, U = LAPACK.syevr!('N', 'A', 'U', X, 0.0, 0.0, 0, 0, -1.0);
-   return s[end] <= tol
+function is_neg_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+	@. X *= -one(T)
+	return is_pos_def!(X, tol)
 end
+
+is_pos_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(copy(X), tol)
+is_neg_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(-X, tol)

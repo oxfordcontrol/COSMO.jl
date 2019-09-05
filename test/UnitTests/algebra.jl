@@ -61,6 +61,11 @@ rng = Random.MersenneTwister(9191)
   COSMO.lmul!(I, M)
   @test M == Mo
 
+  x = rand(5)
+  y = copy(x)
+  COSMO.lmul!(L, x)
+  @test norm(x - L * y, Inf ) <= 1e-10
+
   # rmul!()
   R = Diagonal(rand(rng, 5))
   Mo = sprand(rng, 5, 5, 0.8)
@@ -95,14 +100,14 @@ rng = Random.MersenneTwister(9191)
   @test Symmetric(A) == (0.5 * (B + B'))
   @test_throws AssertionError COSMO.symmetrize_upper!(rand(2, 3));
 
-  # is_pos_sem_def()
+  # is_pos_def()
   A = Symmetric(randn(rng, 4, 4))
   Apos = A + 4 * Matrix(1.0I, 4, 4)
   Aneg = A - 4 * Matrix(1.0I, 4, 4)
-  @test COSMO.is_pos_sem_def(Apos, 1e-6)
-  @test !COSMO.is_pos_sem_def(Aneg, 1e-6)
-  @test COSMO.is_neg_sem_def(Aneg, 1e-6)
-  @test !COSMO.is_neg_sem_def(Apos, 1e-6)
+  @test COSMO.is_pos_def(Apos, 1e-6)
+  @test !COSMO.is_pos_def(Aneg, 1e-6)
+  @test COSMO.is_neg_def(Aneg, 1e-6)
+  @test !COSMO.is_neg_def(Apos, 1e-6)
 
 end
 nothing
