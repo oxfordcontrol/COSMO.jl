@@ -61,6 +61,11 @@ rng = Random.MersenneTwister(9191)
   COSMO.lmul!(I, M)
   @test M == Mo
 
+  x = rand(5)
+  y = copy(x)
+  COSMO.lmul!(L, x)
+  @test norm(x - L * y, Inf ) <= 1e-10
+
   # rmul!()
   R = Diagonal(rand(rng, 5))
   Mo = sprand(rng, 5, 5, 0.8)

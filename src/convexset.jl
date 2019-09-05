@@ -268,18 +268,21 @@ function project!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}
     return nothing
 end
 
-
-function in_dual(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
+# Notice that this is an in-place version that uses x as workspace
+function in_dual!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
-  return is_pos_def(X, tol)
+  return COSMO.is_pos_def!(X, tol)
 end
+in_dual(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T} = in_dual!(copy(x), cone, tol)
 
-function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
+function in_pol_recc!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T}
 	n = cone.sqrt_dim
 	X = reshape(x, n, n)
-	return is_neg_def(X, tol)
+	return COSMO.is_neg_def!(X, tol)
 end
+in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T} = in_pol_recc!(copy(x), cone, tol)
+
 
 
 
@@ -345,19 +348,22 @@ function project!(x::AbstractArray, cone::Union{PsdConeTriangle{T}, DensePsdCone
     return nothing
 end
 
-
-function in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
+# Notice that we are using a (faster) in-place version that modifies the input
+function in_dual!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
-    return is_pos_def(cone.X, tol)
+    return COSMO.is_pos_def!(cone.X, tol)
 end
+in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where {T} = in_dual!(x, cone, tol)
 
-function in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
+function in_pol_recc!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
-    return is_neg_def(cone.X, tol)
+    return COSMO.is_neg_def!(cone.X, tol)
 end
+in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where {T} = in_pol_recc!(x, cone, tol)
+
 
 function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
   cone.X = zeros(cone.sqrt_dim, cone.sqrt_dim)
@@ -738,6 +744,7 @@ function support_function(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
     end
     return s
 end
+support_function!(x::AbstractVector{T}, B::Box{T}, tol::T) where{T} = support_function(x, B, tol)
 
 function in_pol_recc(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
     !any(XU -> (XU[2] == Inf && XU[1] > tol), zip(x,B.u)) && !any(XL -> (XL[2] == -Inf && XL[1] < -tol), zip(x,B.l))
@@ -771,12 +778,16 @@ function project!(x::SplitVector{T}, C::CompositeConvexSet{T}) where{T}
 	return nothing
 end
 
-function support_function(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
-	sum(xC -> support_function(xC[1], xC[2], tol), zip(x.views, C.sets))
+function support_function!(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
+	sum(xC -> support_function!(xC[1], xC[2], tol), zip(x.views, C.sets))
 end
 
 function in_pol_recc(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
 	all(xC -> in_pol_recc(xC[1], xC[2], tol), zip(x.views, C.sets))
+end
+
+function in_pol_recc!(x::SplitVector{T}, C::CompositeConvexSet{T}, tol::T) where{T}
+  all(xC -> in_pol_recc!(xC[1], xC[2], tol), zip(x.views, C.sets))
 end
 
 function scale!(C::CompositeConvexSet{T}, e::SplitVector{T}) where{T}
@@ -807,6 +818,22 @@ end
 
 function support_function(y::SplitView{T}, cone::AbstractConvexCone{T}, tol::T) where{T}
   in_dual(-y, cone, tol) ? 0. : Inf;
+end
+
+# An in-place method that is faster, but uses the input variable y as workspace
+function support_function!(y::SplitView{T}, cone::AbstractConvexCone{T}, tol::T) where{T}
+  @. y *= - one(T)
+  in_dual!(y, cone, tol) ? 0. : Inf;
+end
+
+# Notice: for every convex set apart from PsdCone and PsdConeTriangle use the normal non-modifying function
+# for PsdCone and PsdConeTriangle we are using (faster) in-place functions.
+function in_dual!(x::AbstractVector{T}, cone::AbstractConvexSet{T}, tol::T) where{T}
+  return in_dual(x, cone, tol)
+end
+
+function in_pol_recc!(x::AbstractVector{T}, cone::AbstractConvexSet{T}, tol::T) where{T}
+  return in_pol_recc(x, cone, tol)
 end
 
 function scale!(cone::AbstractConvexCone{T}, ::AbstractVector{T}) where{T}

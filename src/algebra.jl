@@ -111,6 +111,16 @@ end
 
 lmul!(L::IdentityMatrix, M::AbstractMatrix) = L.λ ? M : M .= zero(eltype(M))
 
+function lmul!(L::Diagonal, x::AbstractVector)
+	(length(L.diag) == length(x)) || throw(DimensionMismatch())
+	@. x = x * L.diag
+	return nothing
+end
+
+lmul!(L::IdentityMatrix, x::AbstractVector) = L.λ ? x : x .= zero(eltype(x))
+
+
+
 function rmul!(M::SparseMatrixCSC, R::Diagonal)
 
 	m, n = size(M)

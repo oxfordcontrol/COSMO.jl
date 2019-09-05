@@ -8,10 +8,15 @@ function is_primal_infeasible(δy, ws)
 	if norm_δy > settings.eps_prim_inf
 		# test condition A'δy = 0
 		A_δy = ws.p.A' * δy
-		A_δy = ws.sm.Dinv * A_δy
-		if norm(A_δy, Inf) <= settings.eps_prim_inf*norm_δy
+		# unscale: A_δy = Dinv * A_δy
+		lmul!(ws.sm.Dinv, A_δy)
+
+
+		if norm(A_δy, Inf) <= settings.eps_prim_inf * norm_δy
 			minus_unit_δy = SplitVector(- δy / norm_δy, ws.p.C)
-			sF = support_function(minus_unit_δy, ws.p.C, settings.eps_prim_inf) - dot(minus_unit_δy,ws.p.b)
+			δyt_b = dot(minus_unit_δy, ws.p.b)
+			# notice the in-place function. This is faster as we are using minus_unit_δy as workspace
+			sF = support_function!(minus_unit_δy, ws.p.C, settings.eps_prim_inf) - δyt_b
 			if sF <= settings.eps_prim_inf
 				return true
 			end
@@ -28,17 +33,22 @@ function is_dual_infeasible(δx, ws)
 
 	if norm_δx > settings.eps_dual_inf
 		# test condition <q,δx> < 0
-		if  dot(ws.p.q,δx) / (norm_δx * ws.sm.c[]) < -settings.eps_dual_inf
+		if  dot(ws.p.q, δx) / (norm_δx * ws.sm.c[]) < -settings.eps_dual_inf
 			# test condition Pδx == 0
 			P_δx = ws.p.P * δx
-			P_δx = ws.sm.Dinv * P_δx
+
+			# unscale P_δx = Dinv * P_δx
+			lmul!(ws.sm.Dinv, P_δx)
+
 			if norm(P_δx, Inf) / (norm_δx * ws.sm.c[]) <= settings.eps_dual_inf
 
 				# test condition Ax in Ktilde_b∞
 				A_δx = ws.p.A * δx
-				A_δx = ws.sm.Einv * A_δx
+				# unscale A_δx = Einv * P_δx
+				lmul!(ws.sm.Einv, A_δx)
+
 				A_δx_split = SplitVector(A_δx / norm_δx, ws.p.C)
-				if in_pol_recc(A_δx_split, ws.p.C, settings.eps_dual_inf)
+				if in_pol_recc!(A_δx_split, ws.p.C, settings.eps_dual_inf)
 					return true
 				end
 			end
