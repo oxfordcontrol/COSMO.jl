@@ -201,10 +201,9 @@ function is_pos_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
 	return issuccess(F)
 end
 
-function is_pos_def!(X::SparseMatrixCSC{T}, tol::T=zero(T)) where T
-	# For sparse matrices pivoting in cholesky is on by default
-	F = cholesky!(Symmetric(X), shift = tol, check = false)
-	return issuccess(F)
+function is_neg_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+	@. X *= -one(T)
+	return is_pos_def!(X, tol)
 end
 
 is_pos_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(copy(X), tol)
