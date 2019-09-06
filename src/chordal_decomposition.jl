@@ -274,6 +274,7 @@ function augment_system!(ws)
 
   # increase the variable dimension
   ws.vars = Variables{Float64}(ws.p.model_size[1], ws.p.model_size[2], ws.p.C)
+  ws.utility_vars = UtilityVariables{Float64}(ws.p.model_size[1], ws.p.model_size[2])
   nothing
 end
 

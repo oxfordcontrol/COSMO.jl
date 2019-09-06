@@ -24,7 +24,7 @@ function adapt_rho_vec!(ws::COSMO.Workspace)
 	settings = ws.settings
 	# compute normalized residuals based on the working variables (dont unscale)
 	ignore_scaling = true
-	r_prim::Float64, r_dual::Float64 = calculate_residuals(ws, ignore_scaling)
+	r_prim::Float64, r_dual::Float64 = calculate_residuals!(ws, ignore_scaling)
 	max_norm_prim::Float64, max_norm_dual::Float64  = max_res_component_norm(ws, ignore_scaling)
 
 	r_prim = r_prim / (max_norm_prim + 1e-10)

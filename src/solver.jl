@@ -109,7 +109,7 @@ function optimize!(ws::COSMO.Workspace)
 
 		# compute residuals (based on optimality conditions of the problem) to check for termination condition
 		# compute them every {settings.check_termination} step
-		mod(iter, settings.check_termination)  == 0 && ((r_prim, r_dual) = calculate_residuals(ws))
+		mod(iter, settings.check_termination)  == 0 && ((r_prim, r_dual) = calculate_residuals!(ws))
 
 		# check convergence with residuals every {settings.checkIteration} steps
 		if mod(iter, settings.check_termination) == 0
@@ -162,7 +162,7 @@ function optimize!(ws::COSMO.Workspace)
 
 	# calculate primal and dual residuals
 	if num_iter == settings.max_iter
-		r_prim, r_dual = calculate_residuals(ws)
+		r_prim, r_dual = calculate_residuals!(ws)
 		status = :Max_iter_reached
 	end
 

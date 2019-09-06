@@ -37,7 +37,7 @@ function assemble!(model::Model{T},
 	!isa(constraints, Array) && (constraints = [constraints])
 
 	merge_constraints!(constraints)
-	model.p.P = P
+	model.p.P = issparse(P) ? P : sparse(P)
 	model.p.q = q
 	n = length(q)
 	m = sum(map( x-> x.dim, map( x-> x.convex_set, constraints)))
@@ -61,6 +61,7 @@ function assemble!(model::Model{T},
 	model.p.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
 	model.settings = settings
 	model.vars = Variables{T}(m, n, model.p.C)
+	model.utility_vars = UtilityVariables{T}(m, n)
 
 	# if user provided (full) warm starting variables, update model
 	x0 != nothing && warm_start_primal!(model, x0)
@@ -96,6 +97,7 @@ function empty_model!(model::COSMO.Model{T}) where {T}
 	model.p = ProblemData{T}()
 	model.sm = ScaleMatrices{T}()
 	model.vars = Variables{T}(1, 1, model.p.C)
+	model.utility_vars = UtilityVariables{T}(1, 1)
 	model.ρ = zero(T)
 	model.ρvec = T[]
 	model.kkt_solver = nothing
@@ -171,6 +173,7 @@ function set!(model::COSMO.Model,
 	model.p.model_size = [m; n]
 	model.p.C = CompositeConvexSet(deepcopy(convex_sets))
 	model.vars = Variables{T}(m, n, model.p.C)
+	model.utility_vars = UtilityVariables{T}(m, n)
  	model.settings = settings
 	nothing
 end

@@ -1,27 +1,97 @@
-function calculate_residuals(ws::COSMO.Workspace,  IGNORESCALING_FLAG::Bool = false)
-
-	if (ws.settings.scaling != 0 && !IGNORESCALING_FLAG)
-		r_prim = norm(ws.sm.Einv * (ws.p.A * ws.vars.x + ws.vars.s - ws.p.b), Inf)
-		# ∇f0 + ∑ νi ∇hi(x*) == 0 condition
-		r_dual = norm(ws.sm.cinv[] * ws.sm.Dinv * (ws.p.P * ws.vars.x + ws.p.q - ws.p.A' * ws.vars.μ), Inf)
-	end
-	if (ws.settings.scaling == 0 || IGNORESCALING_FLAG )
-		r_prim = norm(ws.p.A * ws.vars.x + ws.vars.s - ws.p.b, Inf)
-		r_dual = norm(ws.p.P * ws.vars.x + ws.p.q - ws.p.A' * ws.vars.μ, Inf)
-	end
-	# FIXME: Why is it -A'μ ?
-	return r_prim,r_dual
+#  Compute r = A * x + s - b in-place
+function primal_kkt_condition!(r::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, s::SplitVector{T}, b::AbstractVector{T}) where {T}
+	# r = A * x
+	mul!(r, A, x)
+	@. r += s
+	@. r -= b
+	return nothing
 end
 
-function max_res_component_norm(ws::COSMO.Workspace, IGNORESCALING_FLAG::Bool = false)
+# Compute r = P * x + q - A' * μ in-place
+function dual_kkt_condition!(r::AbstractVector{T}, r_temp::AbstractVector{T}, P::AbstractMatrix{T}, x::AbstractVector{T}, q::AbstractVector{T}, A::AbstractMatrix{T}, μ::AbstractVector{T}) where {T}
+	mul!(r, P, x)
+	@. r += q
+
+	mul!(r_temp, A', μ)
+	@. r -= r_temp
+	return nothing
+end
+
+# Einv * x
+unscale_primal!(x::AbstractVector{T}, Einv::AbstractMatrix{T}) where {T} = lmul!(Einv, x)
+
+# cinv * Dinv * x
+function unscale_dual!(x::AbstractVector{T}, Dinv::AbstractMatrix{T}, cinv) where {T}
+		lmul!(Dinv, x)
+		@. x *= cinv
+		return nothing
+end
+
+function calculate_residuals!(ws::COSMO.Workspace,  IGNORESCALING_FLAG::Bool = false)
+	# reuse vectors from temporary workspace
+	r_prim = ws.utility_vars.vec_m
+	r_dual = ws.utility_vars.vec_n
+	r_temp = ws.utility_vars.vec_n2
+
+	# r_prim = A * x + s - b
+	primal_kkt_condition!(r_prim, ws.p.A, ws.vars.x, ws.vars.s, ws.p.b)
+
+	# ∇f0 + ∑ νi ∇hi(x*) == 0 condition
+	# r_dual = P * x + q - A' * μ
+	dual_kkt_condition!(r_dual, r_temp, ws.p.P, ws.vars.x, ws.p.q, ws.p.A, ws.vars.μ)
+
 	if (ws.settings.scaling != 0 && !IGNORESCALING_FLAG)
-		max_norm_prim = max.(norm(ws.sm.Einv * (ws.p.A * ws.vars.x), Inf), norm(ws.sm.Einv * ws.vars.s, Inf), norm(ws.sm.Einv * ws.p.b, Inf))
-		max_norm_dual = max.(norm(ws.sm.cinv .* (ws.sm.Dinv * (ws.p.P * ws.vars.x)), Inf), norm(ws.sm.cinv .* (ws.sm.Dinv * ws.p.q), Inf), norm(ws.sm.cinv .* (ws.sm.Dinv * (ws.p.A' * ws.vars.μ)), Inf))
+		# unscale primal residual: r_prim = Einv * ( A * x + s - b)
+		unscale_primal!(r_prim, ws.sm.Einv)
+
+		# unscale dual residual: r_dual = cinv * Dinv * (P * x + q - A' * μ)
+		unscale_dual!(r_dual, ws.sm.Dinv, ws.sm.cinv)
 	end
-	if (ws.settings.scaling == 0 || IGNORESCALING_FLAG)
-		max_norm_prim = max.(norm(ws.p.A * ws.vars.x, Inf), norm(ws.vars.s, Inf), norm(ws.p.b, Inf))
-		max_norm_dual = max.(norm(ws.p.P * ws.vars.x, Inf), norm(ws.p.q, Inf), norm(ws.p.A' * ws.vars.μ, Inf))
-	end
+
+	return norm(r_prim, Inf), norm(r_dual, Inf)
+
+end
+
+
+function max_res_component_norm(ws::COSMO.Workspace, IGNORESCALING_FLAG::Bool = false)
+		r_prim = ws.utility_vars.vec_m
+		r_dual = ws.utility_vars.vec_n
+
+		# Determine if the components inside max{ } have to be unscaled
+		unscale = (ws.settings.scaling != 0 && !IGNORESCALING_FLAG)
+
+		# Calculate: max { ||Einv * Ax ||_Inf, ||Einv * s||_Inf, ||Einv * b||_Inf }
+		# Einv * A * x
+		mul!(r_prim, ws.p.A, ws.vars.x)
+		unscale && unscale_primal!(r_prim, ws.sm.Einv)
+		max_norm_prim = norm(r_prim, Inf)
+
+		# Einv * s
+		@. r_prim = ws.vars.s
+		unscale && unscale_primal!(r_prim, ws.sm.Einv)
+		max_norm_prim = max.(max_norm_prim, norm(r_prim, Inf))
+
+		# Einv * b
+		@. r_prim = ws.p.b
+		unscale && unscale_primal!(r_prim, ws.sm.Einv)
+		max_norm_prim = max.(max_norm_prim, norm(r_prim, Inf))
+
+		# Calculate: max { ||cinv * Dinv * P * x ||_Inf, ||cinv * Dinv * q||_Inf, ||cinv * Dinv * A' * μ||_Inf }
+		# ||cinv * Dinv * P * x ||_Inf
+		mul!(r_dual, ws.p.P, ws.vars.x)
+		unscale && unscale_dual!(r_dual, ws.sm.Dinv, ws.sm.cinv)
+		max_norm_dual = norm(r_dual, Inf)
+
+		# ||cinv * Dinv * q||_Inf
+		@. r_dual = ws.p.q
+		unscale && unscale_dual!(r_dual, ws.sm.Dinv, ws.sm.cinv)
+		max_norm_dual = max.(max_norm_dual, norm(r_dual, Inf))
+
+		# ||cinv * Dinv * A' * μ||_Inf
+		mul!(r_dual, ws.p.A', ws.vars.μ)
+		unscale && unscale_dual!(r_dual, ws.sm.Dinv, ws.sm.cinv)
+		max_norm_dual = max.(max_norm_dual, norm(r_dual, Inf))
+
 	return max_norm_prim, max_norm_dual
 end
 

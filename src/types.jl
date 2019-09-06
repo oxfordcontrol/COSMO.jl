@@ -241,7 +241,17 @@ end
 
 Variables(args...) = Variables{DefaultFloat}(args...)
 
+mutable struct UtilityVariables{T}
+  vec_m::Vector{T}
+  vec_n::Vector{T}
+  vec_n2::Vector{T}
 
+  function UtilityVariables{T}(m::Int64, n::Int64) where {T}
+    new(zeros(T, m), zeros(T, n), zeros(T, n))
+  end
+end
+
+UtilityVariables(args...) = UtilityVariables{DefaultFloat}(args...)
 
 # -------------------------------------
 # Top level container for all solver data
@@ -257,19 +267,22 @@ mutable struct Workspace{T}
 	sm::ScaleMatrices{T}
 	ci::ChordalInfo{T}
 	vars::Variables{T}
+  utility_vars::UtilityVariables{T}
 	ρ::T
 	ρvec::Vector{T}
 	kkt_solver::Union{AbstractKKTSolver,Nothing}
 	flags::Flags
 	Info::Info
 	times::ResultTimes{Float64} #Always 64 bit regardless of data type?
+
 	#constructor
 	function Workspace{T}() where {T}
 		p = ProblemData{T}()
 		sm = ScaleMatrices{T}()
 		vars = Variables{T}(1, 1, p.C)
+    uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		return new(p, Settings(), sm, ci, vars, zero(T), T[], nothing, Flags(), Info([zero(T)]), ResultTimes())
+		return new(p, Settings(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), Info([zero(T)]), ResultTimes())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
