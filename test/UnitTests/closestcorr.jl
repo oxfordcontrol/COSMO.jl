@@ -35,8 +35,6 @@ n = 50
 C = xMin .+ randn(rng, n, n)*(xMax - xMin)
 c = vec(C)
 
-isposdef(C) && warn("The perturbed correlation matrix is still pos def.")
-
 
 n2 = n^2
 m = n + n2

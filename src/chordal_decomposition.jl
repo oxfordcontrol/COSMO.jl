@@ -9,7 +9,7 @@ end
 
 function chordal_decomposition!(ws::COSMO.Workspace)
   # do nothing if no psd cones present in the problem
-  if !_contains(ws.p.C, Union{COSMO.PsdConeTriangle{Float64}, COSMO.PsdCone{Float64}})
+  if !_contains(ws.p.C, DecomposableCones{Float64})
     ws.settings.decompose = false
     return nothing
   end
@@ -23,6 +23,7 @@ function chordal_decomposition!(ws::COSMO.Workspace)
 
     # augment the original system
     augment_system!(ws)
+    pre_allocate_variables!(ws)
   else
     ws.settings.decompose = false
   end
@@ -87,7 +88,7 @@ function number_of_overlaps_in_rows(A::SparseMatrixCSC)
 end
 
 
-function find_aggregate_sparsity(A, b, ind, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}})
+function find_aggregate_sparsity(A, b, ind, C::DecomposableCones{ <: Real})
   AInd = nz_rows(A, ind, false)
   # commonZeros = AInd[find(x->x==0,b[AInd])]
   bInd = findall(x -> x != 0, view(b, ind))
@@ -181,7 +182,7 @@ end
 get_blk_rows(d::Int64, C::COSMO.PsdCone{Float64}) = d^2
 get_blk_rows(d::Int64, C::COSMO.PsdConeTriangle{Float64}) = d
 
-function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64,  C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, entry::Int64, row_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
+function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64,  C::DecomposableCones{ <: Real}, entry::Int64, row_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   # original matrix size
@@ -271,10 +272,6 @@ end
 
 function augment_system!(ws)
   _augment!(ws.p, ws.ci.H)
-
-  # increase the variable dimension
-  ws.vars = Variables{Float64}(ws.p.model_size[1], ws.p.model_size[2], ws.p.C)
-  ws.utility_vars = UtilityVariables{Float64}(ws.p.model_size[1], ws.p.model_size[2])
   nothing
 end
 

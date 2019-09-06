@@ -76,7 +76,6 @@ function optimize!(ws::COSMO.Workspace)
 	settings.verbose && print_header(ws)
 	time_limit_start = time()
 
-	#preallocate arrays
 	m, n = ws.p.model_size
 	δx = zeros(n)
 	δy =  zeros(m)

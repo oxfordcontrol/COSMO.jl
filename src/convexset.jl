@@ -320,6 +320,8 @@ mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
 end
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
 
+DecomposableCones{T} = Union{PsdCone{T}, PsdConeTriangle{T}}
+
 mutable struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix

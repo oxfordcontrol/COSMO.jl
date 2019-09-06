@@ -241,7 +241,7 @@ end
 
 Variables(args...) = Variables{DefaultFloat}(args...)
 
-mutable struct UtilityVariables{T}
+struct UtilityVariables{T}
   vec_m::Vector{T}
   vec_n::Vector{T}
   vec_n2::Vector{T}

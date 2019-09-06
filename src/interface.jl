@@ -42,7 +42,7 @@ function assemble!(model::Model{T},
 	n = length(q)
 	m = sum(map( x-> x.dim, map( x-> x.convex_set, constraints)))
 
-	model.p.model_size = [m;n]
+	model.p.model_size = [m; n]
 
 	model.p.A = spzeros(Float64, m, n)
 	model.p.b = spzeros(Float64, m)
@@ -60,8 +60,11 @@ function assemble!(model::Model{T},
 	# save the convex sets inside the model as a composite set
 	model.p.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
 	model.settings = settings
-	model.vars = Variables{T}(m, n, model.p.C)
-	model.utility_vars = UtilityVariables{T}(m, n)
+
+	# the size of the temporary variables might change if the problem is decomposed
+	# only allocate if it's not a cd problem
+	pre_allocate_variables!(model)
+
 
 	# if user provided (full) warm starting variables, update model
 	x0 != nothing && warm_start_primal!(model, x0)
@@ -69,16 +72,6 @@ function assemble!(model::Model{T},
 	y0 != nothing && warm_start_dual!(model, y0)
 	nothing
 end
-
-# function assemble!(model::COSMO.Model{T},
-# 	P::Real,q::Real,
-# 	constraints::Union{COSMO.Constraint{T},Array{COSMO.Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings()) where {T}
-# 	Pm = spzeros(T, 1, 1)
-# 	qm = zeros(T, 1)
-# 	Pm[1, 1] = convert(T, P)
-# 	qm[1] = convert(T, q)
-# 	assemble!(model, Pm, qm, constraints, settings = settings)
-# end
 
 # Handle case where q is a 2-dimensional array instead of a 1-dimensional array
 assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractMatrix{T}, args...; kwargs...) where {T} = assemble!(model, P, vec(q), args...; kwargs...)
@@ -172,8 +165,8 @@ function set!(model::COSMO.Model,
 	model.p.b = b_c
 	model.p.model_size = [m; n]
 	model.p.C = CompositeConvexSet(deepcopy(convex_sets))
-	model.vars = Variables{T}(m, n, model.p.C)
-	model.utility_vars = UtilityVariables{T}(m, n)
+
+	pre_allocate_variables!(model)
  	model.settings = settings
 	nothing
 end
@@ -275,3 +268,11 @@ function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{Abst
 	p.A[s:e, :] = -A
 	p.b[s:e, :] = b
 end
+
+
+function pre_allocate_variables!(ws::Workspace{T}) where{T}
+	m, n = ws.p.model_size
+  ws.vars = Variables{T}(m, n, ws.p.C)
+  ws.utility_vars = UtilityVariables{T}(m, n)
+end
+
