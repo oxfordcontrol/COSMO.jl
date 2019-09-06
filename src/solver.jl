@@ -78,7 +78,8 @@ function optimize!(ws::COSMO.Workspace)
 
 	m, n = ws.p.model_size
 	δx = zeros(n)
-	δy =  zeros(m)
+	δy = SplitVector(zeros(m), ws.p.C)
+
 	s_tl = zeros(m) # i.e. sTilde
 
 	ls = zeros(n + m)
@@ -104,7 +105,10 @@ function optimize!(ws::COSMO.Workspace)
 
 		# compute deltas for infeasibility detection
 		@. δx = ws.vars.x - δx
-		@. δy = -ws.vars.μ + δy
+
+		#@. δy = -ws.vars.μ + δy
+		@. δy -= ws.vars.μ
+
 
 		# compute residuals (based on optimality conditions of the problem) to check for termination condition
 		# compute them every {settings.check_termination} step
@@ -131,13 +135,13 @@ function optimize!(ws::COSMO.Workspace)
 
 		# check infeasibility conditions every {settings.checkInfeasibility} steps
 		if mod(iter, settings.check_infeasibility) == 0
-			if is_primal_infeasible(δy, ws)
+			if is_primal_infeasible!(δy, ws)
 				status = :Primal_infeasible
 				cost = Inf
 				break
 			end
 
-			if is_dual_infeasible(δx, ws)
+			if is_dual_infeasible!(δx, ws)
 				status = :Dual_infeasible
 				cost = -Inf
 				break
