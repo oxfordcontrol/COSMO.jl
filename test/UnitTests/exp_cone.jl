@@ -121,7 +121,7 @@ end
 
         # solve the following dual exponential cone problem
         # min  y
-        # s.t. -x * exp(y / x) <= z
+        # s.t. -x * exp(y / x) <= exp(1) * z
         #      x == -1, z == exp(5)
 
         P = spzeros(3, 3)
@@ -143,6 +143,34 @@ end
         res = COSMO.optimize!(model)
         @test res.status == :Solved
         @test isapprox(res.obj_val, -6., atol=1e-3)
+    end
+
+    @testset "Primal Infeasible" begin
+
+        # solve the following dual exponential cone problem
+        # max  u + v + w
+        # s.t. -u * exp(v / u) <= exp(1) * w
+        #      u == 1, v == 2
+
+        P = spzeros(3, 3)
+        q = -ones(3)
+
+        # -u * exp( v / u) <= exp(1) * w
+        A1 = sparse(Matrix(1.0I, 3, 3))
+        b1 = zeros(3)
+        cs1 = COSMO.Constraint(A1, b1, COSMO.DualExponentialCone)
+
+        #  u == 1 and b == 2
+        A2 = sparse([1. 0 0; 0 1 0])
+        b2 = [-1.; -2]
+        cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
+
+        model = COSMO.Model()
+        assemble!(model, P, q, [cs1; cs2])
+
+        res = COSMO.optimize!(model)
+        @test res.status == :Primal_infeasible
+
     end
 end
 

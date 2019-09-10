@@ -683,8 +683,8 @@ struct DualPowerCone{T} <: AbstractConvexCone{T}
 end
 DualPowerCone(args...) = DualPowerCone{DefaultFloat}(args...)
 DualCones = Union{DualExponentialCone, DualPowerCone}
-in_cone(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(v, typeof(cone.primal_cone), tol)
-in_dual(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_cone(v, typeof(cone.primal_cone), tol)
+in_cone(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(v, cone.primal_cone, tol)
+in_dual(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_cone(v, cone.primal_cone, tol)
 in_pol_recc(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(-v, cone, tol)
 
 # Project dual cones by using Moreau decomposition: Proj^*(v) = v + Proj(-v)
