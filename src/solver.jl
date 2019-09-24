@@ -25,7 +25,7 @@ function admm_step!(x::Vector{Float64},
 	@. ls[(n + 1):end] = b - s + μ / ρ
 	solve!(kkt_solver,sol,ls)
 
-	# Over relaxattion
+	# Over relaxation
 	@. x = α * x_tl + (1.0 - α) * x
 	@. s_tl = s - (ν + μ) / ρ
 	@. s_tl = α * s_tl + (1.0 - α) * s

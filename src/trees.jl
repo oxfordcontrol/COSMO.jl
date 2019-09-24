@@ -51,35 +51,35 @@ mutable struct SuperNodeTree
 	num::Int64 # number of supernodes / cliques in tree
 	merge_log::MergeLog
 	strategy::AbstractMergeStrategy
-	function SuperNodeTree(L, merge_strategy::AbstractMergeStrategy)
+	function SuperNodeTree(L::SparseMatrixCSC,  merge_strategy::AbstractMergeStrategy)
 		par = etree(L)
 		child = child_from_par(par)
 		post = post_order(par, child)
 		# sorting of children from highest order one to lowest make sure that a node always gets
 		# added to the supernode with the highest rep vertex
-		sort_children!(child, post)
+		#sort_children!(child, post)
 		# faster algorithm according to Vandenberghe p.308
 		degrees = higher_degrees(L)
-		snd, snd_par = find_supernodes(par, child, post, degrees)
+		snd, snd_par = find_supernodes(par, post, degrees)
 
 		snd_child = child_from_par(snd_par)
-		# # a post-ordering of the elimination tree is needed to make sure that in the
-		# # psd completion step the matrix is completed from lower-right to top-left
 	 	snd_post = post_order(snd_par, snd_child)
-
-	 	# If the merge strategy is tree based keep the supernodes and separators in to different locations
-	 	if typeof(merge_strategy) <: AbstractTreeBasedMerge
-	 		# given the supernodes (clique residuals) find the clique separators
-			sep = find_separators(L, snd, snd_par, post)
-			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
 
 		# If the merge strategy is clique graph-based, we give up the tree structure and add the seperators to the supernodes
 		# the supernodes then represent the full clique
 		# after the clique merging a new clique tree will be computed before psd completion is performed
-		else
+	 	if typeof(merge_strategy) <: AbstractGraphBasedMerge
 			add_separators!(L, snd, snd_par, post)
 			@. snd_par = -1
-			new(snd, snd_par, snd_post, snd_child, post, par, [[0]], [0], length(snd_post), MergeLog(), merge_strategy)
+			snd_child = [Int64[] for i = 1:length(snd)]
+			sep = [Int64[] for i = 1:length(snd)]
+			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
+	 	# If the merge strategy is tree based keep the supernodes and separators in to different locations
+		else
+	 		# given the supernodes (clique residuals) find the clique separators
+			sep = find_separators(L, snd, snd_par, post)
+			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
+
 		end
 	end
 
@@ -189,7 +189,7 @@ end
 # ------------------------------------------
 
 function num_cliques(sntree::SuperNodeTree)
-	return sntree.num
+	return sntree.num::Int64
 end
 
 function get_post_order(sntree::SuperNodeTree)
@@ -208,12 +208,25 @@ function get_sep(sntree::SuperNodeTree, ind::Int64)
 		return sntree.sep[sntree.snd_post[ind]]
 end
 
-# the block sizes are stored in post order, e.g. if clique 4 (stored in pos 4) has order 2, then nBlk[2] represents the size of clique 4
+# the block sizes are stored in post order, e.g. if clique 4 (stored in pos 4) has order 2, then nBlk[2] represents the cardinality of clique 4
 function get_nBlk(sntree::SuperNodeTree, ind::Int64)
-		return sntree.nBlk[ind]
+		return sntree.nBlk[ind]::Int64
 end
 
-# return the cliques in a post order (prevents returning empty arrays due to clique merging)
+"Returns the number of rows of all the blocks (cliques) represented in the tree after decomposition."
+function get_decomposed_dim(sntree::SuperNodeTree, C::DecomposableCones{<: Real})
+	dim = 0
+	for iii = 1:num_cliques(sntree)
+		dim += vec_dim(get_nBlk(sntree, iii), C)
+	end
+	return dim::Int64
+end
+
+"Given the side dimension of a PSD cone return the number of stored entries."
+vec_dim(side_dim::Int64, C::PsdCone{<:Real}) = Base.power_by_squaring(side_dim, 2)
+vec_dim(side_dim::Int64, C::PsdConeTriangle{<:Real}) = div(side_dim * (side_dim + 1), 2)
+
+" Return clique with post order `ind` (prevents returning empty arrays due to clique merging)"
 get_clique(sntree::SuperNodeTree, ind::Int64) = get_clique(sntree, ind, sntree.strategy)
 function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractTreeBasedMerge)
 	c = sntree.snd_post[ind]
@@ -221,10 +234,33 @@ function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractTreeBas
 end
 
 function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractGraphBasedMerge)
-	c = sntree.snd_post[ind]
-	return sntree.snd[c]
+	# if a clique tree has been recomputed, call the method for AbstractTreeBasedMerge types
+	if strategy.clique_tree_recomputed
+		return get_clique(sntree, ind, COSMO.NoMerge())
+	else
+		c = sntree.snd_post[ind]
+		return sntree.snd[c]
+	end
 end
 
+
+function print_cliques(sp; reordered = true)
+	sntree = sp.sntree
+	reverse_ordering = sp.reverse_ordering
+	Nsnd = length(sntree.snd)
+	println("Cliques of Graph:")
+	println("Reordered = $(reordered)")
+	for iii = 1:Nsnd
+			if !reordered
+				snd = map(x-> reverse_ordering[x], sntree.snd[iii])
+				sep = map(x-> reverse_ordering[x], sntree.sep[iii])
+			else
+				snd = sntree.snd[iii]
+				sep = sntree.sep[iii]
+			end
+			println("$(iii): res: $(snd), sep: $(sep)")
+	end
+end
 print_cliques(sntree::SuperNodeTree) = print_cliques(sntree, sntree.strategy)
 function print_cliques(sntree::SuperNodeTree, strategy::AbstractTreeBasedMerge)
 	Nsnd = length(sntree.snd)
@@ -248,11 +284,17 @@ function print_clique_orders(sntree::SuperNodeTree, strategy::AbstractTreeBasedM
 end
 
 function print_cliques(sntree::SuperNodeTree, strategy::AbstractGraphBasedMerge)
-	Nsnd = length(sntree.snd)
-	println("Cliques of Graph:")
-	for iii = 1:Nsnd
-			println("$(iii): clique: $(sntree.snd[iii])")
+
+	if strategy.clique_tree_recomputed
+		return print_cliques(sntree, COSMO.NoMerge())
+	else
+		Nsnd = length(sntree.snd)
+		println("Cliques of Graph:")
+		for iii = 1:Nsnd
+				println("$(iii): clique: $(sntree.snd[iii])")
+		end
 	end
+	return nothing
 end
 
 
@@ -306,38 +348,93 @@ end
 
 
 # Algorithm from A. Poten and C. Sun: Compact Clique Tree Data Structures in Sparse Matrix Factorizations (1989)
-function pothen_sun(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post::Array{Int64,1}, degrees::Array{Int64,1})
+function pothen_sun(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{Int64,1})
 	N = length(par)
 	sn_ind = -1 * ones(Int64, N) # if snInd[v] < 0 then v is a rep vertex, otherwise v ∈ supernode[snInd[v]]
 	supernode_par = -1 * ones(Int64, N)
+	children = 	[Array{Int64}(undef, 0) for i = 1:length(par)]
 
-	# go through vertices in post_order
+	root_ind = findfirst(x -> x == 0, par)
+	# go through parents of vertices in post_order
 	for v in post
-		child_ind = 0
-		# check degree condition for all of v's childs from highest to lowest
 
-		for (iii, w) in enumerate(child[v])
-			# if not deg+(v) > deg+(w) - 1 for a certain w, set u to be w in snd(u), add v to snd(u)
-			if !check_degree_condition(v, w, degrees)
-				sn_ind[w] < 0 ? (u = w) : (u = sn_ind[w])
-				sn_ind[v] = u
-				child_ind = iii
-				break
+		if par[v] == 0
+			push!(children[root_ind], v)
+		else
+			push!(children[par[v]], v)
+		end
+
+		# parent is not the root
+		if par[v] != 0
+			if degrees[v] - 1 == degrees[par[v]] && sn_ind[par[v]] == -1
+				# Case A: v is a representative vertex
+				if sn_ind[v] < 0
+					sn_ind[par[v]] = v
+					sn_ind[v] -= 1
+				# Case B: v is not representative vertex, add to sn_ind[v] instead
+				else
+					sn_ind[par[v]] = sn_ind[v]
+					sn_ind[sn_ind[v]] -= 1
+				end
+			else
+				if sn_ind[v] < 0
+					supernode_par[v] = v
+				else
+					supernode_par[sn_ind[v]] = sn_ind[v]
+				end
 			end
 		end
 
-		# if v is still a rep vertex (i.e. above loop didnt find a child that fulfilled degree condition)
+		# k: rep vertex of the snd that v belongs to
 		if sn_ind[v] < 0
-			u = v
+			k = v
+		else
+			k = sn_ind[v]
 		end
-
-		for (iii, w) in enumerate(child[v])
-			if iii != child_ind
-				sn_ind[w] < 0 ? (x = w) : x = sn_ind[w]
-				supernode_par[x] = u
+		# loop over v's children
+		v_children = children[v]
+		if !isempty(v_children)
+			for w in v_children
+				if sn_ind[w] < 0
+					l = w
+				else
+					l = sn_ind[w]
+				end
+				if l != k
+					supernode_par[l] = k
+				end
 			end
 		end
-	end
+	end # loop over vertices
+
+	# 	for (iii, w) in enumerate(child[v])
+	# 		for
+	# 	end
+	# 	child_ind = 0
+	# 	# check degree condition for all of v's children from highest to lowest
+
+	# 	for (iii, w) in enumerate(child[v])
+	# 		# if not deg+(v) > deg+(w) - 1 for a certain w, set u to be w in snd(u), add v to snd(u)
+	# 		if !check_degree_condition(v, w, degrees)
+	# 			sn_ind[w] < 0 ? (u = w) : (u = sn_ind[w])
+	# 			sn_ind[v] = u
+	# 			child_ind = iii
+	# 			break
+	# 		end
+	# 	end
+
+	# 	# if v is still a rep vertex (i.e. above loop didnt find a child that fulfilled degree condition)
+	# 	if sn_ind[v] < 0
+	# 		u = v
+	# 	end
+
+	# 	for (iii, w) in enumerate(child[v])
+	# 		if iii != child_ind
+	# 			sn_ind[w] < 0 ? (x = w) : x = sn_ind[w]
+	# 			supernode_par[x] = u
+	# 		end
+	# 	end
+	# end
 
 	# representative vertices
 	reprv = findall(x-> x < 0, sn_ind)
@@ -355,19 +452,18 @@ function pothen_sun(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post::Arr
 	return sn_par, sn_ind
 end
 
-function find_supernodes(par::Array{Int64,1}, child::Array{Array{Int64,1}}, post::Array{Int64,1}, degrees::Array{Int64,1})
-	supernode_par, snInd = pothen_sun(par, child, post, degrees)
+function find_supernodes(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{Int64,1})
+	supernode_par, snInd = pothen_sun(par, post, degrees)
 	# number of vertices
 	N = length(par)
 	# number of representative vertices == number of supernodes
 	Nrep = length(supernode_par)
 	snode = [Array{Int64}(undef, 0) for i = 1:N]
 
-	for iii in post
+	for iii = 1:N
 		f = snInd[iii]
 		if f < 0
 			push!(snode[iii], iii)
-
 		else
 			push!(snode[f], iii)
 		end
@@ -416,6 +512,51 @@ function add_separators!(L::SparseMatrixCSC, snodes::Array{Array{Int64,1},1}, su
 	end
 	return nothing
 end
+
+
+"""
+		reorder_snd_consecutively!(sntree, ordering)
+
+Takes a SuperNodeTree and reorders the vertices in each supernode (and separator) to have consecutive order.
+
+The reordering is needed to achieve equal column structure for the psd completion of the dual variable `Y`. This also modifies `ordering` which maps the vertices in the sntree back to the actual location in the not reordered data, i.e.
+the primal constraint variable `S` and dual variables `Y`.
+"""
+function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int64, 1})
+
+	# determine permutation vector p and permute the vertices in each snd
+	p = zeros(Int64,length(t.post))
+	snd = t.snd
+	sep = t.sep
+
+	k = 1
+	for snd_ind in t.snd_post
+	  s = snd[snd_ind]
+	  l = length(s)
+	  p[k:k+l-1] = s
+	  s[:] = collect(k:1:k+l-1)
+	  k += l
+	end
+
+
+  # permute the separators as well
+  p_inv = invperm(p)
+  for sp in t.sep
+    sp[:] = map(x -> p_inv[x], sp)
+  end
+
+	# # permute the degrees, supernodal parent structure and supernodal post order
+
+	# snd_post_inv = invperm(t.snd_post)
+	# root_ind = findfirst(x -> x == 0, t.snd_par)
+	# t.snd_par[root_ind] = root_ind
+	# t.snd_par = sndpost_inv[t.snd_par[t.snd_post]]
+	# t.snd_post = collect(1:1:t.num)
+
+	permute!(ordering, p)
+	return nothing
+end
+
 
 function find_higher_order_neighbors(L::SparseMatrixCSC, v::Int64)
 	v == size(L, 1) && return 0

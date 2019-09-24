@@ -38,6 +38,7 @@ abstract type AbstractComplexityScore <: AbstractEdgeScore end
 struct ComplexityScore <: AbstractComplexityScore end
 
 
+merge_cliques!(t::SuperNodeTree) = merge_cliques!(t, t.strategy)
 merge_cliques!(t::SuperNodeTree, strategy::NoMerge) = nothing
 
 
@@ -57,15 +58,15 @@ function _merge_cliques!(t::SuperNodeTree, strategy::AbstractMergeStrategy)
     end
     log_merge!(t, do_merge, ordered_cand)
 
+    # update strategy information after the merge
+    update!(strategy, t, cand, ordered_cand, do_merge)
     t.num == 1 && break
     strategy.stop && break
-    # update strategy information after the merge
-    update!(strategy, t, cand, ordered_cand)
   end
-return nothing
+  return nothing
 end
 
-function merge_cliques!(t, strategy::AbstractTreeBasedMerge)
+function merge_cliques!(t::SuperNodeTree, strategy::AbstractTreeBasedMerge)
   # call main merge routine
   _merge_cliques!(t, strategy)
   # do some merge strategy specific post-processing of the tree
@@ -73,38 +74,42 @@ function merge_cliques!(t, strategy::AbstractTreeBasedMerge)
   # the merging creates empty supernodes and seperators, recalculate a post order for the supernodes
   snd_post = post_order(t.snd_par, t.snd_child, Nc)
   t.snd_post = snd_post
-  t.connectivity = spzeros(0, 0)
+
   return nothing
 end
 
-function merge_cliques!(t, strategy::AbstractGraphBasedMerge)
+function merge_cliques!(t::SuperNodeTree, strategy::AbstractGraphBasedMerge)
   # call main merge routine
   _merge_cliques!(t, strategy)
-  # since for now we have a graph, not a tree a post ordering does not make sense. Therefore just number
+  # since for now we have a graph, not a tree, a post ordering or a parent structure does not make sense. Therefore just number
   # the non-empty supernodes in t.snd
   t.snd_post = findall(x -> !isempty(x), t.snd)
+  t.snd_par = -ones(Int64, length(t.snd))
+
+  # recomute a clique tree from the clique graph
+  t.num > 1 && clique_tree_from_graph!(t)
   return nothing
 end
 
 # calculate block sizes (notice: the block sizes are stored in post order)
-function calculate_block_dimensions!(t::SuperNodeTree, strategy::AbstractTreeBasedMerge)
+function calculate_block_dimensions!(t::SuperNodeTree)#, strategy::AbstractTreeBasedMerge)
   Nc = t.num
   t.nBlk = zeros(Nc)
   for iii = 1:Nc
     c = t.snd_post[iii]
-    t.nBlk[iii] = Base.power_by_squaring(length(t.sep[c]) + length(t.snd[c]), 2)
+    t.nBlk[iii] = length(t.sep[c]) + length(t.snd[c])
   end
 end
 
 
-function calculate_block_dimensions!(t::SuperNodeTree, strategy::AbstractGraphBasedMerge)
-  Nc = t.num
-  t.nBlk = zeros(Nc)
-  for iii = 1:Nc
-    c = t.snd_post[iii]
-    t.nBlk[iii] = Base.power_by_squaring(length(t.snd[c]), 2)
-  end
-end
+# function calculate_block_dimensions!(t::SuperNodeTree, strategy::AbstractGraphBasedMerge)
+#   Nc = t.num
+#   t.nBlk = zeros(Nc)
+#   for iii = 1:Nc
+#     c = t.snd_post[iii]
+#     t.nBlk[iii] = Base.power_by_squaring(length(t.snd[c]), 2)
+#   end
+# end
 
 function log_merge!(t::SuperNodeTree, do_merge::Bool, cand::Array{Int64, 1})
   t.merge_log.clique_pairs = vcat(t.merge_log.clique_pairs, cand')
@@ -161,18 +166,18 @@ end
 
 
 """
-PairwiseMerge <: AbstractGraphBasedMerge
+PairwiseMerge(edge_score::AbstractEdgeScore = ComplexityScore()) <: AbstractGraphBasedMerge
 
-A merge strategy that calculates the edge metric `A ∩ B / A ∪ B` for every two cliques that are in a parent-child or sibling relationship. The resulting clique
+A merge strategy that calculates the edge metric given by `edge_score` for every two cliques that have any overlap. The resulting clique
 graph is traversed from the highest edge metric to the lowest.
 """
 mutable struct PairwiseMerge <: AbstractGraphBasedMerge
   stop::Bool
   edges::AbstractMatrix
   edge_score::AbstractEdgeScore
-  recompute_ct_on_demand::Bool # if true only recompute clique tree from clique graph when psd_complete is called, i.e. dual variable has to be completed
-  function PairwiseMerge(; edge_score = RelIntersect())
-    new(false, spzeros(Float64, 0, 0), edge_score, true)
+  clique_tree_recomputed::Bool
+  function PairwiseMerge(; edge_score = ComplexityScore())
+    new(false, spzeros(Float64, 0, 0), edge_score, false)
   end
 end
 
@@ -180,8 +185,8 @@ end
 """
 TreeTraversalMerge(t_fill = 8, t_size = 8) <: AbstractTreeBasedMerge
 
-The merge strategy suggested in Sun / Andersen - Decomposition in conic optimization with partially separable structure (2013).
-The initial clique tree is traversed in topological order and cliques are greedily merged to their parent if evaluate() returns true.
+The merge strategy suggested in **Sun / Andersen - Decomposition in conic optimization with partially separable structure (2013)**.
+The initial clique tree is traversed in topological order and cliques are greedily merged to their parent if `evaluate()` returns true.
 """
 mutable struct TreeTraversalMerge <: AbstractTreeBasedMerge
   stop::Bool
@@ -197,11 +202,11 @@ end
 """
 NakataMerge(zeta = 0.4) <: AbstractTreeBasedMerge
 
-The merge strategy suggested in Nakata - Exploiting sparsity in semidefinite programming via matrix completion II (2001)
-The initial clique tree is traversed in a depth first search and for each clique a conditition is checked if the clique's
- - any pair of children should be merged (sibling-merge)
- - the clique should be merged with a child (parent-child merge)
- - the clique and two children should be merged (3-family merge)
+The merge strategy suggested in **Nakata - Exploiting sparsity in semidefinite programming via matrix completion II (2001)**
+The initial clique tree is traversed in a depth first search and for each clique a conditition is checked if:
+- any pair of children should be merged (sibling-merge)
+- the clique should be merged with a child (parent-child merge)
+- the clique and two children should be merged (3-family merge)
 """
 mutable struct NakataMerge <: AbstractTreeBasedMerge
   stop::Bool
@@ -213,8 +218,6 @@ mutable struct NakataMerge <: AbstractTreeBasedMerge
     new(false, 1, zeta)
   end
 end
-
-
 
 
 
@@ -233,7 +236,7 @@ end
 """
 isdisjoint(c_a, c_b)
 
-Checks whether two sets c_a, c_b have no common elements.
+Checks whether two sets `c_a`, `c_b` have no common elements.
 """
 function isdisjoint(c_a::AbstractVector, c_b::AbstractVector; is_sorted = false)
   if !is_sorted
@@ -261,7 +264,7 @@ end
 """
 compute_edges!(t, strategy, c_a)
 
-Computes the edge metric between clique c_a and all cliques that have some overlap with c_a and stores the result in strategy.edges.
+Computes the edge metric between clique `c_a` and all cliques that have some overlap with `c_a` and stores the result in `strategy.edges`.
 """
 function compute_edges!(t, strategy::PairwiseMerge, c_a_ind::Int64)
   # loop over all cliques (including empty ones and except c_a), and compute edge metric
@@ -375,9 +378,6 @@ end
 # instead of the individual cliques
 compute_complexity_savings(n_1::Int64, n_2::Int64, n_m::Int64, edge_score::ComplexityScore) = n_1^3 + n_2^3 - n_m^3
 
-# Approximates the number of operations for one projection of all the cliques in the tree
-compute_complexity(t::COSMO.SuperNodeTree) = sum(map(x -> x^3, t.nBlk))
-
 
 function merge_two_cliques!(t::SuperNodeTree, cand::Array{Int64, 1}, strategy::AbstractGraphBasedMerge)
   c_1 = cand[1]
@@ -404,7 +404,7 @@ merge_two_cliques!(t::SuperNodeTree, cand::Array{Int64, 1}, strategy::TreeTraver
 """
 find_neighbors(edges::SparseMatrixCSC, c::Int64)
 
-Find all the cliques connected to c which are given by the nonzeros in (c, 1:c-1) and (c+1:n, c).
+Find all the cliques connected to `c` which are given by the nonzeros in `(c, 1:c-1)` and `(c+1:n, c)`.
 """
 function find_neighbors(edges::SparseMatrixCSC, c::Int64)
   neighbors = zeros(Int64, 0)
@@ -424,30 +424,33 @@ return neighbors
 end
 
 
-# After a merge operation update the information of the strategy
-function update!(strategy::PairwiseMerge, t, cand, ordered_cand)
-  c_1_ind = cand[1]
-  c_removed = cand[2]
-  edges = strategy.edges
-  n = size(edges, 2)
+function update!(strategy::PairwiseMerge, t::SuperNodeTree, cand::Array{Int64, 1}, ordered_cand::Array{Int64, 1}, do_merge::Bool)
 
+  # After a merge operation update the information of the strategy
+  if do_merge
+    c_1_ind = cand[1]
+    c_removed = cand[2]
+    edges = strategy.edges
+    n = size(edges, 2)
 
-  # ... and all to the removed clique
-  edges[c_removed+1:n, c_removed] .= 0
-  edges[c_removed, 1:c_removed] .= 0
-  dropzeros!(strategy.edges)
+    c_1 = t.snd[c_1_ind]
 
-  c_1 = t.snd[c_1_ind]
-  # recalculate edge values of all of c_1's neighbors and store in lower triangle
+    # recalculate edge values of all of c_1's and c_removed's neighbors and store in lower triangle
+    n_arr = [find_neighbors(edges, c_1_ind); find_neighbors(edges, c_removed)]
+    n_arr = unique!(n_arr)
+    for n_ind in n_arr
+      if n_ind != c_1_ind
+        neigbhor = t.snd[n_ind]
+        edges[max(c_1_ind, n_ind), min(c_1_ind, n_ind)] = COSMO.edge_metric(c_1, neigbhor, strategy.edge_score)
+      end
+    end
 
-  n_arr = find_neighbors(edges, c_1_ind)
-  # println("c1: $(c_1_ind):")
-  # @show(n_arr)
-  for n_ind in n_arr
-    neigbhor = t.snd[n_ind]
-    edges[max(c_1_ind, n_ind), min(c_1_ind, n_ind)] = edge_metric(c_1, neigbhor, strategy.edge_score)
+    # remove entries in rows and columns that refer to edges that link to the removed clique
+    edges[c_removed+1:n, c_removed] .= 0
+    edges[c_removed, 1:c_removed] .= 0
+    dropzeros!(edges)
   end
-
+  return nothing
 end
 
 
@@ -465,15 +468,19 @@ function clique_intersections!(E::SparseMatrixCSC, snd::Array{Array{Int64, 1}})
 end
 
 
-# Kruskal's algorithm to find a maximum weight spanning tree from the clique intersection graph, E represents the cardinality of the
-# intersection between two cliques
-# Changes the entries in the connectivity matrix E to negative value if an edge between two cliques is included in the max spanning tree
-# modified version of:https://github.com/JuliaGraphs/LightGraphs.jl/blob/master/src/spanningtrees/kruskal.jl
-function kruskal!(E::SparseMatrixCSC)
+"""
+    kruskal!(E::SparseMatrixCSC)
 
+Kruskal's algorithm to find a maximum weight spanning tree from the clique intersection graph.
 
-  num_c = size(E, 2)
-  connected_c = DataStructures.IntDisjointSets(num_c)
+ `E` represents the cardinality of the intersection between two cliques. Changes the entries in the connectivity matrix `E` to a negative
+ value if an edge between two cliques is included in the max spanning tree.
+
+ This is a modified version of https://github.com/JuliaGraphs/LightGraphs.jl/blob/master/src/spanningtrees/kruskal.jl
+ """
+function kruskal!(E::SparseMatrixCSC, num_cliques::Int64)
+  num_initial_cliques = size(E, 2)
+  connected_c = DataStructures.IntDisjointSets(num_initial_cliques)
 
   I, J, V = findnz(E)
   # sort the weights and edges from maximum to minimum value
@@ -492,40 +499,33 @@ function kruskal!(E::SparseMatrixCSC)
       E[row, col] = -1.0
       num_edges_found += 1
       # break when all cliques are connected in one tree
-      num_edges_found >= num_c - 1 && break
+      num_edges_found >= num_cliques - 1 && break
     end
   end
   return nothing
 end
 
-  function assign_children!(snd_par::Array{Int64, 1}, snd_child::Array{Array{Int64, 1}}, c::Int64, edges::SparseMatrixCSC)
-    # determine neighbors
-    neighbors = find_neighbors(edges, c)
-    for n in neighbors
-      if n < c
-        row = c
-        col = n
-      else
-        row = n
-        col = c
-      end
-
-      # conditions that there is a edge in the MST and that n is not the parent of c
-      if edges[row, col] == -1.0 && snd_par[c] != n
-        snd_par[n] = c
-        push!(snd_child[c], n)
-        assign_children!(snd_par, snd_child, n, edges)
-      end
+"Given a MWT represented by `edges`, find the children of clique `c` and store them in `snd_child."
+function assign_children!(snd_par::Array{Int64, 1}, snd_child::Array{Array{Int64, 1}}, c::Int64, edges::SparseMatrixCSC)
+  # determine neighbors
+  neighbors = find_neighbors(edges, c)
+  for n in neighbors
+    # conditions that there is a edge in the MST and that n is not the parent of c
+    if edges[max(c, n), min(c, n)] == -1.0 && snd_par[c] != n
+      snd_par[n] = c
+      push!(snd_child[c], n)
+      assign_children!(snd_par, snd_child, n, edges)
     end
-    return nothing
+  end
+  return nothing
 end
 
-
+" Given the maximum weight spanning tree represented by `E`, determine a parent structure `snd_par` for the clique tree."
 function determine_parent_cliques!(snd_par::Array{Int64, 1}, snd_child::Array{Array{Int64, 1}}, cliques::Array{Array{Int64, 1}}, post::Array{Int64, 1}, E::SparseMatrixCSC)
   # vertex with highest order
   v = post[end]
   c = 0
-  # find clique that contains that vertex
+  # Find clique that contains that vertex
   for (k, clique) in enumerate(cliques)
     if v ∈ clique
       # set that clique to the root
@@ -534,12 +534,13 @@ function determine_parent_cliques!(snd_par::Array{Int64, 1}, snd_child::Array{Ar
       break
     end
   end
-  # recursively assign children to cliques along the MST defined by E
- assign_children!(snd_par, snd_child, c, E)
 
+  # recursively assign children to cliques along the MST defined by E
+  assign_children!(snd_par, snd_child, c, E)
   return nothing
 end
 
+" Traverse the clique tree in descending topological order and split the clique sets into supernodes and separators."
 function split_cliques!(snd::Array{Array{Int64,1}}, sep::Array{Array{Int64,1}}, snd_par::Array{Int64,1}, snd_post::Array{Int64}, num_cliques::Int64)
 
   # travese in topological decending order through the clique tree and split the clique in snd and sep
@@ -555,13 +556,13 @@ function split_cliques!(snd::Array{Array{Int64,1}}, sep::Array{Array{Int64,1}}, 
   return nothing
 end
 
-recompute_clique_tree(strategy::AbstractTreeBasedMerge) = false
-recompute_clique_tree(strategy::AbstractGraphBasedMerge) = strategy.recompute_ct_on_demand
 
 """
-    clique_tree_from_graph!(tree)
+clique_tree_from_graph!(clique_graph::SuperNodeTree)
 
-Given the cliques and edges of a clique graph, this function computes a valid clique tree. This is necessary to perform the psd completion step.
+Given the cliques and edges of a clique graph, this function computes a valid clique tree.
+
+This is necessary to perform the psd completion step.
 """
 function clique_tree_from_graph!(t::SuperNodeTree)
   # a clique tree is a maximum weight spanning tree of the clique graph where the edge weight is the cardinality of the intersection between two cliques
@@ -569,20 +570,20 @@ function clique_tree_from_graph!(t::SuperNodeTree)
   clique_intersections!(t.strategy.edges, t.snd)
 
   # find a maximum weight spanning tree of the clique graph using Kruskal's algorithm
-  kruskal!(t.strategy.edges)
+  kruskal!(t.strategy.edges, t.num)
 
-  # determine the root clique of the clique tree (the clique that contains the vertex with the highest order)
+  # determine the root clique of the clique tree (it can be any clique, but we choose the clique that contains the vertex with the highest order)
   determine_parent_cliques!(t.snd_par, t.snd_child, t.snd, t.post, t.strategy.edges)
 
-  # recompute a postorder
-  t.snd_post = post_order(t.snd_par, t.snd_child)
+  # recompute a postorder for the supernodes
+  t.snd_post = post_order(t.snd_par, t.snd_child, t.num)
 
   # split clique sets back into seperators and supernodes
   split_cliques!(t.snd, t.sep, t.snd_par, t.snd_post, t.num)
+  t.strategy.clique_tree_recomputed = true
   return nothing
 end
 
-clique_tree_from_graph!(t::SuperNodeTree, strategy::AbstractTreeBasedMerge) = nothing
 
 # # computes the edge metric for cliques C_a and C_b: (C_a ∩ C_b) / (C_a ∪ C_b) where C_a is the parent of C_b
 # function edge_metric_parent(res, sep, c_a, c_b, edge_score::RelIntersect)
@@ -675,7 +676,7 @@ function evaluate(t, strategy::NakataMerge, cand)
   end
 end
 
-function _evaluate(t, strategy, c_r, c_s)
+function _evaluate(t, strategy::NakataMerge, c_r, c_s)
   zeta = strategy.zeta
   intersecct_dim = intersect_dim(c_r, c_s)
   c_r_dim = t.snd[c_r] + t.sep[c_r]
@@ -683,7 +684,7 @@ function _evaluate(t, strategy, c_r, c_s)
   return min(intersect_dim / c_r_dim, intersect_dim / c_s_dim) >= zeta
 end
 
-function _evaluate(t, strategy, c_q, c_r, c_s)
+function _evaluate(t, strategy::NakataMerge, c_q, c_r, c_s)
   zeta = strategy.zeta
   intersecct_dim = intersect_dim(c_a, c_b)
   c_a_dim = t.snd[c_a] + t.sep[c_a]
@@ -692,7 +693,7 @@ function _evaluate(t, strategy, c_q, c_r, c_s)
 end
 
 
-function update!(strategy::TreeTraversalMerge, t, cand, ordered_cand)
+function update!(strategy::TreeTraversalMerge, t::SuperNodeTree, cand::Array{Int64, 1}, ordered_cand::Array{Int64, 1}, do_merge::Bool)
   # try to merge last node of order 1, then stop
   if strategy.clique_ind == 1
     strategy.stop = true

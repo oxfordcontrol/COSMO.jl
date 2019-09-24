@@ -53,8 +53,8 @@ q = -P * x - A' * y
 # Run three test cases
 cases = [
   COSMO.Settings(decompose = false, verbose_timing = true);
-  COSMO.Settings(decompose = true, complete_dual = false, verbose_timing = true);
-  COSMO.Settings(decompose = true, complete_dual = true, verbose_timing = true)
+  COSMO.Settings(decompose = true, complete_dual = false, verbose_timing = true, merge_strategy = COSMO.NoMerge);
+  COSMO.Settings(decompose = true, complete_dual = true, verbose_timing = true, merge_strategy = COSMO.NoMerge)
   ]
 results = Array{COSMO.Result{Float64}}(undef, 3);
 
@@ -92,8 +92,8 @@ results_triangle = Array{COSMO.Result{Float64}}(undef, 3);
 
 cases_triangle = [
   COSMO.Settings(decompose = false);
-  COSMO.Settings(decompose = true, complete_dual = false);
-  COSMO.Settings(decompose = true, complete_dual = true)
+  COSMO.Settings(decompose = true, complete_dual = false, merge_strategy = COSMO.NoMerge);
+  COSMO.Settings(decompose = true, complete_dual = true, merge_strategy = COSMO.NoMerge)
   ]
 for i = 1:3
   model_tri = COSMO.Model()

@@ -46,7 +46,7 @@ function Base.show(io::IO, obj::ResultTimes)
 end
 
 """
-	ResultInfo{T <: AbstractFloat}
+    ResultInfo{T <: AbstractFloat}
 
 Object that contains further information about the primal and dual residuals.
 """
@@ -58,7 +58,7 @@ end
 ResultInfo(rp, rd) = ResultInfo{DefaultFloat}(rp, rd)
 
 """
-	Result{T <: AbstractFloat}
+    Result{T <: AbstractFloat}
 
 Object returned by the COSMO solver after calling `optimize!(model)`. It has the following fields:
 
@@ -176,21 +176,22 @@ mutable struct SparsityPattern
   reverse_ordering::Array{Int64}
 
   # constructor for sparsity pattern
-  function SparsityPattern(L, N::Int64, ordering, merge_strategy)
+  function SparsityPattern(L::SparseMatrixCSC, N::Int64, ordering, merge_strategy)
 
-    reverse_ordering = zeros(length(ordering))
-    for i = 1:N
-      reverse_ordering[ordering[i]] = i
-    end
     merge_strategy = merge_strategy()
     sntree = SuperNodeTree(L, merge_strategy)
 
     # clique merging
-    sntree.num > 1 && merge_cliques!(sntree, merge_strategy)
+    sntree.num > 1 && merge_cliques!(sntree)
 
-    calculate_block_dimensions!(sntree, merge_strategy)
+    # reorder vertices in supernodes to have consecutive order
+    # necessary for equal column structure for psd completion
+    reorder_snd_consecutively!(sntree, ordering)
 
-    return new(sntree, ordering, reverse_ordering)
+    # for each clique determine the number of entries of the block represented by that clique
+    calculate_block_dimensions!(sntree)#, merge_strategy)
+
+    return new(sntree, ordering, invperm(ordering))
   end
 end
 
@@ -207,7 +208,7 @@ mutable struct ChordalInfo{T <: Real}
   num_psd_cones::Int64 # number of psd cones of original problem
   num_decomposable::Int64 #number of decomposable cones
   num_decom_psd_cones::Int64 #total number of psd cones after decomposition
-  L::SparseMatrixCSC{T} #pre allocate memory for QDLD - Lt
+  L::SparseMatrixCSC{T} #pre allocate memory for QDLDL
 
   function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
     originalM = problem.model_size[1]

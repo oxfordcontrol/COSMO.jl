@@ -41,31 +41,34 @@ function find_sparsity_patterns!(ws)
   end
 end
 
-function analyse_sparsity_pattern!(ci, csp, sets, C::PsdCone{T}, k, sp_ind, merge_strategy) where {T <: Real}
+function analyse_sparsity_pattern!(ci, csp, sets, C::DecomposableCones{T}, k, sp_ind, merge_strategy) where {T <: Real}
   if length(csp) < C.dim
-    return _analyse_sparsity_pattern(ci, csp, C, k, sp_ind, merge_strategy)
+    return _analyse_sparsity_pattern(ci, csp, sets, C, k, sp_ind, merge_strategy)
   else
-   sets[k] = COSMO.DensePsdCone{T}(C.dim)
+   sets[k] = COSMO.DenseEquivalent(C, C.dim)
    return sp_ind
   end
 end
 
-function analyse_sparsity_pattern!(ci, csp, sets, C::PsdConeTriangle{T}, k, sp_ind, merge_strategy) where {T <: Real}
-  if length(csp) < C.dim
-    return _analyse_sparsity_pattern(ci, csp, C, k, sp_ind, merge_strategy)
+function _analyse_sparsity_pattern(ci, csp, sets, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k, sp_ind, merge_strategy) where {T <: Real}
+  ordering = find_graph!(ci, csp, C.sqrt_dim, C)
+  sp = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering, merge_strategy)
+  # if after analysis of SparsityPattern & clique merging only one clique remains, don't bother decomposing
+  if num_cliques(sp.sntree) == 1
+      sets[k] = DenseEquivalent(C, C.dim)
+      return sp_ind
   else
-   sets[k] = COSMO.DensePsdConeTriangle{T}(C.dim)
-    return sp_ind
+    ci.sp_arr[sp_ind] = sp
+    push!(ci.psd_cones_ind, k)
+    ci.num_decomposable += 1
+    return sp_ind + 1
   end
 end
 
-function _analyse_sparsity_pattern(ci, csp, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k, sp_ind, merge_strategy) where {T <: Real}
-  ordering = find_graph!(ci, csp, C.sqrt_dim, C)
-  ci.sp_arr[sp_ind] = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering, merge_strategy)
-  push!(ci.psd_cones_ind, k)
-  ci.num_decomposable += 1
-  return sp_ind + 1
-end
+DenseEquivalent(C::COSMO.PsdCone{T}, dim::Int64) where {T} = COSMO.DensePsdCone{T}(dim)
+DenseEquivalent(C::COSMO.PsdConeTriangle{T}, dim::Int64) where {T} = COSMO.DensePsdConeTriangle{T}(dim)
+
+
 
 analyse_sparsity_pattern!(ci, csp, sets, C::AbstractConvexSet, k, sp_ind, merge_strategy) = sp_ind
 
@@ -174,11 +177,9 @@ function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64, C::COSMO.Abstract
   return set_ind + 1, sp_ind, entry
 end
 
-get_blk_length(nBlk::Int64, C::COSMO.PsdCone{Float64}) = isqrt(nBlk)
-function get_blk_length(nBlk::Int64, C::COSMO.PsdConeTriangle{Float64})
-    d = isqrt(nBlk)
-    return div((d + 1) * d, 2)
-end
+get_blk_length(nBlk::Int64, C::COSMO.PsdCone{Float64}) = nBlk
+get_blk_length(nBlk::Int64, C::COSMO.PsdConeTriangle{Float64}) = div((nBlk + 1) * nBlk, 2)
+
 get_blk_rows(d::Int64, C::COSMO.PsdCone{Float64}) = d^2
 get_blk_rows(d::Int64, C::COSMO.PsdConeTriangle{Float64}) = d
 
@@ -245,13 +246,9 @@ function find_H_col_dimension(sets, sp_arr)
 end
 
 decomposed_dim(C::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64) = (C.dim, sp_arr_ind)
-function decomposed_dim(C::PsdCone{<: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
-  dim = sum(sp_arr[sp_arr_ind].sntree.nBlk)
-  return dim::Int64, (sp_arr_ind + 1)::Int64
-end
-
-function decomposed_dim(C::PsdConeTriangle{<: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
-  dim = sum(map(d -> div((d + 1) * d, 2), map(x -> isqrt(x), sp_arr[sp_arr_ind].sntree.nBlk)))
+function decomposed_dim(C::DecomposableCones{ <: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
+  sntree = sp_arr[sp_arr_ind].sntree
+  dim = get_decomposed_dim(sntree, C)
   return dim::Int64, (sp_arr_ind + 1)::Int64
 end
 
@@ -303,8 +300,9 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   # if user requests, perform positive semidefinite completion on entries of μ that were not in the decomposed blocks
   ws.vars = vars
   ws.p.C = ws.ci.originalC
+  #yb = copy(ws.vars.μ)
   settings.complete_dual && psd_completion!(ws)
-
+  #@show(norm(ws.vars.μ-yb, Inf))
   return nothing
 end
 
@@ -343,8 +341,16 @@ complete!(μ::AbstractVector, ::AbstractConvexSet, sp_arr::Array{SparsityPattern
 
 function complete!(μ::AbstractVector, C::PsdCone{<: Real}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
   sp = sp_arr[sp_ind]
-  M = reshape(view(μ, rows), C.sqrt_dim, C.sqrt_dim)
+
+  μ_view = view(μ, rows)
+  # make this y = -μ
+  @. μ_view *= -1
+
+  M = reshape(μ_view, C.sqrt_dim, C.sqrt_dim)
+
   psd_complete!(M, C.sqrt_dim, sp.sntree, sp.ordering)
+
+  @. μ_view *= -1
   return sp_ind + 1
 end
 
@@ -352,9 +358,12 @@ function complete!(μ::AbstractVector, C::PsdConeTriangle{<: Real}, sp_arr::Arra
   sp = sp_arr[sp_ind]
 
   μ_view = view(μ, rows)
-  populate_upper_triangle!(C.X, μ_view, 1. / sqrt(2))
+
+  # I want to psd complete y, which is -μ
+  populate_upper_triangle!(C.X, -μ_view, 1. / sqrt(2))
   psd_complete!(C.X, C.sqrt_dim, sp.sntree, sp.ordering)
   extract_upper_triangle!(C.X, μ_view, sqrt(2))
+  @. μ_view *= -1
   return sp_ind + 1
 end
 
@@ -366,11 +375,11 @@ function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Ar
   # if a clique graph based merge strategy was used for this sparsity pattern, recompute a valid clique tree
   #recompute_clique_tree(sntree.strategy) && clique_tree_from_graph!(sntree, sntree.strategy)
 
-  ip = zeros(Int64, length(p))
-  ip[p] = 1:length(p)
+  ip = invperm(p)
 
+  As = Symmetric(A, :U)
   # permutate matrix based on ordering p (p must be a vector type), W is in the order that the cliques are based on
-  W = A[p, p]
+  W = copy(As[p, p])
   W = Matrix(W)
   num_cliques = COSMO.num_cliques(sntree)
 
@@ -386,15 +395,27 @@ function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Ar
 
     # index set containing the row indizes of the lower-triangular zeros in column i (i: representative index) sorted by σ(i)
     i = ν[1]
-    η = collect(i + 1:1:N)
+    η = collect(i+1:1:N)
     # filter out elements in lower triangular part of column i that are non-zero
-    filter!(x -> !in(x, α), η)
+    filter!(x -> !in(x, α) && !in(x, ν), η)
 
-    Waa = view(W, α, α)
+    Waa = W[α, α]
     Wαν = view(W, α, ν)
     Wηα = view(W, η, α)
 
-    Y = Waa \ Wαν
+     #@show(ν, α, η, Waa, Wαν, Wηα)
+     Y = zeros(length(α), length(ν))
+    try
+       Y[:, :] = Waa \ Wαν
+     catch
+      # F = eigen(Symmetric(Waa))
+      # V = F.vectors
+      # λ = F.values
+      # λ_max = maximum(λ)
+      @show("Use SVD and PINV")
+      Waa_pinv = pinv(Waa)
+      Y[:, :] = Waa_pinv * Wαν
+    end
 
     W[η, ν] =  Wηα * Y
     # symmetry condition
@@ -402,7 +423,7 @@ function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Ar
   end
 
   # invert the permutation
-  A[:, :] = W[ip, ip]
+  A[:, :] =  W[ip, ip]
 end
 
 
