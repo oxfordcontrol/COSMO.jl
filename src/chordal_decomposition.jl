@@ -294,32 +294,15 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   vars.x .= ws.vars.x[1:nO]
   vars.s  .= SplitVector{Float64}(H * ws.vars.s[mO + 1:end], ws.ci.originalC)
 
-  # fill dual variables such that μ_k  = H_k μ for k=1,...,p
-  fill_dual_variables!(ws, vars)
+  # this performs the operation μ = sum H_k^T *  μ_k which is negative of the (uncompleted) dual variable of the original problem
+  vars.μ .= H * ws.vars.μ[mO + 1:end]
 
   # if user requests, perform positive semidefinite completion on entries of μ that were not in the decomposed blocks
   ws.vars = vars
   ws.p.C = ws.ci.originalC
-  #yb = copy(ws.vars.μ)
   settings.complete_dual && psd_completion!(ws)
-  #@show(norm(ws.vars.μ-yb, Inf))
+
   return nothing
-end
-
-function fill_dual_variables!(ws::COSMO.Workspace, vars::COSMO.Variables)
-  mO = ws.ci.originalM
-  H = ws.ci.H
-
-  # this performs the operation μ = sum H_k^T *  μ_k causing an addition of (identical valued) overlapping blocks
-  vars.μ .= H * ws.vars.μ[mO + 1:end]
-
-  # # to remove the overlaps we take the average of the values for each overlap by dividing by the number of blocks that overlap in a particular entry, i.e. number of 1s in each row of H
-  rowInd, nnzs = number_of_overlaps_in_rows(H)
-
-  for iii=1:length(rowInd)
-    ri = rowInd[iii]
-    vars.μ[ri] .= vars.μ[ri] / nnzs[iii]
-  end
 end
 
 # The psd entries of μ that correspond to the zeros in s are not constrained by the problem
@@ -403,16 +386,10 @@ function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Ar
     Wαν = view(W, α, ν)
     Wηα = view(W, η, α)
 
-     #@show(ν, α, η, Waa, Wαν, Wηα)
      Y = zeros(length(α), length(ν))
     try
        Y[:, :] = Waa \ Wαν
      catch
-      # F = eigen(Symmetric(Waa))
-      # V = F.vectors
-      # λ = F.values
-      # λ_max = maximum(λ)
-      @show("Use SVD and PINV")
       Waa_pinv = pinv(Waa)
       Y[:, :] = Waa_pinv * Wαν
     end
