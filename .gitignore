@@ -1,4 +1,5 @@
 *.mem
+*.DS_Store
 *.cov
 *.out
 *scratch*.jl

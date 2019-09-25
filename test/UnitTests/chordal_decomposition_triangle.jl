@@ -2,18 +2,6 @@ using COSMO, Random, Test, LinearAlgebra, SparseArrays, Random
 rng = Random.MersenneTwister(144545)
 
 
-
-function generate_pos_def_matrix(rng, n, aMin, aMax)
-  X = rand(rng,n,n)
-  # any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R
-  Q, R = qr(X)
-  eigs = rand(rng,n).*(aMax.-aMin) .+ aMin
-  X = Q*Diagonal(eigs)*Q'
-  X = 0.5*(X+X')
-  return X
-end
-
-
 # We create a test problem with 4 convex sets (2 of them decomposable), 1 zero set in the middle
 
 # define convex set

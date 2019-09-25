@@ -33,7 +33,7 @@ solver_tols   = [1e-10, 1e-10, 1e-10, 1e-10, 5e-5]
         rho2 in [rand(1), rand(m)],
         sigma in [rand(1), rand(1)[], rand(n)]
 
-        P  = sparse(generate_pos_def_matrix(n, rng))
+        P  = sparse(generate_pos_def_matrix(rng, n))
         A  = sprandn(m, n, 0.2)
         b = randn(m + n)
 

@@ -16,7 +16,7 @@ rng = Random.MersenneTwister(74747)
     b = [b; zeros(n)]
 
     # create dual feasible problem
-    P = generate_pos_def_matrix(n, rng)
+    P = generate_pos_def_matrix(rng, n)
     ytrue = rand(rng, m + n, 1)
     xtrue = rand(rng, n, 1)
     q = (-P * xtrue -  A' * ytrue)[:]

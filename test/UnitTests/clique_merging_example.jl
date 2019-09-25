@@ -48,11 +48,11 @@ end
 # Correct solution for adjacency matrix with edge scores
 function get_adjacency_matrix(t)
   rows = [2; 3; 6; 7; 8; 9;
-      3; 6; 7; 8;
-      4; 5; 7;
-      5;
-      7; 8;
-      9]
+  3; 6; 7; 8;
+  4; 5; 7;
+  5;
+  7; 8;
+  9]
   cols = [ones(Int64, 6); 2*ones(Int64, 4); 3*ones(Int64, 3); 4; 6*ones(Int64, 2); 8]
   N = length(rows)
   edge_score = zeros(N)
@@ -74,36 +74,36 @@ end
 @testset "Clique merging (CHOMPACK merge strategy)" begin
 
 
-strategy = COSMO.TreeTraversalMerge()
-t = get_example_tree(strategy)
-COSMO.initialise!(t, strategy)
+  strategy = COSMO.TreeTraversalMerge()
+  t = get_example_tree(strategy)
+  COSMO.initialise!(t, strategy)
 
-# Check first  merge_cand: (1, 2)
-cand = COSMO.traverse(t, strategy)
-dim_par_snd, dim_par_sep = COSMO.clique_dim(t, cand[1])
-dim_clique_snd, dim_clique_sep = COSMO.clique_dim(t, cand[2])
-@test cand == [1; 2] && dim_clique_snd == 2 && dim_clique_sep == 2 && dim_par_snd == 3 && dim_par_sep == 0
-f_i = COSMO.fill_in(dim_clique_snd, dim_clique_sep, dim_par_snd, dim_par_sep)
-s = COSMO.max_snd_size(dim_clique_snd, dim_par_snd)
-@test f_i == 2 && s == 3
-@test COSMO.evaluate(t, strategy, cand)
-ordered_cand = COSMO.merge_two_cliques!(t, cand, strategy)
-@test isempty(t.snd[2]) && t.snd[1] == [15; 16; 17; 5; 9]
-@test isempty(t.sep[2]) && isempty(t.sep[1])
-@test t.num == 8 && t.snd_par[2] == -1 && t.snd_par[3] == t.snd_par[6]  == t.snd_par[7] == 1
-@test t.snd_child[1] == [8; 3; 6; 7] && isempty(t.snd_child[2])
+  # Check first  merge_cand: (1, 2)
+  cand = COSMO.traverse(t, strategy)
+  dim_par_snd, dim_par_sep = COSMO.clique_dim(t, cand[1])
+  dim_clique_snd, dim_clique_sep = COSMO.clique_dim(t, cand[2])
+  @test cand == [1; 2] && dim_clique_snd == 2 && dim_clique_sep == 2 && dim_par_snd == 3 && dim_par_sep == 0
+  f_i = COSMO.fill_in(dim_clique_snd, dim_clique_sep, dim_par_snd, dim_par_sep)
+  s = COSMO.max_snd_size(dim_clique_snd, dim_par_snd)
+  @test f_i == 2 && s == 3
+  @test COSMO.evaluate(t, strategy, cand)
+  ordered_cand = COSMO.merge_two_cliques!(t, cand, strategy)
+  @test isempty(t.snd[2]) && t.snd[1] == [15; 16; 17; 5; 9]
+  @test isempty(t.sep[2]) && isempty(t.sep[1])
+  @test t.num == 8 && t.snd_par[2] == -1 && t.snd_par[3] == t.snd_par[6]  == t.snd_par[7] == 1
+  @test t.snd_child[1] == [8; 3; 6; 7] && isempty(t.snd_child[2])
 
 
-# Let's go throught the whole tree and check if the merge log is as expected
-strategy = COSMO.TreeTraversalMerge()
-t = get_example_tree(strategy)
-COSMO.merge_cliques!(t, strategy)
-# considered clique pairs
-@test t.merge_log.clique_pairs == [1 2; 1 3; 1 4; 1 5; 1 6; 1 7; 1 8; 8 9]
-# decision if merge should be done
-@test t.merge_log.decisions == [true; true; true; true; true; false; false; true]
-# number of merges
-@test t.merge_log.num == 6
+  # Let's go throught the whole tree and check if the merge log is as expected
+  strategy = COSMO.TreeTraversalMerge()
+  t = get_example_tree(strategy)
+  COSMO.merge_cliques!(t, strategy)
+  # considered clique pairs
+  @test t.merge_log.clique_pairs == [1 2; 1 3; 1 4; 1 5; 1 6; 1 7; 1 8; 8 9]
+  # decision if merge should be done
+  @test t.merge_log.decisions == [true; true; true; true; true; false; false; true]
+  # number of merges
+  @test t.merge_log.num == 6
 
 end
 
@@ -111,44 +111,15 @@ end
 @testset "Clique merging (Clique graph based merge strategy)" begin
 
 
-strategy = COSMO.PairwiseMerge(edge_score = COSMO.ComplexityScore())
-t = get_example_graph(strategy)
-COSMO.initialise!(t, strategy)
-# since all values are < 0, this merge strategy wouldn't merge at all
-@test strategy.edges == get_adjacency_matrix(t)
+  strategy = COSMO.PairwiseMerge(edge_score = COSMO.ComplexityScore())
+  t = get_example_graph(strategy)
+  COSMO.initialise!(t, strategy)
+  # since all values are < 0, this merge strategy wouldn't merge at all
+  @test strategy.edges == get_adjacency_matrix(t)
 
-t = get_example_graph(strategy)
-COSMO.merge_cliques!(t, strategy)
-# number of merges
-@test t.merge_log.num == 0
-
-
-# recompute clique tree from clique graph
-# compute clique graph edge weights ( |C_i ∩ C_j)
-COSMO.clique_intersections!(t.strategy.edges, t.snd)
-@test t.strategy.edges == get_intersection_matrix()
-# Compute maximum weight spanning tree
-COSMO.kruskal!(t.strategy.edges)
-@test length(findall(x -> x < 0, t.strategy.edges)) == 8
-
-COSMO.determine_parent_cliques!(t.snd_par, t.snd_child, t.snd, t.post, t.strategy.edges)
-# check that tree structure is as expected
-@test t.snd_par == [0; 1; 2; 3; 3; 2; 2; 1; 8]
-t.snd_post = COSMO.post_order(t.snd_par, t.snd_child)
-
-COSMO.split_cliques!(t.snd, t.sep, t.snd_par, t.snd_post, t.num)
-
-
-I = [3; 4; 5; 15;3; 4; 4; 5; 15; 5; 15; 9; 15; 16; 9; 16; 8; 9; 15; 9; 15; 15; 16; 11; 13; 14; 17; 13; 14; 17; 13; 14; 16; 17; 14; 16; 17; 16; 17; 16; 17; 17]
-J = [ones(Int64, 4); 2 * ones(Int64, 2); 3*ones(Int64, 3); 4*ones(Int64, 2); 5*ones(Int64, 3); 6*ones(Int64, 2); 7*ones(Int64, 3); 8*ones(Int64, 2); 9*ones(Int64, 2); 10*ones(Int64, 4); 11*ones(Int64, 3);
-    12*ones(Int64, 4); 13*ones(Int64, 3); 14*ones(Int64, 2); 15*ones(Int64, 2); 16 ]
-
-L = sparse(I, J, ones(length(I)), 17, 17)
-
-strategy = COSMO.PairwiseMerge(edge_score = COSMO.ComplexityScore())
-t = COSMO.SuperNodeTree(L, COSMO.TreeTraversalMerge())
-
-
-
-
+  t = get_example_graph(strategy)
+  COSMO.merge_cliques!(t, strategy)
+  # number of merges
+  @test t.merge_log.num == 0
+  @test t.snd_par == [0; 1; 2; 3; 3; 2; 2; 1; 8]
 end
