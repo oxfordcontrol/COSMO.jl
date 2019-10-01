@@ -176,7 +176,7 @@ function optimize!(ws::COSMO.Workspace)
 		cost =  (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
 	end
 
-	# reverse chordal decomposition
+	#reverse chordal decomposition
 	if settings.decompose
 	 reverse_decomposition!(ws, settings)
 	end

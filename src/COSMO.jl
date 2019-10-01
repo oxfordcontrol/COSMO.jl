@@ -27,6 +27,7 @@ include("./parameters.jl")          # TODO: unmodified - revisit
 include("./residuals.jl")           # TODO: unmodified - revisit
 include("./scaling.jl")             # TODO: set scaling / E scaling is broken
 include("./infeasibility.jl")       # TODO: stylistic fixes needed
+include("./transformations.jl")
 include("./chordal_decomposition.jl")
 include("./printing.jl")            # TODO: unmodified - revisit
 include("./setup.jl")               # TODO: unmodified - revisit (short - consolidate?)

@@ -83,6 +83,14 @@ mutable struct SuperNodeTree
 		end
 	end
 
+	function COSMO.SuperNodeTree(cliques::Array{Array{Int64,1},1}, N::Int64)
+    snd_child = [Int64[] for i = 1:N]
+    snd_par = -1 * ones(length(cliques))
+    sep = [Int64[] for i = 1:length(cliques)]
+    snd_post = zeros(length(cliques))
+    new(cliques, snd_par, snd_post, snd_child, collect(1:N), [0], sep, [1], length(cliques), COSMO.MergeLog(), COSMO.PairwiseMerge())
+	end
+
 
 	# FIXME: only for debugging purposes
 	function SuperNodeTree(res, par, snd_post, sep, merge_strategy; post::Array{Int64, 1} = [1])
@@ -208,18 +216,27 @@ function get_sep(sntree::SuperNodeTree, ind::Int64)
 		return sntree.sep[sntree.snd_post[ind]]
 end
 
+function get_clique_par(sntree::SuperNodeTree, clique_ind::Int64)
+		return sntree.snd_par[sntree.snd_post[clique_ind]]
+end
 # the block sizes are stored in post order, e.g. if clique 4 (stored in pos 4) has order 2, then nBlk[2] represents the cardinality of clique 4
 function get_nBlk(sntree::SuperNodeTree, ind::Int64)
 		return sntree.nBlk[ind]::Int64
 end
 
-"Returns the number of rows of all the blocks (cliques) represented in the tree after decomposition."
+function get_overlap(sntree::SuperNodeTree, ind::Int64)
+		return length(sntree.sep[sntree.snd_post[ind]])
+end
+
+"Returns the number of rows and the number of overlaps of all the blocks (cliques) represented in the tree after decomposition."
 function get_decomposed_dim(sntree::SuperNodeTree, C::DecomposableCones{<: Real})
 	dim = 0
+	overlaps = 0
 	for iii = 1:num_cliques(sntree)
 		dim += vec_dim(get_nBlk(sntree, iii), C)
+		overlaps += vec_dim(get_overlap(sntree, iii), C)
 	end
-	return dim::Int64
+	return dim::Int64, overlaps::Int64
 end
 
 "Given the side dimension of a PSD cone return the number of stored entries."
@@ -243,17 +260,21 @@ function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractGraphBa
 	end
 end
 
+function get_clique_by_ind(sntree::SuperNodeTree, ind::Int64)
+	return union(sntree.snd[ind], sntree.sep[ind])
+end
+
 
 function print_cliques(sp; reordered = true)
 	sntree = sp.sntree
-	reverse_ordering = sp.reverse_ordering
+	ordering = sp.ordering
 	Nsnd = length(sntree.snd)
 	println("Cliques of Graph:")
 	println("Reordered = $(reordered)")
 	for iii = 1:Nsnd
 			if !reordered
-				snd = map(x-> reverse_ordering[x], sntree.snd[iii])
-				sep = map(x-> reverse_ordering[x], sntree.sep[iii])
+				snd = map(x-> ordering[x], sntree.snd[iii])
+				sep = map(x-> ordering[x], sntree.sep[iii])
 			else
 				snd = sntree.snd[iii]
 				sep = sntree.sep[iii]
@@ -615,12 +636,30 @@ end
 
 function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
 	row_val, col_val = COSMO.row_ind_to_matrix_indices(rows, N, C)
-	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val))), logical = true)#, perm = collect(1:N))
+	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val)), N, N), logical = true)#, perm = collect(1:N))
 	# this takes care of the case that QDLDL returns an unconnected adjacency matrix L
+	nz_ind_map = get_nz_ind_map(rows, N)
 	connect_graph!(F.L)
 	ci.L = F.L
-	return F.perm
+	return F.perm, nz_ind_map
 end
+
+" A sparse vector that maps the index of svec(i, j) = k to the actual index of where that entry is stored in A.rowval."
+function get_nz_ind_map(rows::Array{Int64, 1}, N::Int64)
+	d = div(N * (N+1), 2)
+	nzind = rows
+	nzval = collect(1:length(rows))
+
+	return SparseArrays._sparsevector!(nzind, nzval, d)
+end
+
+# function get_nz_ind_map(sntree::SuperNodeTree)
+# 	n =
+# 	nzind = rows
+# 	nzval = collect(1:length(rows))
+
+# 	return SparseArrays._sparsevector!(nzind, nzval, d)
+# end
 
 
 # given an array [rows] that represent the nonzero entries of a vectorized NxN matrix,
