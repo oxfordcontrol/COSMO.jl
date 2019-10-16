@@ -296,7 +296,10 @@ MOIU.@model(COSMOModelData,
                        "solve_integer_edge_cases", "solve_objbound_edge_cases",
                         "solve_zero_one_with_bounds_1",
                         "solve_zero_one_with_bounds_2",
-                        "solve_zero_one_with_bounds_3"])
+                        "solve_zero_one_with_bounds_3",
+                       # Can not set the # of threads
+                        "number_threads",
+                         ])
     end
 
     @testset "Continuous Linear" begin
