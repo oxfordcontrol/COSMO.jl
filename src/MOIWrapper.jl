@@ -621,7 +621,7 @@ end
 # allow returning the inner model
 MOI.get(optimizer::Optimizer, ::MOI.RawSolver) = optimizer.inner
 # allow returning the number of results available
-MOI.get(optimizer::Optimizer, ::MOI.ResultCount) = 1
+MOI.get(optimizer::Optimizer, ::MOI.ResultCount) = optimizer.hasresults ? 1 : 0
 MOI.get(optimizer::Optimizer, ::MOI.NumberOfVariables) = length(optimizer.inner.vars.x)
 function MOI.get(optimizer::Optimizer, ::MOI.ListOfVariableIndices)
     return [MOI.VariableIndex(i) for i in 1:length(optimizer.inner.vars.x)]
@@ -629,6 +629,7 @@ end
 
 # Get objective function
 function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
+    MOI.check_result_index_bounds(optimizer, a)
     rawobj = optimizer.results.obj_val
     if optimizer.sense == MOI.MAX_SENSE
         return -rawobj - optimizer.objconstant
@@ -666,7 +667,9 @@ end
 
 # Get Primal Status
 function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
-    optimizer.hasresults || return MOI.NO_SOLUTION
+    if !(1 <= a.N <= MOI.get(optimizer, MOI.ResultCount()))
+        return MOI.NO_SOLUTION
+    end
 
     status = optimizer.results.status
     if status == :Primal_infeasible
@@ -682,7 +685,9 @@ end
 
 # Get Dual Status
 function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
-    optimizer.hasresults || return MOI.NO_SOLUTION
+    if !(1 <= a.N <= MOI.get(optimizer, MOI.ResultCount()))
+        return MOI.NO_SOLUTION
+    end
 
     status = optimizer.results.status
     if status == :Dual_infeasible
@@ -708,7 +713,8 @@ _unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) 
 _shift(optimizer::Optimizer, offset, value, s) = value
 _shift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value - optimizer.set_constant[offset]
 
-function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+function MOI.get(optimizer::Optimizer, a::MOI.ConstraintPrimal, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+    MOI.check_result_index_bounds(optimizer, a)
     # offset = constroffset(optimizer, ci)
     # rows = constrrows(optimizer, ci)
     rows = COSMO.constraint_rows(optimizer.rowranges, ci_src)
@@ -717,13 +723,15 @@ function MOI.get(optimizer::Optimizer, ::MOI.ConstraintPrimal, ci_src::CI{<:MOI.
     return _unshift(optimizer, rows, c_primal, S)
 end
 
-function MOI.get(optimizer::Optimizer, ::MOI.ConstraintDual, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+function MOI.get(optimizer::Optimizer, a::MOI.ConstraintDual, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+    MOI.check_result_index_bounds(optimizer, a)
     rows = constraint_rows(optimizer.rowranges, ci_src)
     return unscalecoef(nom_rows(rows, S), optimizer.results.y[rows], S)
 end
 
 ## Variable attributes:
 function MOI.get(optimizer::Optimizer, a::MOI.VariablePrimal, vi::VI)
+    MOI.check_result_index_bounds(optimizer, a)
     return optimizer.results.x[vi.value]
 end
 
