@@ -168,3 +168,6 @@ end
 function get_tolerance(S::Union{IndirectReducedKKTSolver, IndirectKKTSolver})
     return S.tol_constant/S.iteration_counter^S.tol_exponent
 end
+
+CGIndirectKKTSolver(args...; kwargs...) = IndirectReducedKKTSolver(args...; solver_type = :CG, kwargs...)
+MINRESIndirectKKTSolver(args...; kwargs...) = IndirecKKTSolver(args...; solver_type = :MINRES, kwargs...)
