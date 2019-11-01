@@ -23,3 +23,10 @@ DataStructures = "~0.17.0"
 MathOptInterface = "~0.9.7"
 UnsafeArrays = "^0.3"
 julia = "^1"
+
+[extras]
+IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
+LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
+
+[targets]
+test = ["IterativeSolvers", "LinearMaps"]
