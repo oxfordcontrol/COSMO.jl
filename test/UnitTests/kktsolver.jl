@@ -99,14 +99,13 @@ end
         # Check that warm starting works
         # Invoking again an indirect solver should result in the solution with only
         # one matrix vector multiplication
-        if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed())) &&
+        if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
             if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
                 # The calculation of the residual, and thus the termination criterion, of
                 # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
                 # For this reason we don't check warm starting with MINRES for now :(
                 if F.solver_type != :MINRES
                     COSMO.solve!(F, x, b)
-                    @show F.multiplications
                     @test F.multiplications[end] <= 1 
                     @test norm(x - J \ b) <= solver_tols[i]
                 end
@@ -122,6 +121,6 @@ end
 
      end
 
- end
+end
 
 nothing
