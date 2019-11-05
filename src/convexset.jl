@@ -253,7 +253,7 @@ function project!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}
 
     # handle 1D case
     if length(x) == 1
-        x = max.(x, zero(T))
+        x .= max(x[1], zero(T))
     else
         # symmetrized square view of x
         X    = reshape(x, n, n)
@@ -341,7 +341,7 @@ DensePsdConeTriangle(dim) = DensePsdConeTriangle{DefaultFloat}(dim)
 function project!(x::AbstractArray, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where{T}
     # handle 1D case
     if length(x) == 1
-        x = max.(x,zero(T))
+        x .= max(x[1],zero(T))
     else
         populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
         _project!(cone.X,cone.work)
