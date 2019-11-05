@@ -58,6 +58,17 @@ tol = 1e-4
     COSMO.project!(view(x, 1:length(x)), soc)
     @test norm(x[2:10], 2) <= x[1]
 
+
+    # Positive Semidefinite cone (1D case)
+    psd = COSMO.PsdCone(1)
+    x = [-1.]
+    COSMO.project!(view(x, 1:length(x)), psd)
+    @test x == [0.]
+
+    x = [1.]
+    COSMO.project!(view(x, 1:length(x)), psd)
+    @test x == [1.]
+
     # Positive Semidefinite cones
     psd = COSMO.PsdCone(16)
     X = Symmetric(randn(rng, 4, 4))
