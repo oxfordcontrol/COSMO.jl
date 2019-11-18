@@ -137,14 +137,17 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     MOI.empty!(dest)
     idxmap = MOIU.IndexMap(dest, src)
     assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
-    dest.sense, P, q, dest.objconstant = processobjective(src, idxmap)
-    A,b, constr_constant, convexSets = processconstraints(dest, src, idxmap, dest.rowranges)
-    convexSets = COSMO.merge_sets(convexSets)
-    COSMO.set!(dest.inner, P, q, A, b, convexSets, dest.inner.settings)
+    processconstraints!(dest, src, idxmap, dest.rowranges)
+    pre_allocate_variables!(dest.inner)
+
     dest.is_empty = false
     dest.idxmap = idxmap
-    warm_start_primal!(dest, src, idxmap)
-    warm_start_dual!(dest, src, idxmap)
+    # pass attributes, e.g. objective, warm strarting vars, etc.
+    dest.sense = MOI.get(src, MOI.ObjectiveSense())
+    COSMO.pass_attributes!(dest, src, idxmap)
+
+    # if no cost function is provided, allocate P, q with correct sizes
+    dest.sense == MOI.FEASIBILITY_SENSE && COSMO.allocate_cost_variables!(dest)
     return idxmap
 end
 
@@ -210,63 +213,81 @@ function constraint_rows(rowranges::Dict{Int, UnitRange{Int}}, ci::CI{<:Any, <:M
 end
 constraint_rows(rowranges::Dict{Int, UnitRange{Int}}, ci::CI{<:Any, <:MOI.AbstractVectorSet}) = rowranges[ci.value]
 
-function processobjective(src::MOI.ModelLike, idxmap)
-    sense = MOI.get(src, MOI.ObjectiveSense())
-    n = MOI.get(src, MOI.NumberOfVariables())
-    q = zeros(n)
-    if sense != MOI.FEASIBILITY_SENSE
-        # FIXME: this is a hacky way of finding the objective function type and should be changed
-        if typeof(src) <: MOIU.UniversalFallback
-            obj_type = MOI.get(src.model,MOI.ObjectiveFunctionType())
-        else
-            obj_type = MOI.get(src, MOI.ObjectiveFunctionType())
-        end
+# this is handled explicitly in `copy_to` before the objective function is processed
+MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
+MOIU.load(optimizer::Optimizer, ::MOI.ObjectiveSense, sense) = nothing
 
-        if obj_type == MOI.SingleVariable
-            fsingle = MOI.get(src, MOI.ObjectiveFunction{MOI.SingleVariable}())
-            P = spzeros(n, n)
-            q[idxmap[fsingle.variable].value] = 1
-            c = 0.
-        elseif obj_type == MOI.ScalarAffineFunction{Float64}
-            faffine = MOI.get(src, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}())
-            P = spzeros(n, n)
-            # sets q
-            processlinearterms!(q, faffine.terms, idxmap)
-            c = faffine.constant
-        elseif obj_type == MOI.ScalarQuadraticFunction{Float64}
-            fquadratic = MOI.get(src, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}())
-            I = [Int(idxmap[term.variable_index_1].value) for term in fquadratic.quadratic_terms]
-            J = [Int(idxmap[term.variable_index_2].value) for term in fquadratic.quadratic_terms]
-            V = [term.coefficient for term in fquadratic.quadratic_terms]
-            symmetrize!(I, J, V)
-            P = sparse(I, J, V, n, n)
-            processlinearterms!(q, fquadratic.affine_terms, idxmap)
-            c = fquadratic.constant
-        else
-            throw(MOI.UnsupportedAttribute(MOI.ObjectiveFunction{obj_type}()))
-        end
-        sense == MOI.MAX_SENSE && (LinearAlgebra.rmul!(P, -1); LinearAlgebra.rmul!(q, -1); c = -c)
-    else
-        P = spzeros(n, n)
-        q = zeros(n)
-        c = 0.
-    end
-    sense, P, q, c
+function allocate_cost_variables!(optimizer::Optimizer)
+    m, n = size(optimizer.inner.p.A)
+    optimizer.inner.p.P = spzeros(n, n)
+    optimizer.inner.p.q = zeros(n)
+    return nothing
 end
 
+MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:Union{MOI.SingleVariable, Affine, Quadratic}}) = true
+function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.SingleVariable)
+    idxmap = dest.idxmap
+    n = MOI.get(dest, MOI.NumberOfVariables())
+    dest.inner.p.q = zeros(n)
+    dest.inner.p.q[idxmap[f.variable].value] = 1
+    dest.inner.p.P = spzeros(n, n)
+    dest.objconstant = 0.
+    dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
+    return nothing
+end
 
+function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.ScalarAffineFunction{Float64})
+    idxmap = dest.idxmap
+    n = MOI.get(dest, MOI.NumberOfVariables())
+    dest.inner.p.P = spzeros(n, n)
+
+    dest.inner.p.q = zeros(n)
+    processlinearterms!(dest.inner.p.q, f.terms)# idxmap)
+
+    dest.objconstant = f.constant
+    dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
+    return nothing
+end
+
+function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.ScalarQuadraticFunction{Float64})
+    idxmap = dest.idxmap
+    n = MOI.get(dest, MOI.NumberOfVariables())
+
+    I = [Int(idxmap[term.variable_index_1].value) for term in f.quadratic_terms]
+    J = [Int(idxmap[term.variable_index_2].value) for term in f.quadratic_terms]
+    V = [term.coefficient for term in f.quadratic_terms]
+    symmetrize!(I, J, V)
+    dest.inner.p.P = sparse(I, J, V, n, n)
+
+    dest.inner.p.q = zeros(n)
+    processlinearterms!(dest.inner.p.q, f.affine_terms)#, idxmap)
+    dest.objconstant = f.constant
+
+    dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
+    return nothing
+end
+
+function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f)
+    throw(MOI.UnsupportedAttribute(MOI.ObjectiveFunction{typeof(f)}()))
+end
+
+function apply_sense!(sense::MOI.OptimizationSense, P::AbstractMatrix, q::AbstractVector, c::Float64)
+    if sense == MOI.MAX_SENSE
+        LinearAlgebra.rmul!(P, -1)
+        LinearAlgebra.rmul!(q, -1)
+        c = -c
+    end
+    return c
+end
 
 function processlinearterms!(q, terms::Vector{<:MOI.ScalarAffineTerm}, idxmapfun::Function = identity)
     for term in terms
         var = term.variable_index
         coeff = term.coefficient
-        q[idxmapfun(var).value] += coeff
+        q[var.value] += coeff
     end
 end
 
-function processlinearterms!(q, terms::Vector{<:MOI.ScalarAffineTerm}, idxmap::MOIU.IndexMap)
-    processlinearterms!(q, terms, var -> idxmap[var])
-end
 
 
 function symmetrize!(I::Vector{Int}, J::Vector{Int}, V::Vector)
@@ -323,7 +344,7 @@ variable_index_value(t::MOI.VectorAffineTerm) = variable_index_value(t.scalar_te
 coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
-function processconstraints(optimizer, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}})
+function processconstraints!(optimizer::Optimizer, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}})
 
     m = mapreduce(length, +, values(rowranges), init=0)
 
@@ -342,7 +363,18 @@ function processconstraints(optimizer, src::MOI.ModelLike, idxmap, rowranges::Di
     # subtract constant from right hand side
     n = MOI.get(src, MOI.NumberOfVariables())
     A = sparse(I, J, V, m, n)
-    return A, b, constant, COSMOconvexSets
+
+    # in a second step: merge some of the sets
+    convex_sets = COSMO.merge_sets(COSMOconvexSets)
+
+    # store constraint matrices in inner model
+    model = optimizer.inner
+    model.p.A = A
+    model.p.b = b
+    model.p.C = CompositeConvexSet(deepcopy(convex_sets))
+    model.p.model_size = [size(A, 1); size(A,2 )]
+    optimizer.constr_constant = constant
+    return nothing
 end
 
 function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSets::Array{COSMO.AbstractConvexSet{Float64}}, constant::Vector{Float64}, set_constant::Vector{Float64},
@@ -391,7 +423,7 @@ end
 
 
 # process function like f(x) = coeff*x_1
-function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     for term in f.terms
         push!(I, row)
@@ -400,7 +432,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunctio
     end
 end
 
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     cols = zeros(length(rows))
     for (i, var) in enumerate(f.variables)
@@ -412,7 +444,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, 
     nothing
 end
 
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     A = sparse(output_index.(f.terms), variable_index_value.(f.terms), coefficient.(f.terms))
     # sparse combines duplicates with + but does not remove zeros created so we call dropzeros!
@@ -567,50 +599,31 @@ function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{Float64}, 1}, ind
         return set_ind + 1
 end
 
-function warm_start_primal!(dest, src::MOI.ModelLike, idxmap)
-    has_primal_start = false
-    for attr in MOI.get(src, MOI.ListOfVariableAttributesSet())
-        if attr isa MOI.VariablePrimalStart
-            has_primal_start = true
-        end
-    end
-    if has_primal_start
-        len = 0
-        vis_src = MOI.get(src, MOI.ListOfVariableIndices())
-        for vi in vis_src
-            value = MOI.get(src, MOI.VariablePrimalStart(), vi)
-            if value != nothing
-                len += 1
-                MOI.set(dest, MOI.VariablePrimalStart(), vi, value)
-            end
-        end
 
-        # if all components of the primal variable x are provided, warm start s = b - Ax too
-        if len == dest.inner.p.model_size[2]
-            s0 = dest.inner.p.b - dest.inner.p.A * dest.inner.vars.x
-            COSMO.warm_start_slack!(dest.inner, s0)
-        end
-    end
 
+function pass_attributes!(dest::Optimizer, src::MOI.ModelLike, idxmap::MOIU.IndexMap, pass_attr::Function=MOI.set)
+    copy_names = false
+
+    # Copy model attributes, e.g. ObjectiveFunction
+    attrs = MOI.get(src, MOI.ListOfModelAttributesSet())
+    MOIU._pass_attributes(dest, src, copy_names, idxmap, attrs, tuple(), tuple(), tuple(), MOIU.load)
+
+    # Copy variable attributes, e.g. VariablePrimalStart
+    var_attr = MOI.get(src, MOI.ListOfVariableAttributesSet())
+    vis_src = MOI.get(src, MOI.ListOfVariableIndices())
+    vis_dest = map(vi -> idxmap[vi], vis_src)
+    MOIU._pass_attributes(dest, src, copy_names, idxmap, var_attr, (VI,), (vis_src,), (vis_dest,), MOIU.load)
+
+    # Copy constraint attributes, e.g. ConstraintPrimalStart
+    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+        cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+        attrs = MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
+        cis_dest = map(ci -> idxmap[ci], cis_src)
+        MOIU._pass_attributes(dest, src, copy_names, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), MOIU.load)
+    end
+    return nothing
 end
 
-function warm_start_dual!(dest, src::MOI.ModelLike, idxmap)
-     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
-        has_dual_start = false
-        for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
-            if attr isa MOI.ConstraintDualStart
-                has_dual_start = true
-            end
-        end
-        if has_dual_start
-            cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
-            for ci in cis_src
-                value = MOI.get(src, MOI.ConstraintDualStart(), ci)
-                value != nothing && MOI.set(dest, MOI.ConstraintDualStart(), ci, value)
-            end
-        end
-    end
-end
 
 ##############################
 # GET / SET : OPTIMIZER ATTRIBUTES
@@ -737,25 +750,28 @@ end
 
 ## Warm starting:
 MOI.supports(::Optimizer, a::MOI.VariablePrimalStart, ::Type{MOI.VariableIndex}) = true
-function MOI.set(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Real)
+function MOIU.load(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Real)
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     COSMO.warm_start_primal!(optimizer.inner, value, vi.value)
 end
+MOIU.load(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Nothing) = nothing
 
-MOI.supports(::Optimizer, a::MOI.ConstraintPrimalStart, ::Type{MOI.ConstraintIndex}) = true
-function MOI.set(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci_src::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+MOI.supports(::Optimizer, a::MOI.ConstraintPrimalStart, ::Type{<:MOI.ConstraintIndex}) = true
+function MOIU.load(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+    (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci_src])
+    rows = constraint_rows(optimizer.rowranges, ci)
     # this undoes the scaling and shifting that was used in get(MOI.ConstraintPrimal)
     # Off-diagonal entries of slack variable of a PSDTriangle constraint has to be scaled by sqrt(2)
     value = _shift(optimizer, rows, value, S)
     COSMO.warm_start_slack!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, false), rows)
 end
 
-MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{MOI.ConstraintIndex}) = true
-function MOI.set(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci_src::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{<:MOI.ConstraintIndex}) = true
+function MOIU.load(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+    (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(optimizer.rowranges, optimizer.idxmap[ci_src])
+    rows = constraint_rows(optimizer.rowranges, ci)
     # this undoes the scaling that was used in get(MOI.ConstraintDual)
     # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sfqrt(2)
     COSMO.warm_start_dual!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, false), rows)
@@ -795,19 +811,11 @@ function MOI.get(optimizer::Optimizer, ::MOI.TimeLimitSec)
     return MOI.get(optimizer, MOI.RawParameter("time_limit"))
 end
 
-
 ##############################
 # SUPPORT OBJECTIVE AND SET FUNCTIONS
 ##############################
-
-# allow objective functions that have the following template types
-MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:Union{MOI.SingleVariable, Affine, Quadratic}}) = true
-MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
 
 
 ## Supported Constraints
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<:IntervalConvertible}) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
-
-
-

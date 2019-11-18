@@ -15,6 +15,9 @@ MOIU.@model(COSMOModelData,
         (MOI.VectorAffineFunction,),);
 
 
+struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
+
+
 @testset "MOI Wrapper" begin
 
     @testset "Basic properties" begin
@@ -27,6 +30,7 @@ MOIU.@model(COSMOModelData,
         @test MOI.supports(optimizer, MOI.VariablePrimalStart(), MOI.VariableIndex)
         @test MOI.supports(optimizer, MOI.ConstraintPrimalStart(), MOI.ConstraintIndex)
         @test MOI.supports(optimizer, MOI.ConstraintDualStart(), MOI.ConstraintIndex)
+
     end
     # Solve the following problem:
     # min c'*x
@@ -40,7 +44,7 @@ MOIU.@model(COSMOModelData,
     b1 = 11.0;
     b2 = 19.0;
 
-    model = COSMOModelData{Float64}();
+    model = MOIU.UniversalFallback(COSMOModelData{Float64}());
     optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
     x = MOI.add_variables(model, 9);
     # define objective function:
@@ -101,10 +105,10 @@ MOIU.@model(COSMOModelData,
         optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
 
         MOI.empty!(optimizer);
+        MOI.set.(model, MOI.VariablePrimalStart(), x[1:9], x_sol[1:9])
+        MOI.set.(model, MOI.ConstraintPrimalStart(), [con1, con2, con3], [s_c1, s_c2, s_c3])
+        MOI.set.(model, MOI.ConstraintDualStart(), [con1, con2, con3], [y_c1, y_c2, y_c3])
         copyresult = MOI.copy_to(optimizer, model);
-        MOI.set.(optimizer, MOI.VariablePrimalStart(), x[1:9], x_sol[1:9])
-        MOI.set.(optimizer, MOI.ConstraintPrimalStart(), [con1, con2, con3], [s_c1, s_c2, s_c3])
-        MOI.set.(optimizer, MOI.ConstraintDualStart(), [con1, con2, con3], [y_c1, y_c2, y_c3])
 
         # check that variables are correctly set after the warm starting
         @test x_sol == optimizer.inner.vars.x
@@ -122,7 +126,9 @@ MOIU.@model(COSMOModelData,
         A1_t = [1.0; 0; 3; 2; 14; 5];
         A2_t = [0.0; 4; 6; 16; 0; 4];
         C_t = [1.; 4; 9; 6; 0; 7];
-        model = COSMOModelData{Float64}();
+
+
+        model = MOIU.UniversalFallback(COSMOModelData{Float64}());
         x = MOI.add_variables(model, 6);
         objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(C_t, x[1:6]), 0.0);
         MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), objectiveFunction);
@@ -147,11 +153,11 @@ MOIU.@model(COSMOModelData,
         s_c3 = MOI.get(optimizer, MOI.ConstraintPrimal(), idxmap[con3])
 
         MOI.empty!(optimizer);
-        idxmap = MOI.copy_to(optimizer, model);
 
         # warm start the PSD triangle related constraint primal and dual variables
-        MOI.set(optimizer, MOI.ConstraintDualStart(), con3, y_c3)
-        MOI.set(optimizer, MOI.ConstraintPrimalStart(), con3, s_c3)
+        MOI.set(model, MOI.ConstraintDualStart(), con3, y_c3)
+        MOI.set(model, MOI.ConstraintPrimalStart(), con3, s_c3)
+        idxmap = MOI.copy_to(optimizer, model);
         @test isapprox(optimizer.inner.vars.μ[3:end], internal_scaled_μ[3:end], atol = 1e-6)
         @test isapprox(optimizer.inner.vars.s.data[3:end], internal_scaled_s[3:end], atol = 1e-6)
 
@@ -273,6 +279,23 @@ MOIU.@model(COSMOModelData,
 
      end
 
+     @testset "Unsupported Attributes" begin
+         model = MOIU.UniversalFallback(COSMOModelData{Float64}());
+         optimizer =  COSMO.Optimizer();
+
+         x = MOI.add_variable(model)
+         y = MOI.add_variable(model)
+
+         cf = MOI.ScalarAffineFunction{Float64}(MOI.ScalarAffineTerm{Float64}.([1., 1.], [x, y]), 0.)
+         c = MOI.add_constraint(model, cf, MOI.LessThan(0.))
+
+         MOI.set(model, UnsupportedModelAttribute(), 0.)
+         @test_throws MOI.UnsupportedAttribute{UnsupportedModelAttribute} MOI.copy_to(optimizer, model);
+
+
+     end
+
+
     # # -------------------
     # # MOI - Test sets
     # --------------------
@@ -321,4 +344,3 @@ MOIU.@model(COSMOModelData,
     end
 
  end
-
