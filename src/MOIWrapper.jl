@@ -341,6 +341,8 @@ nom_rows(rows, s::Type{<:MOI.AbstractSet}) = rows
 output_index(t::MOI.VectorAffineTerm) = t.output_index
 variable_index_value(t::MOI.ScalarAffineTerm) = t.variable_index.value
 variable_index_value(t::MOI.VectorAffineTerm) = variable_index_value(t.scalar_term)
+get_var_index(t::MOI.ScalarAffineTerm) = t.variable_index
+get_var_index(t::MOI.VectorAffineTerm) = get_var_index(t.scalar_term)
 coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
@@ -446,7 +448,11 @@ end
 
 function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
     (I, J, V) = triplets
-    A = sparse(output_index.(f.terms), variable_index_value.(f.terms), coefficient.(f.terms))
+
+    vis_src = get_var_index.(f.terms)
+    vis_dest = map(vi -> idxmap[vi], vis_src)
+
+    A = sparse(output_index.(f.terms), map(x-> x.value, vis_dest), coefficient.(f.terms))
     # sparse combines duplicates with + but does not remove zeros created so we call dropzeros!
     dropzeros!(A)
     A_I, A_J, A_V = findnz(A)
