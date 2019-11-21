@@ -1,6 +1,7 @@
 *.mem
-*.DS_Store
+.DS_Store*
 *.cov
 *.out
 *scratch*.jl
+*.sublime*
 /docs/build
