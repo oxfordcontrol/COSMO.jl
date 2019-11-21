@@ -114,7 +114,7 @@ function find_H_col_dimension(sets, sp_arr)
   sum_cols = 0
   sp_arr_ind = 1
   for C in sets
-    dim, sp_arr_ind = decomposed_dim(C, sp_arr, sp_arr_ind)
+    dim, overlaps, sp_arr_ind = decomposed_dim(C, sp_arr, sp_arr_ind)
     sum_cols += dim
   end
   return sum_cols::Int64
@@ -599,4 +599,3 @@ function svec_to_mat_ind(k::Int64)
   i = k - div((j - 1) * j, 2)
   return i, j
 end
-
