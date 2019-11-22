@@ -55,11 +55,11 @@ function get_adjacency_matrix(t)
   9]
   cols = [ones(Int64, 6); 2*ones(Int64, 4); 3*ones(Int64, 3); 4; 6*ones(Int64, 2); 8]
   N = length(rows)
-  edge_score = zeros(N)
+  edge_weight = zeros(N)
   for iii = 1:N
-    edge_score[iii] = complexity_savings(t, rows[iii], cols[iii])
+    edge_weight[iii] = complexity_savings(t, rows[iii], cols[iii])
   end
-  A = sparse(rows, cols, edge_score, 9, 9)
+  A = sparse(rows, cols, edge_weight, 9, 9)
   return A
 end
 
@@ -71,10 +71,10 @@ function get_intersection_matrix()
   A = sparse(rows, cols, vals, 9, 9)
 end
 
-@testset "Clique merging (CHOMPACK merge strategy)" begin
+@testset "Clique merging (Parent-child merge strategy)" begin
 
 
-  strategy = COSMO.TreeTraversalMerge()
+  strategy = COSMO.ParentChildMerge()
   t = get_example_tree(strategy)
   COSMO.initialise!(t, strategy)
 
@@ -95,7 +95,7 @@ end
 
 
   # Let's go throught the whole tree and check if the merge log is as expected
-  strategy = COSMO.TreeTraversalMerge()
+  strategy = COSMO.ParentChildMerge()
   t = get_example_tree(strategy)
   COSMO.merge_cliques!(t, strategy)
   # considered clique pairs
@@ -111,7 +111,7 @@ end
 @testset "Clique merging (Clique graph based merge strategy)" begin
 
 
-  strategy = COSMO.PairwiseMerge(edge_score = COSMO.ComplexityScore())
+  strategy = COSMO.CliqueGraphMerge(edge_weight = COSMO.ComplexityWeight())
   t = get_example_graph(strategy)
   COSMO.initialise!(t, strategy)
   # since all values are < 0, this merge strategy wouldn't merge at all

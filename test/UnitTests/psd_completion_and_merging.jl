@@ -66,8 +66,8 @@ problem_patterns = [pattern, pattern2, pattern3]
   cases = [
     COSMO.Settings(decompose = false);
     COSMO.Settings(decompose = true, complete_dual = true, merge_strategy = COSMO.NoMerge);
-    COSMO.Settings(decompose = true, complete_dual = true, merge_strategy = COSMO.TreeTraversalMerge);
-    COSMO.Settings(decompose = true, complete_dual = true, merge_strategy = COSMO.PairwiseMerge);
+    COSMO.Settings(decompose = true, complete_dual = true, merge_strategy = COSMO.ParentChildMerge);
+    COSMO.Settings(decompose = true, complete_dual = true, merge_strategy = COSMO.CliqueGraphMerge);
     ]
   results = Array{COSMO.Result{Float64}}(undef, 4);
 

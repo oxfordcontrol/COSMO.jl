@@ -3,19 +3,30 @@ export print_merge_logs, print_clique_sizes
 """
     AbstractMergeStrategy
 
-A merge strategy determines how the cliques in a clique tree are merged to improve computation time of the projection. Each merge receipt should
+An abstract supertype for merge strategies.
+
+A merge strategy determines how the cliques in a clique tree / clique graph are merged to improve computation time of the projection. Each merge strategy should
 implement the following functions:
 
- - initialise!: Initialise the graph / tree from the input clique tree, allocate memory
+ - initialise!: Initialise the graph / tree from the input clique graph / tree, allocate memory
  - traverse: A method that determines how the clique tree / graph is traversed
  - evaluate: A method that decides whether to merge two cliques
  - update!: A method to update local strategy-related information after a merge
 """
 abstract type AbstractMergeStrategy end
 
+"""
+    AbstractTreeBasedMerge
 
-
+An abstract supertype for merge strategies that work with the clique tree.
+"""
 abstract type AbstractTreeBasedMerge <: AbstractMergeStrategy end
+
+"""
+    AbstractGraphBasedMerge
+
+An abstract supertype for merge strategies that work with the clique (intersection) graph.
+"""
 abstract type AbstractGraphBasedMerge <: AbstractMergeStrategy end
 
 
@@ -35,9 +46,16 @@ end
 
 
 """
-		SuperNodeTree
+	SuperNodeTree
 
 A structure to represent and analyse the sparsity pattern of the input matrix L.
+
+### Note:
+Based on the `merge_strategy` in the constructor, SuperNodeTree might be initialised
+as a graph, i.e. seperators `sep` are left empty as well as `snd_child` and `snd_post`.
+
+After cliques have been merged, a valid clique tree will be recomputed from the
+consolidated clique graph.
 """
 mutable struct SuperNodeTree
 	snd::Array{Array{Int64,1},1} #vertices of supernodes stored in one array (also called residuals)
@@ -88,7 +106,7 @@ mutable struct SuperNodeTree
     snd_par = -1 * ones(length(cliques))
     sep = [Int64[] for i = 1:length(cliques)]
     snd_post = zeros(length(cliques))
-    new(cliques, snd_par, snd_post, snd_child, collect(1:N), [0], sep, [1], length(cliques), COSMO.MergeLog(), COSMO.PairwiseMerge())
+    new(cliques, snd_par, snd_post, snd_child, collect(1:N), [0], sep, [1], length(cliques), COSMO.MergeLog(), COSMO.CliqueGraphMerge())
 	end
 
 
@@ -428,34 +446,6 @@ function pothen_sun(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{In
 		end
 	end # loop over vertices
 
-	# 	for (iii, w) in enumerate(child[v])
-	# 		for
-	# 	end
-	# 	child_ind = 0
-	# 	# check degree condition for all of v's children from highest to lowest
-
-	# 	for (iii, w) in enumerate(child[v])
-	# 		# if not deg+(v) > deg+(w) - 1 for a certain w, set u to be w in snd(u), add v to snd(u)
-	# 		if !check_degree_condition(v, w, degrees)
-	# 			sn_ind[w] < 0 ? (u = w) : (u = sn_ind[w])
-	# 			sn_ind[v] = u
-	# 			child_ind = iii
-	# 			break
-	# 		end
-	# 	end
-
-	# 	# if v is still a rep vertex (i.e. above loop didnt find a child that fulfilled degree condition)
-	# 	if sn_ind[v] < 0
-	# 		u = v
-	# 	end
-
-	# 	for (iii, w) in enumerate(child[v])
-	# 		if iii != child_ind
-	# 			sn_ind[w] < 0 ? (x = w) : x = sn_ind[w]
-	# 			supernode_par[x] = u
-	# 		end
-	# 	end
-	# end
 
 	# representative vertices
 	reprv = findall(x-> x < 0, sn_ind)
@@ -540,7 +530,7 @@ end
 
 Takes a SuperNodeTree and reorders the vertices in each supernode (and separator) to have consecutive order.
 
-The reordering is needed to achieve equal column structure for the psd completion of the dual variable `Y`. This also modifies `ordering` which maps the vertices in the sntree back to the actual location in the not reordered data, i.e.
+The reordering is needed to achieve equal column structure for the psd completion of the dual variable `Y`. This also modifies `ordering` which maps the vertices in the `sntree` back to the actual location in the not reordered data, i.e.
 the primal constraint variable `S` and dual variables `Y`.
 """
 function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int64, 1})
@@ -634,17 +624,24 @@ function connect_graph!(L::SparseMatrixCSC)
 	end
 end
 
+"""
+	find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
+
+Given the indices of non-zero rows in `rows`:
+- Compute the sparsity pattern and find a chordal extension using `QDLDL` with AMD ordering `F.perm`.
+- If unconnected, connect the graph represented by the cholesky factor `L`
+"""
 function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
 	row_val, col_val = COSMO.row_ind_to_matrix_indices(rows, N, C)
 	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val)), N, N), logical = true)#, perm = collect(1:N))
-	# this takes care of the case that QDLDL returns an unconnected adjacency matrix L
 	nz_ind_map = get_nz_ind_map(rows, N)
+	# this takes care of the case that QDLDL returns an unconnected adjacency matrix L
 	connect_graph!(F.L)
 	ci.L = F.L
 	return F.perm, nz_ind_map
 end
 
-" A sparse vector that maps the index of svec(i, j) = k to the actual index of where that entry is stored in A.rowval."
+" A sparse vector that maps the index of svec(i, j) = k to the actual index of where that entry is stored in `A.rowval`."
 function get_nz_ind_map(rows::Array{Int64, 1}, N::Int64)
 	d = div(N * (N+1), 2)
 	nzind = rows
@@ -652,15 +649,6 @@ function get_nz_ind_map(rows::Array{Int64, 1}, N::Int64)
 
 	return SparseArrays._sparsevector!(nzind, nzval, d)
 end
-
-# function get_nz_ind_map(sntree::SuperNodeTree)
-# 	n =
-# 	nzind = rows
-# 	nzval = collect(1:length(rows))
-
-# 	return SparseArrays._sparsevector!(nzind, nzval, d)
-# end
-
 
 # given an array [rows] that represent the nonzero entries of a vectorized NxN matrix,
 # return the rows and columns of the nonzero entries of the original matrix

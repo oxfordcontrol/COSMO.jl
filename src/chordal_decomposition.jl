@@ -20,7 +20,7 @@ function chordal_decomposition!(ws::COSMO.Workspace)
   if ws.ci.num_decomposable > 0
 
     # Do transformation similar to clique tree based transformation in SparseCoLo
-    if ws.settings.colo_transformation
+    if ws.settings.compact_transformation
       augment_clique_based!(ws)
     else
       # find transformation matrix H and new composite convex set
@@ -37,7 +37,7 @@ function chordal_decomposition!(ws::COSMO.Workspace)
 end
 
 # analyse PSD cone constraints for chordal sparsity pattern
-function find_sparsity_patterns!(ws)
+function find_sparsity_patterns!(ws::COSMO.Workspace)
   row_ranges = get_set_indices(ws.p.C.sets)
   sp_ind = 1
   for (k, C) in enumerate(ws.p.C.sets)
@@ -47,9 +47,9 @@ function find_sparsity_patterns!(ws)
   end
 end
 
-analyse_sparsity_pattern!(ci, csp, sets, C::AbstractConvexSet, k, psd_row_range, sp_ind, merge_strategy) = sp_ind
+analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::AbstractConvexSet, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::OptionsFactory) = sp_ind
 
-function analyse_sparsity_pattern!(ci, csp, sets, C::DecomposableCones{T}, k, psd_row_range, sp_ind, merge_strategy) where {T <: Real}
+function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::DecomposableCones{T}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::OptionsFactory) where {T <: Real}
   if length(csp) < C.dim
     return _analyse_sparsity_pattern(ci, csp, sets, C, k, psd_row_range, sp_ind, merge_strategy)
   else
@@ -58,7 +58,7 @@ function analyse_sparsity_pattern!(ci, csp, sets, C::DecomposableCones{T}, k, ps
  end
 end
 
-function _analyse_sparsity_pattern(ci, csp, sets, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k, psd_row_range, sp_ind, merge_strategy) where {T <: Real}
+function _analyse_sparsity_pattern(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::OptionsFactory) where {T <: Real}
   ordering, nz_ind_map = find_graph!(ci, csp, C.sqrt_dim, C)
   sp = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering, merge_strategy, psd_row_range, k, nz_ind_map)
   # if after analysis of SparsityPattern & clique merging only one clique remains, don't bother decomposing
@@ -95,14 +95,14 @@ function number_of_overlaps_in_rows(A::SparseMatrixCSC)
 end
 
 
-function find_aggregate_sparsity(A, b, ind, C::DecomposableCones{ <: Real})
+function find_aggregate_sparsity(A::SparseMatrixCSC, b::AbstractVector, ind::UnitRange{Int64}, C::DecomposableCones{ <: Real})
   AInd = nz_rows(A, ind, false)
   # commonZeros = AInd[find(x->x==0,b[AInd])]
   bInd = findall(x -> x != 0, view(b, ind))
   commonNZeros = union(AInd, bInd)
   return commonNZeros
 end
-find_aggregate_sparsity(A, b, ind, C::AbstractConvexSet) = Int64[]
+find_aggregate_sparsity(A::SparseMatrixCSC, b::AbstractVector, ind::UnitRange{Int64}, C::AbstractConvexSet) = Int64[]
 
 
 """
@@ -123,7 +123,7 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   vars = Variables{Float64}(mO, nO, ws.ci.originalC)
   vars.x .= ws.vars.x[1:nO]
 
-  if settings.colo_transformation
+  if settings.compact_transformation
     # reassemble the original variables s and μ
     add_sub_blocks!(vars.s, ws.vars.s, vars.μ, ws.vars.μ, ws.ci, ws.p.C, ws.ci.originalC, ws.ci.cone_map)
   else
@@ -281,5 +281,3 @@ end
 # invert the permutation
 A[:, :] =  W[ip, ip]
 end
-
-

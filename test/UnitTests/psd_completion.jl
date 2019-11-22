@@ -33,8 +33,8 @@ q = -P * x - A' * y
 
 # Run two test cases
 cases = [
-  COSMO.Settings(decompose = false, verbose_timing = true, colo_transformation = false);
-  COSMO.Settings(decompose = true, complete_dual = true, verbose_timing = true, merge_strategy = COSMO.NoMerge, colo_transformation = false)
+  COSMO.Settings(decompose = false, verbose_timing = true, compact_transformation = false);
+  COSMO.Settings(decompose = true, complete_dual = true, verbose_timing = true, merge_strategy = COSMO.NoMerge, compact_transformation = false)
   ]
 results = Array{COSMO.Result{Float64}}(undef, 2);
 

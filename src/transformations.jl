@@ -1,7 +1,7 @@
 # -----------------------------------------
-# Functions related to traditional decomposition
+# Functions related to "traditional" decomposition
 # -----------------------------------------
-" Find the transformation matrix H to decompose the vector s into its parts and stacks them into sbar"
+" Find the transformation matrix `H` to decompose the vector `s` into its parts and stacks them into `sbar`"
 function find_decomposition_matrix!(ws)
 
   # allocate H and new decomposed cones
@@ -28,7 +28,7 @@ function find_decomposition_matrix!(ws)
   ws.ci.H = sparse(H_I, collect(1:n), ones(n))
 end
 
-
+"Determine the total number of sets `num_total` after decomposition and the number of new psd cones `num_new_psd_cones`."
 function num_cone_decomposition(ws)
   num_sets = length(ws.p.C.sets)
   num_old_psd_cones = length(ws.ci.psd_cones_ind)
@@ -46,7 +46,6 @@ end
 
 
 function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64, C::COSMO.AbstractConvexSet, entry::Int64, row::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
-  #H[row:row + C.dim - 1, col:col + C.dim - 1] = sparse(1.0I, C.dim, C.dim)
   for i = 1:C.dim
     H_I[entry] = row + i - 1
     entry += 1
@@ -56,7 +55,7 @@ function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64, C::COSMO.Abstract
   return set_ind + 1, sp_ind, entry
 end
 
-# for a clique with nBlk entries, return the number of entries in the corresponding matrix
+"For a PSD cone `C` of dimension `nBlk`, return the number of entries/rows in vectorized form."
 get_blk_rows(nBlk::Int64, C::COSMO.PsdCone{T}) where {T} = Base.power_by_squaring(nBlk, 2)
 get_blk_rows(nBlk::Int64, C::COSMO.PsdConeTriangle{T}) where {T} = div((nBlk + 1) * nBlk, 2)
 
@@ -141,14 +140,14 @@ end
 
 
 # -----------------------------------------
-# Functions related to clique tree based transformation
+# Functions related to clique tree based transformation (compact decomposition)
 # see: Kim: Exploiting sparsity in linear and nonlinear matrix inequalities via positive semidefinite matrix completion (2011), p.53
 # -----------------------------------------
 
 """
     augment_clique_based!(ws::COSMO.Workspace{T})
 
-If `settings.colo_transformation = true`, decompose the problem based on the clique tree.
+If `settings.compact_decomposition = true`, decompose the problem based on the clique tree.
 """
 function augment_clique_based!(ws::COSMO.Workspace{T}) where {T}
   A = ws.p.A
@@ -342,23 +341,16 @@ function add_clique_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, A_rowva
   return overlap_ptr
 end
 
-" Given the nominal entry position `k = svec(i, j)` find and modify with `new_row_val` the actual location of that entry in the global row vector `rowval`,"
-function modify_clique_rows!(A_I::Array{Int64, 1}, k::Int64, rowval::Array{Int64, 1}, C_sqrt_dim::Int64, new_row_val::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64})
+" Given the nominal entry position `k = svec(i, j)` find and modify with `new_row_val` the actual location of that entry in the global row vector `rowval`."
+function modify_clique_rows!(v::Array{Int64, 1}, k::Int64, rowval::Array{Int64, 1}, C_sqrt_dim::Int64, new_row_val::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64})
   row_0 = COSMO.get_row_index(k, rowval, C_sqrt_dim, row_range, row_range_col)
   # row_0 happens when (i, j) references an edge that was added by merging cliques, the corresponding value will be zero
   # and can be disregarded
   if row_0 != 0
-    A_I[row_0] = new_row_val
+    v[row_0] = new_row_val
   end
   return nothing
 end
-
-# function modify_clique_rows_b!(b_I::Array{Int64, 1}, k::Int64, b_nzind::Array{Int64, 1}, C_sqrt_dim::Int64, new_row_val::Int64, row_range::UnitRange{Int64}, row_range_b::UnitRange{Int64} )
-#   row_0 = COSMO.get_row_index(k, b_nzind, C_sqrt_dim, row_range, row_range_b)
-#   row_0 != 0 && (b_I[row_0] = new_row_val)
-#   return nothing
-# end
-
 
 "Given the svec index `k` and an offset `row_range_col.start`, return the location of the (i, j)th entry in the row vector `rowval`."
 function get_row_index(k::Int64, rowval::Array{Int64, 1}, sqrt_dim::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64})
@@ -431,6 +423,7 @@ function get_block_indices(snd::Array{Int64}, sep::Array{Int64}, Nv::Int64)
   return block_indices
 end
 
+"For a cone `C` determine the sum of vector-dimensions of its cliques after decomposition (`dim`) and the total number of overlaps between them (`overlaps`)."
 decomposed_dim(C::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64) = (C.dim, 0, sp_arr_ind)
 function decomposed_dim(C::DecomposableCones{ <: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
   sntree = sp_arr[sp_arr_ind].sntree
@@ -576,13 +569,13 @@ function vec_to_mat_ind(ind::Int64, n::Int64)
   return i, j
 end
 
-# Converts the matrix element (i, j) of A ∈ m x n into the corresponding linear index of v = vec(A)
+"Convert the matrix indices `(i, j)` of `A ∈ R^{m x n}` into the corresponding linear index of `v = vec(A)`."
 function mat_to_vec_ind(i::Int64, j::Int64, m::Int64)
   (i > m || i <= 0 || j <= 0) && throw(BoundsError("Indices outside matrix bounds."))
   return (j - 1) * m + i
 end
 
-# Converts the matrix element (i, j) of A ∈ m x n into the corresponding linear index of v = svec(A, ::UpperTriangle)
+"Convert the matrix indices `(i, j)` of `A ∈ R^{m x n}` into the corresponding linear index of `v = svec(A, ::UpperTriangle)`."
 function mat_to_svec_ind(i::Int64, j::Int64)
   if i <= j
     return div((j - 1) * j, 2) + i

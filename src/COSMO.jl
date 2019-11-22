@@ -20,19 +20,19 @@ include("./algebra.jl")
 include("./projections.jl")
 include("./trees.jl")
 include("./clique_merging.jl")
-include("./settings.jl")            # TODO: unmodified - revisit
-include("./types.jl")               # some types still need tidying
-include("./constraint.jl")          # TODO: unmodified - revisit
-include("./parameters.jl")          # TODO: unmodified - revisit
-include("./residuals.jl")           # TODO: unmodified - revisit
-include("./scaling.jl")             # TODO: set scaling / E scaling is broken
-include("./infeasibility.jl")       # TODO: stylistic fixes needed
+include("./settings.jl")
+include("./types.jl")
+include("./constraint.jl")
+include("./parameters.jl")
+include("./residuals.jl")
+include("./scaling.jl")
+include("./infeasibility.jl")
 include("./transformations.jl")
 include("./chordal_decomposition.jl")
-include("./printing.jl")            # TODO: unmodified - revisit
-include("./setup.jl")               # TODO: unmodified - revisit (short - consolidate?)
-include("./solver.jl")              # TODO: unmodified - revisit
-include("./interface.jl")           # TODO: unmodified - revisit
+include("./printing.jl")
+include("./setup.jl")
+include("./solver.jl")
+include("./interface.jl")           
 include("./MOIWrapper.jl")
 
 

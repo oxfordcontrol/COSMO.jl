@@ -71,7 +71,7 @@ S2_sol1 = reshape(res1.s[19:34], 4, 4)
 # --------------------------
 
 model = COSMO.Model()
-settings = COSMO.Settings(decompose = true, colo_transformation = false)
+settings = COSMO.Settings(decompose = true, compact_transformation = false)
  COSMO.set!(model, P, q, A, b, C, settings)
 res2 = COSMO.optimize!(model);
 S1_sol2 = reshape(res2.s[1:16], 4, 4)
