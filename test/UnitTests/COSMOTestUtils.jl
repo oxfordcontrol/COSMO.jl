@@ -1,4 +1,4 @@
-
+using SparseArrays, LinearAlgebra
 # generate a random pos def matrix with eigenvalues between 0.1 and 2
 function generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Real = 0.1, aMax::Real = 2)
 	X = rand(rng, n, n)
