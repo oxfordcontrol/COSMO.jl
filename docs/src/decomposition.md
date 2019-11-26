@@ -17,15 +17,14 @@ with problem data matrices ``A_1, \ldots, A_m, B \in \mathbb{S}^n``, vector vari
 
 Let's look at the following example problem with ``m=2`` and  ``n=9``:
 
-```@repl
+```@example
 A1 = [-4.0 0.0 -2.0 0.0 0.0 -1.0 0.0 0.0 0.0; 0.0 -3.0 -1.0 0.0 0.0 0.0 0.0 0.0 0.0; -2.0 -1.0 -2.0 0.0 0.0 5.0 4.0 -4.0 0.0; 0.0 0.0 0.0 -4.0 -5.0 0.0 0.0 3.0 0.0; 0.0 0.0 0.0 -5.0 4.0 0.0 0.0 2.0 0.0; -1.0 0.0 5.0 0.0 0.0 5.0 -4.0 -4.0 -5.0; 0.0 0.0 4.0 0.0 0.0 -4.0 -1.0 -1.0 -3.0; 0.0 0.0 -4.0 3.0 2.0 -4.0 -1.0 2.0 -2.0; 0.0 0.0 0.0 0.0 0.0 -5.0 -3.0 -2.0 -3.0];
 
 A2 = [-5.0 0.0 3.0 0.0 0.0 -2.0 0.0 0.0 0.0; 0.0 -3.0 -5.0 0.0 0.0 0.0 0.0 0.0 0.0; 3.0 -5.0 3.0 0.0 0.0 5.0 -4.0 -5.0 0.0; 0.0 0.0 0.0 3.0 2.0 0.0 0.0 -2.0 0.0; 0.0 0.0 0.0 2.0 4.0 0.0 0.0 -3.0 0.0; -2.0 0.0 5.0 0.0 0.0 1.0 -5.0 -2.0 -4.0; 0.0 0.0 -4.0 0.0 0.0 -5.0 -2.0 -3.0 3.0; 0.0 0.0 -5.0 -2.0 -3.0 -2.0 -3.0 5.0 3.0; 0.0 0.0 0.0 0.0 0.0 -4.0 3.0 3.0 -4.0];
 
 B = [-0.11477375644968069 0.0 6.739182490600791 0.0 0.0 -1.2185593245043502 0.0 0.0 0.0; 0.0 1.2827680528587497 -5.136452036888789 0.0 0.0 0.0 0.0 0.0 0.0; 6.739182490600791 -5.136452036888789 7.344770673489607 0.0 0.0 -0.2224400187044442 -10.505300166831221 -1.2627361794562273 0.0; 0.0 0.0 0.0 10.327710040060499 8.91534585379813 0.0 0.0 -6.525873789637007 0.0; 0.0 0.0 0.0 8.91534585379813 0.8370459338528677 0.0 0.0 -6.210900615408826 0.0; -1.2185593245043502 0.0 -0.2224400187044442 0.0 0.0 -3.8185953011245024 -0.994033914192722 2.8156077981712997 1.4524716674219218; 0.0 0.0 -10.505300166831221 0.0 0.0 -0.994033914192722 0.029162208619863517 -2.8123790276830745 7.663416446183705; 0.0 0.0 -1.2627361794562273 -6.525873789637007 -6.210900615408826 2.8156077981712997 -2.8123790276830745 4.71893305728242 6.322431630550857; 0.0 0.0 0.0 0.0 0.0 1.4524716674219218 7.663416446183705 6.322431630550857 0.5026094532322212];
 
-c = [-3.0835800776893785, -0.801817004699308];
-
+c = [-0.21052661285686525, -1.263324575834677];
 ```
 
 
@@ -39,9 +38,9 @@ The _aggregated_ pattern matrix of ``S`` is shown in the following figure, where
 
 ![](assets/example_decomposition.gif)
 
-Since the matrices are symmetric we only show the lower triangle. We can represent the aggregated sparsity pattern of the problem using a graph ``G(V, E)``, where the vertex set ``V`` is given by the column indices of the matrix and we introduce an edge ``(i,j) \in E`` for every nonzero matrix element ``S_{ij}``. The graph for the example problem is shown in the right figure. In order to decompose the problem, we have to find the _cliques_, i.e. completely connected subgraphs, of the graph ``G``. These cliques represent the dense subblocks of non-zero entries in the matrix. In order for the theory to work, we also have to require ``G`` to be a [chordal](https://en.wikipedia.org/wiki/Chordal_graph) graph. For the purpose of this example, we just assume that ``G`` is chordal and keep in mind that we can always make a graph chordal by adding more edges.
+Since the matrices are symmetric we only show the lower triangle. We can represent the aggregated sparsity pattern of the problem using a graph ``G(V, E)``, where the vertex set ``V`` is given by the column indices of the matrix and we introduce an edge ``(i,j) \in E`` for every nonzero matrix element ``S_{ij}``. The graph for the example problem is shown in the right figure. In order to decompose the problem, we have to find the _cliques_, i.e. completely connected subgraphs, of the graph ``G``. These cliques represent the dense subblocks of non-zero entries in the matrix (see the colored entries in the figure). In order for the theory to work, we also have to require ``G`` to be a [chordal](https://en.wikipedia.org/wiki/Chordal_graph) graph. For the purpose of this example, we just assume that ``G`` is chordal and keep in mind that we can always make a graph chordal by adding more edges.
 
-COSMO finds the cliques of the graph automatically, if a constraint of type `COSMO.PsdCone` or `COSMO.PsdConeTriangle` is present in the problem and additional equality constraints impose a structure on them. For the example problem COSMO finds the following cliques: ``\mathcal{C_1}=\{1,3,6\}, \; \mathcal{C_2}=\{2,3\}, \; \mathcal{C_3}=\{3,6,7,8\}, \; \mathcal{C_4}=\{4,5,8\}`` and ``\mathcal{C_5}=\{6,7,8,9\}``.
+`COSMO` finds the cliques of the graph automatically, if a constraint of type `COSMO.PsdCone` or `COSMO.PsdConeTriangle` is present in the problem and additional equality constraints impose a structure on them. For the example problem `COSMO` finds the following cliques: ``\mathcal{C_1}=\{1,3,6\}, \; \mathcal{C_2}=\{2,3\}, \; \mathcal{C_3}=\{3,6,7,8\}, \; \mathcal{C_4}=\{4,5,8\}`` and ``\mathcal{C_5}=\{6,7,8,9\}``.
 
 Let's denote the set of cliques ``\mathcal{B}=\{\mathcal{C}_1,\ldots,\mathcal{C_p}\}``. To represent the relationship between different cliques, e.g. in terms of overlapping entries, it is helpful to represent them either as a clique tree ``\mathcal{T}(\mathcal{B}, \mathcal{E})`` (left) or a clique graph ``\mathcal{G}(\mathcal{B}, \xi)`` (right), shown in the following figures:
 
@@ -75,9 +74,7 @@ For our example this means that we now project one ``2\times 2`` block, two ``3 
 
 Let's go back to our example and solve it with `COSMO` and `JuMP`:
 ```julia
-strategy = with_options(COSMO.NoMerge)
-
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, decompose = true, merge_strategy = strategy));
+model = JuMP.Model(with_optimizer(COSMO.Optimizer, decompose = true, merge_strategy = COSMO.NoMerge));
 @variable(model, x[1:2]);
 @objective(model, Min, c' * x )
 @constraint(model, Symmetric(B - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
@@ -144,9 +141,7 @@ COSMO.CliqueGraphMerge
 ```
 In our example problem we have two cliques ``\mathcal{C}_3 = \{ 3,6,7,8\}`` and ``\mathcal{C}_5 = \{6,7,8,9 \}`` that overlap in three entries. Let's solve the problem again and choose the default clique merging strategy `merge_strategy = COSMO.CliqueGraphMerge`:
 ```julia
-strategy = with_options(COSMO.CliqueGraphMerge)
-
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, decompose = true, merge_strategy = strategy));
+model = JuMP.Model(with_optimizer(COSMO.Optimizer, decompose = true, merge_strategy = COSMO.CliqueGraphMerge));
 @variable(model, x[1:2]);
 @objective(model, Min, c' * x )
 @constraint(model, Symmetric(B - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
@@ -195,7 +190,7 @@ Runtime: 0.003s (2.68ms)
 Unsurprisingly, we can see in the output that `COSMO` solved a problem with four PSD constraints. One of them is of dimension 15, i.e. a ``5\times 5`` block, which correspond to the merged clique ``\mathcal{C_3} \cup \mathcal{C}_5 = \{3,6,7,8,9 \}``.
 
 ## Completing the dual variable
-After a decomposed problem is solved, we can recover the solution to the original problem by assembling the matrix variable ``S`` from its sublocks ``S_\ell``:
+After a decomposed problem is solved, we can recover the solution to the original problem by assembling the matrix variable ``S`` from its subblocks ``S_\ell``:
 ```math
 S = \displaystyle \sum_{\ell = 1}^p T_\ell^\top S_\ell T_\ell,
 ```
@@ -204,7 +199,10 @@ Following Agler's Theorem, ``S`` will be a positive semidefinite matrix. However
 
 ![](assets/psd_completion.jpg)
 
-For more information about PSD matrix completion and the completion algorithm used in `COSMO` take a look at _Vandenberghe and Andersen - Chordal Graphs and Semidefinite Optimization (Ch.10)_. To configure `COSMO` to complete the dual variable after solving the problem you have to set the `complete_dual` option:
+For more information about PSD matrix completion and the completion algorithm used in `COSMO` take a look at _Vandenberghe and Andersen - Chordal Graphs and Semidefinite Optimization_ (Ch.10). To configure `COSMO` to complete the dual variable after solving the problem you have to set the `complete_dual` option:
 ```julia
 model = JuMP.Model(with_optimizer(COSMO.Optimizer, complete_dual = true));
 ```
+
+### Example Code
+The code used for this example can be found in [/examples/chordal_decomposition.jl](examples/chordal_decomposition.jl).

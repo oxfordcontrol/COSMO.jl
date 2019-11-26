@@ -47,9 +47,9 @@ function find_sparsity_patterns!(ws::COSMO.Workspace)
   end
 end
 
-analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::AbstractConvexSet, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::OptionsFactory) = sp_ind
+analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::AbstractConvexSet, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) = sp_ind
 
-function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::DecomposableCones{T}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::OptionsFactory) where {T <: Real}
+function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::DecomposableCones{T}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: Real}
   if length(csp) < C.dim
     return _analyse_sparsity_pattern(ci, csp, sets, C, k, psd_row_range, sp_ind, merge_strategy)
   else
@@ -58,7 +58,7 @@ function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::
  end
 end
 
-function _analyse_sparsity_pattern(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::OptionsFactory) where {T <: Real}
+function _analyse_sparsity_pattern(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: Real}
   ordering, nz_ind_map = find_graph!(ci, csp, C.sqrt_dim, C)
   sp = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering, merge_strategy, psd_row_range, k, nz_ind_map)
   # if after analysis of SparsityPattern & clique merging only one clique remains, don't bother decomposing

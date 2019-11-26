@@ -1,3 +1,31 @@
+## Version 0.6.0 (26. November 2019)
+We add smart clique merging and fix a number of bugs in COSMO and the MOIWrapper.
+
+- `94babde` Add Documentation for Chordal Decomposition
+- `3ba43dd` Renaming merge concepts, adding docstrings
+- `96e9c1c` Implementation of a SparseCoLO like transformation
+- `752117b` Add unit test for psd completion with clique merge
+- `975f87a` 🔧 Fix bug about recovering the dual variable
+- `e524b59` Working recomputation of clique tree
+- `09dc024` Implement clique merging
+- `f90cc62` <#96> Map var idxs when processing MOI constraints
+- `9f1b5ff` <#97> Loop over all MOI-Attributes during copy_to
+- `59f0480` Add unit test for 1d psd projection
+- `ab821d8` Fix bug in 1D PSD cone projection
+- `857bf18` Merge pull request #98 from rschwarz/rs/moi095
+- `969cb2b` Fix MOI tests "result_count".
+- `c3d0263` Exclude MOI unit test "number_threads".
+- `ed25b4b` [#94] Fix bug related to DualExpCone problems
+- `7f91e71` 💾 Implement memory-efficient infeasibility checks
+- `dc75bc5` 🔧 Code refactoring
+- `a754b0c` Implement memory-efficient residual computation
+- `020ada4` [#94] Merge pull request #94 from oxfordcontrol/check_psd_clean
+- `4b8396d` Use (faster) in-place versions for in_pos_def()
+- `5565fa9` Remove sparse version of is_pos_def!()
+- `dceea67` Avoids eigendecomposition in psd tests.
+- `340ecde` Assemble entry selector matrix more efficient
+
+
 ## Version 0.5.0 (30. August 2019)
 
 - `8986827` Update to support MOI v0.9
@@ -66,4 +94,3 @@ The most important changes are listed below:
 ## Version 0.3 (7. January 2019)
 __First public release of COSMO solver__
 - Add MOI / JuMP support
-

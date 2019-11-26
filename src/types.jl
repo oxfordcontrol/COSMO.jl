@@ -179,7 +179,7 @@ mutable struct SparsityPattern
   nz_ind_map::SparseVector{Int64, Int64} # maps a matrix entry k = svec(i, j) to the location of the entry in the sparse data structure
 
   # constructor for sparsity pattern
-  function SparsityPattern(L::SparseMatrixCSC, N::Int64, ordering::Array{Int64, 1}, merge_strategy, row_range::UnitRange{Int64}, cone_ind::Int64, nz_ind_map::SparseVector{Int64, Int64})
+  function SparsityPattern(L::SparseMatrixCSC, N::Int64, ordering::Array{Int64, 1}, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}, row_range::UnitRange{Int64}, cone_ind::Int64, nz_ind_map::SparseVector{Int64, Int64})
 
     merge_strategy = merge_strategy()
     sntree = SuperNodeTree(L, merge_strategy)
@@ -323,5 +323,3 @@ Base.show(io::IO, model::COSMO.Workspace{T}) where {T} = println(io, "A COSMO Mo
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints; [settings, x0, s0, y0])`.
 """
 const Model = Workspace;
-
-
