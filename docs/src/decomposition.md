@@ -205,4 +205,4 @@ model = JuMP.Model(with_optimizer(COSMO.Optimizer, complete_dual = true));
 ```
 
 ### Example Code
-The code used for this example can be found in [/examples/chordal_decomposition.jl](examples/chordal_decomposition.jl).
+The code used for this example can be found in [/examples/chordal_decomposition.jl](https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples/chordal_decomposition.jl).
