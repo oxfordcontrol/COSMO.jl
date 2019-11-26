@@ -45,7 +45,7 @@ __For more information check the [COSMO.jl Documentation](https://oxfordcontrol.
 * __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
 * __Smart clique merging__: After an initial decomposition of a structured SDP, COSMO recombines overlapping cliques/blocks to speed up the algorithm.
 <h1 align="center" margin=0px>
-  <img src="https://github.com/docs/src/assets/blob/master/example_decomposition.gif" width=40%>
+  <img src="docs/src/assets/example_decomposition.gif" width=50%>
 </h1>
 
 ## Installation
