@@ -2,18 +2,6 @@ using COSMO, Random, Test, LinearAlgebra, SparseArrays, Random
 rng = Random.MersenneTwister(144545)
 
 
-
-function generate_pos_def_matrix(rng, n, aMin, aMax)
-  X = rand(rng,n,n)
-  # any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R
-  Q, R = qr(X)
-  eigs = rand(rng,n).*(aMax.-aMin) .+ aMin
-  X = Q*Diagonal(eigs)*Q'
-  X = 0.5*(X+X')
-  return X
-end
-
-
 # We create a test problem with 4 convex sets (2 of them decomposable), 1 zero set in the middle
 
 # define convex set
@@ -83,8 +71,8 @@ S2_sol1 = reshape(res1.s[19:34], 4, 4)
 # --------------------------
 
 model = COSMO.Model()
-settings = COSMO.Settings(decompose = true)
-COSMO.set!(model, P, q, A, b, C, settings)
+settings = COSMO.Settings(decompose = true, compact_transformation = false)
+ COSMO.set!(model, P, q, A, b, C, settings)
 res2 = COSMO.optimize!(model);
 S1_sol2 = reshape(res2.s[1:16], 4, 4)
 S2_sol2 = reshape(res2.s[19:34], 4, 4)
@@ -160,5 +148,3 @@ S2_sol4 = Symmetric(S2_sol4)
   @test norm(S2_sol3 - S2_sol4, Inf) < 1e-8
 end
 nothing
-
-

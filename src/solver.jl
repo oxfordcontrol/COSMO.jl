@@ -25,7 +25,7 @@ function admm_step!(x::Vector{Float64},
 	@. ls[(n + 1):end] = b - s + μ / ρ
 	solve!(kkt_solver,sol,ls)
 
-	# Over relaxattion
+	# Over relaxation
 	@. x = α * x_tl + (1.0 - α) * x
 	@. s_tl = s - (ν + μ) / ρ
 	@. s_tl = α * s_tl + (1.0 - α) * s
@@ -62,8 +62,8 @@ function optimize!(ws::COSMO.Workspace)
 
 	# perform preprocessing steps (scaling, initial KKT factorization)
 	ws.times.factor_time = 0
-	ws.times.setup_time = @elapsed setup!(ws);
 	ws.times.proj_time  = 0. #reset projection time
+	ws.times.setup_time = @elapsed setup!(ws);
 
 	# instantiate variables
 	num_iter = 0
@@ -176,7 +176,7 @@ function optimize!(ws::COSMO.Workspace)
 		cost =  (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1] #sm.cinv * not necessary anymore since reverseScaling
 	end
 
-	# reverse chordal decomposition
+	#reverse chordal decomposition
 	if settings.decompose
 	 reverse_decomposition!(ws, settings)
 	end
@@ -192,7 +192,7 @@ function optimize!(ws::COSMO.Workspace)
 	y = -ws.vars.μ
 	free_memory!(ws)
 
-	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
+	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);#, ws;
 
 end
 

@@ -1,7 +1,8 @@
 __COSMO.jl__ is a Julia implementation of the _Conic Operator Splitting Method_. The underlying ADMM-algorithm is well-suited for large convex conic problems. COSMO solves the following problem:
 
 ```math
-\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{K}, \end{array}
+\begin{array}{ll} \text{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \text{subject to} & Ax + s = b \\ & s \in \mathcal{K},
+\end{array}
 ```
 
 with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data matrices ``P=P^\top \succeq 0``, ``q \in \mathbb{R}^n``, ``A \in \mathbb{R}^{m \times n}``, and ``b \in \mathbb{R}^m``. The convex set ``\mathcal{K}``
@@ -13,7 +14,8 @@ with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data 
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP support__: COSMO supports MathOptInterface and JuMP, which allows you to model your problem in JuMP
-* __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem. (_this feature is not active by default_)
+* __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints into multiple smaller PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to solving the original problem.
+* __Smart clique merging__: After an initial decomposition of a structured SDP, COSMO recombines overlapping cliques/blocks to speed up the algorithm.
 * __Warm starting__: COSMO supports warm starting of the decision variables
 * __Open Source__: Our code is available on [GitHub](https://github.com/oxfordcontrol/COSMO.jl) and distributed under the Apache 2.0 Licence
 
@@ -105,7 +107,7 @@ The following people are involved in the development of COSMO:
 \*all contributors are affiliated with the [University of Oxford](http://www2.eng.ox.ac.uk/control).
 
 If this project is useful for your work please consider
-* [Citing](citing.md) the relevant paper
+* [Citing](citing.md) the relevant papers
 * Leaving a star on the [GitHub repository](https://github.com/oxfordcontrol/COSMO.jl)
 
 

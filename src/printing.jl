@@ -19,7 +19,7 @@ function print_header(ws::COSMO.Workspace)
 		end
 	end
 	if ws.settings.decompose && ws.ci.num_decomposable > 0
-		println("Decomp:   Num of original PSD cones: $(ws.ci.num_psd_cones)\n" * " "^10*"Num decomposable PSD cones: $(ws.ci.num_decomposable)\n" * " "^10*"Num PSD cones after decomposition: $(ws.ci.num_decom_psd_cones)")
+		println("Decomp:   Num of original PSD cones: $(ws.ci.num_psd_cones)\n" * " "^10*"Num decomposable PSD cones: $(ws.ci.num_decomposable)\n" * " "^10*"Num PSD cones after decomposition: $(ws.ci.num_decom_psd_cones)\n" * " "^10*"Merge Strategy: $(stringify(ws.settings.merge_strategy))")
 	end
 	println("Settings: ϵ_abs = $(@sprintf("%.1e", settings.eps_abs)), ϵ_rel = $(@sprintf("%.1e", settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.1e", settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.1e", settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(settings.rho), σ = $(settings.sigma), α = $(settings.alpha),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scaling_status)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter,\n" *	 " "^10 * "KKT system solver: $(print_lin_sys(settings.kkt_solver.ObjectType))")
 
@@ -40,6 +40,15 @@ function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::Float64, r_prim
 	nothing
 end
 
+function stringify(merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}})
+	if typeof(merge_strategy) <: OptionsFactory
+		return stringify(merge_strategy.ObjectType)
+	else
+		s = string(merge_strategy)
+		# remove the COSMO prefix
+		return s[7:end]
+	end
+end
 
 function print_result(status::Symbol, iter::Int64, cost::Float64, rt::Float64)
 	println("\n" * "-"^66 * "\n>>> Results\nStatus: $(status)\nIterations: $(iter)\nOptimal objective: $(round.(cost; digits = 4))\nRuntime: $(round.(rt; digits = 3))s ($(round.(rt * 1000; digits = 2))ms)\n")

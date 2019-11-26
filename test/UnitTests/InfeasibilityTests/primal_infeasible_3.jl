@@ -20,7 +20,7 @@ rng = Random.MersenneTwister(1313)
     xtrue = rand(rng,n,1)*50
     s1 = zeros(m1,1)
     s2 = randn(rng,m2,1)
-    s3 = vec(generate_pos_def_matrix(r,rng))
+    s3 = vec(generate_pos_def_matrix(rng, r))
     s = [s1;s2;s3]
     b = A*xtrue+s
 
@@ -30,11 +30,11 @@ rng = Random.MersenneTwister(1313)
     b = vec(b)
 
     # create dual feasible problem Px+q+A'y = 0, and y in K*
-    P = generate_pos_def_matrix(n,rng)
+    P = generate_pos_def_matrix(rng, n)
     ytrue_1 = randn(rng,m1,1)*50
     ytrue_2 = randn(rng,m2-1,1)*50
     ytrue_2 = [norm(ytrue_2,2)+1;ytrue_2]
-    ytrue_3 = vec(generate_pos_def_matrix(r,rng))
+    ytrue_3 = vec(generate_pos_def_matrix(rng, r))
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 

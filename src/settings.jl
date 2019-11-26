@@ -17,7 +17,7 @@ function (options_factory::OptionsFactory{T})(args...; kwargs...) where {T}
 end
 
 """
-	Settings(;arg=val)
+	COSMO.Settings(; kws)
 
 Creates a COSMO settings object that is used to pass user settings to the solver.
 
@@ -33,13 +33,15 @@ eps\\_dual\\_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
 verbose_timing | Verbose timing | false
-kkt_solver | Linear System solver | QDLDLKKTSolver
+kkt_solver | Linear System solver | `QDLDLKKTSolver`
 check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
-decompose | Activate to decompose chordal psd constraints | false
+decompose | Activate to decompose chordal psd constraints | true
 complete_dual | Activate to complete the dual variable after decomposition | false
+merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
+compact_transformation | Choose how a decomposed problem is transformed | true
 time_limit | set solver time limit in s | 0
 """
 mutable struct Settings
@@ -70,6 +72,8 @@ mutable struct Settings
 	time_limit::Float64
 	obj_true::Float64
 	obj_true_tol::Float64
+	merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}
+	compact_transformation::Bool
 	#constructor
 	function Settings(;
 		rho=0.1,
@@ -94,15 +98,21 @@ mutable struct Settings
 		RHO_MIN = 1e-6,
 		RHO_MAX = 1e6,
 		RHO_TOL = 1e-4,
-		decompose = false,
+		decompose = true,
     complete_dual = false,
 		time_limit = 0.0,
 		obj_true = NaN,
-		obj_true_tol = 1e-3
+		obj_true_tol = 1e-3,
+		merge_strategy = CliqueGraphMerge,
+		compact_transformation = true
 		)
 	if !isa(kkt_solver, OptionsFactory)
 		kkt_solver = with_options(kkt_solver)
 	end
-	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, decompose, complete_dual, time_limit, obj_true, obj_true_tol)
+
+	if !isa(merge_strategy, OptionsFactory)
+		merge_strategy = with_options(merge_strategy)
+	end
+	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation)
 end
 end

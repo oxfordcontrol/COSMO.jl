@@ -6,8 +6,8 @@ In the first example the native solver interface is used to define and solve a L
 ## Linear Program
 We want to solve the following linear program with decision variable `x`:
 ```math
-\begin{array}{ll} \mbox{minimize} &  c^\top x\\
-\mbox{subject to} &  A x \leq b \\
+\begin{array}{ll} \text{minimize} &  c^\top x\\
+\text{subject to} &  A x \leq b \\
                   &  x \geq 1 \\
                   &  x_2 \geq 5 \\
                   &  x_1 + x_3 \geq 4.
@@ -57,8 +57,8 @@ end
 ## Closest Correlation Matrix
 We consider the problem of finding the closest correlation matrix `X` to a given random matrix `C`. With closest correlation matrix we mean a positive semidefinite matrix with ones on the diagonal. The problem is given by:
 ```math
-\begin{array}{ll} \mbox{minimize} &  \frac{1}{2}||X - C||_F^2\\
-\mbox{subject to} &  X_{ii} = 1, \quad i=1,\dots,n \\
+\begin{array}{ll} \text{minimize} &  \frac{1}{2}||X - C||_F^2\\
+\text{subject to} &  X_{ii} = 1, \quad i=1,\dots,n \\
                   &  X \succeq 0.
 \end{array}
 ```

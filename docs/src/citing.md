@@ -17,3 +17,20 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
 }
 ```
 A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
+
+The following paper describes the algorithm used for our clique graph based merging strategy:
+```
+@Article{garstka_2019b,
+  author        = {Garstka, Michael and Cannon, Mark and Goulart, Paul},
+  journal       = {ArXiv e-prints},
+  title         = {A clique graph based merging strategy for decomposable {SDPs}},
+  year          = {2019},
+  archiveprefix = {arXiv},
+  eprint        = {1911.05615},
+  keywords      = {Mathematics - Optimization and Control},
+  primaryclass  = {math.OC},
+  url           = {https://arxiv.org/abs/1911.05615},
+}
+
+```
+A preprint can be downloaded [here](https://arxiv.org/abs/1911.05615).

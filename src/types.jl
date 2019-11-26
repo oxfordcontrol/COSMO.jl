@@ -46,7 +46,7 @@ function Base.show(io::IO, obj::ResultTimes)
 end
 
 """
-	ResultInfo{T <: AbstractFloat}
+    ResultInfo{T <: AbstractFloat}
 
 Object that contains further information about the primal and dual residuals.
 """
@@ -58,7 +58,7 @@ end
 ResultInfo(rp, rd) = ResultInfo{DefaultFloat}(rp, rd)
 
 """
-	Result{T <: AbstractFloat}
+    Result{T <: AbstractFloat}
 
 Object returned by the COSMO solver after calling `optimize!(model)`. It has the following fields:
 
@@ -174,20 +174,45 @@ mutable struct SparsityPattern
   sntree::SuperNodeTree
   ordering::Array{Int64}
   reverse_ordering::Array{Int64}
+  row_range::UnitRange{Int64} # the starting row of the psd cone in the original problem
+  cone_ind::Int64 # this is the ind of the original psd cone in ws.p.C that is decomposed
+  nz_ind_map::SparseVector{Int64, Int64} # maps a matrix entry k = svec(i, j) to the location of the entry in the sparse data structure
 
   # constructor for sparsity pattern
-  function SparsityPattern(L, N::Int64, ordering)
+  function SparsityPattern(L::SparseMatrixCSC, N::Int64, ordering::Array{Int64, 1}, merge_strategy, row_range::UnitRange{Int64}, cone_ind::Int64, nz_ind_map::SparseVector{Int64, Int64})
 
-    reverse_ordering = zeros(length(ordering))
-    for i = 1:N
-      reverse_ordering[ordering[i]] = i
-    end
-    sntree = SuperNodeTree(L)
-    return new(sntree, ordering, reverse_ordering)
+    merge_strategy = merge_strategy()
+    sntree = SuperNodeTree(L, merge_strategy)
+
+    # clique merging
+    sntree.num > 1 && merge_cliques!(sntree)
+
+    # reorder vertices in supernodes to have consecutive order
+    # necessary for equal column structure for psd completion
+    reorder_snd_consecutively!(sntree, ordering)
+
+    # undo the reordering and sort
+    # for iii = 1:sntree.num
+    #   sep = get_sep(sntree, iii)
+    #   snd = get_snd(sntree, iii)
+    #   map!(v -> ordering[v], sep)
+    #   map!(v -> ordering[v], snd)
+    #   sort!(sep)
+    #   sort!(snd)
+    # end
+
+    # for each clique determine the number of entries of the block represented by that clique
+    calculate_block_dimensions!(sntree)#, merge_strategy)
+
+    return new(sntree, ordering, invperm(ordering), row_range, cone_ind, nz_ind_map)
+  end
+
+  # For debugging
+  function SparsityPattern(sntree::SuperNodeTree, ordering::Array{Int64}, reverse_ordering::Array{Int64}, row_range::UnitRange{Int64}, cone_ind::Int64)
+    return new(sntree, ordering, reverse_ordering, row_range, cone_ind)
   end
 end
 
-# To handle the case where a PSD cone is dense
 # -------------------------------------
 # Chordal Decomposition Information
 # -------------------------------------
@@ -201,8 +226,8 @@ mutable struct ChordalInfo{T <: Real}
   num_psd_cones::Int64 # number of psd cones of original problem
   num_decomposable::Int64 #number of decomposable cones
   num_decom_psd_cones::Int64 #total number of psd cones after decomposition
-  L::SparseMatrixCSC{T} #pre allocate memory for QDLD - Lt
-
+  L::SparseMatrixCSC{T} #pre allocate memory for QDLDL
+  cone_map::Dict{Int64, Int64} # map every cone in the decomposed problem to the equivalent or undecomposed cone in the original problem
   function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
     originalM = problem.model_size[1]
     originalN = problem.model_size[2]
@@ -210,8 +235,9 @@ mutable struct ChordalInfo{T <: Real}
     num_psd_cones = length(findall(x -> typeof(x) <: Union{PsdConeTriangle{Float64}, PsdCone{Float64}} , problem.C.sets))
     # allocate sparsity pattern for each cone
     sp_arr = Array{COSMO.SparsityPattern}(undef, num_psd_cones)
+    cone_map = Dict{Int64, Int64}()
 
-    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], num_psd_cones, 0, 0, spzeros(1, 1))
+    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], num_psd_cones, 0, 0, spzeros(1, 1), cone_map)
   end
 
 	function ChordalInfo{T}() where{T}
@@ -286,6 +312,9 @@ mutable struct Workspace{T}
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
+
+Base.show(io::IO, model::COSMO.Workspace{T}) where {T} = println(io, "A COSMO Model")
+
 
 # Type alias facing the user
 """

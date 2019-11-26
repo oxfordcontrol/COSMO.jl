@@ -28,7 +28,7 @@ sum_detected = 0
     s2 = rand(rng)
     s3 = randn(rng,m3-1,1)
     s3 = [norm(s3,2)+1;s3]
-    s4 = vec(generate_pos_def_matrix(r, rng))
+    s4 = vec(generate_pos_def_matrix(rng, r))
     s = [s1;s2;s3;s4]
 
     # make problem unbounded in x1
