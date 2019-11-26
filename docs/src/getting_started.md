@@ -3,7 +3,7 @@ This user guide describes the basic structures and functions to define an optimi
 
 COSMO solves optimisation problems in the following format:
 ```math
-\begin{array}{ll} \mbox{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \mbox{subject to} & Ax + s = b \\ & s \in \mathcal{K}, \end{array}
+\begin{array}{ll} \text{minimize} & \textstyle{\frac{1}{2}}x^\top Px + q^\top x\\ \text{subject to} & Ax + s = b \\ & s \in \mathcal{K}, \end{array}
 ```
 
 with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data matrices ``P=P^\top \succeq 0``, ``q \in \mathbb{R}^n``, ``A \in \mathbb{R}^{m \times n}``, and ``b \in \mathbb{R}^m``. The convex set ``\mathcal{K}``
@@ -31,8 +31,8 @@ ZeroSet | The set ``\{ 0 \}^{dim}`` that contains the origin
 Nonnegatives | The nonnegative orthant ``\{ x \in \mathbb{R}^{dim} : x_i \ge 0, \forall i=1,\dots,\mathrm{dim} \}``
 Box(l, u) | The hyperbox ``\{ x \in \mathbb{R}^{dim} : l \leq x \leq u\}`` with vectors ``l \in \mathbb{R}^{dim} \cup \{-\infty\}`` and ``u \in \mathbb{R}^{dim} \cup \{+\infty\}``
 SecondOrderCone | The second-order (Lorenz) cone ``\{ (t,x) \in \mathbb{R}^{dim}  :  \|x\|_2   \leq t \}``
-PsdCone | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{\sqrt{dim}}_+ \Rightarrow \text{vec}(X) = x \in \mathcal{S}_+^{dim}``
-PsdConeTriangle | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the upper triangular part of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{d}_+ \Rightarrow \text{svec}(X) = x \in \mathcal{S}_+^{dim}`` where ``d=\sqrt{1/4 + 2 \text{dim}} - 1/2``
+PsdCone | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{\sqrt{dim}}_+ \rarr \text{vec}(X) = x \in \mathcal{S}_+^{dim}``
+PsdConeTriangle | The vectorized positive semidefinite cone ``\mathcal{S}_+^{dim}``. ``x`` is the vector obtained by stacking the columns of the upper triangular part of the positive semidefinite matrix ``X``, i.e. ``X \in \mathbb{S}^{d}_+ \rarr \text{svec}(X) = x \in \mathcal{S}_+^{dim}`` where ``d=\sqrt{1/4 + 2 \text{dim}} - 1/2``
 ExponentialCone | The exponential cone ``\mathcal{K}_{exp} = \{(x, y, z) \mid y \geq 0,  ye^{x/y} ≤ z\} \cup \{ (x,y,z) \mid   x \leq 0, y = 0, z \geq 0 \}``
 DualExponentialCone | The dual exponential cone ``\mathcal{K}^*_{exp} = \{(x, y, z) \mid x < 0,  -xe^{y/x} \leq e^1 z \} \cup \{ (0,y,z) \mid   y \geq 0, z \geq 0 \}``
 PowerCone(alpha) | The 3d power cone ``\mathcal{K}_{pow} = \{(x, y, z) \mid x^\alpha y^{(1-\alpha)} \geq  \|z\|, x \geq 0, y \geq 0 \}`` with ``0 < \alpha < 1``
@@ -83,31 +83,10 @@ constraint = COSMO.Constraint(Matrix(1.0I, 3, 3), zeros(3), COSMO.PowerCone(0.6)
 ## Settings
 
 The solver settings are stored in a `Settings` object and can be adjusted by the user. To create a `Settings` object just call the constructor:
-```julia
-settings = COSMO.Settings()
-```
-The settings object holds the following options and default values:
 
-Argument | Description | Values (default)
-:---: | :--- | :---:
-rho | ADMM rho step | 0.1
-sigma | ADMM sigma step | 1e-6
-alpha | Relaxation parameter | 1.6
-eps_abs | Absolute residual tolerance | 1e-4
-eps_rel | Relative residual tolerance | 1e-4
-eps\_prim\_inf | Primal infeasibility tolerance | 1e-4
-eps\_dual\_inf | Dual infeasibility tolerance | 1e-4
-max_iter | Maximum number of iterations | 2500
-verbose | Verbose printing | false
-kkt_solver | Linear system solver | QDLDLKKTSolver
-verbose_timing | Verbose timing | false
-check_termination | Check termination interval | 40
-check_infeasibility | Check infeasibility interval | 40
-scaling | Number of scaling iterations | 10
-adaptive_rho | Automatic adaptation of step size parameter | true
-time_limit | set solver time limit in s | 0.0
-decompose | Activate to decompose chordal psd constraints | false
-complete_dual | Activate to complete the dual variable after decomposition | false
+```@docs
+COSMO.Settings
+```
 
 To adjust those values, either pass your preferred option and parameter as a key-value pair to the constructor or edit the corresponding field afterwards. For example if you want to enable verbose printing and increase the solver accuracy, you can type
 ```julia
@@ -201,5 +180,3 @@ It holds:
 `setup_time` = `graph_time`+ `factor_time`,
 
 `proj_time` is a subset of `iter_time`.
-
-

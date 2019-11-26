@@ -28,11 +28,6 @@ COSMO.PowerCone
 COSMO.DualPowerCone
 ```
 
-## Settings
-
-```@docs
-COSMO.Settings
-```
 
 ## Results
 ```@docs

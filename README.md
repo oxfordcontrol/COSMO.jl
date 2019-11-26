@@ -40,9 +40,13 @@ __For more information check the [COSMO.jl Documentation](https://oxfordcontrol.
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP support__: COSMO supports MathOptInterface and JuMP, which allows you to describe your problem in JuMP
-* __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
 * __Warm starting__: COSMO supports warm starting of the decision variables
 * __Open Source__: Our code is free to use and distributed under the Apache 2.0 Licence
+* __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
+* __Smart clique merging__: After an initial decomposition of a structured SDP, COSMO recombines overlapping cliques/blocks to speed up the algorithm.
+<h1 align="center" margin=0px>
+  <img src="https://github.com/docs/src/assets/blob/master/example_decomposition.gif" width=40%>
+</h1>
 
 ## Installation
 - `COSMO` can be added via the Julia package manager (type `]`): `pkg> add COSMO`
@@ -73,5 +77,3 @@ A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
 
 ## Licence
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
-
-

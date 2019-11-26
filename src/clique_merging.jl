@@ -42,8 +42,22 @@ struct NoMerge <: AbstractTreeBasedMerge end
 """
     CliqueGraphMerge(edge_weight::AbstractEdgeWeight = ComplexityWeight()) <: AbstractGraphBasedMerge
 
-A merge strategy that calculates the edge metric given by `edge_weight` for every two cliques that have any overlap. The resulting clique
-graph is traversed from the highest edge metric to the lowest.
+The (default) merge strategy based on the clique (intersection) graph ``\\mathcal{G}(\\mathcal{B}, \\xi)``, for a set of cliques ``\\mathcal{B} = \\{ \\mathcal{C}_1, \\dots, \\mathcal{C}_p\\}`` where the edge set ``\\xi`` is defined as
+``\\xi = \\{ (\\mathcal{C}_{i},\\mathcal{C}_{j}) \\mid i \\neq j, \\; \\mathcal{C}_i, \\mathcal{C}_j \\in \\mathcal{B},\\; |\\mathcal{C}_i \\cap \\mathcal{C}_j| > 0 \\}``. In other words, we add an edge between every two cliques
+ that overlap in at least one entry.
+
+Moreover, given an edge weighting function ``e(\\mathcal{C}_i,\\mathcal{C}_j) = w_{ij}``, we compute a weight for each edge that quantifies the computational savings of merging the two cliques.
+After the initial weights are computed, we merge cliques in a loop:
+
+**while** clique graph contains positive weights:
+- select two cliques with the highest weight ``w_{ij}``
+- merge cliques ``\\rightarrow`` update clique graph
+- recompute weights for updated clique graph
+
+Custom edge weighting functions can be used by defining your own `CustomEdgeWeight <: AbstractEdgeWeight` and a corresponding `edge_metric` method. By default, the `ComplexityWeight <: AbstractEdgeWeight` is used which computes the weight based
+on the cardinalities of the cliques: ``e(\\mathcal{C}_i,\\mathcal{C}_j)  = |\\mathcal{C}_i|^3 + |\\mathcal{C}_j|^3 - |\\mathcal{C}_i \\cup \\mathcal{C}_j|^3``.
+
+See also: *Garstka, Cannon, Goulart - A clique graph based merging strategy for decomposable SDPs (2019)*
 """
 mutable struct CliqueGraphMerge <: AbstractGraphBasedMerge
   stop::Bool
@@ -59,8 +73,12 @@ end
 """
     ParentChildMerge(t_fill = 8, t_size = 8) <: AbstractTreeBasedMerge
 
-The merge strategy suggested in **Sun / Andersen - Decomposition in conic optimization with partially separable structure (2013)**.
-The initial clique tree is traversed in topological order and cliques are greedily merged to their parent if `evaluate(t, strategy::ParentChildMerge, cand)` returns true.
+The merge strategy suggested in *Sun and Andersen - Decomposition in conic optimization with partially separable structure (2014)*.
+The initial clique tree is traversed in topological order and a clique ``\\mathcal{C}_\\ell``  is greedily merged to its parent clique
+``\\mathcal{C}_{par(\\ell)}`` if at least one of the two conditions are met
+
+  - ``(| \\mathcal{C}_{par(\\ell)}| -| \\eta_\\ell|) (|\\mathcal{C}_\\ell| - |\\eta_\\ell|) \\leq t_{\\text{fill}}`` (fill-in condition)
+  - ``\\max \\left\\{ |\\nu_{\\ell}|,  |\\nu_{par(\\ell)}|  \\right\\} \\leq t_{\\text{size}}`` (supernode size condition)
 """
 mutable struct ParentChildMerge <: AbstractTreeBasedMerge
   stop::Bool

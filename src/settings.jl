@@ -17,7 +17,7 @@ function (options_factory::OptionsFactory{T})(args...; kwargs...) where {T}
 end
 
 """
-	Settings(;arg=val)
+	COSMO.Settings(; kws)
 
 Creates a COSMO settings object that is used to pass user settings to the solver.
 
@@ -33,15 +33,15 @@ eps\\_dual\\_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
 verbose_timing | Verbose timing | false
-kkt_solver | Linear System solver | QDLDLKKTSolver
+kkt_solver | Linear System solver | `QDLDLKKTSolver`
 check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
 decompose | Activate to decompose chordal psd constraints | true
 complete_dual | Activate to complete the dual variable after decomposition | false
-merge_strategy | Choose a strategy for clique merging | CliqueGraphMerge
-compact_transformation | Choose a decomposed problem is transformed | true
+merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
+compact_transformation | Choose how a decomposed problem is transformed | true
 time_limit | set solver time limit in s | 0
 """
 mutable struct Settings
