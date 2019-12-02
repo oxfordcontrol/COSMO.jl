@@ -31,8 +31,8 @@ If you want to install the latest version from master run
 ## Quick Example
 Consider the following 2x2 semidefinite program with decision variable `X`:
 ```math
-\begin{array}{ll} \mbox{minimize} &  \text{tr}(CX)\\
-\mbox{subject to} &  \text{tr}(A X) = b \\
+\begin{array}{ll} \text{minimize} &  \text{tr}(CX)\\
+\text{subject to} &  \text{tr}(A X) = b \\
                   &  X \succeq 0,
 \end{array}
 ```

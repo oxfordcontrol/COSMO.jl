@@ -31,11 +31,11 @@ COSMO also allows you to pass in solver-specific options with the `with_options(
 settings = COSMO.Settings(kkt_solver = with_options(PardisoDirectKKTSolver, msg_level_on = true))
 ```
 
-Likewise, CGIndirectKKTSolver and MINRESIndirectKKTSolver are also parametrizable with the `with_options(solver_type, args...; kwargs...)` and accept the following arguments:
-Keyword Argument | Description
--------------- |   :-----
-tol_constant::T=T(1.0) and tol_exponent::T=T(1.5) | Parameter that defines the solution tolerance for the iterative solvers accross iterations. In particular, the solution tolerance at every iteration is defined as `\text{tol_constant} \text{iteration}^\text{tol_exponent}`
- | 
+Likewise, `CGIndirectKKTSolver` and `MINRESIndirectKKTSolver` are also parameterizable with `with_options(solver_type, args...; kwargs...)` and accept the following arguments:
+
+ Argument | Description | Values (default)
+-------------- |   :-------------- |   :--------------
+`tol_constant::T` and `tol_exponent::T` | Parameter that defines the solution tolerance for the iterative solvers across iterations. In particular, the solution tolerance at every iteration is defined as ``\text{tol\_constant} /  \text{iteration}^{\text{tol\_exponent}}`` | 1.0, 1.5
 
 
 This also works if you want to use this configuration with JuMP:
