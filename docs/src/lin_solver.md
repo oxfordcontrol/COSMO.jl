@@ -13,9 +13,11 @@ CholmodKKTSolver | Cholmod | Julia's default linear system solver (by SuiteSpars
 PardisoDirectKKTSolver | Pardiso (direct) | Pardiso 6.0 direct solver
 PardisoIndirectKKTSolver | Pardiso (indirect) | Pardiso 6.0 indirect solver
 MKLPardisoKKTSolver | Intel MKL Pardiso | Pardiso optimised for Intel platforms
+CGIndirectKKTSolver | IterativeSolvers.jl | Conjugate Gradients on the reduced KKT linear system.
+MINRESIndirectKKTSolver | IterativeSolvers.jl | MINRES on the (full) KKT linear system.
 
 !!! note
-    To use the Pardiso and Intel MKL Pardiso solver, you have to install the respective libraries and the corresponding Julia wrapper. For more information about installing these, visit the [Pardiso.jl](https://github.com/JuliaSparse/Pardiso.jl) repository page.
+    To use the Pardiso and Intel MKL Pardiso solver, you have to install the respective libraries and the corresponding Julia wrapper. For more information about installing these, visit the [Pardiso.jl](https://github.com/JuliaSparse/Pardiso.jl) repository page. Likewise in order to use Indirect(Reduced)KKTSolver you have to install [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl) and [LinearMaps.jl](https://github.com/Jutho/LinearMaps.jl).
 
 COSMO uses the QDLDL linear system solver by default. You can specify a different solver in the settings by using the `kkt_solver` keyword and the respective type:
 
@@ -24,13 +26,17 @@ settings = COSMO.Settings(kkt_solver = CholmodKKTSolver)
 
 ```
 
-COSMO also allows you to pass in solver-specific options. If you want to use Pardiso with verbose printing use the `with_options(solver_type, args...; kwargs...)` syntax:
-
-
+COSMO also allows you to pass in solver-specific options with the `with_options(solver_type, args...; kwargs...)` syntax. For example, if you want to use Pardiso with verbose printing use the following syntax:
 ```julia
 settings = COSMO.Settings(kkt_solver = with_options(PardisoDirectKKTSolver, msg_level_on = true))
-
 ```
+
+Likewise, CGIndirectKKTSolver and MINRESIndirectKKTSolver are also parametrizable with the `with_options(solver_type, args...; kwargs...)` and accept the following arguments:
+Keyword Argument | Description
+-------------- |   :-----
+tol_constant::T=T(1.0) and tol_exponent::T=T(1.5) | Parameter that defines the solution tolerance for the iterative solvers accross iterations. In particular, the solution tolerance at every iteration is defined as `\text{tol_constant} \text{iteration}^\text{tol_exponent}`
+ | 
+
 
 This also works if you want to use this configuration with JuMP:
 
