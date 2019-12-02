@@ -41,6 +41,8 @@ __For more information check the [COSMO.jl Documentation](https://oxfordcontrol.
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP support__: COSMO supports MathOptInterface and JuMP, which allows you to describe your problem in JuMP
 * __Warm starting__: COSMO supports warm starting of the decision variables
+* __Custom sets and linear solver__: Customize COSMO's components by defining your own convex constraint sets and by choosing from a number of direct and indirect linear system solvers, e.g. [QDLDL](https://github.com/oxfordcontrol/qdldl), [Pardiso](https://github.com/JuliaSparse/Pardiso.jl), [Conjugate Gradient](https://juliamath.github.io/IterativeSolvers.jl/dev/) and [MINRES](https://juliamath.github.io/IterativeSolvers.jl/dev/)
+
 * __Open Source__: Our code is free to use and distributed under the Apache 2.0 Licence
 * __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
 * __Smart clique merging__: After an initial decomposition of a structured SDP, COSMO recombines overlapping cliques/blocks to speed up the algorithm.
