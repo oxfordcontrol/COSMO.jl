@@ -47,7 +47,7 @@ function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::Float64, r_prim
 				@printf("%d\t%.4e\t%.4e\t%.4e\t%.4e\t%.2e\n", iter, cost, r_prim, r_dual, ws.ρ, running_time)
 			else
 				@printf("%d\t%.4e\t%.4e\t%.4e\t%.4e\t%.2e\t%s\t%.2f\t\t%.2f\n", iter, cost, r_prim, r_dual, ws.ρ, running_time,
-					lobpcg_dims_str, lobpcg_iterations, exact_projections)
+					lobpcg_dims_str, lobpcg_iterations/settings.check_termination, exact_projections/settings.check_termination)
 			end
 		else
 			@printf("%d\t%.4e\t ---\t\t\t---\t%.2e\n", iter, cost, running_time)
