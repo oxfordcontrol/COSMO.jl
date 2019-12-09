@@ -24,6 +24,8 @@ include("./UnitTests/COSMOTestUtils.jl")
   include("./UnitTests/psd_completion.jl")
   include("./UnitTests/psd_completion_and_merging.jl")
   include("./UnitTests/clique_merging_example.jl")
+  include("./UnitTests/LOBPCG/lobpcg_sanity_checks.jl")
+  include("./UnitTests/LOBPCG/lobpcg_projection_tests.jl")
 
     # optional unittests
   if in("Pardiso",keys(Pkg.installed()))

@@ -31,4 +31,6 @@ struct CompositeConvexSet{T} <: AbstractConvexSet{T}
 end
 
 include("./splitvector.jl")
+include("./lobpcg.jl")
+include("./lobpcg_projection.jl")
 include("./convexset.jl")
