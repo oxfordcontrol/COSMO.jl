@@ -1,7 +1,6 @@
 using LinearAlgebra
 using Random
 using Test
-using Profile
 
 function generate_test_matrix(n, n_pos, n_small, gap)
     # Generates the n x n symmetric matrix A with
