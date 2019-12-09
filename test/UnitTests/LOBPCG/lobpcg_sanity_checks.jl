@@ -1,7 +1,6 @@
 using LinearAlgebra
 using Random
 using Test
-using BenchmarkTools
 using Profile
 
 function generate_test_matrix(n, n_pos, n_small, gap)
