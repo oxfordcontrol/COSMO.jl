@@ -1,5 +1,6 @@
 using  LinearAlgebra
 import LinearAlgebra.lmul!
+import LinearAlgebra.rmul!
 const  IdentityMatrix = UniformScaling{Bool}
 
 
