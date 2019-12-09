@@ -6,7 +6,7 @@ include("./UnitTests/COSMOTestUtils.jl")
 
   # Split tests into native interface unit tests and MOI unit tests
   include("./run_cosmo_tests.jl")
-  # include("./UnitTests/moi_wrapper.jl")
+  include("./UnitTests/moi_wrapper.jl")
 
 end
 nothing
