@@ -7,7 +7,7 @@ Our [JuMP](https://github.com/JuliaOpt/JuMP.jl/) interface allows you to describ
 ## Use COSMO
 To specify COSMO as the solver for your JuMP model, load the solver module with `using COSMO` and then use the `with_optimizer()` function when initialising the JuMP model:
 ```julia
-m = JuMP.Model(with_optimizer(COSMO.Optimizer);
+m = JuMP.Model(with_optimizer(COSMO.Optimizer));
 ```
 
 ## Specify Solver Settings
