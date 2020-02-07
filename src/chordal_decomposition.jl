@@ -129,8 +129,7 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   else
     H = ws.ci.H
     vars.s  .= SplitVector{Float64}(H * ws.vars.s[mO + 1:end], ws.ci.originalC)
-    # this performs the operation μ = sum H_k^T *  μ_k which is negative of the (uncompleted) dual variable of the original problem
-    vars.μ .= H * ws.vars.μ[mO + 1:end]
+    fill_dual_variables!(ws, vars)
   end
 
   ws.p.C = ws.ci.originalC
@@ -138,6 +137,23 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   ws.vars = vars
   settings.complete_dual && psd_completion!(ws)
 
+  return nothing
+end
+
+function fill_dual_variables!(ws::COSMO.Workspace, vars::COSMO.Variables)
+  mO = ws.ci.originalM
+  H = ws.ci.H
+
+  # this performs the operation μ = sum H_k^T *  μ_k causing an addition of (identical valued) overlapping blocks
+  vars.μ .= H * ws.vars.μ[mO + 1:end]
+
+  # # to remove the overlaps we take the average of the values for each overlap by dividing by the number of blocks that overlap in a particular entry, i.e. number of 1s in each row of H
+  rowInd, nnzs = number_of_overlaps_in_rows(H)
+
+  for iii=1:length(rowInd)
+    ri = rowInd[iii]
+    vars.μ[ri] .= vars.μ[ri] / nnzs[iii]
+  end
   return nothing
 end
 
@@ -175,7 +191,9 @@ function add_blocks!(s::SplitVector, μ::AbstractVector, row_start::Int64, row_r
     if isa(C, PsdCone) || i <= j
       offset = COSMO.vectorized_ind(i, j, N, C) - 1
       s.data[row_range.start + offset] += s_decomp.data[row_start + counter]
-      μ[row_range.start + offset] += μ_decomp[row_start + counter]
+
+      # notice: this overwrites the overlapping entries
+      μ[row_range.start + offset] = μ_decomp[row_start + counter]
       counter += 1
     end
   end

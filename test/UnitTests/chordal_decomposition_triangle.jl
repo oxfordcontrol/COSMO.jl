@@ -135,7 +135,8 @@ S1_sol4 = Symmetric(S1_sol4)
 S2_sol4 = zeros(4, 4)
 COSMO.populate_upper_triangle!(S2_sol4, res4.s[13:22], 1. / sqrt(2))
 S2_sol4 = Symmetric(S2_sol4)
-
+Y1_sol4 = matrixify(res4.y[1:10])
+Y2_sol4 = matrixify(res4.y[13:22])
 @testset "Decomposition with PSDTriangle" begin
   @test abs(res1.obj_val - res2.obj_val) < 1e-4
   @test abs(res1.obj_val - res3.obj_val) < 1e-4
@@ -146,5 +147,46 @@ S2_sol4 = Symmetric(S2_sol4)
   @test norm(S2_sol1 - S2_sol2, Inf) < 1e-8
   @test norm(S2_sol2 - S2_sol3, Inf) < 1e-8
   @test norm(S2_sol3 - S2_sol4, Inf) < 1e-8
+
 end
+
+
+# Check that the correct y is reassembled after the decomposition, i.e. the correct dual error holds and that Y is positive semidefinite
+pattern2 = ones(9, 9)
+pattern2[1, 5:9] .= 0
+pattern2[2, 6:9] .= 0
+pattern2[3, 6:9] .= 0
+pattern2[4, 9] = 0
+pattern2 = Matrix(Symmetric(pattern2, :U))
+
+P, q, At, bt, Ct = feasible_sdp_with_pattern(rng, pattern2)
+
+settings = COSMO.Settings(decompose = false, verbose =true);
+model = COSMO.Model()
+COSMO.set!(model, P, q, At, bt, Ct, settings)
+res5 = COSMO.optimize!(model);
+
+settings = COSMO.Settings(decompose = true, complete_dual = true, verbose = true, compact_transformation = true);
+model = COSMO.Model()
+COSMO.set!(model, P, q, At, bt, Ct, settings)
+res6 = COSMO.optimize!(model);
+
+settings = COSMO.Settings(decompose = true, complete_dual = true, compact_transformation = false);
+model = COSMO.Model()
+COSMO.set!(model, P, q, At, bt, Ct, settings)
+res7 = COSMO.optimize!(model);
+
+Y_5 = matrixify(res5.y)
+Y_6 = matrixify(res6.y)
+Y_7 = matrixify(res7.y)
+@testset "Check correct assembly of dual variable y" begin
+  @test minimum(eigen(Y_5).values) > -1e-6
+  @test minimum(eigen(Y_6).values) > -1e-6
+  @test minimum(eigen(Y_7).values) > -1e-6
+  @test norm(At' * res5.y + q, Inf) < 1e-3
+  @test norm(At' * res6.y + q, Inf) < 1e-3
+  @test norm(At' * res7.y + q, Inf) < 1e-3
+end
+
+
 nothing
