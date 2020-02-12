@@ -57,7 +57,7 @@ function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace)
 	push!(ws.rho_updates, new_rho)
 
 	if ws.settings.verbose_timing
-		ws.times.factor_time += @elapsed update_rho!(ws.kkt_solver,ws.ρvec)
+		ws.times.factor_update_time += @elapsed update_rho!(ws.kkt_solver,ws.ρvec)
 	else
 		update_rho!(ws.kkt_solver,ws.ρvec)
 	end

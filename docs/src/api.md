@@ -27,11 +27,3 @@ COSMO.DualExponentialCone
 COSMO.PowerCone
 COSMO.DualPowerCone
 ```
-
-
-## Results
-```@docs
-COSMO.Result
-COSMO.ResultTimes
-COSMO.ResultInfo
-```

@@ -12,7 +12,13 @@ function setup!(ws::COSMO.Workspace)
   allocate_set_memory!(ws)
 	# scale problem data
 	if ws.settings.scaling != 0
-		scale_ruiz!(ws)
+		if ws.settings.verbose_timing
+			ws.times.scaling_time = @elapsed scale_ruiz!(ws)
+		else
+			scale_ruiz!(ws)
+		end
+	else
+		ws.times.scaling_time = 0.
 	end
 
 	set_rho_vec!(ws)
@@ -20,7 +26,7 @@ function setup!(ws::COSMO.Workspace)
 	# create a KKT solver object populated with our data
 	if(ws.flags.FACTOR_LHS)
 		if ws.settings.verbose_timing
-			ws.times.factor_time += @elapsed _make_kkt_solver!(ws)
+			ws.times.init_factor_time = @elapsed _make_kkt_solver!(ws)
 		else
 			_make_kkt_solver!(ws)
 		end

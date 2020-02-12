@@ -8,11 +8,13 @@
 Part of the Result object returned by the solver. ResultTimes contains timing results for certain parts of the algorithm:
 
 Time Name  | Description
----  | ---
+---  | :---
 solver_time | Total time used to solve the problem
-setup_time | Setup time = graph_time + factor_time
+setup_time |  Setup time = graph\\_time + init\\_factor\\_time + scaling\\_time
+scaling_time | Time to scale the problem data
 graph_time | Time used to perform chordal decomposition
-factor_time | Time used to factor the system of linear equations
+init\\_factor\\_time | Time used for initial factorisation of the system of linear equations
+factor\\_update\\_time | Sum of times used to refactor the system of linear equations due to rho
 iter_time | Time spent in iteration loop
 proj_time | Time spent in projection functions
 post_time | Time used for post processing
@@ -22,14 +24,16 @@ By default COSMO only measures `solver_time`, `setup_time` and `proj_time`. To m
 mutable struct ResultTimes{T <: AbstractFloat}
 	solver_time::T
 	setup_time::T
+	scaling_time::T
 	graph_time::T
-	factor_time::T
+	init_factor_time::T
+	factor_update_time::T
 	iter_time::T
 	proj_time::T
 	post_time::T
 end
 
-ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
+ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
 ResultTimes(T::Type = DefaultFloat) = ResultTimes{T}()
 
 function Base.show(io::IO, obj::ResultTimes)
@@ -39,8 +43,10 @@ function Base.show(io::IO, obj::ResultTimes)
 "Proj time:\t$(round.(obj.proj_time, digits = 4))s ($(round.(obj.proj_time * 1000, digits = 2))ms)\n")
   if verbose
     print(io,"Iter time:\t$(round.(obj.iter_time, digits = 4))s ($(round.(obj.iter_time * 1000, digits = 2))ms)\n",
+    "Scaling time:\t$(round.(obj.scaling_time, digits = 4))s ($(round.(obj.scaling_time * 1000, digits = 2))ms)\n",
     "Graph time:\t$(round.(obj.graph_time, digits = 4))s ($(round.(obj.graph_time * 1000, digits = 2))ms)\n",
-    "Factor time:\t$(round.(obj.factor_time, digits = 4))s ($(round.(obj.factor_time * 1000, digits = 2))ms)\n",
+    "Initial Factor time:\t$(round.(obj.init_factor_time, digits = 4))s ($(round.(obj.init_factor_time * 1000, digits = 2))ms)\n",
+    "Factor update time:\t$(round.(obj.factor_update_time, digits = 4))s ($(round.(obj.factor_update_time * 1000, digits = 2))ms)\n",
     "Post time:\t$(round.(obj.post_time, digits = 4))s ($(round.(obj.post_time * 1000, digits = 2))ms)\n")
   end
 end
@@ -65,7 +71,7 @@ Object returned by the COSMO solver after calling `optimize!(model)`. It has the
 
 
 Fieldname | Type | Description
----  | --- | ---
+---  | :--- | :---
 x | Vector{T}| Primal variable
 y | Vector{T}| Dual variable
 s | Vector{T}| (Primal) set variable

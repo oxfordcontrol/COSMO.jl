@@ -61,7 +61,7 @@ function optimize!(ws::COSMO.Workspace)
 	ws.sm = (settings.scaling > 0) ? ScaleMatrices(ws.p.model_size[1], ws.p.model_size[2]) : ScaleMatrices()
 
 	# perform preprocessing steps (scaling, initial KKT factorization)
-	ws.times.factor_time = 0
+	ws.times.factor_update_time = 0
 	ws.times.proj_time  = 0. #reset projection time
 	ws.times.setup_time = @elapsed setup!(ws);
 

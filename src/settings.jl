@@ -22,7 +22,7 @@ end
 Creates a COSMO settings object that is used to pass user settings to the solver.
 
 Argument | Description | Values (default)
---- | --- | ---
+--- | :--- | :---
 rho | ADMM rho step | 0.1
 sigma | ADMM sigma step | 1e-6
 alpha | Relaxation parameter | 1.6
@@ -42,7 +42,7 @@ decompose | Activate to decompose chordal psd constraints | true
 complete_dual | Activate to complete the dual variable after decomposition | false
 merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
 compact_transformation | Choose how a decomposed problem is transformed | true
-time_limit | set solver time limit in s | 0
+time_limit | Set solver time limit in s | 0
 """
 mutable struct Settings
 	rho::Float64

@@ -137,23 +137,16 @@ Once the solver algorithm terminates, it will return a `Results` object that giv
 
 After attempting to solve the problem, COSMO will return a result object with the following fields:
 
-Fieldname | Type | Description
----  | --- | ---
-x | Vector{Float64}| Primal variable
-y | Vector{Float64}| Dual variable
-s | Vector{Float64}| (Primal) set variable
-obj_val | Float64 | Objective value
-iter | Int64 | Number of iterations
-status | Symbol | Solution status
-info | COSMO.ResultInfo | Struct with more information
-times | COSMO.ResultTimes | Struct with several measured times
-
+```@docs
+COSMO.Result
+COSMO.ResultInfo
+```
 ### Status Codes
 
 COSMO will return one of the following statuses:
 
 Status Code  | Description
----  | ---
+---  | :---
 :Solved | An optimal solution was found
 :Unsolved | Default value
 :Max\_iter\_reached | Solver reached iteration limit (set with `Settings.max_iter`)
@@ -164,19 +157,13 @@ Status Code  | Description
 ### Timings
 If `settings.verbose_timing` is set to `true`, COSMO will report the following times in `result.times`:
 
-Time Name  | Description
----  | ---
-solver_time | Total time used to solve the problem
-setup_time | Setup time = graph\_time + factor\_time
-graph_time | Time used to perform chordal decomposition
-factor_time | Time used to factor the system of linear equations
-iter_time | Time spent in iteration loop
-proj_time | Time spent in projection functions
-post_time | Time used for post processing
+```@docs
+COSMO.ResultTimes
+```
 
 It holds:
-`solver_time` = `setup_time`+ `iter_time` + `post_time`,
+`solver_time` = `setup_time`+ `iter_time` + `factor_update_time` + `post_time`,
 
-`setup_time` = `graph_time`+ `factor_time`,
+`setup_time` = `graph_time`+ `init_factor_time` + `scaling_time`,
 
 `proj_time` is a subset of `iter_time`.
