@@ -187,12 +187,12 @@ function optimize!(ws::COSMO.Workspace)
 	settings.verbose && print_result(status, num_iter, cost, ws.times.solver_time)
 
 	# create result object
-	res_info = ResultInfo(r_prim, r_dual)
+	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
 
 	y = -ws.vars.μ
 	free_memory!(ws)
 
-	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);#, ws;
+	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
 

@@ -48,14 +48,15 @@ end
 """
     ResultInfo{T <: AbstractFloat}
 
-Object that contains further information about the primal and dual residuals.
+Object that contains further information about the primal residual, the dual residuals and the rho updates.
 """
 struct ResultInfo{T <: AbstractFloat}
 	r_prim::T
 	r_dual::T
+	rho_updates::Vector{T}
 end
 
-ResultInfo(rp, rd) = ResultInfo{DefaultFloat}(rp, rd)
+ResultInfo(rp, rd, ro, rho_updates) = ResultInfo{DefaultFloat}(rp, rd, rho_updates)
 
 """
     Result{T <: AbstractFloat}
@@ -85,7 +86,7 @@ struct Result{T <: AbstractFloat}
     times::ResultTimes{T}
 
     function Result{T}() where {T <: AbstractFloat}
-      return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, :Unsolved, ResultInfo{T}(0.,0.), ResultTimes{T}())
+      return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, :Unsolved, ResultInfo{T}(0.,0., T[]), ResultTimes{T}())
     end
 
     function Result{T}(x, y, s, obj_val, iter, status, info, times) where {T <: AbstractFloat}
@@ -97,10 +98,6 @@ end
 function Base.show(io::IO, obj::Result)
 	print(io,">>> COSMO - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.obj_val, digits = 2))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
 	!isnan(obj.times.iter_time) && print("Avg Iter Time: $(round.((obj.times.iter_time / obj.iter) * 1000, digits = 2))ms")
-end
-
-struct Info{T <: AbstractFloat}
-	rho_updates::Vector{T}
 end
 
 # -------------------------------------
@@ -293,12 +290,12 @@ mutable struct Workspace{T}
 	sm::ScaleMatrices{T}
 	ci::ChordalInfo{T}
 	vars::Variables{T}
-  utility_vars::UtilityVariables{T}
+  	utility_vars::UtilityVariables{T}
 	ρ::T
 	ρvec::Vector{T}
 	kkt_solver::Union{AbstractKKTSolver,Nothing}
 	flags::Flags
-	Info::Info
+	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
 	times::ResultTimes{Float64} #Always 64 bit regardless of data type?
 
 	#constructor
@@ -306,9 +303,9 @@ mutable struct Workspace{T}
 		p = ProblemData{T}()
 		sm = ScaleMatrices{T}()
 		vars = Variables{T}(1, 1, p.C)
-    uvars = UtilityVariables{T}(1, 1)
+    	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		return new(p, Settings(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), Info([zero(T)]), ResultTimes())
+		return new(p, Settings(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), T[], ResultTimes())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

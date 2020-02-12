@@ -95,7 +95,7 @@ function empty_model!(model::COSMO.Model{T}) where {T}
 	model.ρvec = T[]
 	model.kkt_solver = nothing
 	model.flags = Flags()
-	model.Info = Info([zero(T)])
+	model.rho_updates = T[]
 	model.times = ResultTimes()
 	nothing
 end
@@ -275,4 +275,3 @@ function pre_allocate_variables!(ws::Workspace{T}) where{T}
   ws.vars = Variables{T}(m, n, ws.p.C)
   ws.utility_vars = UtilityVariables{T}(m, n)
 end
-

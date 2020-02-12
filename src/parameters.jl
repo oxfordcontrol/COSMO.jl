@@ -14,7 +14,7 @@ function set_rho_vec!(ws::COSMO.Workspace)
 			ws.ρvec[rows] *= 1e3
 		end
 	end
-	push!(ws.Info.rho_updates, ws.ρ)
+	push!(ws.rho_updates, ws.ρ)
 	return nothing
 end
 
@@ -53,8 +53,8 @@ function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace)
 		end
 	end
 
-	# log rho updates to info variable
-	push!(ws.Info.rho_updates, new_rho)
+	# log rho updates
+	push!(ws.rho_updates, new_rho)
 
 	if ws.settings.verbose_timing
 		ws.times.factor_time += @elapsed update_rho!(ws.kkt_solver,ws.ρvec)
