@@ -32,7 +32,7 @@ This is a Julia implementation of the _Conic operator splitting method_ (COSMO) 
 
 with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q ϵ R^n`, `A ϵ R^(m×n)`, and `b ϵ R^m`. The convex set `K` is a composition of convex sets and cones.
 
-__For more information check the [COSMO.jl Documentation](https://oxfordcontrol.github.io/COSMO.jl/stable).__
+__For more information take a look at the COSMO.jl Documentation ([stable](https://oxfordcontrol.github.io/COSMO.jl/stable) |  [dev](https://oxfordcontrol.github.io/COSMO.jl/dev)).__
 
 ## Features
 
@@ -50,10 +50,10 @@ __For more information check the [COSMO.jl Documentation](https://oxfordcontrol.
   <img src="docs/src/assets/example_decomposition.gif" width=45%>
 </div>
 
-## Installation 🔧
+## Installation
 - `COSMO` can be added via the Julia package manager (type `]`): `pkg> add COSMO`
 
-## Citing 📃
+## Citing
 If you find COSMO useful in your project, we kindly request that you cite the following paper:
 ```
 @InProceedings{garstka_2019,
@@ -72,7 +72,7 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
 ```
 A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
 
-## Contributing 🙋
+## Contributing
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
 - Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues). Please report any issues or bugs that you encounter.
 - As an open source project we are also interested in any projects and applications that use COSMO. Please let us know!
