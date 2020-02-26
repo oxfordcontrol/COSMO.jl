@@ -12,13 +12,13 @@ iparms = Dict{Int64, Int64}()
 iparms[13] = 100
 num_threads = 2
 
-settings = COSMO.Settings(kkt_solver = with_options(COSMO.MKLPardisoKKTSolver, iparm = iparms, num_threads = num_threads, msg_level_on = false))
+settings = COSMO.Settings(kkt_solver = with_options(MKLPardisoKKTSolver, iparm = iparms, num_threads = num_threads, msg_level_on = false))
 model = COSMO.Model()
 assemble!(model, P, q, c1, settings = settings)
 model.ρvec = settings.rho * ones(size(model.p.A, 1))
 COSMO._make_kkt_solver!(model)
 
-  @test typeof(model.kkt_solver) <: COSMO.MKLPardisoKKTSolver
+  @test typeof(model.kkt_solver) <: MKLPardisoKKTSolver
   # @test Pardiso.get_nprocs(model.kkt_solver.ps) == num_threads
   @test Pardiso.get_iparm(model.kkt_solver.ps, 13) == iparms[13]
 
@@ -42,5 +42,3 @@ COSMO._make_kkt_solver!(model)
 
 
 end
-
-

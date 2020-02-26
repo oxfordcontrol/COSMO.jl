@@ -32,14 +32,14 @@ add_kwargs(params)
                 # COSMO.CholmodKKTSolver]
 
 # optional dependencies
-if in("Pardiso",keys(Pkg.installed()))
+@require Pardiso="46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2" begin
     using Pardiso
-    if Pardiso.MKL_PARDISO_LOADED[] 
+    if Pardiso.MKL_PARDISO_LOADED[]
         push!(solver_types, COSMO.MKLPardisoKKTSolver)
         push!(solver_tols, 1e-10)
             add_kwargs(params)
-        end
-    if Pardiso.PARDISO_LOADED[] 
+    end
+    if Pardiso.PARDISO_LOADED[]
         push!(solver_types, COSMO.PardisoDirectKKTSolver)
         push!(solver_tols, 1e-10)
         add_kwargs(params)
@@ -51,19 +51,21 @@ if in("Pardiso",keys(Pkg.installed()))
     end
 end
 
-if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed())) 
-    using IterativeSolvers
-    push!(solver_types, COSMO.IndirectReducedKKTSolver)
-    push!(solver_tols, 1e-3)
-    add_kwargs(params, solver_type=:CG)
+@require IterativeSolvers="42fd0dbc-a981-5370-80f2-aaf504508153" begin
+    @require LinearMap="7a12625a-238d-50fd-b39a-03d52299707e" begin
+        using IterativeSolvers
+        push!(solver_types, COSMO.IndirectReducedKKTSolver)
+        push!(solver_tols, 1e-3)
+        add_kwargs(params, solver_type=:CG)
 
-    push!(solver_types, COSMO.IndirectReducedKKTSolver)
-    push!(solver_tols, 1e-3)
-    add_kwargs(params, solver_type=:MINRES)
+        push!(solver_types, COSMO.IndirectReducedKKTSolver)
+        push!(solver_tols, 1e-3)
+        add_kwargs(params, solver_type=:MINRES)
 
-    push!(solver_types, COSMO.IndirectKKTSolver)
-    push!(solver_tols, 1e-3)
-    add_kwargs(params, solver_type=:MINRES)
+        push!(solver_types, COSMO.IndirectKKTSolver)
+        push!(solver_tols, 1e-3)
+        add_kwargs(params, solver_type=:MINRES)
+    end
 end
 
 
@@ -81,12 +83,14 @@ end
         b = randn(m + n)
 
         F = solver_types[i](P, A, sigma, rho1; params[i]...)
-        if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
-            if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
-                # Technically, we should have been able to set the tolerance even lower
-                # But, currently, issues in IterativeSolvers.jl do not allow this
-                # See: https://github.com/JuliaMath/IterativeSolvers.jl/pull/244
-                F.iteration_counter = 10^4 # This forces CG's/MINRES tolerance to be 1/10^4
+        @require IterativeSolvers="42fd0dbc-a981-5370-80f2-aaf504508153" begin
+            @require LinearMaps="7a12625a-238d-50fd-b39a-03d52299707e" begin
+                if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
+                    # Technically, we should have been able to set the tolerance even lower
+                    # But, currently, issues in IterativeSolvers.jl do not allow this
+                    # See: https://github.com/JuliaMath/IterativeSolvers.jl/pull/244
+                    F.iteration_counter = 10^4 # This forces CG's/MINRES tolerance to be 1/10^4
+                end
             end
         end
         J = make_test_kkt(P, A, sigma, rho1)
@@ -99,15 +103,17 @@ end
         # Check that warm starting works
         # Invoking again an indirect solver should result in the solution with only
         # one matrix vector multiplication
-        if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
-            if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
-                # The calculation of the residual, and thus the termination criterion, of
-                # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
-                # For this reason we don't check warm starting with MINRES for now :(
-                if F.solver_type != :MINRES
-                    COSMO.solve!(F, x, b)
-                    @test F.multiplications[end] <= 1 
-                    @test norm(x - J \ b) <= solver_tols[i]
+        @require IterativeSolvers="42fd0dbc-a981-5370-80f2-aaf504508153" begin
+            @require LinearMaps="7a12625a-238d-50fd-b39a-03d52299707e" begin
+                if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
+                    # The calculation of the residual, and thus the termination criterion, of
+                    # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
+                    # For this reason we don't check warm starting with MINRES for now :(
+                    if F.solver_type != :MINRES
+                        COSMO.solve!(F, x, b)
+                        @test F.multiplications[end] <= 1
+                        @test norm(x - J \ b) <= solver_tols[i]
+                    end
                 end
             end
         end
