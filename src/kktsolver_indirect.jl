@@ -1,6 +1,6 @@
 using LinearMaps, IterativeSolvers
 
-mutable struct IndirectReducedKKTSolver{TP, TA, T} <: COSMO.AbstractKKTSolver
+mutable struct IndirectReducedKKTSolver{TP, TA, T} <: AbstractKKTSolver
     m::Integer
     n::Integer
     P::TP
@@ -38,7 +38,7 @@ function solve!(S::IndirectReducedKKTSolver, y::AbstractVector{T}, x::AbstractVe
     # | P + σI     A'  |  |y1|  =  |x1|
     # | A        -I/ρ  |  |y2|  =  |x2|
     # x1,y1: R^n, x2/y2: R^m
-    # where [y1; y2] := y, [x1; x2] := x 
+    # where [y1; y2] := y, [x1; x2] := x
 
     # In particular we perform cg/minres on the reduced system
     # (P + σΙ + Α'ρΑ)y1 = x1 + A'ρx2
@@ -87,7 +87,7 @@ function solve!(S::IndirectReducedKKTSolver, y::AbstractVector{T}, x::AbstractVe
     return y
 end
 
-mutable struct IndirectKKTSolver{TP, TA, T} <: COSMO.AbstractKKTSolver
+mutable struct IndirectKKTSolver{TP, TA, T} <: AbstractKKTSolver
     m::Integer
     n::Integer
     P::TP
@@ -125,7 +125,7 @@ function solve!(S::IndirectKKTSolver, y::AbstractVector{T}, x::AbstractVector{T}
     # | P + σI     A'  |  |y1|  =  |x1|
     # | A        -I/ρ  |  |y2|  =  |x2|
     # x1,y1: R^n, x2/y2: R^m
-    # where [y1; y2] := y, [x1; x2] := x 
+    # where [y1; y2] := y, [x1; x2] := x
     push!(S.multiplications, 0)
     function kkt_mul!(y::AbstractVector{T}, x::AbstractVector{T}) where {T}
         # Performs
@@ -148,8 +148,8 @@ function solve!(S::IndirectKKTSolver, y::AbstractVector{T}, x::AbstractVector{T}
     end
     L = LinearMap(kkt_mul!, S.n + S.m; ismutating=true, issymmetric=true)
     if S.solver_type == :MINRES
-        init_residual = norm(L*S.previous_solution - y)
-        minres!(S.previous_solution, L, y, tol=get_tolerance(S)/init_residual)
+        init_residual = norm(L*S.previous_solution - x)
+        minres!(S.previous_solution, L, x, tol=get_tolerance(S)/init_residual)
     end
     # Sanity check for tolerance
     # might not always hold for MINRES, as its termination criterion is approximate, (see its documentation)
@@ -170,4 +170,4 @@ function get_tolerance(S::Union{IndirectReducedKKTSolver, IndirectKKTSolver})
 end
 
 CGIndirectKKTSolver(args...; kwargs...) = IndirectReducedKKTSolver(args...; solver_type = :CG, kwargs...)
-MINRESIndirectKKTSolver(args...; kwargs...) = IndirecKKTSolver(args...; solver_type = :MINRES, kwargs...)
+MINRESIndirectKKTSolver(args...; kwargs...) = IndirectKKTSolver(args...; solver_type = :MINRES, kwargs...)
