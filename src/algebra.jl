@@ -1,4 +1,6 @@
 using  LinearAlgebra
+import LinearAlgebra.lmul!
+import LinearAlgebra.rmul!
 const  IdentityMatrix = UniformScaling{Bool}
 
 
@@ -111,11 +113,11 @@ end
 
 lmul!(L::IdentityMatrix, M::AbstractMatrix) = L.λ ? M : M .= zero(eltype(M))
 
-function lmul!(L::Diagonal, x::AbstractVector)
-	(length(L.diag) == length(x)) || throw(DimensionMismatch())
-	@. x = x * L.diag
-	return nothing
-end
+function lmul!(L::Diagonal, x::AbstractVector)	
+	(length(L.diag) == length(x)) || throw(DimensionMismatch())	
+	@. x = x * L.diag	
+	return nothing	
+end	
 
 lmul!(L::IdentityMatrix, x::AbstractVector) = L.λ ? x : x .= zero(eltype(x))
 
@@ -218,3 +220,47 @@ end
 
 is_pos_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(copy(X), tol)
 is_neg_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(-X, tol)
+
+function populate_upper_triangle!(A::AbstractMatrix{T}, x::AbstractVector{T}, scaling_factor::T=T(1/sqrt(2))) where T
+	k = 0
+	 for j in 1:size(A, 2)
+		for i in 1:j
+		   k += 1
+		   if i != j
+			   A[i, j] = scaling_factor * x[k]
+		   else
+			   A[i, j] = x[k]
+		   end
+		 end
+	 end
+	 nothing
+end
+
+function extract_upper_triangle!(A::AbstractMatrix{T}, x::AbstractVector{T}, scaling_factor::T=T(sqrt(2))) where T
+   k = 0
+	 for j in 1:size(A, 2)
+		for i in 1:j
+		   k += 1
+		   if i != j
+			   x[k] = scaling_factor * A[i, j]
+		   else
+			   x[k] = A[i, j]
+		   end
+		 end
+	 end
+   nothing
+end
+
+function populate_upper_triangle(x::AbstractVector{T}, scaling_factor::T=T(1/sqrt(2))) where T
+	n = Int(1/2*(sqrt(8*length(x) + 1) - 1)) # Solution of (n^2 + n)/2 = length(x) obtained by WolframAlpha
+	A = zeros(n, n)
+	populate_upper_triangle!(A, x, scaling_factor)
+	return Symmetric(A)
+end
+
+function extract_upper_triangle(A::AbstractMatrix{T}, scaling_factor::T=T(sqrt(2))) where T
+	n = size(A, 2)
+	x = zeros(Int(n*(n + 1)/2))
+	extract_upper_triangle!(A, x, scaling_factor)
+	return x
+end

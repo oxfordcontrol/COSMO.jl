@@ -359,7 +359,7 @@ function processconstraints!(optimizer::Optimizer, src::MOI.ModelLike, idxmap, r
     set_constant = zeros(Float64, m)
     # loop over constraints and modify A, l, u and constants
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
-        processconstraints!((I, J, V), b, COSMOconvexSets, constant, set_constant, src, idxmap, rowranges, F, S)
+        processconstraints!(optimizer, (I, J, V), b, COSMOconvexSets, constant, set_constant, src, idxmap, rowranges, F, S)
     end
     optimizer.set_constant = set_constant
     # subtract constant from right hand side
@@ -379,7 +379,7 @@ function processconstraints!(optimizer::Optimizer, src::MOI.ModelLike, idxmap, r
     return nothing
 end
 
-function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSets::Array{COSMO.AbstractConvexSet{Float64}}, constant::Vector{Float64}, set_constant::Vector{Float64},
+function processconstraints!(optimizer, triplets::SparseTriplets, b::Vector, COSMOconvexSets::Array{COSMO.AbstractConvexSet{Float64}}, constant::Vector{Float64}, set_constant::Vector{Float64},
         src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}},
         F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})
     cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
@@ -394,7 +394,7 @@ function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSet
             set_constant[rows] =  MOI.constant(s)
         end
         processConstraint!(triplets, f, rows, idxmap, s)
-        processSet!(b, rows, COSMOconvexSets, s)
+        processSet!(b, rows, COSMOconvexSets, s, optimizer.inner.settings)
     end
     nothing
 end
@@ -425,7 +425,7 @@ end
 
 
 # process function like f(x) = coeff*x_1
-function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     for term in f.terms
         push!(I, row)
@@ -434,7 +434,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunctio
     end
 end
 
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap, s::MOI.AbstractSet)
     (I, J, V) = triplets
     cols = zeros(length(rows))
     for (i, var) in enumerate(f.variables)
@@ -470,75 +470,75 @@ end
 ##############################
 
 # process the following sets Union{LessThan, GreaterThan, EqualTo}
-function processSet!(b::Vector, row::Int, cs, s::LessThan)
+function processSet!(b::Vector, row::Int, cs, s::LessThan, settings::Settings)
     b[row] += s.upper
     push!(cs, COSMO.Nonnegatives{Float64}(1))
     nothing
 end
-function processSet!(b::Vector, row::Int, cs, s::GreaterThan)
+function processSet!(b::Vector, row::Int, cs, s::GreaterThan, settings::Settings)
     b[row] -= s.lower
     push!(cs, COSMO.Nonnegatives{Float64}(1))
     nothing
 end
-function processSet!(b::Vector, row::Int, cs, s::EqualTo)
+function processSet!(b::Vector, row::Int, cs, s::EqualTo, settings::Settings)
     b[row] += s.value
     push!(cs, COSMO.ZeroSet{Float64}(1))
     nothing
 end
 
-function processSet!(b::Vector, row::Int, cs, s::MOI.Interval)
+function processSet!(b::Vector, row::Int, cs, s::MOI.Interval, settings::Settings)
     push!(cs, COSMO.Box{Float64}([s.lower], [s.upper]))
     nothing
 end
 
 # process the following sets Zeros
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::Zeros)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::Zeros, settings::Settings)
     push!(cs, COSMO.ZeroSet{Float64}(length(rows)))
     nothing
 end
 
 # process the following sets Union{Zeros, Nonnegatives, Nonpositives}
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonnegatives)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonnegatives, settings::Settings)
     push!(cs, COSMO.Nonnegatives{Float64}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonpositives)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonpositives, settings::Settings)
     push!(cs, COSMO.Nonnegatives{Float64}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::SOC)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::SOC, settings::Settings)
     push!(cs, COSMO.SecondOrderCone{Float64}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeSquare)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeSquare, settings::Settings)
     push!(cs, COSMO.PsdCone{Float64}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle)
-    push!(cs, COSMO.PsdConeTriangle{Float64}(length(rows)))
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle, settings::Settings)
+    push!(cs, settings.psd_projector(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.ExponentialCone)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.ExponentialCone, settings::Settings)
     push!(cs, COSMO.ExponentialCone{Float64}())
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualExponentialCone)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualExponentialCone, settings::Settings)
     push!(cs, COSMO.DualExponentialCone{Float64}())
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PowerCone)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PowerCone, settings::Settings)
     push!(cs, COSMO.PowerCone{Float64}(s.exponent))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualPowerCone)
+function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualPowerCone, settings::Settings)
     push!(cs, COSMO.DualPowerCone{Float64}(s.exponent))
     nothing
 end

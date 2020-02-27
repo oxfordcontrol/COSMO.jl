@@ -317,11 +317,11 @@ mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     clique_ind::Int64
 
     function PsdConeTriangle{T}(dim::Int, tree_ind::Int64, clique_ind::Int64) where{T}
-        dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
-        side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-        new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension), tree_ind, clique_ind)
+      dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
+      side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
+      new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension), tree_ind, clique_ind)
 
-    end
+  end
 end
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
 PsdConeTriangle{T}(dim::Int64) where{T} = PsdConeTriangle{T}(dim, 0, 0)
@@ -357,54 +357,28 @@ function project!(x::AbstractArray, cone::Union{PsdConeTriangle{T}, DensePsdCone
 end
 
 # Notice that we are using a (faster) in-place version that modifies the input
-function in_dual!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
+function in_dual!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLOBPCG{T}}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     return COSMO.is_pos_def!(cone.X, tol)
 end
-in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where {T} = in_dual!(x, cone, tol)
+in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLOBPCG{T}}, tol::T) where {T} = in_dual!(x, cone, tol)
 
-function in_pol_recc!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
+function in_pol_recc!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLOBPCG{T}}, tol::T) where{T}
     n = cone.sqrt_dim
     populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
     Xs = Symmetric(cone.X)
     return COSMO.is_neg_def!(cone.X, tol)
 end
-in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where {T} = in_pol_recc!(x, cone, tol)
+in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}, PsdConeTriangleLOBPCG{T}}, tol::T) where {T} = in_pol_recc!(x, cone, tol)
 
 
 function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
   cone.X = zeros(cone.sqrt_dim, cone.sqrt_dim)
 end
 
-function populate_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
- 	k = 0
-  	for j in 1:size(A, 2)
-     	for i in 1:j
-        	k += 1
-        	if i != j
-        		A[i, j] = scaling_factor * x[k]
-        	else
-        		A[i, j] = x[k]
-        	end
-      	end
-  	end
-  	nothing
-end
-
-function extract_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
-	k = 0
-  	for j in 1:size(A, 2)
-     	for i in 1:j
-        	k += 1
-        	if i != j
-        		x[k] = scaling_factor * A[i, j]
-        	else
-        		x[k] = A[i, j]
-        	end
-      	end
-  	end
-	nothing
+function reset_iteration_counters!(cone::AbstractConvexSet)
+  nothing
 end
 
 """
@@ -848,7 +822,7 @@ function scale!(cone::AbstractConvexCone{T}, ::AbstractVector{T}) where{T}
   return nothing
 end
 
-function rectify_scaling!(E, work, set::Union{SecondOrderCone{T}, PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, DensePsdConeTriangle{T}, PowerCone{T}, DualPowerCone{T}, ExponentialCone{T}, DualExponentialCone{T}}) where{T}
+function rectify_scaling!(E, work, set::Union{SecondOrderCone{T}, PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, PsdConeTriangleLOBPCG{T}, DensePsdConeTriangle{T}, PowerCone{T}, DualPowerCone{T}, ExponentialCone{T}, DualExponentialCone{T}}) where{T}
   return rectify_scalar_scaling!(E, work)
 end
 rectify_scaling!(E, work, set::Union{ZeroSet{<:Real}, Nonnegatives{<:Real}, Box{<:Real}}) = false
