@@ -33,7 +33,7 @@ eps\\_dual\\_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
 verbose_timing | Verbose timing | false
-kkt_solver | Linear System solver | `QDLDLKKTSolver`
+kkt_solver | Linear System solver | `CholmodKKTSolver`
 check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
@@ -85,7 +85,7 @@ mutable struct Settings
 		eps_dual_inf=1e-4,
 		max_iter=2500,
 		verbose=false,
-		kkt_solver=QdldlKKTSolver,
+		kkt_solver=CholmodKKTSolver,
 		check_termination=40,
 		check_infeasibility=40,
 		scaling=10,

@@ -8,8 +8,8 @@ COSMO allows you to specify the linear system solver that performs the factorisa
 
 Type | Solver | Description
 --- | --- | ---
-QDLDLKKTSolver | QDLDL | For more information [QDLDL.jl](https://github.com/oxfordcontrol/QDLDL.jl)
-CholmodKKTSolver | Cholmod | Julia's default linear system solver (by SuiteSparse)
+CholmodKKTSolver | Cholmod | Julia's default linear system solver (from SuiteSparse)
+QdldlKKTSolver | QDLDL | For more information [QDLDL.jl](https://github.com/oxfordcontrol/QDLDL.jl)
 PardisoDirectKKTSolver | Pardiso (direct) | Pardiso 6.0 direct solver
 PardisoIndirectKKTSolver | Pardiso (indirect) | Pardiso 6.0 indirect solver
 MKLPardisoKKTSolver | Intel MKL Pardiso | Pardiso optimised for Intel platforms
@@ -19,7 +19,7 @@ MINRESIndirectKKTSolver | IterativeSolvers.jl | MINRES on the (full) KKT linear 
 !!! note
     To use the Pardiso and Intel MKL Pardiso solver, you have to install the respective libraries and the corresponding Julia wrapper. For more information about installing these, visit the [Pardiso.jl](https://github.com/JuliaSparse/Pardiso.jl) repository page. Likewise in order to use Indirect(Reduced)KKTSolver you have to install [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl) and [LinearMaps.jl](https://github.com/Jutho/LinearMaps.jl).
 
-COSMO uses the QDLDL linear system solver by default. You can specify a different solver in the settings by using the `kkt_solver` keyword and the respective type:
+COSMO uses the `Cholmod` linear system solver by default. You can specify a different solver in the settings by using the `kkt_solver` keyword and the respective type:
 
 ```julia
 settings = COSMO.Settings(kkt_solver = CholmodKKTSolver)
