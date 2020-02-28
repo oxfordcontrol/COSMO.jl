@@ -169,5 +169,21 @@ function get_tolerance(S::Union{IndirectReducedKKTSolver, IndirectKKTSolver})
     return S.tol_constant/S.iteration_counter^S.tol_exponent
 end
 
-CGIndirectKKTSolver(args...; kwargs...) = IndirectReducedKKTSolver(args...; solver_type = :CG, kwargs...)
-MINRESIndirectKKTSolver(args...; kwargs...) = IndirectKKTSolver(args...; solver_type = :MINRES, kwargs...)
+# For convenience we define CG and Minres wrappers around IndirectKKTSolver and IndirectReducedKKTSolver
+struct CGIndirectKKTSolver{TP, TA, T} <: AbstractKKTSolver
+    indirect_kktsolver::IndirectReducedKKTSolver{TP, TA, T}
+    function CGIndirectKKTSolver(P::TP, A::TA, σ::T, ρ; tol_constant::T=T(1.0), tol_exponent::T=T(1.5)) where {TP, TA, T}
+        new{TP, TA, T}(IndirectReducedKKTSolver(P, A, σ, ρ; solver_type = :CG, tol_constant = tol_constant, tol_exponent = tol_exponent))
+    end
+end
+
+struct MINRESIndirectKKTSolver{TP, TA, T} <: AbstractKKTSolver
+    indirect_kktsolver::IndirectKKTSolver{TP, TA, T}
+    function MINRESIndirectKKTSolver(P::TP, A::TA, σ::T, ρ; tol_constant::T=T(1.0), tol_exponent::T=T(1.5)) where {TP, TA, T}
+        new{TP, TA, T}(IndirectKKTSolver(P, A, σ, ρ; solver_type = :MINRES, tol_constant = tol_constant, tol_exponent = tol_exponent))
+    end
+end
+
+update_rho!(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, ρ) = update_rho!(S.indirect_kkt_solver, ρ)
+get_tolerance(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, ρ) = get_tolerance(S.indirect_kkt_solver, ρ)
+solve!(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, y::AbstractVector{T}, x::AbstractVector{T}) where {T} = solve!(S.indirect_kktsolver, y, x)
