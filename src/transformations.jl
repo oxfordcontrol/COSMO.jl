@@ -238,7 +238,7 @@ function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{C
   offset = row_ptr - row_range.start
 
   row_range_col = COSMO.get_rows(b0, row_range)
-  if row_range_col != nothing
+  if row_range_col != 0:0
     for k in row_range_col
       b_I[k] = b0.nzind[k] + offset
     end
@@ -252,8 +252,10 @@ function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{C
     ptr = copy(row_ptr)
     # indices which store the rows in column for C in A0
     row_range_col = COSMO.get_rows(A0, col, row_range)
-    for k in row_range_col
-      A_I[k] = A0.rowval[k] + offset
+    if row_range_col != 0:0
+      for k in row_range_col
+        A_I[k] = A0.rowval[k] + offset
+      end
     end
   end
 
@@ -354,7 +356,7 @@ end
 
 "Given the svec index `k` and an offset `row_range_col.start`, return the location of the (i, j)th entry in the row vector `rowval`."
 function get_row_index(k::Int64, rowval::Array{Int64, 1}, sqrt_dim::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64})
-
+  row_range_col == 0:0 && return 0
   k_shift = row_range.start + k - 1
 
   # determine upper set boundary of where the row could be
@@ -449,15 +451,20 @@ end
 function get_rows(b::SparseVector, row_range::UnitRange{Int64})
   rows = b.nzind
   if length(rows) > 0
+
     s = searchsortedfirst(rows, row_range.start)
+    if s == length(rows) + 1
+      return 0:0
+    end
+
     if rows[s] > row_range.stop || s == 0
-        return nothing, 0:0
+        return 0:0
     else
       e = searchsortedlast(rows, row_range.stop)
       return s:e
     end
   else
-    return nothing
+    return 0:0
   end
 
 end
@@ -472,6 +479,11 @@ function get_rows(A::SparseMatrixCSC, col::Int64, row_range::UnitRange{Int64})
     # find the rows within row_start:row_start+C.dim-1
     # s: index of first entry in rows >= row_start
     s = searchsortedfirst(rows, row_range.start)
+
+    # if no entry in that row_range
+    if s == length(rows) + 1
+      return 0:0
+    end
     if rows[s] > row_range.stop || s == 0
       return 0:0
     else

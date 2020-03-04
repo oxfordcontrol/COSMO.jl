@@ -150,10 +150,10 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     dest.sense == MOI.FEASIBILITY_SENSE && COSMO.allocate_cost_variables!(dest)
     return idxmap
 end
-using FileIO
+#using FileIO
 function MOI.optimize!(optimizer::Optimizer)
     #FileIO.save("problem_sdp_sigma.jld2", "A", optimizer.inner.p.A, "b", optimizer.inner.p.b,  "q", optimizer.inner.p.q,  "P", optimizer.inner.p.P)
-    @show(optimizer.inner.p.C)
+    #@show(optimizer.inner.p.C)
     optimizer.results = COSMO.optimize!(optimizer.inner)
     optimizer.hasresults = true
     nothing
