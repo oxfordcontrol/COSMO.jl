@@ -208,8 +208,8 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
         idxmap = MOI.copy_to(optimizer, model);
         MOI.optimize!(optimizer);
         @test MOI.get(optimizer, MOI.TerminationStatus()) == MOI.ITERATION_LIMIT
-        @test MOI.get(optimizer, MOI.PrimalStatus()) == MOI.NO_SOLUTION
-        @test MOI.get(optimizer, MOI.DualStatus()) == MOI.NO_SOLUTION
+        @test MOI.get(optimizer, MOI.PrimalStatus()) == MOI.NEARLY_FEASIBLE_POINT
+        @test MOI.get(optimizer, MOI.DualStatus()) == MOI.NEARLY_FEASIBLE_POINT
 
     end
     @testset "Set merging" begin

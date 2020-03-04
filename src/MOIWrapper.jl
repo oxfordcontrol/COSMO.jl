@@ -150,10 +150,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     dest.sense == MOI.FEASIBILITY_SENSE && COSMO.allocate_cost_variables!(dest)
     return idxmap
 end
-#using FileIO
 function MOI.optimize!(optimizer::Optimizer)
-    #FileIO.save("problem_sdp_sigma.jld2", "A", optimizer.inner.p.A, "b", optimizer.inner.p.b,  "q", optimizer.inner.p.q,  "P", optimizer.inner.p.P)
-    #@show(optimizer.inner.p.C)
     optimizer.results = COSMO.optimize!(optimizer.inner)
     optimizer.hasresults = true
     nothing
@@ -697,6 +694,8 @@ function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
         return MOI.INFEASIBLE_POINT
     elseif status == :Solved
         return MOI.FEASIBLE_POINT
+    elseif status == :Max_iter_reached
+        return MOI.NEARLY_FEASIBLE_POINT
     elseif status == :Dual_infeasible
         return MOI.INFEASIBILITY_CERTIFICATE
     else
@@ -717,6 +716,8 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
         return MOI.INFEASIBILITY_CERTIFICATE
     elseif status == :Solved
         return MOI.FEASIBLE_POINT
+    elseif status == :Max_iter_reached
+        return MOI.NEARLY_FEASIBLE_POINT
     else
         return MOI.NO_SOLUTION
     end
