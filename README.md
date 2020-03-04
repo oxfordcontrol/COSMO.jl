@@ -39,7 +39,7 @@ __For more information take a look at the COSMO.jl Documentation ([stable](https
 * __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs, semidefinite programs and problems involving exponential and power cones
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
-* __JuMP support__: COSMO supports MathOptInterface and JuMP, which allows you to describe your problem in JuMP
+* __JuMP / Convex.jl support__: We provide an interface to MathOptInterface (MOI), which allows you to describe your problem in [JuMP](https://github.com/JuliaOpt/JuMP.jl) and [Convex.jl](https://github.com/JuliaOpt/Convex.jl).
 * __Warm starting__: COSMO supports warm starting of the decision variables
 * __Custom sets and linear solver__: Customize COSMO's components by defining your own convex constraint sets and by choosing from a number of direct and indirect linear system solvers, e.g. [QDLDL](https://github.com/oxfordcontrol/qdldl), [Pardiso](https://github.com/JuliaSparse/Pardiso.jl), [Conjugate Gradient](https://juliamath.github.io/IterativeSolvers.jl/dev/) and [MINRES](https://juliamath.github.io/IterativeSolvers.jl/dev/)
 
