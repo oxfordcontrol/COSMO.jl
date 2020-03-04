@@ -7,7 +7,7 @@ MOIU.@model(COSMOModelData,
         (),
         (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
         (MOI.Zeros, MOI.Nonnegatives, MOI.Nonpositives, MOI.SecondOrderCone,
-         MOI.PositiveSemidefiniteConeSquare, MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone, MOI.DualExponentialCone),
+         MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone, MOI.DualExponentialCone),
         (MOI.PowerCone, MOI.DualPowerCone),
         (),
         (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
@@ -36,8 +36,13 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
     # min c'*x
     # vec(A1)' * x == b1
     # vec(A2)' * x == b2
-    # mat(x) is posdef
+    # mat(x) is posdeftriangle
     # with:
+    A1_t = [1.0; 0; 3; 2; 14; 5];
+    A2_t = [0.0; 4; 6; 16; 0; 4];
+    C_t = [1.; 4; 9; 6; 0; 7];
+
+
     A1 = [1.0 0 1; 0 3 7; 1 7 5];
     A2 = [0.0 2 8; 2 6 0; 8 0 4];
     C = [1.0 2 3; 2 9 0; 3 0 7];
@@ -45,33 +50,44 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
     b2 = 19.0;
 
     model = MOIU.UniversalFallback(COSMOModelData{Float64}());
+    x = MOI.add_variables(model, 6);
+    objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(C_t, x[1:6]), 0.0);
+    MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), objectiveFunction);
+    MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE);
+    con1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A1_t, x[1:6]), 0.0), MOI.EqualTo(b1));
+    con2 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A2_t, x[1:6]), 0.0), MOI.EqualTo(b2));
+    con3 = MOI.add_constraint(model, MOI.VectorOfVariables([x[1], x[2], x[3], x[4], x[5], x[6]]), MOI.PositiveSemidefiniteConeTriangle(3));
+    MOI.empty!(optimizer);
+
+
+
+    model = MOIU.UniversalFallback(COSMOModelData{Float64}());
     optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
-    x = MOI.add_variables(model, 9);
+    x = MOI.add_variables(model, 6);
     # define objective function:
-    objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(vec(C),x[1:9]),0.0);
+    objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(vec(C_t),x[1:6]),0.0);
     MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(),objectiveFunction);
     MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE);
 
     # eq constraints
-    con1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(vec(A1),x[1:9]),0.0), MOI.EqualTo(b1));
-    con2 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(vec(A2),x[1:9]),0.0), MOI.EqualTo(b2));
+    con1 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A1_t,x[1:6]),0.0), MOI.EqualTo(b1));
+    con2 = MOI.add_constraint(model, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(A2_t,x[1:6]),0.0), MOI.EqualTo(b2));
 
     # SDP constraint
-    con3 = MOI.add_constraint(model, MOI.VectorOfVariables(x[1:9]), MOI.PositiveSemidefiniteConeSquare(3));
+    con3 = MOI.add_constraint(model, MOI.VectorOfVariables([x[1], x[2], x[3], x[4], x[5], x[6]]), MOI.PositiveSemidefiniteConeTriangle(3));
 
     # copy model into optimizer
     MOI.empty!(optimizer);
     @test sprint(show, optimizer) != nothing
 
     idxmap = MOI.copy_to(optimizer, model);
-    @test MOI.get(optimizer, MOI.ListOfVariableIndices()) == MOI.VariableIndex.(1:9)
+    @test MOI.get(optimizer, MOI.ListOfVariableIndices()) == MOI.VariableIndex.(1:6)
     MOI.optimize!(optimizer);
     @test sprint(show, optimizer) != nothing
 
     t_cold = MOI.get(optimizer, MOI.SolveTime())
     iter_cold = optimizer.results.iter
     x_sol = MOI.get(optimizer, MOI.VariablePrimal(), getindex.(Ref(idxmap), x))
-    X_sol = reshape(x_sol, 3, 3)
     y_c1 = MOI.get(optimizer, MOI.ConstraintDual(), idxmap[con1])
     y_c2 = MOI.get(optimizer, MOI.ConstraintDual(), idxmap[con2])
     y_c3 = MOI.get(optimizer, MOI.ConstraintDual(), idxmap[con3])
@@ -85,13 +101,9 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
         @test MOI.get(optimizer, MOI.SolveTime()) > 0.;
         @test typeof(MOI.get(optimizer, MOI.RawSolver())) <: COSMO.Workspace
         @test MOI.get(optimizer, MOI.ResultCount()) == 1
-        @test MOI.get(optimizer, MOI.NumberOfVariables()) == 9
+        @test MOI.get(optimizer, MOI.NumberOfVariables()) == 6
         @test isapprox(s_c1, b1, atol = 1e-3)
         @test isapprox(s_c2, b2, atol = 1e-3)
-        # check if S_C3 = X is pos semidefinite
-        @test minimum(eigen(reshape(s_c3, 3, 3)).values) >  -1e-6
-        # check if Y_C3 is pos semidefinite (since y is in dual cone K*)
-        @test minimum(eigen(reshape(y_c3, 3, 3)).values) >  -1e-6
     end
 
     # Solve once again to get cold iter and time
@@ -101,28 +113,8 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
     iter_cold = optimizer.results.iter
 
     @testset "Warm starting" begin
-        # Warm start x,y, s at the same time
-        optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
 
-        MOI.empty!(optimizer);
-        MOI.set.(model, MOI.VariablePrimalStart(), x[1:9], x_sol[1:9])
-        MOI.set.(model, MOI.ConstraintPrimalStart(), [con1, con2, con3], [s_c1, s_c2, s_c3])
-        MOI.set.(model, MOI.ConstraintDualStart(), [con1, con2, con3], [y_c1, y_c2, y_c3])
-        copyresult = MOI.copy_to(optimizer, model);
-
-        # check that variables are correctly set after the warm starting
-        @test x_sol == optimizer.inner.vars.x
-        @test y_c1 == optimizer.inner.vars.μ[1]
-        @test y_c2 == optimizer.inner.vars.μ[2]
-        @test y_c3 == -optimizer.inner.vars.μ[3:end]
-        @test 0. == optimizer.inner.vars.s.data[1]
-        @test 0. == optimizer.inner.vars.s.data[2]
-        @test s_c3 == optimizer.inner.vars.s.data[3:end]
-
-        MOI.optimize!(optimizer);
-        iter_warm_all = optimizer.results.iter
-        @test iter_warm_all < iter_cold
-        # solve the same problem but with a psd triangle constraint (upper triangle)
+        # solve the same problem again
         A1_t = [1.0; 0; 3; 2; 14; 5];
         A2_t = [0.0; 4; 6; 16; 0; 4];
         C_t = [1.; 4; 9; 6; 0; 7];
@@ -141,14 +133,10 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
         idxmap = MOI.copy_to(optimizer, model);
         MOI.optimize!(optimizer);
 
-        # double check solution with problem with PSDSquare constraint
         x_sol_tri = MOI.get(optimizer, MOI.VariablePrimal(), getindex.(Ref(idxmap), x))
         X_sol_tri = zeros(3, 3)
         internal_scaled_s = copy(optimizer.inner.vars.s.data)
         internal_scaled_μ = copy(optimizer.inner.vars.μ)
-        COSMO.populate_upper_triangle!(X_sol_tri, x_sol_tri, 1.)
-        @test maximum(abs.(X_sol - Symmetric(X_sol_tri))) < 1e-2
-
         y_c3 = MOI.get(optimizer, MOI.ConstraintDual(), idxmap[con3])
         s_c3 = MOI.get(optimizer, MOI.ConstraintPrimal(), idxmap[con3])
 

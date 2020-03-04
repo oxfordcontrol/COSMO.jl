@@ -28,10 +28,10 @@ const Zeros = MOI.Zeros
 #Nonnegatives = MOI.Nonnegatives
 const Nonpositives = MOI.Nonpositives
 const SOC = MOI.SecondOrderCone
-const PSDS = MOI.PositiveSemidefiniteConeSquare
+#const PSDS = MOI.PositiveSemidefiniteConeSquare
 const PSDT = MOI.PositiveSemidefiniteConeTriangle
 const PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
-const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDS, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
+const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
 
 #export sortSets, assign_constraint_row_ranges!, processconstraints, constraint_rows, processobjective, processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 export Optimizer
@@ -150,8 +150,10 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     dest.sense == MOI.FEASIBILITY_SENSE && COSMO.allocate_cost_variables!(dest)
     return idxmap
 end
-
+using FileIO
 function MOI.optimize!(optimizer::Optimizer)
+    #FileIO.save("problem_sdp_sigma.jld2", "A", optimizer.inner.p.A, "b", optimizer.inner.p.b,  "q", optimizer.inner.p.q,  "P", optimizer.inner.p.P)
+    @show(optimizer.inner.p.C)
     optimizer.results = COSMO.optimize!(optimizer.inner)
     optimizer.hasresults = true
     nothing
@@ -513,10 +515,10 @@ function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::SOC)
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeSquare)
-    push!(cs, COSMO.PsdCone{Float64}(length(rows)))
-    nothing
-end
+# function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeSquare)
+#     push!(cs, COSMO.PsdCone{Float64}(length(rows)))
+#     nothing
+# end
 
 function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle)
     push!(cs, COSMO.PsdConeTriangle{Float64}(length(rows)))
