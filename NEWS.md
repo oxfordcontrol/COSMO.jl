@@ -1,3 +1,22 @@
+## Version 0.7.0 (05. March 2020)
+- This release adds support for indirect linear system solver from the `IterativeSolvers.jl` package. We also drop support of PsdConeSquare constraints ins MOI. By default MOI will bridge them to PSDTriangle constraints. We further fixed a number of bugs related to the compact transformation for decomposable SDPs. Another change is that when used with `verbose_timing = true`, COSMO will now measure the initial factorisation time and the time for refactorisations separately.
+The major commits are listed here:
+
+- `439f218` Return NearlyFeasible status code if max_iter reached
+- `fda29e1` Fix problem with empty columns in compact_transform
+- `4324560` Drop support for MOI.PSDConeSquare
+- `f0a99fe` ⏲  Add more detailed timing to solver
+- `92aa32c` Store rho-updates in result variable
+- `eb0be3b` Assemble dual variable like in Grone's Theorem
+- `14e862e` Make Cholmod (SuiteSparse) default KKT solver
+- `e64cfc9` Fix bug with CGIndirectKKTSolver and MINRESIndirectKKTSolver
+- `f514caa` Merge pull request #106 from oxfordcontrol/pg/pardiso_fix
+- `6290cbe` fixes minres
+- `b2a0e49` fix pardiso default options
+- `5ed8a9c` [ci skip] Add info about custom linear solvers
+- `cfa6f76` Merge pull request #92 from oxfordcontrol/cg
+
+
 ## Version 0.6.0 (26. November 2019)
 We add smart clique merging and fix a number of bugs in COSMO and the MOIWrapper.
 
