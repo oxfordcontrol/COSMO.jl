@@ -51,10 +51,10 @@ Attempts to solve the optimization problem defined in `COSMO.Model` object with 
 function optimize!(ws::COSMO.Workspace)
 	solver_time_start = time()
 	settings = ws.settings
-  # perform chordal decomposition
-  if settings.decompose
-  	ws.times.graph_time = @elapsed COSMO.chordal_decomposition!(ws)
-  end
+	# perform chordal decomposition
+	if settings.decompose
+		ws.times.graph_time = @elapsed COSMO.chordal_decomposition!(ws)
+	end
 	# create scaling variables
 	# with scaling    -> uses mutable diagonal scaling matrices
 	# without scaling -> uses identity matrices
@@ -177,7 +177,7 @@ function optimize!(ws::COSMO.Workspace)
 	end
 
 	#reverse chordal decomposition
-	if settings.decompose
+	if ws.ci.decompose
 	 reverse_decomposition!(ws, settings)
 	end
 

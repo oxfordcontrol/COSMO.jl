@@ -184,6 +184,6 @@ struct MINRESIndirectKKTSolver{TP, TA, T} <: AbstractKKTSolver
     end
 end
 
-update_rho!(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, ρ) = update_rho!(S.indirect_kkt_solver, ρ)
+update_rho!(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, ρ) = update_rho!(S.indirect_kktsolver, ρ)
 get_tolerance(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, ρ) = get_tolerance(S.indirect_kkt_solver, ρ)
 solve!(S::Union{CGIndirectKKTSolver, MINRESIndirectKKTSolver}, y::AbstractVector{T}, x::AbstractVector{T}) where {T} = solve!(S.indirect_kktsolver, y, x)

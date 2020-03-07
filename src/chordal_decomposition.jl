@@ -10,10 +10,10 @@ end
 function chordal_decomposition!(ws::COSMO.Workspace)
   # do nothing if no psd cones present in the problem
   if !_contains(ws.p.C, DecomposableCones{Float64})
-    ws.settings.decompose = false
+    ws.ci.decompose = false
     return nothing
   end
-  ws.ci = ChordalInfo{Float64}(ws.p)
+  ws.ci = ChordalInfo{Float64}(ws.p, ws.settings)
 
   find_sparsity_patterns!(ws)
 
@@ -29,9 +29,9 @@ function chordal_decomposition!(ws::COSMO.Workspace)
       augment_system!(ws)
     end
     pre_allocate_variables!(ws)
-
+    ws.ci.decompose = true
   else
-    ws.settings.decompose = false
+    ws.ci.decompose = false
   end
   nothing
 end

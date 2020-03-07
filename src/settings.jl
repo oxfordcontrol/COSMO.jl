@@ -67,8 +67,8 @@ mutable struct Settings
 	RHO_MIN::Float64
 	RHO_MAX::Float64
 	RHO_TOL::Float64
-  decompose::Bool
-  complete_dual::Bool
+  	decompose::Bool
+  	complete_dual::Bool
 	time_limit::Float64
 	obj_true::Float64
 	obj_true_tol::Float64
@@ -99,7 +99,7 @@ mutable struct Settings
 		RHO_MAX = 1e6,
 		RHO_TOL = 1e-4,
 		decompose = true,
-    complete_dual = false,
+    	complete_dual = false,
 		time_limit = 0.0,
 		obj_true = NaN,
 		obj_true_tol = 1e-3,

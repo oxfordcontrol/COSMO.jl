@@ -220,6 +220,7 @@ end
 # Chordal Decomposition Information
 # -------------------------------------
 mutable struct ChordalInfo{T <: Real}
+  decompose::Bool # an internal flag to check if problem has been decomposed
   originalM::Int64
   originalN::Int64
   originalC::CompositeConvexSet{T}
@@ -231,7 +232,7 @@ mutable struct ChordalInfo{T <: Real}
   num_decom_psd_cones::Int64 #total number of psd cones after decomposition
   L::SparseMatrixCSC{T} #pre allocate memory for QDLDL
   cone_map::Dict{Int64, Int64} # map every cone in the decomposed problem to the equivalent or undecomposed cone in the original problem
-  function ChordalInfo{T}(problem::COSMO.ProblemData{T}) where {T}
+  function ChordalInfo{T}(problem::COSMO.ProblemData{T}, settings::COSMO.Settings) where {T}
     originalM = problem.model_size[1]
     originalN = problem.model_size[2]
     originalC = deepcopy(problem.C)
@@ -240,12 +241,12 @@ mutable struct ChordalInfo{T <: Real}
     sp_arr = Array{COSMO.SparsityPattern}(undef, num_psd_cones)
     cone_map = Dict{Int64, Int64}()
 
-    return new(originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], num_psd_cones, 0, 0, spzeros(1, 1), cone_map)
+    return new(settings.decompose, originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], num_psd_cones, 0, 0, spzeros(1, 1), cone_map)
   end
 
 	function ChordalInfo{T}() where{T}
 		C = COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)])
-		return new(0, 0, C, spzeros(1, 1), COSMO.SparsityPattern[], [1])
+		return new(false, 0, 0, C, spzeros(1, 1), COSMO.SparsityPattern[], [1])
 	end
 
 end
