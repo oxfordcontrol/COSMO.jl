@@ -112,10 +112,11 @@ function optimize!(ws::COSMO.Workspace)
 
 		# compute residuals (based on optimality conditions of the problem) to check for termination condition
 		# compute them every {settings.check_termination} step
-		mod(iter, settings.check_termination)  == 0 && ((r_prim, r_dual) = calculate_residuals!(ws))
+
 
 		# check convergence with residuals every {settings.checkIteration} steps
-		if mod(iter, settings.check_termination) == 0
+		if mod(iter, settings.check_termination) == 0 || iter == 1
+			r_prim, r_dual = calculate_residuals!(ws)
 			# update cost
 			cost = ws.sm.cinv[] * (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1]
 
@@ -164,7 +165,7 @@ function optimize!(ws::COSMO.Workspace)
 		end
 
 		# adapt rhoVec if enabled
-		if settings.adaptive_rho && (mod(iter, settings.adaptive_rho_interval) == 0) && (settings.adaptive_rho_interval > 0)
+		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0)
 			adapt_rho_vec!(ws)
 		end
 
