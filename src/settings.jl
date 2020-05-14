@@ -63,6 +63,7 @@ mutable struct Settings
 	adaptive_rho::Bool
 	adaptive_rho_interval::Int64
 	adaptive_rho_tolerance::Float64
+	adaptive_rho_fraction::Float64
 	verbose_timing::Bool
 	RHO_MIN::Float64
 	RHO_MAX::Float64
@@ -94,6 +95,7 @@ mutable struct Settings
 		adaptive_rho = true,
 		adaptive_rho_interval = 40,
 		adaptive_rho_tolerance = 5,
+		adaptive_rho_fraction = 0.4,
 		verbose_timing = false,
 		RHO_MIN = 1e-6,
 		RHO_MAX = 1e6,
@@ -113,6 +115,6 @@ mutable struct Settings
 	if !isa(merge_strategy, OptionsFactory)
 		merge_strategy = with_options(merge_strategy)
 	end
-	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation)
+	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation)
 end
 end

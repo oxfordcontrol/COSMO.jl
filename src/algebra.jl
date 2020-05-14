@@ -218,3 +218,9 @@ end
 
 is_pos_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(copy(X), tol)
 is_neg_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(-X, tol)
+
+
+"Round x to the closest multiple of N."
+function round_multiple(x::T, N::T) where {T <: Integer}
+	return floor(T, x +  0.5 * N - rem(x + 0.5 * N, N))
+end
