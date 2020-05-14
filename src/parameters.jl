@@ -1,20 +1,44 @@
 # set initial values of rhoVec
 function set_rho_vec!(ws::COSMO.Workspace)
 	m = ws.p.model_size[1]
-	# nEQ = p.K.f
-	# nINEQ = p.m - p.K.f
+
 	ws.ρ = ws.settings.rho
 	ws.ρvec = ws.ρ * ones(m)
 
-	# scale ρ values that belong to equality constraints with a factor of 1e3
-	set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
-	if length(set_ind) > 0
-		row_ind = COSMO.get_set_indices(ws.p.C.sets)
-		for (i, rows) in enumerate(row_ind[set_ind])
-			ws.ρvec[rows] *= 1e3
+	apply_constraint_rho_scaling!(ws.ρvec, ws.row_ranges, ws.p.C.sets, ws.settings.RHO_MIN, ws.settings.RHO_EQ_OVER_RHO_INEQ)
+
+	push!(ws.rho_updates, ws.ρ)
+	return nothing
+end
+
+"Scale active constraints by `RHO_EQ_OVER_RHO_INEQ` and set loose constraints to `RHO_MIN`."
+function apply_constraint_rho_scaling!(ρvec::Array{T, 1}, row_ranges::Array{UnitRange{Int64}, 1}, sets::Vector{AbstractConvexSet}, RHO_MIN::Real, RHO_EQ_OVER_RHO_INEQ::Real) where {T <: Real}
+	for (k, C) in enumerate(sets)
+		if C isa ZeroSet
+			for row in row_ranges[k]
+				ρvec[row] *= RHO_EQ_OVER_RHO_INEQ
+			end
+		elseif C isa Nonnegatives
+			row_offset = row_ranges[k].start - 1
+			for (j, val) in enumerate(C.constr_type)
+				if val == true
+					ρvec[row_offset + j] = RHO_MIN
+				end
+			end
+
+		elseif C isa Box
+			for (j, val) in enumerate(C.constr_type)
+				row_offset = row_ranges[k].start - 1
+				# loose inequality constraint
+				if val == -1
+					ρvec[j + row_offset] = RHO_MIN
+				# equality constraint
+				elseif val == 1
+					ρvec[j + row_offset] *= RHO_EQ_OVER_RHO_INEQ
+				end
+			end
 		end
 	end
-	push!(ws.rho_updates, ws.ρ)
 	return nothing
 end
 
@@ -44,22 +68,15 @@ function update_rho_vec!(new_rho::Float64, ws::COSMO.Workspace)
 	ws.ρ     = new_rho
 	ws.ρvec .= new_rho
 
-	# scale ρ values that belong to equality constraints with a factor of 1e3
-	set_ind = findall(x -> typeof(x) == COSMO.ZeroSet{Float64}, ws.p.C.sets)
-	if length(set_ind) > 0
-		row_ind = COSMO.get_set_indices(ws.p.C.sets)
-		for (i, rows) in enumerate(row_ind[set_ind])
-			ws.ρvec[rows] *= 1e3
-		end
-	end
+	apply_constraint_rho_scaling!(ws.ρvec, ws.row_ranges, ws.p.C.sets, ws.settings.RHO_MIN, ws.settings.RHO_EQ_OVER_RHO_INEQ)
 
 	# log rho updates
 	push!(ws.rho_updates, new_rho)
 
 	if ws.settings.verbose_timing
-		ws.times.factor_update_time += @elapsed update_rho!(ws.kkt_solver,ws.ρvec)
+		ws.times.factor_update_time += @elapsed update_rho!(ws.kkt_solver, ws.ρvec)
 	else
-		update_rho!(ws.kkt_solver,ws.ρvec)
+		update_rho!(ws.kkt_solver, ws.ρvec)
 	end
 
 	return nothing

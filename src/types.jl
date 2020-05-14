@@ -304,7 +304,7 @@ mutable struct Workspace{T}
 	flags::Flags
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
 	times::ResultTimes{Float64} #Always 64 bit regardless of data type?
-
+	row_ranges::Array{UnitRange{Int64}, 1} # store a set_ind -> row_range map
 	#constructor
 	function Workspace{T}() where {T}
 		p = ProblemData{T}()
@@ -312,7 +312,7 @@ mutable struct Workspace{T}
 		vars = Variables{T}(1, 1, p.C)
     	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		return new(p, Settings(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), T[], ResultTimes())
+		return new(p, Settings(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), T[], ResultTimes(), [0:0])
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
