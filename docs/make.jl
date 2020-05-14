@@ -1,4 +1,30 @@
-using Documenter, DocumenterTools, COSMO
+using Documenter, DocumenterTools, COSMO, Literate
+
+@info "Building example problems..."
+
+# utility function from https://github.com/JuliaOpt/Convex.jl/blob/master/docs/make.jl
+fix_math_md(content) = replace(content, r"\$\$(.*?)\$\$"s => s"```math\1```")
+fix_suffix(filename) = replace(filename, ".jl" => ".md")
+function postprocess(cont)
+      """
+      The source files for all examples can be found in [/examples](https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples/).
+      """ * cont
+end
+# find all example source files
+exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "portfolio_optimization.jl"; "qp.jl"; "sum_of_squares.jl"];
+example_path = joinpath(@__DIR__, "../examples/")
+build_path =  joinpath(@__DIR__, "src", "examples/")
+files = readdir(example_path)
+filter!(x -> endswith(x, ".jl"), files)
+filter!(x -> !in(x, exclude_files), files)
+
+for file in files
+      Literate.markdown(example_path * file, build_path; preprocess = fix_math_md, postprocess = postprocess, documenter = true, credit = true)
+end
+
+examples_nav = fix_suffix.("./examples/" .* files)
+push!(examples_nav, "logistic_regression.md")
+@info "Makeing documentation..."
 
 makedocs(
   sitename="COSMO.jl",
@@ -18,10 +44,10 @@ makedocs(
         "Chordal Decomposition" => "decomposition.md"
         ],
         "Method" => "method.md",
-        "Examples" => "examples.md",
+        "Examples" => examples_nav,
         "Citing COSMO" => "citing.md",
         "Contributing" => "contributing.md",
-        "API Reference" => "api.md",
+        "API Reference" => "api.md"
     ]
 )
 
