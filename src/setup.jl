@@ -9,7 +9,7 @@ end
 
 function setup!(ws::COSMO.Workspace)
 
-  allocate_set_memory!(ws)
+  	allocate_set_memory!(ws)
 	# scale problem data
 	if ws.settings.scaling != 0
 		if ws.settings.verbose_timing
@@ -20,6 +20,10 @@ function setup!(ws::COSMO.Workspace)
 	else
 		ws.times.scaling_time = 0.
 	end
+
+	# construct a set index --> row range map
+	ws.row_ranges = get_set_indices(ws.p.C.sets)
+	classify_constraints!(ws)
 
 	set_rho_vec!(ws)
 
@@ -34,8 +38,21 @@ function setup!(ws::COSMO.Workspace)
 	end
 end
 
-function allocate_set_memory!(ws)
+function allocate_set_memory!(ws::COSMO.Workspace)
   for (k, C) in enumerate(ws.p.C.sets)
     allocate_memory!(C)
   end
+end
+
+"For inequality and box constraints, check if any constraints are obviously loose or tight."
+function classify_constraints!(ws::COSMO.Workspace)
+	for (k, C) in enumerate(ws.p.C.sets)
+		if C isa Nonnegatives
+			b = view(ws.p.b, ws.row_ranges[k])
+			classify_constraints!(C.constr_type, b, ws.settings.COSMO_INFTY, ws.settings.MIN_SCALING)
+		elseif C isa Box
+			classify_box_constraints!(C, ws.settings.COSMO_INFTY, ws.settings.MIN_SCALING, ws.settings.RHO_TOL)
+		end
+	end
+	return nothing
 end

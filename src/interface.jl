@@ -59,7 +59,7 @@ function assemble!(model::Model{T},
 
 	# save the convex sets inside the model as a composite set
 	model.p.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
-	model.settings = settings
+	model.settings = deepcopy(settings)
 
 	# the size of the temporary variables might change if the problem is decomposed
 	# only allocate if it's not a cd problem
@@ -167,7 +167,7 @@ function set!(model::COSMO.Model,
 	model.p.C = CompositeConvexSet(deepcopy(convex_sets))
 
 	pre_allocate_variables!(model)
- 	model.settings = settings
+ 	model.settings = deepcopy(settings)
 	nothing
 end
 

@@ -49,11 +49,22 @@ Creates the nonnegative orthant ``\\{ x \\in \\mathbb{R}^{dim} : x \\ge 0 \\}`` 
 """
 struct Nonnegatives{T} <: AbstractConvexCone{T}
 	dim::Int
+	constr_type::BitArray{1} #store rows of constraints that are loose (+1)
 	function Nonnegatives{T}(dim::Int) where {T}
-		dim >= 0 ? new(dim) : throw(DomainError(dim, "dimension must be nonnegative"))
+		dim >= 0 ? new(dim, falses(dim)) : throw(DomainError(dim, "dimension must be nonnegative"))
 	end
 end
 Nonnegatives(dim) = Nonnegatives{DefaultFloat}(dim)
+
+"Classify the inequality constraints as loose, if b very large, as s = -Ax + b >= 0."
+function classify_constraints!(constr_type::BitArray, b::AbstractVector{T}, COSMO_INFTY::Real, MIN_SCALING::Real) where {T}
+	for i = 1:length(b)
+		if b[i] > COSMO_INFTY * MIN_SCALING
+			constr_type[i] = true
+		end
+	end
+	return nothing
+end
 
 function project!(x::AbstractVector{T}, C::Nonnegatives{T}) where{T}
 	x .= max.(x, zero(T))
@@ -715,19 +726,20 @@ Creates a box or intervall with lower boundary vector ``l \\in  \\mathbb{R}^m \\
 """
 struct Box{T} <: AbstractConvexSet{T}
 	dim::Int
+	constr_type::Array{Int8} #store type of constraint {-1: loose, 0: inequality, 1: equality}
 	l::Vector{T}
 	u::Vector{T}
 	function Box{T}(dim::Int) where{T}
 		dim >= 0 || throw(DomainError(dim, "dimension must be nonnegative"))
 		l = fill!(Vector{T}(undef, dim), -Inf)
 		u = fill!(Vector{T}(undef, dim), +Inf)
-		new(dim, l, u)
+		return new(dim, zeros(Int8, dim), l, u)
 	end
 	function Box{T}(l::Vector{T}, u::Vector{T}) where{T}
 		length(l) == length(u) || throw(DimensionMismatch("bounds must be same length"))
+		#enforce consistent bounds
         _box_check_bounds(l,u)
-        #enforce consistent bounds
-		new(length(l), l, u)
+		return new(length(l), zeros(Int8, length(l)), l, u)
 	end
 end
 Box(dim) = Box{DefaultFloat}(dim)
@@ -737,6 +749,20 @@ function _box_check_bounds(l,u)
     for i in eachindex(l)
         l[i] > u[i] && error("Box set: inconsistent lower/upper bounds specified at index i = ", i, ": l[i] = ",l[i],", u[i] = ",u[i])
     end
+end
+
+"Classify the type of constraint of the box into loose inequality (-1), inequality (0) or equality (+1)."
+function classify_box_constraints!(box::COSMO.Box{T}, COSMO_INFTY::Real, MIN_SCALING::Real, RHO_TOL::Real) where{T}
+	@inbounds for i = 1:length(box.l)
+		if box.l[i] < (-COSMO_INFTY * MIN_SCALING) && box.u[i] > (COSMO_INFTY * MIN_SCALING)
+			box.constr_type[i] = -1
+		elseif (box.u[i] - box.l[i]) < RHO_TOL
+			box.constr_type[i] = 1
+		else
+			box.constr_type[i] = 0
+		end
+	end
+	return nothing
 end
 
 function project!(x::AbstractVector{T}, box::Box{T}) where{T}

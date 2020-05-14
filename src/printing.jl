@@ -31,7 +31,7 @@ end
 function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::Float64, r_prim::Float64, r_dual::Float64)
 	settings = ws.settings
 	if mod(iter, 1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
-		if mod(iter, settings.check_termination) == 0
+		if mod(iter, settings.check_termination) == 0 || iter == 1
 			@printf("%d\t%.4e\t%.4e\t%.4e\t%.4e\n", iter, cost, r_prim, r_dual, ws.ρ)
 		else
 			@printf("%d\t%.4e\t ---\t\t\t---\n", iter, cost)
