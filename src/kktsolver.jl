@@ -28,32 +28,30 @@ end
 
 function _kktutils_make_kkt(P, A, sigma, rho, shape::Symbol=:F)
 
-    S = length(sigma) == 1 ? (sigma[1]) * I : Diagonal(sigma)
     n = size(P, 1)
     m = size(A, 1)
 
-    if length(rho) == 1
-        rho = rho .* ones(m)
-    end
+    S = length(sigma) == 1 ? (sigma[1]) * I : Diagonal(sigma)
 
-    if     shape == :F
+    rhoinv  = Vector{Float64}(undef,m)
+    rhoinv .= (-1.0./rho)
+    D       = SparseMatrixCSC(Diagonal(rhoinv))
+
+    if  shape == :F
         #compute the full KKT matrix
-        K = [P + S SparseMatrixCSC(A'); A -I]
+        K = [P + S SparseMatrixCSC(A'); A D]
 
     elseif shape == :U
         #upper triangular
-        K = [triu(P) + S  SparseMatrixCSC(A'); spzeros(eltype(A), m, n)  -I]
+        #Ps = triu(P) + S;
+        K = [triu(P)+S  SparseMatrixCSC(A'); spzeros(eltype(A), m, n) D]
 
     elseif shape == :L
         #lower triangular
-        K = [tril(P)+S  spzeros(eltype(A), n, m); A  -I]
+        K = [tril(P)+S  spzeros(eltype(A), n, m); A  D]
 
     else
         error("Bad matrix shape description")
-    end
-
-    @inbounds @simd for i = (n + 1):(n + m)
-        K[i, i] = -1.0 / rho[i - n]
     end
 
     return K
@@ -87,13 +85,9 @@ struct QdldlKKTSolver{Tv, Ti} <: AbstractKKTSolver
     function QdldlKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho) where {Tv, Ti}
 
         m,n = _kktutils_check_dims(P, A, sigma, rho)
-
-        #NB: qdldl uses triu internally, but it reorders
-        #with AMD first.  This way is memory inefficient
-        #but saves having to permute the rhs/lhs each
-        #time we solve.
-        K   = _kktutils_make_kkt(P, A, sigma, rho, :F)
+        K   = _kktutils_make_kkt(P, A, sigma, rho, :U)
         ldlfact = qdldl(K)
+        println("K = ", Array(K))
 
         #check for exactly n positive eigenvalues
         positive_inertia(ldlfact) == n || error("Objective function is not convex.")
