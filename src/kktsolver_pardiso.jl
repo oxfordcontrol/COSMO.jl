@@ -1,4 +1,4 @@
-using Pardiso: Pardiso, set_solver!, pardisoinit, set_phase!, set_iparm!, set_msglvl!, get_iparm, pardiso, PardisoSolver, MKLPardisoSolver, get_nprocs, set_nprocs!, set_matrixtype!
+using .Pardiso: Pardiso, set_solver!, pardisoinit, set_phase!, set_iparm!, set_msglvl!, get_iparm, pardiso, PardisoSolver, MKLPardisoSolver, get_nprocs, set_nprocs!, set_matrixtype!
 export PardisoDirectKKTSolver, PardisoIndirectKKTSolver, MKLPardisoSolver
 
 abstract type AbstractPardisoKKTSolver <: AbstractKKTSolver end
@@ -110,7 +110,7 @@ function _pardiso_common_init(P, A, sigma, rho, Solver::Type, iparm::Dict{Int64,
     # as our internal defaults.  Can be overridden
     # by user options in the iparm dict to follow.
     # These are the same as the OSQP Pardiso defaults
-    
+
     set_iparm!(ps, 2, 3)    #Parallel METIS reordering
     set_iparm!(ps, 8, 0)    #Number of iterative refinement steps (auto, performs them only if perturbed pivots are obtained)
     set_iparm!(ps, 10, 13)  #Perturb the pivot elements with 1E-13

@@ -1,7 +1,7 @@
 __precompile__()
 module COSMO
 
-using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures
+using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires
 
 
 export assemble!, warmStart!, empty_model!
@@ -12,12 +12,14 @@ const DefaultInt   = LinearAlgebra.BlasInt
 
 include("./kktsolver.jl")
 # optional dependencies
-if in("Pardiso",keys(Pkg.installed()))
-    include("./kktsolver_pardiso.jl")
+function __init__()
+    @require Pardiso="46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2" include("kktsolver_pardiso.jl")
+
+    @require IterativeSolvers="42fd0dbc-a981-5370-80f2-aaf504508153" begin
+        @require LinearMaps="7a12625a-238d-50fd-b39a-03d52299707e" include("./kktsolver_indirect.jl")
+    end
 end
-if in("IterativeSolvers", keys(Pkg.installed())) && in("LinearMaps", keys(Pkg.installed()))
-    include("./kktsolver_indirect.jl")
-end
+
 
 include("./algebra.jl")
 include("./projections.jl")
@@ -35,7 +37,7 @@ include("./chordal_decomposition.jl")
 include("./printing.jl")
 include("./setup.jl")
 include("./solver.jl")
-include("./interface.jl")           
+include("./interface.jl")
 include("./MOIWrapper.jl")
 
 include("precompile.jl")

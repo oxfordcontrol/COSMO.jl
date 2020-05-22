@@ -1,6 +1,9 @@
 using COSMO, Random, Test, Pkg
 rng = Random.MersenneTwister(12345)
 
+
+
+
 include("./UnitTests/COSMOTestUtils.jl")
 
 @testset "COSMO native tests" begin
@@ -27,7 +30,7 @@ include("./UnitTests/COSMOTestUtils.jl")
   include("./UnitTests/clique_merging_example.jl")
 
     # optional unittests
-  if in("Pardiso",keys(Pkg.installed()))
+  if pkg_installed("Pardiso", "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2")
     include("./UnitTests/options_factory.jl")
   end
 

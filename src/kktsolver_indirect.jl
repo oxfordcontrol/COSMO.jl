@@ -1,4 +1,4 @@
-using LinearMaps, IterativeSolvers
+using .LinearMaps, .IterativeSolvers
 
 mutable struct IndirectReducedKKTSolver{TP, TA, T} <: AbstractKKTSolver
     m::Integer

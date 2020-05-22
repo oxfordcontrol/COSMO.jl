@@ -1,4 +1,15 @@
 using SparseArrays, LinearAlgebra
+
+"Check whether a package is installed."
+function pkg_installed(name::String, uuid::String)
+	pkg_id = Base.PkgId(Base.UUID(uuid), name::String)
+	return Base.locate_package(pkg_id) != nothing
+end
+
+
+
+
+
 # generate a random pos def matrix with eigenvalues between 0.1 and 2
 function generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Real = 0.1, aMax::Real = 2)
 	X = rand(rng, n, n)

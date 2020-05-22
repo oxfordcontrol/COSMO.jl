@@ -5,6 +5,10 @@ rng = Random.MersenneTwister(1)
 
 T = Float64
 
+# check if optional dependencies are available
+test_iterative_solvers = pkg_installed("IterativeSolvers", "42fd0dbc-a981-5370-80f2-aaf504508153") && pkg_installed("LinearMaps", "7a12625a-238d-50fd-b39a-03d52299707e")
+test_pardiso = pkg_installed("Pardiso", "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2")
+
 function make_test_kkt(P, A, sigma, rho)
 
     R = length(rho)   == 1 ? ((1.) ./ rho[1]) * I : Diagonal((1.) ./ rho)
@@ -33,7 +37,7 @@ end
                     # COSMO.CholmodKKTSolver]
 
     # optional dependencies
-    if in("Pardiso",keys(Pkg.installed()))
+    if test_pardiso
         using Pardiso
         if isdefined(Pardiso, :MKL_PARDISO_LOADED)
             push!(solver_types, COSMO.MKLPardisoKKTSolver)
@@ -52,8 +56,8 @@ end
         end
     end
 
-    if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
-        using IterativeSolvers
+    if test_iterative_solvers
+        using IterativeSolvers, LinearMaps
         push!(solver_types, COSMO.IndirectReducedKKTSolver)
         push!(solver_tols, 1e-3)
         add_kwargs(params, solver_type=:CG)
@@ -82,7 +86,7 @@ end
             b = randn(m + n)
 
             F = solver_types[i](P, A, sigma, rho1; params[i]...)
-            if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
+            if test_iterative_solvers
                 if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
                     # Technically, we should have been able to set the tolerance even lower
                     # But, currently, issues in IterativeSolvers.jl do not allow this
@@ -100,7 +104,7 @@ end
             # Check that warm starting works
             # Invoking again an indirect solver should result in the solution with only
             # one matrix vector multiplication
-            if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
+            if test_iterative_solvers
                 if isa(F, COSMO.IndirectReducedKKTSolver) || isa(F, COSMO.IndirectKKTSolver)
                     # The calculation of the residual, and thus the termination criterion, of
                     # MINRES is approximate. Thus warm started solutions won't necessarily finish in one step
@@ -127,14 +131,14 @@ end
     # Try every solver on the same problem and compare results
     solver_types = Array{Union{Type{<: COSMO.AbstractKKTSolver}, COSMO.OptionsFactory{<: COSMO.AbstractKKTSolver}}}(undef, 0)
     push!(solver_types, COSMO.QdldlKKTSolver, COSMO.CholmodKKTSolver)
-    if in("Pardiso",keys(Pkg.installed()))
+    if test_pardiso
         isdefined(Pardiso, :MKL_PARDISO_LOADED) && push!(solver_types, COSMO.PardisoDirectKKTSolver)
         if isdefined(Pardiso, :PARDISO_LOADED)
             push!(solver_types, COSMO.PardisoDirectKKTSolver)
             push!(solver_types, COSMO.PardisoIndirectKKTSolver)
         end
     end
-    if in("IterativeSolvers",keys(Pkg.installed())) && in("LinearMaps",keys(Pkg.installed()))
+    if test_iterative_solvers
         push!(solver_types, COSMO.CGIndirectKKTSolver)
         push!(solver_types, COSMO.MINRESIndirectKKTSolver)
         push!(solver_types, with_options(COSMO.CGIndirectKKTSolver))
