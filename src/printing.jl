@@ -7,7 +7,7 @@ function print_header(ws::COSMO.Workspace)
 	settings.scaling > 0 ? scaling_status = "on" : scaling_status = "off"
 	nnz_in_P = count(!iszero,ws.p.P) - count(!iszero,diag(ws.p.P)) + n
 	nnz_in_M = 2*count(!iszero,ws.p.A) + nnz_in_P + m
-	println("-"^66 * "\n" * " "^10 * "COSMO v0.7.1 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2020\n" * "-"^66 * "\n")
+	println("-"^66 * "\n" * " "^10 * "COSMO v0.7.2 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2020\n" * "-"^66 * "\n")
 
 	println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero, ws.p.A)) nnz),\n          matrix size to factor: $(n + m)x$(n + m) ($(nnz_in_M) nnz)")
 	for (iii, set) in enumerate(sort(ws.p.C.sets, by = x -> -x.dim))
