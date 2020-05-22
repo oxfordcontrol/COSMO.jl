@@ -87,7 +87,6 @@ struct QdldlKKTSolver{Tv, Ti} <: AbstractKKTSolver
         m,n = _kktutils_check_dims(P, A, sigma, rho)
         K   = _kktutils_make_kkt(P, A, sigma, rho, :U)
         ldlfact = qdldl(K)
-        println("K = ", Array(K))
 
         #check for exactly n positive eigenvalues
         positive_inertia(ldlfact) == n || error("Objective function is not convex.")
