@@ -1,3 +1,21 @@
+## Version 0.7.2 (22. March 2020)
+- We now handle the optional dependencies of external linear solver packages `Pardiso` and `IterativeSolvers` by using the `Requires.jl` package. Furthermore, we improve convergence of problems with box constraints in many cases. We also allow an automatic adaptive rho interval option, like in OSQP, which can be activated by setting `adaptive_rho_interval = 0` (automatic).
+
+- The main commits in this new version are:
+- `ecef91d` 🤝  Improve handling of optional dependencies
+- `70c6067` Merge branch 'mg/adaptive_rho_intervall'
+- `64dbcc1` 🚀 Scale rho-value of loose, active box constraints
+- `9b50f17` Print first iteration
+- `44ada54` Allow adaptive rho interval determination
+- `2dcc593` Make deepcopy of settings object
+- `41f82f3` 🔮 Enable code literacy
+- `9ea6dc2` Update newest Julia version in travis
+
+## Version 0.7.1 (11. March 2020)
+- `264294d` Add precompile statements (#109)
+- `1b8c58c` Print decomposition info only when decomposing
+- `d8dfe26` Prevent decomposition from mutating settings
+
 ## Version 0.7.0 (05. March 2020)
 - This release adds support for indirect linear system solver from the `IterativeSolvers.jl` package. We also drop support of PsdConeSquare constraints ins MOI. By default MOI will bridge them to PSDTriangle constraints. We further fixed a number of bugs related to the compact transformation for decomposable SDPs. Another change is that when used with `verbose_timing = true`, COSMO will now measure the initial factorisation time and the time for refactorisations separately.
 The major commits are listed here:
