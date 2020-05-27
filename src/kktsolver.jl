@@ -44,7 +44,8 @@ function _kktutils_make_kkt(P, A, sigma, rho, shape::Symbol=:F)
     elseif shape == :U
         #upper triangular
         #Ps = triu(P) + S;
-        K = [triu(P)+S  SparseMatrixCSC(A'); spzeros(eltype(A), m, n) D]
+        #K = [triu(P)+S  SparseMatrixCSC(A'); spzeros(eltype(A), m, n) D]
+        K = _kkt_fast_uppertriu(P, A, sigma, rho)
 
     elseif shape == :L
         #lower triangular
@@ -57,6 +58,109 @@ function _kktutils_make_kkt(P, A, sigma, rho, shape::Symbol=:F)
     return K
 
 end
+
+function _kkt_fast_uppertriu(P::SparseMatrixCSC{Tf, Ti}, A::SparseMatrixCSC{Tf, Ti}, sigma, rho) where {Tf, Ti}
+
+    n = size(P, 1)
+    m = size(A, 1)
+
+    if length(sigma) == 1
+        S = Vector{typeof(sigma)}(undef,n)
+        fill!(S,sigma)
+    else
+        S = sigma
+    end
+
+    if length(rho) == 1
+        R  = Array{typeof(rho)}(undef,m)
+        fill!(R,-1/rho)
+    else
+        R  = Array{typeof(rho[1])}(undef,m)
+        R .= (-1.0./rho)
+    end
+
+    #make the column counter of K
+    Kcolnz = zeros(Ti,m+n)
+
+    #work out how many nonzeros are in K.   First
+    #count nonzeros in the strict upper triangle of (P)
+    @inbounds for cidx = 1:n
+        for j = (P.colptr[cidx]):(P.colptr[cidx+1]-1)
+            ridx = P.rowval[j]
+            if (ridx < cidx)
+                Kcolnz[cidx] += 1
+            else
+                break
+            end
+        end
+    end
+    #count the nonzeros in columns in A'
+    for idx in A.rowval
+        Kcolnz[idx + n] += 1
+    end
+
+    #every element on the diagonal is also nonzero
+    Kcolnz .+= 1
+
+    #make the column pointer and nonzero count
+    Kp   = Array{Ti}(undef,m+n+1)
+    Kp[1] = 1
+    @inbounds for i = 2:(m+n+1)
+        Kp[i] = Kp[i-1] + Kcolnz[i-1]
+    end
+
+    KNextInCol = copy(Kp);        #next value in column goes here
+    nnzK = Kp[end] - 1
+    Ki   = Array{Ti}(undef,nnzK)
+    Kx   = Array{Tf}(undef,nnzK)
+
+    #fill in triu(P)
+    @inbounds for cidx = 1:n
+        for j = (P.colptr[cidx]):(P.colptr[cidx+1]-1)
+            ridx = P.rowval[j]
+            if(ridx <= cidx)
+                Kidx = KNextInCol[cidx]
+                Ki[Kidx] = ridx
+                Kx[Kidx] = P.nzval[j]
+                KNextInCol[cidx] += 1
+            else
+                break
+            end
+        end
+    end
+
+    #fill in A' in the upper RHS
+    @inbounds for cidx = 1:n
+        for j = (A.colptr[cidx]):(A.colptr[cidx+1]-1)
+            ridx = A.rowval[j]
+            Kidx = KNextInCol[ridx + n]
+            Ki[Kidx] = cidx
+            Kx[Kidx] = A.nzval[j]
+            KNextInCol[ridx + n] += 1
+        end
+    end
+
+    #fill in the Sigma part
+    @inbounds for cidx = 1:n
+        if(KNextInCol[cidx] == Kp[cidx+1])        #P had diagonal term at cidx)
+            Kx[KNextInCol[cidx] - 1] += S[cidx]
+        else
+            Kx[KNextInCol[cidx]]      = S[cidx]
+            Ki[KNextInCol[cidx]]      = cidx
+        end
+    end
+    #fill in the rho part
+    @inbounds for idx   = 1:m
+        Kx[KNextInCol[idx+n]] = R[idx]
+        Ki[KNextInCol[idx+n]] = idx+n
+    end
+
+    #assemble the matrix
+    K = SparseMatrixCSC(m+n,m+n,Kp,Ki,Kx)
+
+    return K
+end
+
 
 function update_kkt_matrix(K, n::Int, m::Int, rho)
     if length(rho) == m

@@ -50,7 +50,7 @@ function col_norms!(v::Array{Tf, 1},
 	A::Matrix{Tf};
 	reset::Bool = true) where{Tf <: AbstractFloat}
 
-	if(reset)
+	if reset
 		fill!(v,0.)
 	end
 
@@ -63,7 +63,7 @@ end
 function col_norms!(v::Array{Tf, 1},
 	A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where{Tf <: AbstractFloat, Ti <: Integer}
 
-	if(reset)
+	if reset
 		fill!(v,0.)
 	end
 
@@ -80,7 +80,7 @@ function row_norms!(v::Array{Tf, 1},
 	A::Matrix{Tf};
 	reset::Bool = true) where{Tf <: AbstractFloat}
 
-	if(reset)
+	if reset
 		fill!(v,0.)
 	end
 
@@ -94,7 +94,7 @@ function row_norms!(v::Array{Tf, 1},
 	A::SparseMatrixCSC{Tf, Ti};
 	reset::Bool = true) where{Tf <: AbstractFloat, Ti <: Integer}
 
-	if(reset)
+	if reset
 		fill!(v,0.)
 	end
 
