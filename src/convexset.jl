@@ -726,20 +726,20 @@ Creates a box or intervall with lower boundary vector ``l \\in  \\mathbb{R}^m \\
 """
 struct Box{T} <: AbstractConvexSet{T}
 	dim::Int
-	constr_type::Array{Int8} #store type of constraint {-1: loose, 0: inequality, 1: equality}
+	constr_type::Vector{Int} #store type of constraint {-1: loose, 0: inequality, 1: equality}
 	l::Vector{T}
 	u::Vector{T}
 	function Box{T}(dim::Int) where{T}
 		dim >= 0 || throw(DomainError(dim, "dimension must be nonnegative"))
 		l = fill!(Vector{T}(undef, dim), -Inf)
 		u = fill!(Vector{T}(undef, dim), +Inf)
-		return new(dim, zeros(Int8, dim), l, u)
+		return new(dim, zeros(Int, dim), l, u)
 	end
 	function Box{T}(l::Vector{T}, u::Vector{T}) where{T}
 		length(l) == length(u) || throw(DimensionMismatch("bounds must be same length"))
 		#enforce consistent bounds
         _box_check_bounds(l,u)
-		return new(length(l), zeros(Int8, length(l)), l, u)
+		return new(length(l), zeros(Int, length(l)), l, u)
 	end
 end
 Box(dim) = Box{DefaultFloat}(dim)
