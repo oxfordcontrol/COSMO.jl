@@ -77,9 +77,9 @@ function scale_ruiz!(ws::COSMO.Workspace)
 			ctmp = 1.0 / scale_cost
 
 			# scale the penalty terms and overall scaling
-			P    .*= ctmp
-			q    .*= ctmp
-			c     *= ctmp
+			P.nzval .*= ctmp
+			q       .*= ctmp
+			c        *= ctmp
 		end
 
 	end #end Ruiz scaling loop
@@ -118,8 +118,8 @@ function scale_ruiz!(ws::COSMO.Workspace)
 	return nothing
 end
 
-function inv_sqrt!(A::Vector{T}) where{T}
-	@. A = oneunit(T) / sqrt(A)
+function inv_sqrt!(A::Vector{T}) where{T <: Real}
+	@fastmath A .= 1. ./ sqrt.(A)
 end
 
 function rectify_set_scalings!(E, Ework, C::AbstractConvexSet)
@@ -154,11 +154,11 @@ function scale_data!(P, A, q, b, Ds, Es, cs = 1.)
 
 	lrmul!(Ds, P, Ds) # P[:,:] = Ds*P*Ds
 	lrmul!(Es, A, Ds) # A[:,:] = Es*A*Ds
-	q[:] = Ds * q
-	b[:] = Es * b
+	q .*= Ds.diag
+	b .*= Es.diag
 	if cs != 1.
-		P .*= cs
-		q .*= cs
+		P.nzval .*= cs
+		q.nzval .*= cs
 	end
 	return nothing
 end
