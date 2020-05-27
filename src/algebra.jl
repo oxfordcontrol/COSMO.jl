@@ -50,7 +50,9 @@ function col_norms!(v::Array{Tf, 1},
 	A::Matrix{Tf};
 	reset::Bool = true) where{Tf <: AbstractFloat}
 
-	if(reset) v.= 0 end
+	if(reset)
+		fill!(v,0.)
+	end
 
 	for i = 1:size(A, 2)
 		v[i] = max(v[i], norm(view(A, :, i), Inf))
@@ -61,12 +63,15 @@ end
 function col_norms!(v::Array{Tf, 1},
 	A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where{Tf <: AbstractFloat, Ti <: Integer}
 
-	if(reset) v.= 0 end
-
-	for i = 1:A.n
-		@inbounds for j = A.colptr[i]:(A.colptr[i + 1] - 1)
-		@inbounds v[i] = max(v[i], abs(A.nzval[j]))
+	if(reset)
+		fill!(v,0.)
 	end
+
+	@inbounds for i = eachindex(v)
+		for j = A.colptr[i]:(A.colptr[i + 1] - 1)
+			tmp = abs(A.nzval[j])
+			v[i] = v[i] > tmp ? v[i] : tmp;
+		end
 	end
 	return v
 end
@@ -75,7 +80,9 @@ function row_norms!(v::Array{Tf, 1},
 	A::Matrix{Tf};
 	reset::Bool = true) where{Tf <: AbstractFloat}
 
-	if(reset) v.= 0 end
+	if(reset)
+		fill!(v,0.)
+	end
 
 	for i = 1:size(A, 1)
 		v[i] = max(v[i], norm(view(A, i, :), Inf))
@@ -87,10 +94,14 @@ function row_norms!(v::Array{Tf, 1},
 	A::SparseMatrixCSC{Tf, Ti};
 	reset::Bool = true) where{Tf <: AbstractFloat, Ti <: Integer}
 
-	if(reset) v.= 0 end
+	if(reset)
+		fill!(v,0.)
+	end
 
 	@inbounds for i = 1:(A.colptr[end] - 1)
-		@inbounds v[A.rowval[i]] = max(v[A.rowval[i]], abs(A.nzval[i]))
+		idx = A.rowval[i]
+		tmp = abs(A.nzval[i])
+		v[idx] = v[idx] > tmp ? v[idx] : tmp
 	end
 	return v
 end
@@ -136,17 +147,18 @@ rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
 
 function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
 
+	m, n = size(M)
 	Mnzval  = M.nzval
 	Mrowval = M.rowval
 	Mcolptr = M.colptr
 	Rd      = R.diag
 	Ld      = L.diag
-
-	m, n = size(M)
 	(m == length(Ld) && n == length(Rd)) || throw(DimensionMismatch())
 
-	@inbounds for i = 1:n, j = Mcolptr[i]:(Mcolptr[i + 1] - 1)
-	@inbounds Mnzval[j] *= Ld[Mrowval[j]] * Rd[i]
+	@inbounds for i = 1:n
+		for j = Mcolptr[i]:(Mcolptr[i + 1] - 1)
+	 		Mnzval[j] *= Ld[Mrowval[j]] * Rd[i]
+		end
 	end
 	return M
 end
