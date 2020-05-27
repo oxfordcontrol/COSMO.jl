@@ -11,6 +11,7 @@ function set_rho_vec!(ws::COSMO.Workspace)
 	return nothing
 end
 
+
 "Scale active constraints by `RHO_EQ_OVER_RHO_INEQ` and set loose constraints to `RHO_MIN`."
 function apply_constraint_rho_scaling!(ρvec::Array{T, 1}, row_ranges::Array{UnitRange{Int64}, 1}, sets::Vector{AbstractConvexSet}, RHO_MIN::Real, RHO_EQ_OVER_RHO_INEQ::Real) where {T <: Real}
 	for (k, C) in enumerate(sets)
@@ -27,19 +28,23 @@ function apply_constraint_rho_scaling!(ρvec::Array{T, 1}, row_ranges::Array{Uni
 			end
 
 		elseif C isa Box
-			for (j, val) in enumerate(C.constr_type)
-				row_offset = row_ranges[k].start - 1
-				# loose inequality constraint
-				if val == -1
-					ρvec[j + row_offset] = RHO_MIN
-				# equality constraint
-				elseif val == 1
-					ρvec[j + row_offset] *= RHO_EQ_OVER_RHO_INEQ
-				end
-			end
+			row_offset = row_ranges[k].start - 1
+			_rho_scale_box_bounds!(ρvec, C.constr_type, row_offset, RHO_MIN::Real, RHO_EQ_OVER_RHO_INEQ::Real)
 		end
 	end
 	return nothing
+end
+
+function _rho_scale_box_bounds!(ρvec, constr_type::Vector{Int}, row_offset, RHO_MIN, RHO_EQ_OVER_RHO_INEQ) where{T}
+	@inbounds for j = eachindex(constr_type)
+		# loose inequality constraint
+		if constr_type[j] == -1
+			ρvec[j + row_offset] = RHO_MIN
+		# equality constraint
+		elseif constr_type[j] == 1
+			ρvec[j + row_offset] *= RHO_EQ_OVER_RHO_INEQ
+		end
+	end
 end
 
 
