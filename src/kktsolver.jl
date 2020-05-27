@@ -95,7 +95,7 @@ function _kkt_fast_uppertriu(P::SparseMatrixCSC{Tf, Ti}, A::SparseMatrixCSC{Tf, 
         end
     end
     #count the nonzeros in columns in A'
-    for idx in A.rowval
+    @inbounds for idx in A.rowval
         Kcolnz[idx + n] += 1
     end
 
@@ -103,16 +103,16 @@ function _kkt_fast_uppertriu(P::SparseMatrixCSC{Tf, Ti}, A::SparseMatrixCSC{Tf, 
     Kcolnz .+= 1
 
     #make the column pointer and nonzero count
-    Kp   = Array{Ti}(undef,m+n+1)
+    Kp   = Vector{Ti}(undef,m+n+1)
     Kp[1] = 1
-    @inbounds for i = 2:(m+n+1)
-        Kp[i] = Kp[i-1] + Kcolnz[i-1]
+    @inbounds for i = 1:(m+n)
+        Kp[i+1] = Kp[i] + Kcolnz[i]
     end
 
     KNextInCol = copy(Kp);        #next value in column goes here
     nnzK = Kp[end] - 1
-    Ki   = Array{Ti}(undef,nnzK)
-    Kx   = Array{Tf}(undef,nnzK)
+    Ki   = Vector{Ti}(undef,nnzK)
+    Kx   = Vector{Tf}(undef,nnzK)
 
     #fill in triu(P)
     @inbounds for cidx = 1:n
@@ -133,10 +133,11 @@ function _kkt_fast_uppertriu(P::SparseMatrixCSC{Tf, Ti}, A::SparseMatrixCSC{Tf, 
     @inbounds for cidx = 1:n
         for j = (A.colptr[cidx]):(A.colptr[cidx+1]-1)
             ridx = A.rowval[j]
-            Kidx = KNextInCol[ridx + n]
+            ridxpn = ridx + n
+            Kidx = KNextInCol[ridxpn]
+            KNextInCol[ridxpn] += 1
             Ki[Kidx] = cidx
             Kx[Kidx] = A.nzval[j]
-            KNextInCol[ridx + n] += 1
         end
     end
 
@@ -150,9 +151,10 @@ function _kkt_fast_uppertriu(P::SparseMatrixCSC{Tf, Ti}, A::SparseMatrixCSC{Tf, 
         end
     end
     #fill in the rho part
-    @inbounds for idx   = 1:m
-        Kx[KNextInCol[idx+n]] = R[idx]
-        Ki[KNextInCol[idx+n]] = idx+n
+    @inbounds for idx = 1:m
+        kidx = KNextInCol[idx+n]
+        Kx[kidx] = R[idx]
+        Ki[kidx] = idx+n
     end
 
     #assemble the matrix

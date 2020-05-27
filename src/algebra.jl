@@ -115,7 +115,7 @@ function lmul!(L::Diagonal, M::SparseMatrixCSC)
 	(m == length(L.diag)) || throw(DimensionMismatch())
 
 	@inbounds for i = 1:(M.colptr[end] - 1)
-	@inbounds M.nzval[i] *= L.diag[M.rowval[i]]
+	 		M.nzval[i] *= L.diag[M.rowval[i]]
 	end
 	return M
 end
@@ -138,7 +138,7 @@ function rmul!(M::SparseMatrixCSC, R::Diagonal)
 	(n == length(R.diag)) || throw(DimensionMismatch())
 
 	@inbounds for i = 1:n, j = M.colptr[i]:(M.colptr[i + 1] - 1)
-	@inbounds M.nzval[j] *= R.diag[i]
+		 	M.nzval[j] *= R.diag[i]
 	end
 	return M
 end
