@@ -77,7 +77,7 @@ function scale_ruiz!(ws::COSMO.Workspace)
 			ctmp = 1.0 / scale_cost
 
 			# scale the penalty terms and overall scaling
-			P.nzval .*= ctmp
+			scalarmul!(P,ctmp)
 			q       .*= ctmp
 			c        *= ctmp
 		end
