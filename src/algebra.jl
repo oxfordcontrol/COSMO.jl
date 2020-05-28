@@ -110,7 +110,9 @@ function scalarmul!(A::SparseMatrixCSC, c::Real)
 	A.nzval .*= c
 end
 
-scalarmul!(A::AbstractMatrix, c::Real) = mul!(A,A,c)
+function scalarmul!(A::AbstractMatrix, c::Real)
+	A .*= c
+end
 
 
 function lmul!(L::Diagonal, M::SparseMatrixCSC)
