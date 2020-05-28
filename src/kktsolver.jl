@@ -28,11 +28,15 @@ end
 
 function _kktutils_make_kkt(P, A, sigma, rho, shape::Symbol=:F)
 
+    #short circuit for fast triu form
+    if shape == :U
+        K = _kkt_fast_uppertriu(P, A, sigma, rho)
+        return K
+    end
+
     n = size(P, 1)
     m = size(A, 1)
-
     S = length(sigma) == 1 ? (sigma[1]) * I : Diagonal(sigma)
-
     rhoinv  = Vector{Float64}(undef,m)
     rhoinv .= (-1.0./rho)
     D       = SparseMatrixCSC(Diagonal(rhoinv))
@@ -40,12 +44,6 @@ function _kktutils_make_kkt(P, A, sigma, rho, shape::Symbol=:F)
     if  shape == :F
         #compute the full KKT matrix
         K = [P + S SparseMatrixCSC(A'); A D]
-
-    elseif shape == :U
-        #upper triangular
-        #Ps = triu(P) + S;
-        #K = [triu(P)+S  SparseMatrixCSC(A'); spzeros(eltype(A), m, n) D]
-        K = _kkt_fast_uppertriu(P, A, sigma, rho)
 
     elseif shape == :L
         #lower triangular
