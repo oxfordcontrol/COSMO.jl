@@ -106,6 +106,13 @@ function row_norms!(v::Array{Tf, 1},
 	return v
 end
 
+function scalarmul!(A::SparseMatrixCSC, c::Real)
+	A.nzval .*= c
+end
+
+scalarmul!(A::AbstractMatrix, c::Real) = mul!(A,A,c)
+
+
 function lmul!(L::Diagonal, M::SparseMatrixCSC)
 
 	#NB : Same as:  @views M.nzval .*= D.diag[M.rowval]

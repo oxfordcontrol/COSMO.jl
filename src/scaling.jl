@@ -158,7 +158,7 @@ function scale_data!(P, A, q, b, Ds, Es, cs = 1.)
 	mul!(q,Ds,q)      # q[:] = Ds*q
 	mul!(b,Es,b)      # b[:] = Es*b
 	if cs != 1.
-		mul!(P,P,cs)
+		scalarmul!(P,cs)
 		q .*= cs
 	end
 	return nothing
