@@ -22,20 +22,20 @@ function admm_step!(x::Vector{Float64},
 	# deconstructed solution vector is ls = [x_tl(n+1); ν(n+1)]
 	# x_tl and ν are automatically updated, since they are views on sol
 	@. ls[1:n] = σ * x - q
-	@. ls[(n + 1):end] = b - s + μ / ρ
+	@. ls[(n + 1):end] = b - s.data + μ / ρ
 	solve!(kkt_solver,sol,ls)
 
 	# Over relaxation
 	@. x = α * x_tl + (1.0 - α) * x
-	@. s_tl = s - (ν + μ) / ρ
-	@. s_tl = α * s_tl + (1.0 - α) * s
-	@. s = s_tl + μ / ρ
+	@. s_tl = s.data - (ν + μ) / ρ
+	@. s_tl = α * s_tl + (1.0 - α) * s.data
+	@. s.data = s_tl + μ / ρ
 
 	# Project onto cone
 	p_time = @elapsed project!(s, set)
 
 	# update dual variable μ
-	@. μ = μ + ρ .* (s_tl - s)
+	@. μ = μ + ρ * (s_tl - s.data)
 	return p_time
 end
 
@@ -94,7 +94,7 @@ function optimize!(ws::COSMO.Workspace)
 		num_iter+= 1
 
 		@. δx = ws.vars.x
-		@. δy = ws.vars.μ
+		@. δy.data = ws.vars.μ
 
 		ws.times.proj_time += admm_step!(
 			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
@@ -107,7 +107,7 @@ function optimize!(ws::COSMO.Workspace)
 		@. δx = ws.vars.x - δx
 
 		#@. δy = -ws.vars.μ + δy
-		@. δy -= ws.vars.μ
+		@. δy.data -= ws.vars.μ
 
 
 		# compute residuals (based on optimality conditions of the problem) to check for termination condition
