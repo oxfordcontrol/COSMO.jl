@@ -88,7 +88,7 @@ mutable struct Settings
 		eps_dual_inf=1e-4,
 		max_iter=2500,
 		verbose=false,
-		kkt_solver=CholmodKKTSolver,
+		kkt_solver=QdldlKKTSolver,
 		check_termination=40,
 		check_infeasibility=40,
 		scaling=10,
