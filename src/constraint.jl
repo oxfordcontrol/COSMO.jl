@@ -55,7 +55,7 @@ struct Constraint{T <: AbstractFloat}
 		b::AbstractVector{T},
 		convex_set::AbstractConvexSet{T},
 		dim::Integer = 0,
-		indices::UnitRange = 0:0) where{T}
+		indices::UnitRange = 0:0) where {T <: AbstractFloat}
 
 		size(A, 1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
 		size(A,1)  != convex_set.dim && throw(DimensionMismatch("The row dimension of A doesn't match the dimension of the constraint set."))
@@ -64,7 +64,7 @@ struct Constraint{T <: AbstractFloat}
 		if indices != 0:0
 			(indices.start < 1 || indices.stop < indices.start) && throw(DomainError("The index range for x has to be increasing and nonnegative."))
 			dim < indices.stop && throw(DomainError("The dimension of x: $(dim) must be equal or higher than the the stop value of indices: $(indices.stop)."))
-			Ac = spzeros(size(A, 1), dim)
+			Ac = spzeros(T, size(A, 1), dim)
 			Ac[:, indices] = A
 			A = Ac
 		end
@@ -75,14 +75,20 @@ end
 #We always choose to internally convert whatever datatype
 #we are given to a floating point type either specified by
 #the user or to DefaultFloat
-Constraint(args...) = Constraint{DefaultFloat}(args...)
+function Constraint(A::AbstractMatrix{T}, b::AbstractVector{T}, args...) where {T <: Real}
+	if T <: AbstractFloat
+		return Constraint{T}(A, b, args...)
+	else
+		return Constraint{DefaultFloat}(convert(AbstractMatrix{DefaultFloat}, A), convert(AbstractVector{DefaultFloat}, b), args...)
+	end
+ end
 
 #support the case where only a Type is specified for the set, and we need to
 #create an instance of the appropriate size
 function Constraint{T}(
 	A::AbstractMatrix{T},
 	b::AbstractVector{T},
-	set_type::Type{ <: AbstractConvexSet},args...) where{T}
+	set_type::Type{ <: AbstractConvexSet}, args...) where {T <: AbstractFloat}
 
 	# this constructor doesnt work with cones that need special arguments like the power cone
 	set_type <: ArgumentCones && error("You can't create a constraint by passing the convex set as a type, if your convex set is a $(set_type). Please pass an object.")
@@ -93,25 +99,22 @@ end
 
 
 #allow various ways of passing A and b and convert  to AbstractMatrix and AbstractVector types
-function Constraint{T}(A::AbstractMatrix, b::AbstractVector, args...) where{T}
-	Constraint{T}(AbstractMatrix{T}(A), AbstractVector{T}(b), args...)
+
+#all others convert first to matrix / vector args
+function Constraint(A::T, b::T, args...) where {T <: Real}
+	Constraint(reshape([A], 1, 1), [b], args...)
 end
 
-#all others convert first o matrix / vector args
-function Constraint{T}(A::Real,b::Real,args...) where{T}
-	Constraint{T}(reshape([A], 1, 1), [b], args...)
+function Constraint(A::AbstractMatrix{T}, b::AbstractMatrix{T}, args...) where {T <: Real}
+	Constraint(A, vec(b), args...)
 end
 
-function Constraint{T}(A::AbstractMatrix,b::AbstractMatrix, args...) where {T}
-	Constraint{T}(A, vec(b), args...)
+function Constraint(A::Union{AbstractVector{T}, AbstractMatrix{T}}, b::T, args...) where {T <: Real}
+	Constraint(reshape(A, 1, length(A)), [b], args...)
 end
 
-function Constraint{T}(A::Union{AbstractVector,AbstractMatrix}, b::Real, args...) where{T}
-	Constraint{T}(reshape(A, 1, length(A)), [b], args...)
-end
-
-function Constraint{T}(A::AbstractVector,b::AbstractVector,args...) where{T}
-	Constraint{T}(reshape(A, length(A), 1), b, args...)
+function Constraint(A::AbstractVector{T}, b::AbstractVector{T}, args...) where {T <: Real}
+	Constraint(reshape(A, length(A), 1), b, args...)
 end
 
 

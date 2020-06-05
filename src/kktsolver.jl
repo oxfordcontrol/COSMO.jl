@@ -313,7 +313,7 @@ end
 # -------------------------------------
 mutable struct CholmodKKTSolver{Tv, Ti} <: AbstractKKTSolver
 
-    fact::SuiteSparse.CHOLMOD.Factor{Tv}
+    fact::SuiteSparse.CHOLMOD.Factor{Float64} # SuiteSparse's cholmod only supports doubles
     K::SparseMatrixCSC{Tv, Ti}
     m::Ti
     n::Ti

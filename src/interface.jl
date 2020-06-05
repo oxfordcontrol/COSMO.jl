@@ -28,10 +28,10 @@ COSMO.assemble!(model, P, q, constraints, x0 = x_0)
 
 """
 function assemble!(model::Model{T},
-	P::AbstractMatrix,
-	q::AbstractVector,
-	constraints::Union{Constraint{T},Vector{Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings(),
-	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where{ T<: AbstractFloat}
+	P::AbstractMatrix{T},
+	q::AbstractVector{T},
+	constraints::Union{Constraint{T}, Vector{Constraint{T}}}; settings::COSMO.Settings{T} = COSMO.Settings{T}(),
+	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where { T <: AbstractFloat}
 
 
 	!isa(constraints, Array) && (constraints = [constraints])
@@ -44,8 +44,8 @@ function assemble!(model::Model{T},
 
 	model.p.model_size = [m; n]
 
-	model.p.A = spzeros(Float64, m, n)
-	model.p.b = spzeros(Float64, m)
+	model.p.A = spzeros(T, m, n)
+	model.p.b = spzeros(T, m)
 
 	check_dimensions(model.p.P, model.p.q, model.p.A, model.p.b)
 
@@ -58,7 +58,7 @@ function assemble!(model::Model{T},
 	end
 
 	# save the convex sets inside the model as a composite set
-	model.p.C = CompositeConvexSet(map( x-> x.convex_set, constraints))
+	model.p.C = CompositeConvexSet{T}(map( x-> x.convex_set, constraints))
 	model.settings = deepcopy(settings)
 
 	# the size of the temporary variables might change if the problem is decomposed
@@ -73,13 +73,17 @@ function assemble!(model::Model{T},
 	nothing
 end
 
+
 # Handle case where q is a 2-dimensional array instead of a 1-dimensional array
 assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractMatrix{T}, args...; kwargs...) where {T} = assemble!(model, P, vec(q), args...; kwargs...)
-assemble!(model::COSMO.Model{T}, P::AbstractVector, q::AbstractArray, args...; kwargs...) where {T} = assemble!(model, P[:, :], q, args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::AbstractVector{T}, q::AbstractArray{T}, args...; kwargs...) where {T} = assemble!(model, P[:, :], q, args...; kwargs...)
 # Handle 1-D cases
-assemble!(model::COSMO.Model{T}, P::Real, q::Real, args...; kwargs...) where {T} = assemble!(model, [P], [q], args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::T, q::T, args...; kwargs...) where {T} = assemble!(model, [P], [q], args...; kwargs...)
+# convert integer inputs to model type
+assemble!(model::COSMO.Model{T}, P::Integer, q::Integer, args...; kwargs...) where {T} = assemble!(model, convert(T, P), convert(T, q), args...; kwargs...)
 assemble!(model::COSMO.Model{T}, P::Real, q::Union{AbstractMatrix, AbstractVector}, args...; kwargs...) where {T} = assemble!(model, [P], q, args...; kwargs...)
 assemble!(model::COSMO.Model{T}, P::Union{AbstractMatrix, AbstractVector}, q::Real, args...; kwargs...) where {T} = assemble!(model, P, [q], args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::AbstractArray{Tb}, q::AbstractArray{Tb}, args...; kwargs...) where {T, Tb} = throw(ArgumentError("The precision types of model and `P` / `q` don't match."))
 
 """
 	empty_model!(model)
@@ -114,7 +118,7 @@ Provides the `COSMO.Model` with warm starting values for the primal variable `x`
 """
 warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.x, x0, ind)
 warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T} = warm_start_primal!(model, x0, nothing)
-warm_start_primal!(model::COSMO.Model{T}, x0::Real, ind::Int64) where {T} = (model.vars.x[ind] = x0)
+warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int64) where {T} = (model.vars.x[ind] = x0)
 
 
 """
@@ -124,7 +128,7 @@ Provides the `COSMO.Model` with warm starting values for the primal slack variab
 """
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.s.data, s0, ind)
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}) where {T} = warm_start_slack!(model, s0, nothing)
-warm_start_slack!(model::COSMO.Model{T}, s0::Real, ind::Int64) where {T} = (model.vars.s.data[ind] = s0)
+warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int64) where {T} = (model.vars.s.data[ind] = s0)
 
 # Notice that the sign of the dual variable y is inverted here, since internally the dual variable μ = -y is used
 """
@@ -134,7 +138,7 @@ Provides the `COSMO.Model` with warm starting values for the dual variable `y`. 
 """
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.μ, -y0, ind)
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_dual!(model, y0, nothing)
-warm_start_dual!(model::COSMO.Model{T}, y0::Real, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
+warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
 
 """
 	set!(model, P, q, A, b, convex_sets, [settings])
@@ -142,19 +146,19 @@ warm_start_dual!(model::COSMO.Model{T}, y0::Real, ind::Int64) where {T} = (model
 Sets model data directly based on provided fields.
 """
 function set!(model::COSMO.Model,
-	P::AbstractMatrix{<:Real},
-	q::AbstractVector{<:Real},
-	A::AbstractMatrix{<:Real},
-	b::AbstractVector{<:Real},
-	convex_sets::Vector{<: COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings = COSMO.Settings()) where{T}
+	P::AbstractMatrix{T},
+	q::AbstractVector{T},
+	A::AbstractMatrix{T},
+	b::AbstractVector{T},
+	convex_sets::Vector{<: COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings = COSMO.Settings()) where {T <: AbstractFloat}
 
 	check_dimensions(P, q, A, b)
 
 	# convert inputs and copy them
-	P_c = convert_copy(P, SparseMatrixCSC{Float64, Int64})
-	A_c = convert_copy(A, SparseMatrixCSC{Float64, Int64})
-	q_c = convert_copy(q, Vector{Float64})
-	b_c = convert_copy(b, Vector{Float64})
+	P_c = convert_copy(P, SparseMatrixCSC{T, Int64})
+	A_c = convert_copy(A, SparseMatrixCSC{T, Int64})
+	q_c = convert_copy(q, Vector{T})
+	b_c = convert_copy(b, Vector{T})
 
 
 	n = length(q)
@@ -164,7 +168,7 @@ function set!(model::COSMO.Model,
 	model.p.A = A_c
 	model.p.b = b_c
 	model.p.model_size = [m; n]
-	model.p.C = CompositeConvexSet(deepcopy(convex_sets))
+	model.p.C = CompositeConvexSet{T}(deepcopy(convex_sets))
 
 	pre_allocate_variables!(model)
  	model.settings = deepcopy(settings)
@@ -213,11 +217,11 @@ function merge_constraints!(constraints::Array{COSMO.Constraint{T}}) where{T}
 	nothing
 end
 
-function merge_zeros(constraints::Array{COSMO.Constraint{T}}) where{T}
+function merge_zeros(constraints::Array{COSMO.Constraint{T}}) where {T <: AbstractFloat}
 	m = sum(x -> x.dim, map(x -> x.convex_set, constraints))
 	n = size(constraints[1].A, 2)
-	A = spzeros(m, n)
-	b = zeros(m)
+	A = spzeros(T, m, n)
+	b = zeros(T, m)
 	s = 1
 	e = 0
 	for cons in constraints
@@ -226,14 +230,14 @@ function merge_zeros(constraints::Array{COSMO.Constraint{T}}) where{T}
 		b[s:e, :] = cons.b
 		s = e + 1
 	end
-	return M = COSMO.Constraint(A, b, ZeroSet)
+	return M = COSMO.Constraint{T}(A, b, ZeroSet)
 end
 
-function merge_nonnegatives(constraints::Array{COSMO.Constraint{T}}) where{T}
+function merge_nonnegatives(constraints::Array{COSMO.Constraint{T}}) where {T <: AbstractFloat}
 	m = sum(x -> x.dim, map(x -> x.convex_set, constraints))
 	n = size(constraints[1].A, 2)
-	A = spzeros(m, n)
-	b = zeros(m)
+	A = spzeros(T, m, n)
+	b = zeros(T, m)
 
 	s = 1
 	e = 0
@@ -244,7 +248,7 @@ function merge_nonnegatives(constraints::Array{COSMO.Constraint{T}}) where{T}
 		s = e + 1
 	end
 
-	return M = COSMO.Constraint(A, b, Nonnegatives)
+	return M = COSMO.Constraint{T}(A, b, Nonnegatives)
 end
 
 
@@ -261,7 +265,7 @@ function sort_sets(C::AbstractConvexSet)
 end
 
 # transform A*x + b in {0}, to A*x + s == b, s in {0}
-function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, b::AbstractVector{<:Real}, C::AbstractConvexSet, n::Int64)
+function process_constraint!(p::COSMO.ProblemData{T}, row_num::Int64, A::Union{AbstractVector{T}, AbstractMatrix{T}}, b::AbstractVector{T}, C::AbstractConvexSet{T}, n::Int64) where {T <: AbstractFloat}
 	check_A_dim(A, n)
 	s = row_num
 	e = row_num + C.dim - 1
@@ -270,8 +274,8 @@ function process_constraint!(p::COSMO.ProblemData, row_num::Int64, A::Union{Abst
 end
 
 
-function pre_allocate_variables!(ws::Workspace{T}) where{T}
-	m, n = ws.p.model_size
+function pre_allocate_variables!(ws::Workspace{T}) where {T <: AbstractFloat}
+  m, n = ws.p.model_size
   ws.vars = Variables{T}(m, n, ws.p.C)
   ws.utility_vars = UtilityVariables{T}(m, n)
 end

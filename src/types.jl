@@ -88,8 +88,8 @@ struct Result{T <: AbstractFloat}
     obj_val::T
     iter::Int64
     status::Symbol
-    info::ResultInfo{T}
-    times::ResultTimes{T}
+    info::ResultInfo
+    times::ResultTimes
 
     function Result{T}() where {T <: AbstractFloat}
       return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, :Unsolved, ResultInfo{T}(0.,0., T[]), ResultTimes{T}())
@@ -123,7 +123,7 @@ ScaleMatrices(args...) = ScaleMatrices{DefaultFloat}(args...)
 
 ScaleMatrices{T}() where {T} = ScaleMatrices(I, I, I, I, Base.RefValue{T}(one(T)), Base.RefValue{T}(one(T)))
 
-function ScaleMatrices{T}(m, n) where{T}
+function ScaleMatrices{T}(m, n) where {T <: AbstractFloat}
 	D    = Diagonal(ones(T, n))
 	Dinv = Diagonal(ones(T, n))
 	E    = Diagonal(ones(T, m))
@@ -148,7 +148,7 @@ end
 # Problem data
 # -------------------------------------
 
-mutable struct ProblemData{T<:Real}
+mutable struct ProblemData{T <: AbstractFloat}
 	P::AbstractMatrix{T}
 	q::Vector{T}
 	A::AbstractMatrix{T}
@@ -156,13 +156,13 @@ mutable struct ProblemData{T<:Real}
 	C::CompositeConvexSet{T}
 	model_size::Array{Integer,1}
 
-	function ProblemData{T}() where{T}
+	function ProblemData{T}() where {T <: AbstractFloat}
 		return new(
 			spzeros(T, 1, 1),             #P
 			T[],                        #q
 			spzeros(T, 1, 1),             #A
 			T[],                        #b
-			COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)]),     #C
+			COSMO.CompositeConvexSet{T}([COSMO.ZeroSet{T}(1)]),     #C
 			[0; 0])                 #model size
 	end
 end
@@ -219,7 +219,7 @@ end
 # -------------------------------------
 # Chordal Decomposition Information
 # -------------------------------------
-mutable struct ChordalInfo{T <: Real}
+mutable struct ChordalInfo{T <: AbstractFloat}
   decompose::Bool # an internal flag to check if problem has been decomposed
   originalM::Int64
   originalN::Int64
@@ -232,7 +232,8 @@ mutable struct ChordalInfo{T <: Real}
   num_decom_psd_cones::Int64 #total number of psd cones after decomposition
   L::SparseMatrixCSC{T} #pre allocate memory for QDLDL
   cone_map::Dict{Int64, Int64} # map every cone in the decomposed problem to the equivalent or undecomposed cone in the original problem
-  function ChordalInfo{T}(problem::COSMO.ProblemData{T}, settings::COSMO.Settings) where {T}
+
+  function ChordalInfo{T}(problem::COSMO.ProblemData{T}, settings::COSMO.Settings) where {T <: AbstractFloat}
     originalM = problem.model_size[1]
     originalN = problem.model_size[2]
     originalC = deepcopy(problem.C)
@@ -245,7 +246,7 @@ mutable struct ChordalInfo{T <: Real}
   end
 
 	function ChordalInfo{T}() where{T}
-		C = COSMO.CompositeConvexSet([COSMO.ZeroSet{T}(1)])
+		C = COSMO.CompositeConvexSet{T}([COSMO.ZeroSet{T}(1)])
 		return new(false, 0, 0, C, spzeros(1, 1), COSMO.SparsityPattern[], [1])
 	end
 
@@ -260,7 +261,7 @@ struct Variables{T}
 	s::SplitVector{T}
 	μ::Vector{T}
 
-	function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where{T}
+	function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 		m == C.dim || throw(DimensionMismatch("set dimension is not m"))
 		x = zeros(T, n)
 		s = SplitVector(zeros(T, m), C)
@@ -276,7 +277,7 @@ struct UtilityVariables{T}
   vec_n::Vector{T}
   vec_n2::Vector{T}
 
-  function UtilityVariables{T}(m::Int64, n::Int64) where {T}
+  function UtilityVariables{T}(m::Int64, n::Int64) where {T <: AbstractFloat}
     new(zeros(T, m), zeros(T, n), zeros(T, n))
   end
 end
@@ -293,7 +294,7 @@ Initializes an empty COSMO model that can be filled with problem data using `ass
 """
 mutable struct Workspace{T}
 	p::ProblemData{T}
-	settings::Settings
+	settings::Settings{T}
 	sm::ScaleMatrices{T}
 	ci::ChordalInfo{T}
 	vars::Variables{T}
@@ -306,13 +307,13 @@ mutable struct Workspace{T}
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int64}, 1} # store a set_ind -> row_range map
 	#constructor
-	function Workspace{T}() where {T}
+	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
 		sm = ScaleMatrices{T}()
 		vars = Variables{T}(1, 1, p.C)
     	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		return new(p, Settings(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), T[], ResultTimes(), [0:0])
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, zero(T), T[], nothing, Flags(), T[], ResultTimes(), [0:0])
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

@@ -20,7 +20,7 @@ end
 struct CompositeConvexSet{T} <: AbstractConvexSet{T}
 	dim::Int
 	sets::Vector{AbstractConvexSet}
-	function CompositeConvexSet{T}(sets::Vector{<:AbstractConvexSet{T}}) where{T}
+	function CompositeConvexSet{T}(sets::Vector{<:AbstractConvexSet{T}}) where {T <: AbstractFloat}
 		# do not allow nesting of composite sets
 		if any(set->isa(set, CompositeConvexSet), sets)
 			error("Nesting of CompositeConvexSets not supported")

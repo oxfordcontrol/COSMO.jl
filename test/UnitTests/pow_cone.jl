@@ -2,6 +2,13 @@
 using Test, LinearAlgebra, SparseArrays
 using COSMO
 
+
+if @isdefined UnitTestFloat
+    T = UnitTestFloat
+else
+    T = Float64
+end
+
 @testset "Power cone problems" begin
 
     @testset "Feasible" begin
@@ -18,27 +25,27 @@ using COSMO
 
         # x = (x1, y, z1, x2, y2, z2)
         n = 6
-        P = spzeros(n, n)
-        q = zeros(6)
-        q[3] = q[6] = -1.
+        P = spzeros(T, n, n)
+        q = zeros(T, 6)
+        q[3] = q[6] = -one(T)
 
         # (x1, y, z1) in K_pow(0.6)
-        A1 = sparse(Matrix(1.0I, 3, 3))
-        b1 = zeros(3)
-        cs1 = COSMO.Constraint(A1, b1, COSMO.PowerCone(0.6), 6, 1:3)
+        A1 = spdiagm(0 => ones(T, 3))
+        b1 = zeros(T, 3)
+        cs1 = COSMO.Constraint(A1, b1, COSMO.PowerCone(T(0.6)), 6, 1:3)
 
         # (x2, 2, z2) in K_pow(0.1)
-        A2 = sparse(Matrix(1.0I, 3, 3))
-        b2 = zeros(3)
-        cs2 = COSMO.Constraint(A2, b2, COSMO.PowerCone(0.1),6, 4:6)
+        A2 = spdiagm(0 => ones(T, 3))
+        b2 = zeros(T, 3)
+        cs2 = COSMO.Constraint(A2, b2, COSMO.PowerCone(T(0.1)),6, 4:6)
 
         # x1 + 2y + 3x2 == 3
-        cs3 = COSMO.Constraint([1.0 2.0 0 3.0 0 0], [-3.], COSMO.ZeroSet)
+        cs3 = COSMO.Constraint(T[1.0 2.0 0 3.0 0 0], T[-3.], COSMO.ZeroSet)
 
         # y2 == 1
-        cs4 = COSMO.Constraint([0 0 0 0 1.0 0], [-1.], COSMO.ZeroSet)
+        cs4 = COSMO.Constraint(T[0 0 0 0 1.0 0], T[-1.], COSMO.ZeroSet)
 
-        model = COSMO.Model()
+        model = COSMO.Model{T}()
         assemble!(model, P, q, [cs1; cs2; cs3; cs4])
 
         res = COSMO.optimize!(model)
@@ -68,13 +75,13 @@ using COSMO
         #       x = y == 1
         #       z = 2
 
-        P = spzeros(3, 3)
-        q = [0; 0; -1.0]
+        P = spzeros(T, 3, 3)
+        q = T[0; 0; -1.0]
 
-        cs1 = COSMO.Constraint(Matrix(1.0I, 3, 3), zeros(3), COSMO.PowerCone(0.8))
-        cs2 = COSMO.Constraint(Matrix(1.0I, 3, 3), [-1.; -1.; -2.], COSMO.ZeroSet)
+        cs1 = COSMO.Constraint(spdiagm(0 => ones(T, 3)), zeros(T, 3), COSMO.PowerCone{T}(0.8))
+        cs2 = COSMO.Constraint(spdiagm(0 => ones(T, 3)), T[-1.; -1.; -2.], COSMO.ZeroSet)
 
-        model = COSMO.Model()
+        model = COSMO.Model{T}()
         assemble!(model, P, q, [cs1; cs2])
 
         res = COSMO.optimize!(model)
@@ -86,12 +93,12 @@ using COSMO
         # min z
         # s.t. x^0.8 * y^0.2 >= z
 
-        P = spzeros(3, 3)
-        q = [0; 0; 1.0]
+        P = spzeros(T, 3, 3)
+        q = T[0; 0; 1.0]
 
-        cs1 = COSMO.Constraint(Matrix(1.0I, 3, 3), zeros(3), COSMO.PowerCone(0.8))
+        cs1 = COSMO.Constraint(spdiagm(0 => ones(T, 3)), zeros(T, 3), COSMO.PowerCone(0.8))
 
-        model = COSMO.Model()
+        model = COSMO.Model{T}()
         assemble!(model, P, q, cs1)
 
         res = COSMO.optimize!(model)
@@ -121,7 +128,7 @@ end
 
         res = COSMO.optimize!(model)
         @test res.status == :Solved
-        @test isapprox(res.obj_val, -1., atol=1e-3)
+        @test isapprox(res.obj_val, -one(T), atol=1e-3)
 
     end
 end

@@ -11,13 +11,14 @@ end
 
 
 # generate a random pos def matrix with eigenvalues between 0.1 and 2
-function generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Real = 0.1, aMax::Real = 2)
-	X = rand(rng, n, n)
+generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Float64 = 0.1, aMax::Float64 = 2.) = generate_pos_def_matrix(rng, n, aMin, aMax, type = Float64)
+function generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::T = T(0.1), aMax::T = T(2.); type::Type{T} = Float64 ) where {T <: AbstractFloat}
+	X = rand(rng, T, n, n)
 	# any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R
 	Q, R = qr(X)
-	eigs = rand(rng ,n) .* (aMax .- aMin) .+ aMin
+	eigs = rand(rng ,T, n) .* (aMax .- aMin) .+ aMin
 	X = Q * Matrix(Diagonal(eigs)) * Q'
-	X = 0.5 * (X + X')
+	X = T(0.5) * (X + X')
 	return X
 end
 

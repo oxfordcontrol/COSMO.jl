@@ -3,19 +3,25 @@
 using Test, LinearAlgebra, SparseArrays, Random
 using COSMO
 
+if @isdefined UnitTestFloat
+    T = UnitTestFloat
+else
+    T = Float64
+end
+T = Float32
 
 @testset "Box Problems - feasible" begin
-    A = sparse([1. 0; 0. 1.])
-    b = [0.;0.]
+    A = SparseMatrixCSC{T, Int64}([1. 0; 0. 1.])
+    b = T[0.;0.]
 
-    P = Matrix(Diagonal(ones(2)))
-    q = [1.;-1.]
-    l = [0.;0]
-    u = [1.;1.]
+    P = Matrix(Diagonal(ones(T, 2)))
+    q = T[1.;-1.]
+    l = T[0.;0]
+    u = T[1.;1.]
     constraint = COSMO.Constraint(A,b, COSMO.Box(l,u))
     constraints = [constraint]
 
-    model = COSMO.Model()
+    model = COSMO.Model{T}()
     assemble!(model, P, q, constraints)
 
     res = COSMO.optimize!(model)
@@ -25,17 +31,17 @@ end
 nothing
 
 @testset "Box Problems - primal infeasible" begin
-    A = sparse([1. 0; 1. 0.])
-    b = [2.;0.]
+    A = SparseMatrixCSC{T, Int64}([1. 0; 1. 0.])
+    b = T[2.;0.]
 
-    P = Matrix(Diagonal(ones(2)))
-    q = [1.;-1.]
-    l = [0.;0]
-    u = [1.;1.]
+    P = Matrix(Diagonal(ones(T, 2)))
+    q = T[1.;-1.]
+    l = T[0.;0]
+    u = T[1.;1.]
     constraint = COSMO.Constraint(A,b, COSMO.Box(l,u))
     constraints = [constraint]
 
-    model = COSMO.Model()
+    model = COSMO.Model{T}()
     assemble!(model, P, q, constraints)
 
     res = COSMO.optimize!(model)
@@ -43,17 +49,17 @@ nothing
 end
 
 @testset "Box Problems - primal infeasible" begin
-    A = sparse([1. 0; 1. 0.])
-    b = [0.;0.]
+    A = SparseMatrixCSC{T, Int64}([1. 0; 1. 0.])
+    b = T[0.;0.]
 
-    P = Matrix(Diagonal(ones(2)))
-    q = [1.;-1.]
-    l = [0.;2.]
-    u = [1.;3.]
+    P = Matrix(Diagonal(ones(T, 2)))
+    q = T[1.;-1.]
+    l = T[0.;2.]
+    u = T[1.;3.]
     constraint = COSMO.Constraint(A,b, COSMO.Box(l,u))
     constraints = [constraint]
 
-    model = COSMO.Model()
+    model = COSMO.Model{T}()
     assemble!(model, P, q, constraints)
 
     res = COSMO.optimize!(model)
@@ -61,18 +67,18 @@ end
 end
 
 @testset "Box Problems - dual infeasible (unscaled)" begin
-    A = sparse([1. 0; 0. 1.])
-    b = [1.;1.]
+    A = SparseMatrixCSC{T, Int64}([1. 0; 0. 1.])
+    b = T[1.;1.]
 
-    P = Matrix(Diagonal(zeros(2)))
-    q = [1.;1.]
-    l = [0.;-Inf]
-    u = [1.;3.]
+    P = Matrix(Diagonal(zeros(T, 2)))
+    q = T[1.;1.]
+    l = T[0.;-Inf]
+    u = T[1.;3.]
     constraint = COSMO.Constraint(A,b, COSMO.Box(l,u))
     constraints = [constraint]
 
-    model = COSMO.Model()
-    settings = COSMO.Settings(check_infeasibility=20,scaling=0)
+    model = COSMO.Model{T}()
+    settings = COSMO.Settings{T}(check_infeasibility=20,scaling=0)
     assemble!(model, P, q, constraints,settings  = settings)
 
     res = COSMO.optimize!(model)
@@ -80,18 +86,18 @@ end
 end
 
 @testset "Box Problems - dual infeasible (scaled)" begin
-    A = sparse([1. 0; 0. 1.])
-    b = [1.;1.]
+    A = SparseMatrixCSC{T, Int64}([1. 0; 0. 1.])
+    b = T[1.;1.]
 
-    P = Matrix(Diagonal(zeros(2)))
-    q = [1.;1.]
-    l = [0.;-Inf]
-    u = [1.;3.]
+    P = Matrix(Diagonal(zeros(T, 2)))
+    q = T[1.;1.]
+    l = T[0.;-Inf]
+    u = T[1.;3.]
     constraint = COSMO.Constraint(A,b, COSMO.Box(l,u))
     constraints = [constraint]
 
-    model = COSMO.Model()
-    settings = COSMO.Settings(check_infeasibility=40,scaling=10)  
+    model = COSMO.Model{T}()
+    settings = COSMO.Settings{T}(check_infeasibility=40,scaling=10)
     assemble!(model, P, q, constraints,settings = settings)
 
     res = COSMO.optimize!(model)

@@ -8,10 +8,17 @@
 
 using COSMO, Test, LinearAlgebra, SparseArrays, Random
 
+if @isdefined UnitTestFloat
+    T = UnitTestFloat
+else
+    T = Float64
+end
+T = Float32
+
 
 # this function creates a matrix A that slices out the diagonal entries Xii of a vectorized square matrix x=vec(X)
-function create_diagonal_extractor(n)
-  A = spzeros(n, n^2)
+function create_diagonal_extractor(n, type::Type{T} = Float64) where {T <: AbstractFloat}
+  A = spzeros(type, n, n^2)
   A[1,1 ] = 1
   for iii = 2:n-1
     col = (iii - 1) * (n + 1)
@@ -29,31 +36,31 @@ function diagonal_equal_one(A, atol)
 end
 
 rng = Random.MersenneTwister(12345)
-xMin = -1.
-xMax = 1.
+xMin = -one(T)
+xMax = one(T)
 n = 50
-C = xMin .+ randn(rng, n, n)*(xMax - xMin)
+C = xMin .+ randn(rng, T, n, n)*(xMax - xMin)
 c = vec(C)
 
 
 n2 = n^2
 m = n + n2
 
-P = sparse(1.0I, n2, n2)
+P = spdiagm(0 => ones(T, n2))
 q = -vec(C)
-r = 0.5*vec(C)' * vec(C)
+r = T(0.5) * dot(c, c)
 
-A1 = create_diagonal_extractor(n)
-b1 = -ones(n)
+A1 = create_diagonal_extractor(n, T)
+b1 = -ones(T, n)
 cs1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
 
-A2 = sparse(1.0I, n2, n2)
-b2 = zeros(n2)
+A2 = spdiagm(0 => ones(T, n2))
+b2 = zeros(T, n2)
 cs2 = COSMO.Constraint(A2, b2, COSMO.PsdCone)
 constraints = [cs1; cs2]
 
 
-model = COSMO.Model()
+model = COSMO.Model{T}()
 assemble!(model, P, q, constraints)
 
 res = COSMO.optimize!(model)
@@ -63,7 +70,7 @@ Xsol = reshape(res.x, n, n)
 @testset "Closest Correlation Matrix - SDP Problems" begin
   @test res.status == :Solved
   @test diagonal_equal_one(Xsol, 1e-5)
-  @test minimum(eigen(Xsol).values) > -1e-3
+  @test minimum(real.(eigen(Xsol).values)) > -1e-3
 
 end
 nothing

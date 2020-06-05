@@ -1,6 +1,12 @@
 using COSMO, Test, Random
 
-ws = COSMO.Workspace()
+if @isdefined UnitTestFloat
+    T = UnitTestFloat
+else
+    T = Float64
+end
+
+ws = COSMO.Workspace{T}()
 iter = 10
 cost = 20.
 r_prim = 1.5e-3

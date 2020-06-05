@@ -203,9 +203,9 @@ function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
 		rank_k_update!(X, ws)
 end
 
-function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where{T}
+function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where {T}
   n = size(X, 1)
-  X .= 0
+  @. X = zero(T)
   nnz_λ = 0
   for j = 1:length(ws.w)
     λ = ws.w[j]
@@ -219,7 +219,7 @@ function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where{
 
   if nnz_λ > 0
     V = uview(ws.Z, :, (n - nnz_λ + 1):n)
-    BLAS.syrk!('U', 'N', 1.0, V, 1.0, X)
+    BLAS.syrk!('U', 'N', one(T), V, one(T), X)
   end
   return nothing
 end
@@ -270,9 +270,9 @@ function project!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}
         x .= max(x[1], zero(T))
     else
         # symmetrized square view of x
-        X    = reshape(x, n, n)
+        X = reshape(x, n, n)
         symmetrize_upper!(X)
-        _project!(X,cone.work)
+        _project!(X, cone.work)
 
         #fill in the lower triangular part
         for j=1:n, i=1:(j-1)
@@ -427,7 +427,7 @@ struct ExponentialCone{T} <: AbstractConvexCone{T}
   dim::Int
   v0::Vector{T}
   MAX_ITER::Int64
-  EXP_TOL::Float64
+  EXP_TOL::T
 
   function ExponentialCone{T}(dim = 3, MAX_ITERS = 100, EXP_TOL = 1e-8) where{T}
     new(3, zeros(T, 3), MAX_ITERS, EXP_TOL)
@@ -440,18 +440,18 @@ function project!(v::AbstractVector{T}, cone::ExponentialCone{T}) where{T}
 
   # Check the four different cases
   # 1. v in K_exp => v = v
-  in_cone(v, cone, 0.) && return nothing
+  in_cone(v, cone, zero(T)) && return nothing
 
   # 2. -v in K_exp^* => v = 0
-  if in_dual(-v, cone, 0.)
+  if in_dual(-v, cone, zero(T))
     v .= zero(T)
     return nothing
   end
 
   # 3. x < 0 and y < 0 => v = (x, 0, max(z, 0))
   if v[1] < 0 && v[2] < 0
-    v[2] = 0.0
-    v[3] = max(v[3], 0)
+    v[2] = T(0)
+    v[3] = max(v[3], zero(T))
     return nothing
   end
 
@@ -465,7 +465,7 @@ end
 # This is a modified version of the projection code used in SCS
 # https://github.com/cvxgrp/scs/blob/master/src/cones.c
 # We are solving the dual problem g(λ) via a bisection method
-function project_exp!(v::AbstractVector{T}, cone::ExponentialCone{T}) where{T}
+function project_exp!(v::AbstractVector{T}, cone::ExponentialCone{T}) where {T <: AbstractFloat}
   # save input vector and use v as working variable
   @. cone.v0 = v
   l, u = get_bisection_bounds(v, cone.v0, cone.EXP_TOL)
@@ -478,9 +478,9 @@ function project_exp!(v::AbstractVector{T}, cone::ExponentialCone{T}) where{T}
   end
 end
 
-function get_bisection_bounds(v::AbstractVector{T}, v0::Vector{T}, tol::Float64) where {T <: Real}
-  l = 0.
-  λ = 0.125
+function get_bisection_bounds(v::AbstractVector{T}, v0::Vector{T}, tol::T) where {T <: AbstractFloat}
+  l = zero(T)
+  λ = T(0.125)
   g = grad_dual!(λ, v, v0, tol)
   while g > 0
     l = λ
@@ -491,13 +491,13 @@ function get_bisection_bounds(v::AbstractVector{T}, v0::Vector{T}, tol::Float64)
   return l, u
 end
 
-function grad_dual!(λ::T, v::AbstractVector{T}, v0::Vector{T}, tol::Float64) where {T <: Real}
+function grad_dual!(λ::T, v::AbstractVector{T}, v0::Vector{T}, tol::T) where {T <: AbstractFloat}
   find_minimizers!(λ, v, v0, tol)
   v[2] == 0 ? (g = v[1]) : (g = v[1] + v[2] * log(v[2] / v[3]))
   return g
 end
 
-function find_minimizers!(λ::T, v::AbstractVector{T}, v0::Vector{T}, tol::Float64) where {T <: Real}
+function find_minimizers!(λ::T, v::AbstractVector{T}, v0::Vector{T}, tol::T) where {T <: AbstractFloat}
   v[3] = find_min_t(λ, v0[2], v0[3], tol)
   # s* = (t - t0) * t / λ
   v[2] = (1 / λ) * (v[3] - v0[3]) * v[3]
@@ -508,18 +508,18 @@ end
 # use Newton method to find minimizer t* for given λ, i.e. find the zero of
 # f(t) = t * (t - t0) / lambda - s0 + λ * log( t - t0 / λ) + λ
 # Define Δt = t - t0
-function find_min_t(λ::T, s0::T, t0::T, tol::Float64) where {T <:Real}
+function find_min_t(λ::T, s0::T, t0::T, tol::T) where {T <: AbstractFloat}
   Δt = max(-t0, tol)
   for k = 1:150
-    f = Δt * (Δt + t0) / λ^2 - s0 / λ + log(Δt / λ) + 1
-    grad_f = (2 * Δt + t0) / λ^2 + 1 / Δt
+    f = Δt * (Δt + t0) / λ^2 - s0 / λ + log(Δt / λ) + one(T)
+    grad_f = (2 * Δt + t0) / λ^2 + one(T) / Δt
     Δt = Δt - f / grad_f
 
     if (Δt <= -t0)
       Δt = -t0
       break
     elseif (Δt <= 0)
-      Δt = 0
+      Δt = zero(T)
       break
     elseif abs(f) < tol
       break
@@ -528,21 +528,21 @@ function find_min_t(λ::T, s0::T, t0::T, tol::Float64) where {T <:Real}
   return Δt + t0
 end
 
-function in_cone(v::AbstractVector{T}, cone::ExponentialCone{T}, tol::T) where{T}
+function in_cone(v::AbstractVector{T}, cone::ExponentialCone{T}, tol::T) where {T <: AbstractFloat}
   x = v[1]
   y = v[2]
   z = v[3]
   return (y > 0 && y * exp(x/y) <= z + tol) || (x <= tol &&  y == 0. && z >= -tol )
 end
 # Kexp^* = { (x,y,z) | x < 0, -xe^(y/x) <= e^1 z } cup { (0,y,z) | y >= 0,z >= 0 }
-function in_dual(v::AbstractVector{T}, cone::ExponentialCone{T}, tol::T) where{T}
+function in_dual(v::AbstractVector{T}, cone::ExponentialCone{T}, tol::T) where {T <: AbstractFloat}
   x = v[1]
   y = v[2]
   z = v[3]
   return (x < 0 && -x * exp(y / x) - exp(1) *  z <= tol) || (abs(x) <= tol && y >= -tol && z >= -tol)
 end
 
-function in_pol_recc(v::AbstractVector{T},cone::ExponentialCone{T}, tol::T) where{T}
+function in_pol_recc(v::AbstractVector{T},cone::ExponentialCone{T}, tol::T) where {T <: AbstractFloat}
   return in_dual(-v, cone, tol)
 end
 
@@ -554,35 +554,39 @@ Creates the 3-d power cone ``\\mathcal{K}_{pow} = \\{(x, y, z) \\mid x^\\alpha y
 """
 struct PowerCone{T} <: AbstractConvexCone{T}
   dim::Int
-  α::Float64
+  α::T
   MAX_ITER::Int64
-  POW_TOL::Float64
+  POW_TOL::T
 
-  function PowerCone{T}(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8) where{T}
-    (alpha <= 0 || alpha >= 1) && throw(DomainError("The exponent α of the power cone has to be in (0, 1)."))
+  function PowerCone{T}(alpha::Real, MAX_ITERS::Int64 = 20, POW_TOL::Real = 1e-8) where{T <: AbstractFloat}
+    (alpha <= 0 || alpha >= one(T)) && throw(DomainError("The exponent α of the power cone has to be in (0, 1)."))
     new(3, alpha, MAX_ITERS, POW_TOL)
   end
 end
-PowerCone(args...) = PowerCone{DefaultFloat}(args...)
+PowerCone(alpha::T, args...) where {T <: AbstractFloat}= PowerCone{T}(alpha, args...)
 
+# Allow precision conversion of PowerCones
+function convert(dest_type::Type{COSMO.PowerCone{Ta}}, src::COSMO.PowerCone{Tb}) where {Ta <: AbstractFloat, Tb <: AbstractFloat}
+	dest_type(Ta(src.α), src.MAX_ITER, Ta(src.POW_TOL))
+end
 
 # The projection onto the power cone is described in
 # Hien - Differential properties of Euclidean projections onto power cone (2015)
 function project!(v::AbstractVector{T}, cone::PowerCone{T}) where{T}
   # Check the special cases first
   # 1. v in K_pow => v = v
-  in_cone(v, cone, 0.) && return nothing
+  in_cone(v, cone, zero(T)) && return nothing
 
   # 2. -v in K_pow^* => v .= 0
-  if in_dual(-v, cone, 0.)
+  if in_dual(-v, cone, zero(T))
     v .= zero(T)
     return nothing
   end
 
   # 3. v not in K_pow and -v not in K_pow^* and z == 0 => x = max(x, 0), y = max(y, 0)
   if abs(v[3]) <= cone.POW_TOL
-    v[1] = max(v[1], 0)
-    v[2] = max(v[2], 0)
+    v[1] = max(v[1], zero(T))
+    v[2] = max(v[2], zero(T))
     return nothing
   end
 
@@ -598,11 +602,11 @@ function project!(v::AbstractVector{T}, cone::PowerCone{T}) where{T}
 end
 
  # find the zero of above condition for r by applying Newton's method
-  function project_pow!(v::AbstractVector{T}, cone::PowerCone{T}) where{T}
+  function project_pow!(v::AbstractVector{T}, cone::PowerCone{T}) where {T <: AbstractFloat}
   x0 = v[1]
   y0 = v[2]
   z0 = v[3]
-  r = abs(z0) / 2
+  r = abs(z0) / T(2)
   ϕx = zero(T)
   ϕy = zero(T)
   # compute a zero of phi(v, r, α)
@@ -629,7 +633,7 @@ end
 end
 
 function ϕc(x0::T, z0::T, r::T, α::T) where{T <: Real}
-  return max(0.5 * (x0 + sqrt(x0^2 + 4 * α * r * (abs(z0) - r))), 1e-10)
+  return max(T(0.5) * (x0 + sqrt(x0^2 + T(4) * α * r * (abs(z0) - r))), T(1e-10))
 end
 
 function dϕc_dr(ϕx::T, x0::T, z0::T, r::T, α::T) where{T <: Real}
@@ -693,12 +697,13 @@ struct DualPowerCone{T} <: AbstractConvexCone{T}
   v0::Vector{T}
   primal_cone::PowerCone{T}
 
-  function DualPowerCone{T}(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8) where{T}
+  function DualPowerCone{T}(alpha::Real, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8) where{T}
     (alpha <= 0 || alpha >= 1) && throw(DomainError, "The exponent α of the dual power cone has to be in (0, 1).")
     new(3, zeros(T,3), PowerCone{T}(alpha, MAX_ITERS, POW_TOL))
   end
 end
-DualPowerCone(args...) = DualPowerCone{DefaultFloat}(args...)
+DualPowerCone(alpha::T, args...) where {T <: AbstractFloat}= DualPowerCone{T}(alpha, args...)
+
 DualCones = Union{DualExponentialCone, DualPowerCone}
 in_cone(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(v, cone.primal_cone, tol)
 in_dual(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_cone(v, cone.primal_cone, tol)
@@ -729,13 +734,13 @@ struct Box{T} <: AbstractConvexSet{T}
 	constr_type::Vector{Int} #store type of constraint {-1: loose, 0: inequality, 1: equality}
 	l::Vector{T}
 	u::Vector{T}
-	function Box{T}(dim::Int) where{T}
+	function Box{T}(dim::Int) where {T <: AbstractFloat}
 		dim >= 0 || throw(DomainError(dim, "dimension must be nonnegative"))
 		l = fill!(Vector{T}(undef, dim), -Inf)
 		u = fill!(Vector{T}(undef, dim), +Inf)
 		return new(dim, zeros(Int, dim), l, u)
 	end
-	function Box{T}(l::Vector{T}, u::Vector{T}) where{T}
+	function Box{T}(l::Vector{T}, u::Vector{T}) where {T <: AbstractFloat}
 		length(l) == length(u) || throw(DimensionMismatch("bounds must be same length"))
 		#enforce consistent bounds
         _box_check_bounds(l,u)
@@ -743,7 +748,7 @@ struct Box{T} <: AbstractConvexSet{T}
 	end
 end
 Box(dim) = Box{DefaultFloat}(dim)
-Box(l, u) = Box{DefaultFloat}(l, u)
+Box(l::AbstractArray{T}, u::AbstractArray{T}) where {T <: AbstractFloat} = Box{T}(l, u)
 
 function _box_check_bounds(l,u)
     for i in eachindex(l)

@@ -44,81 +44,83 @@ merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
 compact_transformation | Choose how a decomposed problem is transformed | true
 time_limit | Set solver time limit in s | 0
 """
-mutable struct Settings
-	rho::Float64
-	sigma::Float64
-	alpha::Float64
-	eps_abs::Float64
-	eps_rel::Float64
-	eps_prim_inf::Float64
-	eps_dual_inf::Float64
+mutable struct Settings{T <: AbstractFloat}
+	rho::T
+	sigma::T
+	alpha::T
+	eps_abs::T
+	eps_rel::T
+	eps_prim_inf::T
+	eps_dual_inf::T
 	max_iter::Int64
 	verbose::Bool
 	kkt_solver::Union{Type{<: AbstractKKTSolver}, OptionsFactory{<: AbstractKKTSolver}}
 	check_termination::Int64
 	check_infeasibility::Int64
 	scaling::Int64
-	MIN_SCALING::Float64
-	MAX_SCALING::Float64
+	MIN_SCALING::T
+	MAX_SCALING::T
 	adaptive_rho::Bool
 	adaptive_rho_interval::Int64
-	adaptive_rho_tolerance::Float64
-	adaptive_rho_fraction::Float64
+	adaptive_rho_tolerance::T
+	adaptive_rho_fraction::T
 	verbose_timing::Bool
-	RHO_MIN::Float64
-	RHO_MAX::Float64
-	RHO_TOL::Float64
-	RHO_EQ_OVER_RHO_INEQ::Float64
-	COSMO_INFTY::Float64
+	RHO_MIN::T
+	RHO_MAX::T
+	RHO_TOL::T
+	RHO_EQ_OVER_RHO_INEQ::T
+	COSMO_INFTY::T
   	decompose::Bool
   	complete_dual::Bool
-	time_limit::Float64
-	obj_true::Float64
-	obj_true_tol::Float64
+	time_limit::T
+	obj_true::T
+	obj_true_tol::T
 	merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}
 	compact_transformation::Bool
 	#constructor
-	function Settings(;
-		rho=0.1,
-		sigma=1e-6,
-		alpha=1.6,
-		eps_abs=1e-4,
-		eps_rel=1e-4,
-		eps_prim_inf=1e-6,
-		eps_dual_inf=1e-4,
+	function Settings{T}(;
+		rho=T(0.1),
+		sigma=T(1e-6),
+		alpha=T(1.6),
+		eps_abs=T(1e-4),
+		eps_rel=T(1e-4),
+		eps_prim_inf=T(1e-6),
+		eps_dual_inf=T(1e-4),
 		max_iter=2500,
 		verbose=false,
 		kkt_solver=QdldlKKTSolver,
 		check_termination=40,
 		check_infeasibility=40,
 		scaling=10,
-		MIN_SCALING = 1e-4,
-		MAX_SCALING = 1e4,
+		MIN_SCALING = T(1e-4),
+		MAX_SCALING = T(1e4),
 		adaptive_rho = true,
 		adaptive_rho_interval = 40,
 		adaptive_rho_tolerance = 5,
-		adaptive_rho_fraction = 0.4,
+		adaptive_rho_fraction = T(0.4),
 		verbose_timing = false,
-		RHO_MIN = 1e-6,
-		RHO_MAX = 1e6,
-		RHO_TOL = 1e-4,
-		RHO_EQ_OVER_RHO_INEQ = 1e3,
-		COSMO_INFTY = 1e20,
+		RHO_MIN = T(1e-6),
+		RHO_MAX = T(1e6),
+		RHO_TOL = T(1e-4),
+		RHO_EQ_OVER_RHO_INEQ = T(1e3),
+		COSMO_INFTY = T(1e20),
 		decompose = true,
     	complete_dual = false,
 		time_limit = 0.0,
 		obj_true = NaN,
-		obj_true_tol = 1e-3,
+		obj_true_tol = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
 		compact_transformation = true
-		)
-	if !isa(kkt_solver, OptionsFactory)
-		kkt_solver = with_options(kkt_solver)
-	end
+		) where {T <: AbstractFloat}
+		if !isa(kkt_solver, OptionsFactory)
+			kkt_solver = with_options(kkt_solver)
+		end
 
-	if !isa(merge_strategy, OptionsFactory)
-		merge_strategy = with_options(merge_strategy)
+		if !isa(merge_strategy, OptionsFactory)
+			merge_strategy = with_options(merge_strategy)
+		end
+		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation)
 	end
-	new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation)
 end
-end
+
+Settings(args...) = Settings{DefaultFloat}(args...)

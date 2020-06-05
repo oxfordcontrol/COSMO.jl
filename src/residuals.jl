@@ -95,7 +95,7 @@ function max_res_component_norm(ws::COSMO.Workspace, IGNORESCALING_FLAG::Bool = 
 	return max_norm_prim, max_norm_dual
 end
 
-function has_converged(ws::COSMO.Workspace, r_prim::Float64, r_dual::Float64)
+function has_converged(ws::COSMO.Workspace{T}, r_prim::T, r_dual::T) where {T <: AbstractFloat}
 	max_norm_prim, max_norm_dual = max_res_component_norm(ws)
 	settings = ws.settings
 	ϵ_prim = settings.eps_abs + settings.eps_rel * max_norm_prim
@@ -104,7 +104,7 @@ function has_converged(ws::COSMO.Workspace, r_prim::Float64, r_dual::Float64)
 	# if an optimal objective value was specified for the problem check if current solution is within specified accuracy
 	obj_true_FLAG = true
 	if !isnan(settings.obj_true)
-		current_cost = ws.sm.cinv[] * (1/2 * ws.vars.x' * ws.p.P * ws.vars.x + ws.p.q' * ws.vars.x)[1]
+		current_cost = calculate_cost!(ws.utility_vars.n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 		obj_true_FLAG = abs(settings.obj_true - current_cost) <= settings.obj_true_tol
 	end
 
@@ -115,5 +115,5 @@ end
 function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::SparseMatrixCSC{T, Int64}, q::AbstractVector{T}, cinv::T = one(T)) where {T <: AbstractFloat}
 	# P x
 	mul!(temp, P, x)
-	return cinv * 0.5 * dot(temp, x) + dot(q, x)
+	return cinv * T(0.5) * dot(temp, x) + dot(q, x)
 end

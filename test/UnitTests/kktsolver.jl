@@ -3,15 +3,26 @@ include("COSMOTestUtils.jl")
 
 rng = Random.MersenneTwister(1)
 
-T = Float64
+
+# This test is precision agnostic and will be run with TestFloat precision
+if @isdefined UnitTestFloat
+    T = UnitTestFloat
+else
+    T = Float64
+end
 
 # check if optional dependencies are available
 test_iterative_solvers = pkg_installed("IterativeSolvers", "42fd0dbc-a981-5370-80f2-aaf504508153") && pkg_installed("LinearMaps", "7a12625a-238d-50fd-b39a-03d52299707e")
 test_pardiso = pkg_installed("Pardiso", "46dd5b70-b6fb-5a00-ae2d-e8fea33afaf2")
+# TODO: Remove these lines later
+test_iterative_solvers = false
+test_pardiso = false
 
-function make_test_kkt(P, A, sigma, rho)
 
-    R = length(rho)   == 1 ? ((1.) ./ rho[1]) * I : Diagonal((1.) ./ rho)
+function make_test_kkt(P::AbstractMatrix{T}, A::AbstractMatrix{T}, sigma, rho) where {T <: AbstractFloat}
+
+    m, n = size(A)
+    R = length(rho)   == 1 ? diagm(0 => ones(T, m) ./ rho[1]) : Diagonal( one(T) ./ rho)
     S = length(sigma) == 1 ? (sigma[1]) * I : Diagonal(sigma)
 
     #compute the full KKT matrix
@@ -29,14 +40,14 @@ end
     solver_tols = []
     params = []
     push!(solver_types, COSMO.QdldlKKTSolver)
-    push!(solver_tols, 1e-10)
+    T <: Float32 ? push!(solver_tols, T(1e-5)) : push!(solver_tols, 1e-10)
     add_kwargs(params)
-    push!(solver_types, COSMO.CholmodKKTSolver)
-    push!(solver_tols, 1e-10)
+    T <: Float64 && push!(solver_types, COSMO.CholmodKKTSolver) #SuiteSparse Cholmod only supports doubles
+    T <: Float32 ? push!(solver_tols, T(1e-5)) : push!(solver_tols, 1e-10)
     add_kwargs(params)
 
     # optional dependencies
-    if test_pardiso
+    if test_pardiso && T <: Float64
         using Pardiso
         if Pardiso.LOCAL_MKL_FOUND
             push!(solver_types, COSMO.MKLPardisoKKTSolver)
@@ -55,7 +66,7 @@ end
         end
     end
 
-    if test_iterative_solvers
+    if test_iterative_solvers && T <: Float64
         using IterativeSolvers, LinearMaps
         push!(solver_types, COSMO.IndirectReducedKKTSolver)
         push!(solver_tols, 1e-3)
@@ -80,9 +91,13 @@ end
             rho2 in [rand(T), rand(T, m)],
             sigma in [rand(T)]
 
-            P  = sparse(generate_pos_def_matrix(rng, n))
-            A  = sprandn(m, n, 0.2)
-            b = randn(m + n)
+            rho1 = rand(T)
+                rho2 = rand(T)
+                sigma = rand(T)
+
+            P  = sparse(generate_pos_def_matrix(rng, n, type = T))
+            A  = sprandn(T, m, n, 0.2)
+            b = randn(T, m + n)
 
             F = solver_types[i](P, A, sigma, rho1; params[i]...)
             if test_iterative_solvers
@@ -98,7 +113,7 @@ end
 
             #test a single solve
             COSMO.solve!(F, x, b)
-            @test norm(x - J \ b) <= solver_tols[i]
+            @test norm(x - Matrix(J) \ b) <= solver_tols[i]
 
             # Check that warm starting works
             # Invoking again an indirect solver should result in the solution with only
@@ -121,7 +136,7 @@ end
             x = copy(b)
             COSMO.update_rho!(F, rho2)
             COSMO.solve!(F, x, b)
-            @test norm(x - J \ b) <= solver_tols[i]
+            @test norm(x - Matrix(J) \ b) <= solver_tols[i]
 
          end
 
@@ -144,23 +159,22 @@ end
         push!(solver_types, with_options(COSMO.MINRESIndirectKKTSolver))
     end
 
-     P = [4. 1;1 2]
-     q = [1; 1.]
-     A = [1. 1;1 0; 0 1]
-     l = [1.;0;0]
-     u = [1.;0.7;0.7]
+     P = T[4. 1;1 2]
+     q = T[1; 1.]
+     A = T[1. 1;1 0; 0 1]
+     l = T[1.;0;0]
+     u = T[1.;0.7;0.7]
 
      constraint1 = COSMO.Constraint(-A, u, COSMO.Nonnegatives)
      constraint2 = COSMO.Constraint(A, -l, COSMO.Nonnegatives)
      constraints = [constraint1; constraint2]
      @testset "$(solver_types[i]): KKT solver tests - simple problem" for i = 1:length(solver_types)
-         model = COSMO.Model()
-         settings = COSMO.Settings(kkt_solver = solver_types[i])
+         model = COSMO.Model{T}()
+         settings = COSMO.Settings{T}(kkt_solver = solver_types[i])
          assemble!(model, P, q, constraints, settings = settings)
          res = COSMO.optimize!(model);
          @test isapprox(norm(res.x - [0.3; 0.7]), 0., atol=1e-3)
          @test isapprox(res.obj_val, 1.88, atol=1e-3)
-
      end
 
 
