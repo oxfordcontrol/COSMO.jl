@@ -11,8 +11,8 @@ struct PardisoDirectKKTSolver{Tv, Ti} <: AbstractPardisoKKTSolver
 
     ps::PardisoSolver
     K::SparseMatrixCSC{Tv, Ti}
-    m::Integer
-    n::Integer
+    m::Ti
+    n::Ti
     work::Vector{Tv}  #working memory for Pardiso
 
     function PardisoDirectKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho;
@@ -35,8 +35,8 @@ struct PardisoIndirectKKTSolver{Tv, Ti} <: AbstractPardisoKKTSolver
 
     ps::PardisoSolver
     K::SparseMatrixCSC{Tv, Ti}
-    m::Integer
-    n::Integer
+    m::Ti
+    n::Ti
     work::Vector{Tv}  #working memory for Pardiso
 
     function PardisoIndirectKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho;
@@ -62,8 +62,8 @@ struct MKLPardisoKKTSolver{Tv, Ti} <: AbstractPardisoKKTSolver
 
     ps::MKLPardisoSolver
     K::SparseMatrixCSC{Tv, Ti}
-    m::Integer
-    n::Integer
+    m::Ti
+    n::Ti
     work::Vector{Tv}  #working memory for Pardiso
 
     function MKLPardisoKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho;
@@ -90,7 +90,7 @@ function _pardiso_common_init(P, A, sigma, rho, Solver::Type, iparm::Dict{Int64,
     #allow Pardiso solvers do this first
 
     m,n  = _kktutils_check_dims(P, A, sigma, rho)
-    K    = _kktutils_make_kkt(P, A, sigma, rho, :L)
+    K    = _assemble_kkt_triangle(P, A, sigma, rho, :L)
     work = zeros(eltype(A), m + n)
     ps   = Solver()
 
@@ -147,12 +147,12 @@ end
 solve!(s::AbstractPardisoKKTSolver, lhs, rhs) = pardiso(s.ps, lhs, s.K, rhs)
 
 function update_rho!(s::AbstractPardisoKKTSolver, rho::Union{Vector,AbstractFloat})
-    update_kkt_matrix(s.K, s.n, s.m, rho)
+    update_kkt_matrix!(s.K, s.n, s.m, rho)
 
     #only refactor for the direct solver
     if s.ps.solver == Pardiso.DIRECT_SOLVER
         # Compute the numeric factorization again,
-        #but skipping the analysis phase
+        # but skipping the analysis phase
         set_phase!(s.ps, Pardiso.NUM_FACT)
         pardiso(s.ps, s.K, s.work)
         _pardiso_check_inertia(s.ps, s.m, s.n)

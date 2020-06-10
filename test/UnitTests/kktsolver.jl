@@ -23,7 +23,8 @@ function add_kwargs(array; kwargs...)
     push!(array, kwargs)
 end
 
-@testset "KKT Solver" begin
+
+@testset "KKT solver" begin
     solver_types = []
     solver_tols = []
     params = []
@@ -33,23 +34,21 @@ end
     push!(solver_types, COSMO.CholmodKKTSolver)
     push!(solver_tols, 1e-10)
     add_kwargs(params)
-    # solver_types = [COSMO.QdldlKKTSolver
-                    # COSMO.CholmodKKTSolver]
 
     # optional dependencies
     if test_pardiso
         using Pardiso
-        if isdefined(Pardiso, :MKL_PARDISO_LOADED)
+        if Pardiso.LOCAL_MKL_FOUND
             push!(solver_types, COSMO.MKLPardisoKKTSolver)
             push!(solver_tols, 1e-10)
                 add_kwargs(params)
             end
-        if isdefined(Pardiso, :PARDISO_LOADED)
+        if Pardiso.PARDISO_LIB_FOUND
             push!(solver_types, COSMO.PardisoDirectKKTSolver)
             push!(solver_tols, 1e-10)
             add_kwargs(params)
         end
-        if isdefined(Pardiso, :PARDISO_LOADED)
+        if Pardiso.PARDISO_LIB_FOUND
             push!(solver_types, COSMO.PardisoIndirectKKTSolver)
             push!(solver_tols, 5e-5)
             add_kwargs(params)
@@ -132,8 +131,8 @@ end
     solver_types = Array{Union{Type{<: COSMO.AbstractKKTSolver}, COSMO.OptionsFactory{<: COSMO.AbstractKKTSolver}}}(undef, 0)
     push!(solver_types, COSMO.QdldlKKTSolver, COSMO.CholmodKKTSolver)
     if test_pardiso
-        isdefined(Pardiso, :MKL_PARDISO_LOADED) && push!(solver_types, COSMO.PardisoDirectKKTSolver)
-        if isdefined(Pardiso, :PARDISO_LOADED)
+        Pardiso.LOCAL_MKL_FOUND && push!(solver_types, COSMO.PardisoDirectKKTSolver)
+        if Pardiso.PARDISO_LIB_FOUND
             push!(solver_types, COSMO.PardisoDirectKKTSolver)
             push!(solver_types, COSMO.PardisoIndirectKKTSolver)
         end
@@ -163,6 +162,38 @@ end
          @test isapprox(res.obj_val, 1.88, atol=1e-3)
 
      end
+
+
+     # Check the KKT triangle assembly utility functions
+     @testset "KKT matrix assembly" begin
+         n = 3
+         m = 2
+         P = sparse([1. 0 1; 0 0 1; 1 1 1])
+         A = sparse([2. 2 2; 0 3 0])
+         # known number of nonzero entries in upper and lower triangle of KKT matrix K
+         Kcolnz_upper_sol = [1; 1; 3; 4; 2]
+         Kcolnz_lower_sol = [3; 4; 2; 1; 1]
+         Kcolnz_upper = zeros(Int64, m + n)
+         COSMO._count_upper_triangle!(Kcolnz_upper, P, A, n)
+         @test Kcolnz_upper == Kcolnz_upper_sol
+         Kcolnz_lower = zeros(Int64, m + n)
+         COSMO._count_lower_triangle!(Kcolnz_lower, P, A, n)
+         @test Kcolnz_lower == Kcolnz_lower_sol
+
+         # make sure all the assembly function return the same matrix K
+         m = 11
+         n = 15
+         P  = sparse(generate_pos_def_matrix(rng, n))
+         A  = sprandn(rng, m, n, 0.2)
+         sigma = 1e-6
+         rho = 0.1 * ones(m)
+         K_full = COSMO._assemble_kkt_full(P, A, sigma, rho)
+         K_tril = COSMO._assemble_kkt_triangle(P, A, sigma, rho, :L)
+         K_triu = COSMO._assemble_kkt_triangle(P, A, sigma, rho, :U)
+         @test triu(K_full) == K_triu
+         @test tril(K_full) == K_tril
+     end
+
 
 end
 
