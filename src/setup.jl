@@ -1,14 +1,9 @@
 function _make_kkt_solver!(ws::COSMO.Workspace)
 
-	#ws.kkt_solver = ws.settings.kkt_solver(SparseMatrixCSC(ws.p.P),
-						#SparseMatrixCSC(ws.p.A),
-						#ws.settings.sigma,
-						#ws.ρvec)
-	ws.kkt_solver = QdldlKKTSolver(ws.p.P,
-						ws.p.A,
+	ws.kkt_solver = ws.settings.kkt_solver(SparseMatrixCSC(ws.p.P),
+						SparseMatrixCSC(ws.p.A),
 						ws.settings.sigma,
 						ws.ρvec)
-
 end
 
 function setup!(ws::COSMO.Workspace)

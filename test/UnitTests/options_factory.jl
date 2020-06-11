@@ -9,7 +9,7 @@ using COSMO, Test, LinearAlgebra, SparseArrays, Pardiso
     c1 = COSMO.Constraint([1.], [-1.], COSMO.Nonnegatives)
 
 
-    if isdefined(Pardiso, :MKL_PARDISO_LOADED)
+    if Pardiso.LOCAL_MKL_FOUND
         iparms = Dict{Int64, Int64}()
         iparms[13] = 100
         num_threads = 2
@@ -23,10 +23,9 @@ using COSMO, Test, LinearAlgebra, SparseArrays, Pardiso
         @test typeof(model.kkt_solver) <: COSMO.MKLPardisoKKTSolver
         # @test Pardiso.get_nprocs(model.kkt_solver.ps) == num_threads
         @test Pardiso.get_iparm(model.kkt_solver.ps, 13) == iparms[13]
-        
+
         ## check that this works via the MathOptInterface wrapper as well
         optimizer = COSMO.Optimizer(time_limit = 10., kkt_solver = with_options(COSMO.MKLPardisoKKTSolver, iparm = iparms, num_threads = num_threads, msg_level_on = false))
-        @test model.settings.kkt_solver == optimizer.inner.settings.kkt_solver
       end
 
   # assemble model when only KKT solver type is provided

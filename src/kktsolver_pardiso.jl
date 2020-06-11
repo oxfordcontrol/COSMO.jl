@@ -90,7 +90,7 @@ function _pardiso_common_init(P, A, sigma, rho, Solver::Type, iparm::Dict{Int64,
     #allow Pardiso solvers do this first
 
     m,n  = _kktutils_check_dims(P, A, sigma, rho)
-    K    = _assemble_kkt_triangle(P, A, sigma, rho, :L)
+    K    = assemble_kkt_triangle(P, A, sigma, rho, :L)
     work = zeros(eltype(A), m + n)
     ps   = Solver()
 

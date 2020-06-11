@@ -131,7 +131,7 @@ end
     solver_types = Array{Union{Type{<: COSMO.AbstractKKTSolver}, COSMO.OptionsFactory{<: COSMO.AbstractKKTSolver}}}(undef, 0)
     push!(solver_types, COSMO.QdldlKKTSolver, COSMO.CholmodKKTSolver)
     if test_pardiso
-        Pardiso.LOCAL_MKL_FOUND && push!(solver_types, COSMO.PardisoDirectKKTSolver)
+        Pardiso.LOCAL_MKL_FOUND && push!(solver_types, COSMO.MKLPardisoKKTSolver)
         if Pardiso.PARDISO_LIB_FOUND
             push!(solver_types, COSMO.PardisoDirectKKTSolver)
             push!(solver_types, COSMO.PardisoIndirectKKTSolver)
@@ -188,8 +188,8 @@ end
          sigma = 1e-6
          rho = 0.1 * ones(m)
          K_full = COSMO._assemble_kkt_full(P, A, sigma, rho)
-         K_tril = COSMO._assemble_kkt_triangle(P, A, sigma, rho, :L)
-         K_triu = COSMO._assemble_kkt_triangle(P, A, sigma, rho, :U)
+         K_tril = COSMO.assemble_kkt_triangle(P, A, sigma, rho, :L)
+         K_triu = COSMO.assemble_kkt_triangle(P, A, sigma, rho, :U)
          @test triu(K_full) == K_triu
          @test tril(K_full) == K_tril
      end

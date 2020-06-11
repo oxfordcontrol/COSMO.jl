@@ -169,29 +169,48 @@ function _fill_upper_triangle!(Ki::Vector{Ti}, Kp::Vector{Ti}, Kx::Vector{Tv}, P
     end
 end
 
+# handle the different forms of inputs for sigma and rho: here both are vectors (*)
+function assemble_kkt_triangle(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::AbstractVector{Tv}, rho::AbstractVector{Tv}, shape::Symbol = :U) where {Tv <: AbstractFloat, Ti <: Integer}
+        S = sigma
+        R  = Array{Tv}(undef, size(A, 1))
+     @. R  = -one(Tv) / rho
+     # pass on to main function
+    return _assemble_kkt_triangle(P, A, S, R, shape)
+end
+# only sigma is a scalar
+function assemble_kkt_triangle(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::Tv, rho::AbstractVector{Tv}, shape::Symbol = :U) where {Tv <: AbstractFloat, Ti <: Integer}
+    S = Vector{Tv}(undef, size(P, 1))
+    fill!(S, sigma)
+    # put again through (*)
+    return assemble_kkt_triangle(P, A, S, rho, shape)
+end
+
+# only rho is a scalar
+function assemble_kkt_triangle(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::AbstractVector{Tv}, rho::Tv, shape::Symbol = :U) where {Tv <: AbstractFloat, Ti <: Integer}
+    R  = Array{Tv}(undef, size(A, 1))
+    fill!(R, -one(Tv) ./ rho)
+    # pass on to main function
+    return _assemble_kkt_triangle(P, A, sigma, R, shape)
+end
+
+# rho and sigma are scalars
+function assemble_kkt_triangle(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::Tv, rho::Tv, shape::Symbol = :U) where {Tv <: AbstractFloat, Ti <: Integer}
+    S = Vector{Tv}(undef, size(P, 1))
+    fill!(S, sigma)
+
+    R  = Array{Tv}(undef, size(A, 1))
+    fill!(R, -one(Tv) ./ rho)
+    # pass on to main function
+    return _assemble_kkt_triangle(P, A, S, R, shape)
+end
 "Given `P`, `A`, `sigma` and `rho` return the upper / lower triangle, defined by `shape`,  of the KKT condition matrix `K`."
-function _assemble_kkt_triangle(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::Union{Tv, AbstractVector{Tv}}, rho::Union{Tv, AbstractVector{Tv}}, shape::Symbol = :U) where {Tv <: AbstractFloat, Ti <: Integer}
+function _assemble_kkt_triangle(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, S::AbstractVector{Tv}, R::AbstractVector{Tv}, shape::Symbol = :U) where {Tv <: AbstractFloat, Ti <: Integer}
 
     #   K = | P + σI |  A'     |
     #       |   A    | - 1/ρ I |
     #         left      right
     n = size(P, 1)
     m = size(A, 1)
-
-    if length(sigma) == 1
-        S = Vector{Tv}(undef, n)
-        fill!(S, sigma)
-    else
-        S = sigma
-    end
-
-    if length(rho) == 1
-        R  = Array{Tv}(undef, m)
-        fill!(R, -one(Tv) / rho)
-    else
-        R  = Array{Tv}(undef, m)
-     @. R  = -one(Tv) / rho
-    end
 
     # make the column counter of K
     Kcolnz = zeros(Ti, m + n)
@@ -269,7 +288,7 @@ struct QdldlKKTSolver{Tv, Ti} <: AbstractKKTSolver
 
     function QdldlKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::Tv, rho::Union{Tv, AbstractVector{Tv}}) where {Tv <: AbstractFloat, Ti <: Integer}
         m, n = _kktutils_check_dims(P, A, sigma, rho)
-        K    = _assemble_kkt_triangle(P, A, sigma, rho, :U)
+        K    = assemble_kkt_triangle(P, A, sigma, rho, :U)
         ldlfact = qdldl(K)
 
         #check for exactly n positive eigenvalues

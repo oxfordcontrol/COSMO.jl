@@ -303,7 +303,7 @@ mutable struct Workspace{T}
 	kkt_solver::Union{AbstractKKTSolver,Nothing}
 	flags::Flags
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
-	times::ResultTimes{Float64} #Always 64 bit regardless of data type?
+	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int64}, 1} # store a set_ind -> row_range map
 	#constructor
 	function Workspace{T}() where {T}
