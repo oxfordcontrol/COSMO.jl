@@ -193,7 +193,11 @@ function optimize!(ws::COSMO.Workspace)
 
 	#reverse chordal decomposition
 	if ws.ci.decompose
-	 reverse_decomposition!(ws, settings)
+	 	reverse_decomposition!(ws, settings)
+		y = -ws.vars.μ
+ 	else
+		@. ws.utility_vars.vec_m = -ws.vars.μ
+		y = ws.utility_vars.vec_m
 	end
 
 	ws.times.solver_time = time() - solver_time_start
@@ -204,11 +208,9 @@ function optimize!(ws::COSMO.Workspace)
 
 	# create result object
 	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
-
-	@. ws.utility_vars.vec_m = -ws.vars.μ
 	free_memory!(ws)
 
-	return Result{Float64}(ws.vars.x, ws.utility_vars.vec_m, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
+	return Result{Float64}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
 
