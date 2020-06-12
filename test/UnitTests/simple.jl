@@ -4,6 +4,12 @@ using COSMO, Test, LinearAlgebra, Statistics, Random
 if !@isdefined(UnitTestFloats)
     UnitTestFloats = [Float64] #if not run in full test setup, just do it for one float type
 end
+mutable struct TestProblem
+    P
+    q
+    constraints
+end
+
 
 @testset "Simple Tests" begin
 
@@ -11,11 +17,6 @@ for TestFloat in UnitTestFloats
     tol = TestFloat(1e-3)
     rng = Random.MersenneTwister(41)
 
-    mutable struct TestProblem
-        P
-        q
-        constraints
-    end
 
     function simpleQP(Type::Type{T}) where {T <: AbstractFloat}
         P = T[4. 1;1 2]
