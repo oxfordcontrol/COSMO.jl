@@ -8,12 +8,12 @@
 
 using COSMO, Test, LinearAlgebra, SparseArrays, Random
 
-if @isdefined UnitTestFloat
-    T = UnitTestFloat
-else
-    T = Float64
+
+# This test is precision agnostic and will be run with TestFloat precision
+if !@isdefined(UnitTestFloats)
+    UnitTestFloats = [Float64] #if not run in full test setup, just do it for one float type
 end
-T = Float32
+
 
 
 # this function creates a matrix A that slices out the diagonal entries Xii of a vectorized square matrix x=vec(X)
@@ -34,43 +34,48 @@ function diagonal_equal_one(A, atol)
   end
   return true
 end
+@testset "SDP - Closest Correlation Matrix" begin
 
-rng = Random.MersenneTwister(12345)
-xMin = -one(T)
-xMax = one(T)
-n = 50
-C = xMin .+ randn(rng, T, n, n)*(xMax - xMin)
-c = vec(C)
-
-
-n2 = n^2
-m = n + n2
-
-P = spdiagm(0 => ones(T, n2))
-q = -vec(C)
-r = T(0.5) * dot(c, c)
-
-A1 = create_diagonal_extractor(n, T)
-b1 = -ones(T, n)
-cs1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
-
-A2 = spdiagm(0 => ones(T, n2))
-b2 = zeros(T, n2)
-cs2 = COSMO.Constraint(A2, b2, COSMO.PsdCone)
-constraints = [cs1; cs2]
+for T in UnitTestFloats
+  if T != BigFloat
+    rng = Random.MersenneTwister(12345)
+    xMin = -one(T)
+    xMax = one(T)
+    n = 50
+    C = xMin .+ randn(rng, T, n, n)*(xMax - xMin)
+    c = vec(C)
 
 
-model = COSMO.Model{T}()
-assemble!(model, P, q, constraints)
+    n2 = n^2
+    m = n + n2
 
-res = COSMO.optimize!(model)
+    P = spdiagm(0 => ones(T, n2))
+    q = -vec(C)
+    r = T(0.5) * dot(c, c)
 
-Xsol = reshape(res.x, n, n)
+    A1 = create_diagonal_extractor(n, T)
+    b1 = -ones(T, n)
+    cs1 = COSMO.Constraint(A1, b1, COSMO.ZeroSet)
 
-@testset "Closest Correlation Matrix - SDP Problems" begin
-  @test res.status == :Solved
-  @test diagonal_equal_one(Xsol, 1e-5)
-  @test minimum(real.(eigen(Xsol).values)) > -1e-3
+    A2 = spdiagm(0 => ones(T, n2))
+    b2 = zeros(T, n2)
+    cs2 = COSMO.Constraint(A2, b2, COSMO.PsdCone)
+    constraints = [cs1; cs2]
 
+
+    model = COSMO.Model{T}()
+    assemble!(model, P, q, constraints)
+
+    res = COSMO.optimize!(model)
+
+    Xsol = reshape(res.x, n, n)
+
+    @testset "SDP - Closest Correlation Matrix (T = $(T))" begin
+      @test res.status == :Solved
+      @test diagonal_equal_one(Xsol, 1e-5)
+      @test minimum(real.(eigen(Xsol).values)) > -1e-3
+    end
+  end
+end
 end
 nothing

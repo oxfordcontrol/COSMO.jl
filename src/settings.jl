@@ -17,7 +17,7 @@ function (options_factory::OptionsFactory{T})(args...; kwargs...) where {T}
 end
 
 """
-	COSMO.Settings(; kws)
+	COSMO.Settings{T}(; kws) where {T <: AbstractFloat}
 
 Creates a COSMO settings object that is used to pass user settings to the solver.
 
@@ -79,38 +79,38 @@ mutable struct Settings{T <: AbstractFloat}
 	compact_transformation::Bool
 	#constructor
 	function Settings{T}(;
-		rho=T(0.1),
-		sigma=T(1e-6),
-		alpha=T(1.6),
-		eps_abs=T(1e-4),
-		eps_rel=T(1e-4),
-		eps_prim_inf=T(1e-6),
-		eps_dual_inf=T(1e-4),
-		max_iter=2500,
-		verbose=false,
+		rho::Real=T(0.1),
+		sigma::Real=T(1e-6),
+		alpha::Real=T(1.6),
+		eps_abs::Real=T(1e-4),
+		eps_rel::Real=T(1e-4),
+		eps_prim_inf::Real=T(1e-6),
+		eps_dual_inf::Real=T(1e-4),
+		max_iter::Integer=2500,
+		verbose::Bool=false,
 		kkt_solver=QdldlKKTSolver,
-		check_termination=40,
-		check_infeasibility=40,
-		scaling=10,
-		MIN_SCALING = T(1e-4),
-		MAX_SCALING = T(1e4),
-		adaptive_rho = true,
-		adaptive_rho_interval = 40,
-		adaptive_rho_tolerance = 5,
-		adaptive_rho_fraction = T(0.4),
-		verbose_timing = false,
-		RHO_MIN = T(1e-6),
-		RHO_MAX = T(1e6),
-		RHO_TOL = T(1e-4),
-		RHO_EQ_OVER_RHO_INEQ = T(1e3),
-		COSMO_INFTY = T(1e20),
-		decompose = true,
-    	complete_dual = false,
-		time_limit = 0.0,
-		obj_true = NaN,
-		obj_true_tol = T(1e-3),
+		check_termination::Int64=40,
+		check_infeasibility::Int64=40,
+		scaling::Integer=10,
+		MIN_SCALING::Real = T(1e-4),
+		MAX_SCALING::Real = T(1e4),
+		adaptive_rho::Bool = true,
+		adaptive_rho_interval::Int64 = 40,
+		adaptive_rho_tolerance::Int64 = 5,
+		adaptive_rho_fraction::Real = T(0.4),
+		verbose_timing::Bool = false,
+		RHO_MIN::Real = T(1e-6),
+		RHO_MAX::Real = T(1e6),
+		RHO_TOL::Real = T(1e-4),
+		RHO_EQ_OVER_RHO_INEQ::Real = T(1e3),
+		COSMO_INFTY::Real = T(1e20),
+		decompose::Bool = true,
+    	complete_dual::Bool = false,
+		time_limit::Real = zero(T),
+		obj_true::Real = T(NaN),
+		obj_true_tol::Real = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
-		compact_transformation = true
+		compact_transformation::Bool = true
 		) where {T <: AbstractFloat}
 		if !isa(kkt_solver, OptionsFactory)
 			kkt_solver = with_options(kkt_solver)
@@ -123,4 +123,5 @@ mutable struct Settings{T <: AbstractFloat}
 	end
 end
 
-Settings(args...) = Settings{DefaultFloat}(args...)
+# The default case it to return a Settings{Float64} object
+Settings(args...; kwargs...) = Settings{DefaultFloat}(args...; kwargs...)

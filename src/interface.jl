@@ -35,6 +35,7 @@ function assemble!(model::Model{T},
 
 
 	!isa(constraints, Array) && (constraints = [constraints])
+	type_checks(constraints)
 
 	merge_constraints!(constraints)
 	model.p.P = issparse(P) ? P : sparse(P)
@@ -80,7 +81,7 @@ assemble!(model::COSMO.Model{T}, P::AbstractVector{T}, q::AbstractArray{T}, args
 # Handle 1-D cases
 assemble!(model::COSMO.Model{T}, P::T, q::T, args...; kwargs...) where {T} = assemble!(model, [P], [q], args...; kwargs...)
 # convert integer inputs to model type
-assemble!(model::COSMO.Model{T}, P::Integer, q::Integer, args...; kwargs...) where {T} = assemble!(model, convert(T, P), convert(T, q), args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::Integer, q::Integer, args...; kwargs...) where {T} = assemble!(model, Base.convert(T, P), Base.convert(T, q), args...; kwargs...)
 assemble!(model::COSMO.Model{T}, P::Real, q::Union{AbstractMatrix, AbstractVector}, args...; kwargs...) where {T} = assemble!(model, [P], q, args...; kwargs...)
 assemble!(model::COSMO.Model{T}, P::Union{AbstractMatrix, AbstractVector}, q::Real, args...; kwargs...) where {T} = assemble!(model, P, [q], args...; kwargs...)
 assemble!(model::COSMO.Model{T}, P::AbstractArray{Tb}, q::AbstractArray{Tb}, args...; kwargs...) where {T, Tb} = throw(ArgumentError("The precision types of model and `P` / `q` don't match."))
@@ -145,14 +146,15 @@ warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int64) where {T} = (model.va
 
 Sets model data directly based on provided fields.
 """
-function set!(model::COSMO.Model,
+function set!(model::COSMO.Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractVector{T},
 	A::AbstractMatrix{T},
 	b::AbstractVector{T},
-	convex_sets::Vector{<: COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings = COSMO.Settings()) where {T <: AbstractFloat}
+	convex_sets::Vector{<: COSMO.AbstractConvexSet{T}}, settings::COSMO.Settings{T} = COSMO.Settings{T}()) where {T <: AbstractFloat}
 
 	check_dimensions(P, q, A, b)
+	type_checks(convex_sets)
 
 	# convert inputs and copy them
 	P_c = convert_copy(P, SparseMatrixCSC{T, Int64})
@@ -183,16 +185,34 @@ function check_dimensions(P, q, A, b)
 	nothing
 end
 
+"Check whether the model will contain any PSD constraints with unsupported Floating-point precision."
+function type_checks(convex_sets::Vector{<: COSMO.AbstractConvexSet{T}}) where {T <: AbstractFloat}
+	for set in convex_sets
+		type_checks(set)
+	end
+	return nothing
+end
+function type_checks(constraints::Vector{COSMO.Constraint{T}}) where {T <: AbstractFloat}
+	for constraint in constraints
+		type_checks(constraint.convex_set)
+	end
+	return nothing
+end
+type_checks(convex_set::AbstractConvexSet) = nothing
+type_checks(convex_set::Union{PsdCone{BigFloat}, PsdConeTriangle{BigFloat}}) = throw(ArgumentError("COSMO currently does not support the combination of PSD constraints and BigFloat."))
+
+
+
 function check_A_dim(A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, n::Int64)
 	size(A, 2) != n && throw(DimensionMismatch("The dimensions of a matrix A (m x $(size(A, 2))) in one of the constraints is inconsistent with the dimension of P ($(n))."))
 end
 
 # convert x into type (which creates a copy) or copy x if type coincides
-function convert_copy(x::AbstractArray, type::Type)
-	if typeof(x) == type
+function convert_copy(x::AbstractArray, argtype::Type)
+	if typeof(x) == argtype
 		x_c = copy(x)
 	else
-		x_c = convert(type, x)
+		x_c = Base.convert(argtype, x)
 	end
 	return x_c
 end

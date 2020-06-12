@@ -104,9 +104,9 @@ function project!(x::AbstractVector{T}, ::SecondOrderCone{T}) where{T}
 	elseif norm_x <= -t
 		x[:] .= zero(T)
 	else
-		x[1] = (norm_x + t) / 2
+		x[1] = (norm_x + t) / T(2)
 		#x(2:end) assigned via view
-		@. xt = (norm_x + t) / (2 * norm_x) * xt
+		@. xt = (norm_x + t) / (T(2) * norm_x) * xt
 	end
 	return nothing
 end
@@ -704,15 +704,15 @@ struct DualPowerCone{T} <: AbstractConvexCone{T}
 end
 DualPowerCone(alpha::T, args...) where {T <: AbstractFloat}= DualPowerCone{T}(alpha, args...)
 
-DualCones = Union{DualExponentialCone, DualPowerCone}
-in_cone(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(v, cone.primal_cone, tol)
-in_dual(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_cone(v, cone.primal_cone, tol)
-in_pol_recc(v::AbstractVector{T}, cone::DualCones, tol::Real) where {T <: Real} = in_dual(-v, cone, tol)
+DualCones{T} = Union{DualExponentialCone{T}, DualPowerCone{T}}
+in_cone(v::AbstractVector{T}, cone::DualCones{T}, tol::T) where {T <: AbstractFloat} = in_dual(v, cone.primal_cone, tol)
+in_dual(v::AbstractVector{T}, cone::DualCones{T}, tol::T) where {T <: AbstractFloat} = in_cone(v, cone.primal_cone, tol)
+in_pol_recc(v::AbstractVector{T}, cone::DualCones{T}, tol::T) where {T <: AbstractFloat} = in_dual(-v, cone, tol)
 
 # Project dual cones by using Moreau decomposition: Proj^*(v) = v + Proj(-v)
-function project!(v::AbstractVector{T}, cone::DualCones) where{T}
+function project!(v::AbstractVector{T}, cone::DualCones{T}) where{T <: AbstractFloat}
   @. cone.v0 = v
-  @. v *= -1.0
+  @. v *= -one(T)
   project!(v, cone.primal_cone)
   @. v += cone.v0
 end

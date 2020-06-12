@@ -102,7 +102,14 @@ struct Result{T <: AbstractFloat}
 end
 
 function Base.show(io::IO, obj::Result)
-	print(io,">>> COSMO - Results\nStatus: $(obj.status)\nIterations: $(obj.iter)\nOptimal Objective: $(round.(obj.obj_val, digits = 2))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
+	print(io,">>> COSMO - Results\nStatus: ")
+	if obj.status == :Solved
+		result_color = :green
+	else
+		result_color = :red
+	end
+	printstyled("$(obj.status)\n", color = result_color)
+	println("Iterations: $(obj.iter)\nOptimal Objective: $(@sprintf("%.4g", obj.obj_val))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
 	!isnan(obj.times.iter_time) && print("Avg Iter Time: $(round.((obj.times.iter_time / obj.iter) * 1000, digits = 2))ms")
 end
 
@@ -288,7 +295,7 @@ UtilityVariables(args...) = UtilityVariables{DefaultFloat}(args...)
 # Top level container for all solver data
 # -------------------------------------
 """
-	Workspace()
+	Workspace{T <: AbstractFloat}()
 
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints; [settings, x0, s0, y0])`.
 """
@@ -318,7 +325,7 @@ mutable struct Workspace{T}
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
 
-Base.show(io::IO, model::COSMO.Workspace{T}) where {T} = println(io, "A COSMO Model")
+Base.show(io::IO, model::COSMO.Workspace{T}) where {T} = println(io, "A COSMO Model with Float precision: $(T)")
 
 
 # Type alias facing the user

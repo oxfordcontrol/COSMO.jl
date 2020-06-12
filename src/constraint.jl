@@ -79,7 +79,7 @@ function Constraint(A::AbstractMatrix{T}, b::AbstractVector{T}, args...) where {
 	if T <: AbstractFloat
 		return Constraint{T}(A, b, args...)
 	else
-		return Constraint{DefaultFloat}(convert(AbstractMatrix{DefaultFloat}, A), convert(AbstractVector{DefaultFloat}, b), args...)
+		return Constraint{DefaultFloat}(Base.convert(AbstractMatrix{DefaultFloat}, A), Base.convert(AbstractVector{DefaultFloat}, b), args...)
 	end
  end
 

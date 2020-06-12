@@ -3,6 +3,7 @@ rng = Random.MersenneTwister(144545)
 
 
 # We create a test problem with 4 convex sets (2 of them decomposable), 1 zero set in the middle
+@testset "Decomposition with PSDTriangle" begin
 
 # define convex set
 C = [COSMO.PsdCone(16); COSMO.ZeroSet(2); COSMO.PsdCone(16); COSMO.PsdCone(9)]
@@ -43,10 +44,10 @@ s = [vec(S1); s2; vec(S3); vec(S4)]
 b = A * x + s
 
 # Find q such that problem is feasible
-Y1 = generate_pos_def_matrix(rng, 4,  0.1, 1)
+Y1 = generate_pos_def_matrix(rng, 4,  0.1, 1.)
 y2 = rand(rng, 2)
-Y3 = generate_pos_def_matrix(rng, 4,  0.1, 1)
-Y4 = generate_pos_def_matrix(rng, 3,  0.1, 1)
+Y3 = generate_pos_def_matrix(rng, 4,  0.1, 1.)
+Y4 = generate_pos_def_matrix(rng, 3,  0.1, 1.)
 y = [vec(Y1); y2; vec(Y3); vec(Y4)]
 
 P = sparse(zeros(1, 1))
@@ -137,7 +138,7 @@ COSMO.populate_upper_triangle!(S2_sol4, res4.s[13:22], 1. / sqrt(2))
 S2_sol4 = Symmetric(S2_sol4)
 Y1_sol4 = matrixify(res4.y[1:10])
 Y2_sol4 = matrixify(res4.y[13:22])
-@testset "Decomposition with PSDTriangle" begin
+@testset "Check correct solution" begin
   @test abs(res1.obj_val - res2.obj_val) < 1e-4
   @test abs(res1.obj_val - res3.obj_val) < 1e-4
   @test abs(res2.obj_val - res4.obj_val) < 1e-4
@@ -187,6 +188,6 @@ Y_7 = matrixify(res7.y)
   @test norm(At' * res6.y + q, Inf) < 1e-3
   @test norm(At' * res7.y + q, Inf) < 1e-3
 end
-
+end
 
 nothing

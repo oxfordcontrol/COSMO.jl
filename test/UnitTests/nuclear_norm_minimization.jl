@@ -13,7 +13,7 @@ using COSMO, Test, LinearAlgebra, SparseArrays
 #   s.t. [t * I Y; Y' t * I]  ⪰ 0
 
 # define x := [t; vec(Y)]
-@testset "Maximum singular value problem [chordal - LMI]" begin
+@testset "Chordal LMI-SDP - Maximum singular value problem" begin
     q = [1.0; zeros(9)]
     con1 = COSMO.Constraint([0 0 -1.0 zeros(1, 7)], 4.0, COSMO.Nonnegatives)
     con2 = COSMO.Constraint([0 0 0 0 0 1.0 zeros(1, 4)], -3.0, COSMO.Nonnegatives)

@@ -18,14 +18,14 @@ A1 = 0.5 * (A1 + A1')
 A1[1, 3] = A1[1, 4] = A1[3, 1] = A1[4, 1] = 0
 a1 = vec(A1)
 
-S1 = generate_pos_def_matrix(rng, 4, 0.1, 2)
+S1 = generate_pos_def_matrix(rng, 4, 0.1, 2.)
 apply_pattern!(S1, A1)
 A = hcat(A1[:])
 s = S1[:]
 x = rand(rng, 1)
 b = A * x + s
 
-Y = generate_pos_def_matrix(rng, 4,  0.1, 1)
+Y = generate_pos_def_matrix(rng, 4,  0.1, 1.)
 y = vec(Y)
 P = sparse(zeros(1, 1))
 q = -P * x - A' * y

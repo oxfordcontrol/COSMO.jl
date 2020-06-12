@@ -5,7 +5,7 @@ using COSMO, Test, LinearAlgebra, SparseArrays, Pardiso
 
     # define a simple problem
     P = spzeros(1, 1)
-    q = [1]
+    q = [1.]
     c1 = COSMO.Constraint([1.], [-1.], COSMO.Nonnegatives)
 
 

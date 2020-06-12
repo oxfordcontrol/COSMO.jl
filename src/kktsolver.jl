@@ -253,7 +253,7 @@ function _assemble_kkt_full(P::SparseMatrixCSC{Tv, Ti}, A::AbstractMatrix{Tv}, s
     n = size(P, 1)
     m = size(A, 1)
     S = length(sigma) == 1 ? (sigma[1]) * I : Diagonal(sigma)
-    rhoinv  = Vector{Float64}(undef, m)
+    rhoinv  = Vector{Tv}(undef, m)
     rhoinv .= (-one(Tv)./rho)
     D       = SparseMatrixCSC(Diagonal(rhoinv))
 

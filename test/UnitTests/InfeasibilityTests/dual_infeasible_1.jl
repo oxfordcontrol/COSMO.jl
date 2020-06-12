@@ -2,36 +2,46 @@
 # Choose A, P and q in a way such that the problem becomes unbounded below
 # here the last element of x appears in the cost function with a negative sign and is unconstrained
 
-rng = Random.MersenneTwister(555)
-nn = 1
 
+# This test is precision agnostic and will be run with T precision
+if !@isdefined(UnitTestFloats)
+    UnitTestFloats = [Float64] #if not run in full test setup, just do it for one float type
+end
 
-@testset "Dual infeasible QP problems - Testset 1" begin
-  for iii = 1:nn
+for T in UnitTestFloats
+  if precision(T) >= precision(Float64)
 
-  # choose size of problem
-  n = rand(rng,5:50)
-  m = 2*n
-  A = sprandn(m,n,0.7)*50
-  A[:,end] .= 0
+    rng = Random.MersenneTwister(555)
+    nn = 1
 
-  P = spzeros(n,n)
+    @testset "Dual infeasible QP problems - Testset 1" begin
+      for iii = 1:nn
 
-  q = randn(n,1)*50
-  q[end] = -1
-  q = vec(q)
-  xtrue = randn(n,1)*50
-  strue = rand(m,1)*50
-  b = A*xtrue+strue
-  b = vec(b)
+      # choose size of problem
+      n = rand(rng,5:50)
+      m = 2*n
+      A = sprand(rng, T, m,n,0.7)*T(50)
+      A[:,end] .= zero(T)
 
-  constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives)
+      P = spzeros(T, n,n)
 
-  settings = COSMO.Settings(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
-  model = COSMO.Model()
-  assemble!(model,P,q,[constraint], settings = settings)
-  res = COSMO.optimize!(model);
+      q = rand(rng, T, n, 1)*T(50)
+      q[end] = -one(T)
+      q = vec(q)
+      xtrue = rand(rng, T, n, 1)*T(50)
+      strue = rand(rng, T, m, 1)*T(50)
+      b = A*xtrue+strue
+      b = vec(b)
 
-  @test res.status == :Dual_infeasible
+      constraint = COSMO.Constraint(-A,b,COSMO.Nonnegatives)
+
+      settings = COSMO.Settings{T}(max_iter=10000,eps_abs = 1e-5,eps_rel=1e-5)
+      model = COSMO.Model{T}()
+      assemble!(model,P,q,[constraint], settings = settings)
+      res = COSMO.optimize!(model);
+
+      @test res.status == :Dual_infeasible
+      end
+    end
   end
 end

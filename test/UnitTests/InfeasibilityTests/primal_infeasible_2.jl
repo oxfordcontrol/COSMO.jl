@@ -6,12 +6,14 @@
 nn = 1
 rng = Random.MersenneTwister(1313)
 
+
+
 @testset "Primal infeasible QP problems - Testset 2" begin
   for iii = 1:nn
 
     # choose size of problem
-    n = rand(rng,10:50)
-    r = rand(rng,2:10)
+    n = rand(rng, 10:50)
+    r = rand(rng, 2:10)
     m2 = r^2 # one sdp cone constraint of size r
     m1 = m2 #m1 equality constraints
     m = m1+m2
@@ -38,7 +40,7 @@ rng = Random.MersenneTwister(1313)
     P = generate_pos_def_matrix(n,rng)
     ytrue_1 = randn(rng,m1,1)*50
     ytrue_2 = rand(rng,n,1)*50
-    ytrue_3 = vec(generate_pos_def_matrix(r,rng))
+    ytrue_3 = vec(generate_pos_def_matrix(r,rng, MT = UnitTestFloat))
     ytrue = [ytrue_1;ytrue_2;ytrue_3]
     q = (-P*xtrue - A'*ytrue)[:]
 

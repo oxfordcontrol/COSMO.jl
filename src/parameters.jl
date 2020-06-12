@@ -53,8 +53,8 @@ function adapt_rho_vec!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	settings = ws.settings
 	# compute normalized residuals based on the working variables (dont unscale)
 	ignore_scaling = true
-	r_prim::Float64, r_dual::Float64 = calculate_residuals!(ws, ignore_scaling)
-	max_norm_prim::Float64, max_norm_dual::Float64  = max_res_component_norm(ws, ignore_scaling)
+	r_prim::T, r_dual::T = calculate_residuals!(ws, ignore_scaling)
+	max_norm_prim::T, max_norm_dual::T  = max_res_component_norm(ws, ignore_scaling)
 
 	r_prim = r_prim / (max_norm_prim + T(1e-10))
 	r_dual = r_dual / (max_norm_dual + T(1e-10))
@@ -62,7 +62,7 @@ function adapt_rho_vec!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	new_rho = ws.ρ * sqrt(r_prim / (r_dual + T(1e-10)))
 	new_rho = min(max(new_rho, settings.RHO_MIN), settings.RHO_MAX)
 	# only update rho if significantly different than current rho
-	if (new_rho > settings.adaptive_rho_tolerance * ws.ρ) || (new_rho < (1 ./ settings.adaptive_rho_tolerance) * ws.ρ)
+	if (new_rho > settings.adaptive_rho_tolerance * ws.ρ) || (new_rho < (one(T) ./ settings.adaptive_rho_tolerance) * ws.ρ)
 		update_rho_vec!(new_rho, ws)
 	end
 	return nothing

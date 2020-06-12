@@ -11,14 +11,14 @@ end
 
 
 # generate a random pos def matrix with eigenvalues between 0.1 and 2
-generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Float64 = 0.1, aMax::Float64 = 2.) = generate_pos_def_matrix(rng, n, aMin, aMax, type = Float64)
-function generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::T = T(0.1), aMax::T = T(2.); type::Type{T} = Float64 ) where {T <: AbstractFloat}
-	X = rand(rng, T, n, n)
+generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Float64 = 0.1, aMax::Float64 = 2.) = generate_pos_def_matrix(rng, n, aMin, aMax, MT = Float64)
+function generate_pos_def_matrix(rng::MersenneTwister, n::Int64, aMin::Real = 0.1, aMax::Real = 2.; MT::Type{<:AbstractFloat} = Float64 )
+	X = rand(rng, MT, n, n)
 	# any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R
 	Q, R = qr(X)
-	eigs = rand(rng ,T, n) .* (aMax .- aMin) .+ aMin
+	eigs = rand(rng ,MT, n) .* (MT(aMax) .- MT(aMin)) .+ MT(aMin)
 	X = Q * Matrix(Diagonal(eigs)) * Q'
-	X = T(0.5) * (X + X')
+	X = MT(0.5) * (X + X')
 	return X
 end
 
@@ -99,7 +99,7 @@ function feasible_sdp_with_pattern(rng::MersenneTwister, pattern::AbstractMatrix
   d = div(n * (n + 1), 2)
 
 
-  S = generate_pos_def_matrix(rng, n, 0.1, 2)
+  S = generate_pos_def_matrix(rng, n, 0.1, 2.)
   apply_pattern!(S, pattern)
   S = Symmetric(S, :U)
 
@@ -112,7 +112,7 @@ function feasible_sdp_with_pattern(rng::MersenneTwister, pattern::AbstractMatrix
   b = A * x + s
   B = reshape(b, n, n)
 
-  Y = generate_pos_def_matrix(rng, n,  0.1, 1)
+  Y = generate_pos_def_matrix(rng, n,  0.1, 1.)
   y = vec(Y)
   P = sparse(zeros(1, 1))
   q = -P * x - A' * y

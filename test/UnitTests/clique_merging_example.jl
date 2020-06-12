@@ -70,56 +70,58 @@ function get_intersection_matrix()
   vals = [2.0; 1; 1; 1; 2; 1; 2; 2; 2; 1; 1; 2; 1; 1; 1; 1; 3]
   A = sparse(rows, cols, vals, 9, 9)
 end
+@testset "Clique merging Example" begin
 
-@testset "Clique merging (Parent-child merge strategy)" begin
-
-
-  strategy = COSMO.ParentChildMerge()
-  t = get_example_tree(strategy)
-  COSMO.initialise!(t, strategy)
-
-  # Check first  merge_cand: (1, 2)
-  cand = COSMO.traverse(t, strategy)
-  dim_par_snd, dim_par_sep = COSMO.clique_dim(t, cand[1])
-  dim_clique_snd, dim_clique_sep = COSMO.clique_dim(t, cand[2])
-  @test cand == [1; 2] && dim_clique_snd == 2 && dim_clique_sep == 2 && dim_par_snd == 3 && dim_par_sep == 0
-  f_i = COSMO.fill_in(dim_clique_snd, dim_clique_sep, dim_par_snd, dim_par_sep)
-  s = COSMO.max_snd_size(dim_clique_snd, dim_par_snd)
-  @test f_i == 2 && s == 3
-  @test COSMO.evaluate(t, strategy, cand)
-  ordered_cand = COSMO.merge_two_cliques!(t, cand, strategy)
-  @test isempty(t.snd[2]) && t.snd[1] == [15; 16; 17; 5; 9]
-  @test isempty(t.sep[2]) && isempty(t.sep[1])
-  @test t.num == 8 && t.snd_par[2] == -1 && t.snd_par[3] == t.snd_par[6]  == t.snd_par[7] == 1
-  @test t.snd_child[1] == [8; 3; 6; 7] && isempty(t.snd_child[2])
+  @testset "Clique merging (Parent-child merge strategy)" begin
 
 
-  # Let's go throught the whole tree and check if the merge log is as expected
-  strategy = COSMO.ParentChildMerge()
-  t = get_example_tree(strategy)
-  COSMO.merge_cliques!(t, strategy)
-  # considered clique pairs
-  @test t.merge_log.clique_pairs == [1 2; 1 3; 1 4; 1 5; 1 6; 1 7; 1 8; 8 9]
-  # decision if merge should be done
-  @test t.merge_log.decisions == [true; true; true; true; true; false; false; true]
-  # number of merges
-  @test t.merge_log.num == 6
+    strategy = COSMO.ParentChildMerge()
+    t = get_example_tree(strategy)
+    COSMO.initialise!(t, strategy)
 
-end
+    # Check first  merge_cand: (1, 2)
+    cand = COSMO.traverse(t, strategy)
+    dim_par_snd, dim_par_sep = COSMO.clique_dim(t, cand[1])
+    dim_clique_snd, dim_clique_sep = COSMO.clique_dim(t, cand[2])
+    @test cand == [1; 2] && dim_clique_snd == 2 && dim_clique_sep == 2 && dim_par_snd == 3 && dim_par_sep == 0
+    f_i = COSMO.fill_in(dim_clique_snd, dim_clique_sep, dim_par_snd, dim_par_sep)
+    s = COSMO.max_snd_size(dim_clique_snd, dim_par_snd)
+    @test f_i == 2 && s == 3
+    @test COSMO.evaluate(t, strategy, cand)
+    ordered_cand = COSMO.merge_two_cliques!(t, cand, strategy)
+    @test isempty(t.snd[2]) && t.snd[1] == [15; 16; 17; 5; 9]
+    @test isempty(t.sep[2]) && isempty(t.sep[1])
+    @test t.num == 8 && t.snd_par[2] == -1 && t.snd_par[3] == t.snd_par[6]  == t.snd_par[7] == 1
+    @test t.snd_child[1] == [8; 3; 6; 7] && isempty(t.snd_child[2])
 
 
-@testset "Clique merging (Clique graph based merge strategy)" begin
+    # Let's go throught the whole tree and check if the merge log is as expected
+    strategy = COSMO.ParentChildMerge()
+    t = get_example_tree(strategy)
+    COSMO.merge_cliques!(t, strategy)
+    # considered clique pairs
+    @test t.merge_log.clique_pairs == [1 2; 1 3; 1 4; 1 5; 1 6; 1 7; 1 8; 8 9]
+    # decision if merge should be done
+    @test t.merge_log.decisions == [true; true; true; true; true; false; false; true]
+    # number of merges
+    @test t.merge_log.num == 6
+
+  end
 
 
-  strategy = COSMO.CliqueGraphMerge(edge_weight = COSMO.ComplexityWeight())
-  t = get_example_graph(strategy)
-  COSMO.initialise!(t, strategy)
-  # since all values are < 0, this merge strategy wouldn't merge at all
-  @test strategy.edges == get_adjacency_matrix(t)
+  @testset "Clique merging (Clique graph based merge strategy)" begin
 
-  t = get_example_graph(strategy)
-  COSMO.merge_cliques!(t, strategy)
-  # number of merges
-  @test t.merge_log.num == 0
-  @test t.snd_par == [0; 1; 2; 3; 3; 2; 2; 1; 8]
+
+    strategy = COSMO.CliqueGraphMerge(edge_weight = COSMO.ComplexityWeight())
+    t = get_example_graph(strategy)
+    COSMO.initialise!(t, strategy)
+    # since all values are < 0, this merge strategy wouldn't merge at all
+    @test strategy.edges == get_adjacency_matrix(t)
+
+    t = get_example_graph(strategy)
+    COSMO.merge_cliques!(t, strategy)
+    # number of merges
+    @test t.merge_log.num == 0
+    @test t.snd_par == [0; 1; 2; 3; 3; 2; 2; 1; 8]
+  end
 end
