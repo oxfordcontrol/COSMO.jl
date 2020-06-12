@@ -30,10 +30,10 @@ for T in UnitTestFloats
     # scaled_norm
     E = Diagonal(T[1, 2, 3.])
     v = T[-1, 5, 4]
-    @test COSMO.scaled_norm(E, v, 1) == 23
-    @test COSMO.scaled_norm(E, v, 2) == norm(T[-1; 10; 12], 2)
-    @test COSMO.scaled_norm(E, v, Inf) == 12
-    @test_throws ArgumentError COSMO.scaled_norm(E, v, 3);
+    @test COSMO.scaled_norm(E, v, T(1)) == 23
+    @test COSMO.scaled_norm(E, v, T(2)) == norm(T[-1; 10; 12], 2)
+    @test COSMO.scaled_norm(E, v, T(Inf)) == 12
+    @test_throws ArgumentError COSMO.scaled_norm(E, v, T(3));
 
     # col_norms!()
     v = zeros(T, 4)

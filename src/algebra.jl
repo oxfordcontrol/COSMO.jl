@@ -6,11 +6,11 @@ function clip(s::Real, min_thresh::Real, max_thresh::Real, min_new::Real = min_t
 	s = ifelse(s < min_thresh, min_new, ifelse(s > max_thresh, max_new, s))
 end
 
-function scaled_norm(E::IdentityMatrix, v::Array, p::Real = 2)
+function scaled_norm(E::IdentityMatrix, v::Array, p::T = T(2)) where {T <: AbstractFloat}
 	E.λ ? norm(v, p) : zero(eltype(v))
 end
 
-function scaled_norm(E::Diagonal, v::Array{T}, p::Real = 2) where{T}
+function scaled_norm(E::Diagonal{T}, v::Array{T}, p::T = T(2)) where {T <: AbstractFloat}
 	if p == 2
 		return scaled_norm2(E, v)
 	elseif p == Inf
@@ -48,7 +48,7 @@ end
 
 function col_norms!(v::Array{Tf, 1},
 	A::Matrix{Tf};
-	reset::Bool = true) where{Tf <: AbstractFloat}
+	reset::Bool = true) where {Tf <: AbstractFloat}
 
 	if reset
 		fill!(v,0.)
@@ -115,7 +115,7 @@ function scalarmul!(A::AbstractMatrix, c::Real)
 end
 
 
-function lmul!(L::Diagonal, M::SparseMatrixCSC)
+function lmul!(L::Diagonal{T}, M::SparseMatrixCSC{T}) where {T <: AbstractFloat}
 
 	#NB : Same as:  @views M.nzval .*= D.diag[M.rowval]
 	#but this way allocates no memory at all and
@@ -131,17 +131,17 @@ end
 
 lmul!(L::IdentityMatrix, M::AbstractMatrix) = L.λ ? M : M .= zero(eltype(M))
 
-function lmul!(L::Diagonal, x::AbstractVector)
+function lmul!(L::Diagonal{T}, x::AbstractVector{T}) where {T <: AbstractFloat}
 	(length(L.diag) == length(x)) || throw(DimensionMismatch())
 	@. x = x * L.diag
 	return nothing
 end
 
-lmul!(L::IdentityMatrix, x::AbstractVector) = L.λ ? x : x .= zero(eltype(x))
+lmul!(L::IdentityMatrix, x::AbstractVector{T}) where {T <: AbstractFloat} = L.λ ? x : x .= zero(eltype(x))
 
 
 
-function rmul!(M::SparseMatrixCSC, R::Diagonal)
+function rmul!(M::SparseMatrixCSC{T}, R::Diagonal{T}) where {T <: AbstractFloat}
 
 	m, n = size(M)
 	(n == length(R.diag)) || throw(DimensionMismatch())
@@ -154,7 +154,7 @@ end
 
 rmul!(M::AbstractMatrix, R::IdentityMatrix) = R.λ ? R : R .= zero(eltype(R))
 
-function lrmul!(L::Diagonal, M::SparseMatrixCSC, R::Diagonal)
+function lrmul!(L::Diagonal{T}, M::SparseMatrixCSC{T}, R::Diagonal{T}) where {T <: AbstractFloat}
 
 	m, n = size(M)
 	Mnzval  = M.nzval
@@ -198,11 +198,11 @@ lrmul!(L::IdentityMatrix,
 
 Symmetrizes the matrix A by calculating A = 0.5 * (A + A') but only performs the operation on the upper triangular part.
 """
-function symmetrize_upper!(A::AbstractMatrix)
+function symmetrize_upper!(A::AbstractMatrix{T}) where {T <: AbstractFloat}
 	n = size(A, 1)
 	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")
 	@inbounds for j in 1:n, i in 1:j
- 		A[i, j] = (A[i, j] + A[j, i]) / 2
+ 		A[i, j] = (A[i, j] + A[j, i]) / T(2)
 	end
 	nothing
 end
@@ -212,11 +212,11 @@ end
 
 Symmetrizes the matrix A by calculating A = 0.5 * (A + A') and storing the result in-place.
 """
-function symmetrize_full!(A::AbstractMatrix)
+function symmetrize_full!(A::AbstractMatrix{T}) where {T <: AbstractFloat}
 	n = size(A, 1)
 	@assert(size(A, 1) == size(A, 2), "Matrix is not square.")
 	@inbounds for j in 1:n, i in 1:j
- 		A[i, j] = (A[i, j] + A[j, i]) / 2
+ 		A[i, j] = (A[i, j] + A[j, i]) / T(2)
  		A[j, i] = A[i, j]
 	end
 	nothing

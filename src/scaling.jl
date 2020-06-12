@@ -1,24 +1,24 @@
 using SparseArrays, LinearAlgebra, Statistics
 
-function kkt_col_norms!(P, A, norm_LHS, norm_RHS)
+function kkt_col_norms!(P::AbstractMatrix{T}, A::AbstractMatrix{T}, norm_LHS::AbstractVector{T}, norm_RHS::AbstractVector{T}) where {T <: AbstractFloat}
 	col_norms!(norm_LHS, P, reset = true);   #start from zero
 	col_norms!(norm_LHS, A, reset = false);  #incrementally from P norms
 	row_norms!(norm_RHS, A)                 #same as column norms of A'
 	return nothing
 end
 
-function limit_scaling!(s::Vector, set::COSMO.Settings)
-	@.s = clip(s, set.MIN_SCALING, set.MAX_SCALING, 1.)
+function limit_scaling!(s::Vector{T}, set::COSMO.Settings{T}) where {T <: AbstractFloat}
+	@.s = clip(s, set.MIN_SCALING, set.MAX_SCALING, one(T))
 	return nothing
 end
 
-function limit_scaling(s::Number, set::COSMO.Settings)
-	s = clip(s, set.MIN_SCALING, set.MAX_SCALING, 1.)
+function limit_scaling(s::T, set::COSMO.Settings{T}) where {T <: AbstractFloat}
+	s = clip(s, set.MIN_SCALING, set.MAX_SCALING, one(T))
 	return s
 end
 
 
-function scale_ruiz!(ws::COSMO.Workspace)
+function scale_ruiz!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	set = ws.settings
 	#references to scaling matrices from workspace
@@ -27,9 +27,9 @@ function scale_ruiz!(ws::COSMO.Workspace)
 	c    = ws.sm.c[]
 
 	#unit scaling to start
-	D.diag .= 1.
-	E.diag .= 1.
-	c       = 1.
+	D.diag .= one(T)
+	E.diag .= one(T)
+	c       = one(T)
 
 	#use the inverse scalings as intermediate
 	#work vectors as well, since we don't
@@ -58,7 +58,7 @@ function scale_ruiz!(ws::COSMO.Workspace)
 
 		# Scale the problem data and update the
 		# equilibration matrices
-		scale_data!(P, A, q, b, Dwork, Ework ,1.)
+		scale_data!(P, A, q, b, Dwork, Ework , one(T))
 		LinearAlgebra.lmul!(Dwork, D)        #D[:,:] = Dtemp*D
 		LinearAlgebra.lmul!(Ework, E)        #D[:,:] = Dtemp*D
 
@@ -74,10 +74,10 @@ function scale_ruiz!(ws::COSMO.Workspace)
 			inf_norm_q = limit_scaling(inf_norm_q, set)
 			scale_cost = max(inf_norm_q, mean_col_norm_P)
 			scale_cost = limit_scaling(scale_cost, set)
-			ctmp = 1.0 / scale_cost
+			ctmp = one(T) / scale_cost
 
 			# scale the penalty terms and overall scaling
-			scalarmul!(P,ctmp)
+			scalarmul!(P, ctmp)
 			q       .*= ctmp
 			c        *= ctmp
 		end
@@ -92,7 +92,7 @@ function scale_ruiz!(ws::COSMO.Workspace)
 	if rectify_set_scalings!(E, Ework, ws.p.C)
 		#only rescale if the above returns true,
 		#i.e. some cone scalings were rectified
-		scale_data!(P, A, q, b, I, Ework, 1.)
+		scale_data!(P, A, q, b, I, Ework, one(T))
 		LinearAlgebra.lmul!(Ework, E)
 	end
 
@@ -101,13 +101,13 @@ function scale_ruiz!(ws::COSMO.Workspace)
 	scale_sets!(E, ws.p.C)
 
 	#update the inverse scaling data, c and c_inv
-	ws.sm.Dinv.diag .= 1. ./ D.diag
-	ws.sm.Einv.diag .= 1. ./ E.diag
+	ws.sm.Dinv.diag .= one(T) ./ D.diag
+	ws.sm.Einv.diag .= one(T) ./ E.diag
 
 	#These are Base.RefValue type so that
 	#scaling can remain an immutable
 	ws.sm.c[]        = c
-	ws.sm.cinv[]     = 1. ./ c
+	ws.sm.cinv[]     = one(T) ./ c
 
 	# scale the potentially warm started variables
 	mul!(ws.vars.x, ws.sm.Dinv, ws.vars.x)
@@ -120,12 +120,12 @@ function scale_ruiz!(ws::COSMO.Workspace)
 end
 
 function inv_sqrt!(A::Vector{T}) where{T <: Real}
-	@fastmath A .= 1. ./ sqrt.(A)
+	@fastmath A .= one(T) ./ sqrt.(A)
 end
 
-function rectify_set_scalings!(E, Ework, C::AbstractConvexSet)
+function rectify_set_scalings!(E::AbstractMatrix{T}, Ework::AbstractMatrix{T}, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 
-	Ework.diag         .= 1.
+	Ework.diag         .= one(T)
 
 	# FIX ME: split the vector Ework.diag over the sets.
 	# This should NOT be done here.  Instead, the
@@ -139,7 +139,7 @@ function rectify_set_scalings!(E, Ework, C::AbstractConvexSet)
 end
 
 
-function scale_sets!(E, C)
+function scale_sets!(E::AbstractMatrix{T}, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 
 	# FIX ME: split the vector Ework.diag over the sets.
 	# This should NOT be done here.  Instead, the
@@ -151,13 +151,13 @@ function scale_sets!(E, C)
 end
 
 
-function scale_data!(P, A, q, b, Ds, Es, cs = 1.)
+function scale_data!(P::AbstractMatrix{T}, A::AbstractMatrix{T}, q::AbstractVector{T}, b::AbstractVector{T}, Ds::Union{IdentityMatrix, AbstractMatrix{T}}, Es::Union{IdentityMatrix, AbstractMatrix{T}}, cs::T = one(T)) where {T <: AbstractFloat}
 
 	lrmul!(Ds, P, Ds) # P[:,:] = Ds*P*Ds
 	lrmul!(Es, A, Ds) # A[:,:] = Es*A*Ds
 	mul!(q,Ds,q)      # q[:] = Ds*q
 	mul!(b,Es,b)      # b[:] = Es*b
-	if cs != 1.
+	if cs != one(T)
 		scalarmul!(P,cs)
 		q .*= cs
 	end

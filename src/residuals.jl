@@ -1,5 +1,5 @@
 #  Compute r = A * x + s - b in-place
-function primal_kkt_condition!(r::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, s::SplitVector{T}, b::AbstractVector{T}) where {T}
+function primal_kkt_condition!(r::AbstractVector{T}, A::AbstractMatrix{T}, x::AbstractVector{T}, s::SplitVector{T}, b::AbstractVector{T}) where {T <: AbstractFloat}
 	# r = A * x
 	mul!(r, A, x)
 	@. r += s
@@ -8,7 +8,7 @@ function primal_kkt_condition!(r::AbstractVector{T}, A::AbstractMatrix{T}, x::Ab
 end
 
 # Compute r = P * x + q - A' * μ in-place
-function dual_kkt_condition!(r::AbstractVector{T}, r_temp::AbstractVector{T}, P::AbstractMatrix{T}, x::AbstractVector{T}, q::AbstractVector{T}, A::AbstractMatrix{T}, μ::AbstractVector{T}) where {T}
+function dual_kkt_condition!(r::AbstractVector{T}, r_temp::AbstractVector{T}, P::AbstractMatrix{T}, x::AbstractVector{T}, q::AbstractVector{T}, A::AbstractMatrix{T}, μ::AbstractVector{T}) where {T <: AbstractFloat}
 	mul!(r, P, x)
 	@. r += q
 

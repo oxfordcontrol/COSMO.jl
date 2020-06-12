@@ -1,8 +1,8 @@
-function is_primal_infeasible!(δy, ws)
+function is_primal_infeasible!(δy::AbstractVector{T}, ws::Workspace{T}) where {T <: AbstractFloat}
 
 	settings = ws.settings
 	# calculate unscaled norm of δy
-	norm_δy = scaled_norm(ws.sm.E, δy.data, Inf)::eltype(δy)
+	norm_δy = scaled_norm(ws.sm.E, δy.data, T(Inf))::eltype(δy)
 
 	# make sure norm is unequal to zero before continuing
 	if norm_δy > settings.eps_prim_inf
@@ -16,7 +16,7 @@ function is_primal_infeasible!(δy, ws)
 
 		if norm(A_δy, Inf) <= settings.eps_prim_inf * norm_δy
 			# scale δy to unit size
-			@. δy *= (-1 / norm_δy)
+			@. δy *= (-one(T) / norm_δy)
 			δyt_b = dot(δy, ws.p.b)
 			# notice the in-place function. This is faster as we are using minus_unit_δy as workspace
 			sF = support_function!(δy, ws.p.C, settings.eps_prim_inf) - δyt_b
@@ -29,10 +29,10 @@ function is_primal_infeasible!(δy, ws)
 end
 
 
-function is_dual_infeasible!(δx, ws)
+function is_dual_infeasible!(δx::AbstractVector{T}, ws::Workspace{T}) where {T <: AbstractFloat}
 	settings = ws.settings
 	# calculate unscaled norm of δx
-	norm_δx = scaled_norm(ws.sm.D, δx, Inf)::eltype(δx)
+	norm_δx = scaled_norm(ws.sm.D, δx, T(Inf))::eltype(δx)
 
 	if norm_δx > settings.eps_dual_inf
 		# test condition <q,δx> < 0
@@ -56,7 +56,7 @@ function is_dual_infeasible!(δx, ws)
 				lmul!(ws.sm.Einv, A_δx)
 
 				#normalize A_δx and create a SplitVector
-				A_δx .*= 1/norm_δx
+				A_δx .*= one(T) / norm_δx
 				A_δx_split = SplitVector(A_δx, ws.p.C)
 				if in_pol_recc!(A_δx_split, ws.p.C, settings.eps_dual_inf)
 					return true

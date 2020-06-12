@@ -244,7 +244,7 @@ mutable struct ChordalInfo{T <: AbstractFloat}
     originalM = problem.model_size[1]
     originalN = problem.model_size[2]
     originalC = deepcopy(problem.C)
-    num_psd_cones = length(findall(x -> typeof(x) <: Union{PsdConeTriangle{Float64}, PsdCone{Float64}} , problem.C.sets))
+    num_psd_cones = length(findall(x -> typeof(x) <: Union{PsdConeTriangle{T}, PsdCone{T}} , problem.C.sets))
     # allocate sparsity pattern for each cone
     sp_arr = Array{COSMO.SparsityPattern}(undef, num_psd_cones)
     cone_map = Dict{Int64, Int64}()
