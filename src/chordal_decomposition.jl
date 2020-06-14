@@ -7,13 +7,13 @@ function _contains(convex_sets::COSMO.CompositeConvexSet, t::Type{<:COSMO.Abstra
   return false
 end
 
-function chordal_decomposition!(ws::COSMO.Workspace)
+function chordal_decomposition!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
   # do nothing if no psd cones present in the problem
-  if !_contains(ws.p.C, DecomposableCones{Float64})
+  if !_contains(ws.p.C, DecomposableCones)
     ws.ci.decompose = false
     return nothing
   end
-  ws.ci = ChordalInfo{Float64}(ws.p, ws.settings)
+  ws.ci = ChordalInfo{T}(ws.p, ws.settings)
 
   find_sparsity_patterns!(ws)
 
@@ -58,7 +58,7 @@ function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::
  end
 end
 
-function _analyse_sparsity_pattern(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{<: Real}, PsdConeTriangle{<: Real}}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: Real}
+function _analyse_sparsity_pattern(ci::ChordalInfo{T}, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{T}, PsdConeTriangle{T}}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: AbstractFloat}
   ordering, nz_ind_map = find_graph!(ci, csp, C.sqrt_dim, C)
   sp = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering, merge_strategy, psd_row_range, k, nz_ind_map)
   # if after analysis of SparsityPattern & clique merging only one clique remains, don't bother decomposing
@@ -73,10 +73,10 @@ function _analyse_sparsity_pattern(ci::ChordalInfo, csp::Array{Int64, 1}, sets::
   end
 end
 
-DenseEquivalent(C::COSMO.PsdCone{T}, dim::Int64) where {T} = COSMO.DensePsdCone{T}(dim)
-DenseEquivalent(C::COSMO.PsdConeTriangle{T}, dim::Int64) where {T} = COSMO.DensePsdConeTriangle{T}(dim)
+DenseEquivalent(C::COSMO.PsdCone{T}, dim::Int64) where {T <: AbstractFloat} = COSMO.DensePsdCone{T}(dim)
+DenseEquivalent(C::COSMO.PsdConeTriangle{T}, dim::Int64) where {T <: AbstractFloat} = COSMO.DensePsdConeTriangle{T}(dim)
 
-function nz_rows(a::SparseMatrixCSC, ind::UnitRange{Int64}, DROP_ZEROS_FLAG::Bool)
+function nz_rows(a::SparseMatrixCSC{T}, ind::UnitRange{Int64}, DROP_ZEROS_FLAG::Bool) where {T <: AbstractFloat}
   DROP_ZEROS_FLAG && dropzeros!(a)
   active = falses(length(ind))
   for r in a.rowval
@@ -87,7 +87,7 @@ function nz_rows(a::SparseMatrixCSC, ind::UnitRange{Int64}, DROP_ZEROS_FLAG::Boo
   return findall(active)
 end
 
-function number_of_overlaps_in_rows(A::SparseMatrixCSC)
+function number_of_overlaps_in_rows(A::SparseMatrixCSC{T}) where {T <: AbstractFloat}
   # sum the entries row-wise
   numOverlaps = sum(A, dims = 2)
   ri = findall(x -> x > 1, numOverlaps)
@@ -95,14 +95,14 @@ function number_of_overlaps_in_rows(A::SparseMatrixCSC)
 end
 
 
-function find_aggregate_sparsity(A::SparseMatrixCSC, b::AbstractVector, ind::UnitRange{Int64}, C::DecomposableCones{ <: Real})
+function find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int64}, C::DecomposableCones{T}) where {T <: AbstractFloat}
   AInd = nz_rows(A, ind, false)
   # commonZeros = AInd[find(x->x==0,b[AInd])]
   bInd = findall(x -> x != 0, view(b, ind))
   commonNZeros = union(AInd, bInd)
   return commonNZeros
 end
-find_aggregate_sparsity(A::SparseMatrixCSC, b::AbstractVector, ind::UnitRange{Int64}, C::AbstractConvexSet) = Int64[]
+find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int64}, C::AbstractConvexSet{T}) where {T <: AbstractFloat} = Int64[]
 
 
 """
@@ -115,12 +115,12 @@ Depending on the kind of transformation that was used, this involves:
 - Reassembling the original matrix S from its blocks
 - Reassembling the dual variable MU and performing a positive semidefinite completion.
 """
-function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
+function reverse_decomposition!(ws::COSMO.Workspace{T}, settings::COSMO.Settings{T}) where {T <: AbstractFloat}
 
   mO = ws.ci.originalM
   nO = ws.ci.originalN
 
-  vars = Variables{Float64}(mO, nO, ws.ci.originalC)
+  vars = Variables{T}(mO, nO, ws.ci.originalC)
   vars.x .= ws.vars.x[1:nO]
 
   if settings.compact_transformation
@@ -128,7 +128,7 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
     add_sub_blocks!(vars.s, ws.vars.s, vars.μ, ws.vars.μ, ws.ci, ws.p.C, ws.ci.originalC, ws.ci.cone_map)
   else
     H = ws.ci.H
-    vars.s  .= SplitVector{Float64}(H * ws.vars.s[mO + 1:end], ws.ci.originalC)
+    vars.s  .= SplitVector{T}(H * ws.vars.s[mO + 1:end], ws.ci.originalC)
     fill_dual_variables!(ws, vars)
   end
 
@@ -140,7 +140,7 @@ function reverse_decomposition!(ws::COSMO.Workspace, settings::COSMO.Settings)
   return nothing
 end
 
-function fill_dual_variables!(ws::COSMO.Workspace, vars::COSMO.Variables)
+function fill_dual_variables!(ws::COSMO.Workspace{T}, vars::COSMO.Variables{T}) where {T <: AbstractFloat}
   mO = ws.ci.originalM
   H = ws.ci.H
 
@@ -157,7 +157,7 @@ function fill_dual_variables!(ws::COSMO.Workspace, vars::COSMO.Variables)
   return nothing
 end
 
-function add_sub_blocks!(s::SplitVector, s_decomp::SplitVector, μ::AbstractVector, μ_decomp::AbstractVector, ci::ChordalInfo, C::CompositeConvexSet, C0::CompositeConvexSet, cone_map::Dict{Int64, Int64})
+function add_sub_blocks!(s::SplitVector{T}, s_decomp::SplitVector{T}, μ::AbstractVector{T}, μ_decomp::AbstractVector{T}, ci::ChordalInfo{T}, C::CompositeConvexSet{T}, C0::CompositeConvexSet{T}, cone_map::Dict{Int64, Int64}) where {T <: AbstractFloat}
   sp_arr = ci.sp_arr
   row_start = 1 # the row pointer in the decomposed problem
   row_ranges = get_set_indices(C0.sets) # the row ranges of the same cone (or "parent" cone) in the original problem
@@ -170,14 +170,14 @@ function add_sub_blocks!(s::SplitVector, s_decomp::SplitVector, μ::AbstractVect
   return nothing
 end
 
-function add_blocks!(s::SplitVector, μ::AbstractVector, row_start::Int64, row_range::UnitRange{Int64}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector, μ_decomp::AbstractVector, C::AbstractConvexSet)
+function add_blocks!(s::SplitVector{T}, μ::AbstractVector{T}, row_start::Int64, row_range::UnitRange{Int64}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector{T}, μ_decomp::AbstractVector{T}, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 
   @. s.data[row_range] = s_decomp.data[row_start:row_start + C.dim - 1]
   @. μ[row_range] = μ_decomp[row_start:row_start + C.dim - 1]
   return row_start + C.dim
 end
 
-function add_blocks!(s::SplitVector, μ::AbstractVector, row_start::Int64, row_range::UnitRange{Int64}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector, μ_decomp::AbstractVector, C::DecomposableCones{ <: Real})
+function add_blocks!(s::SplitVector{T}, μ::AbstractVector{T}, row_start::Int64, row_range::UnitRange{Int64}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector{T}, μ_decomp::AbstractVector{T}, C::DecomposableCones{T}) where {T <: AbstractFloat}
   # load the appropriate sparsity_pattern
   sp = sp_arr[C.tree_ind]
   sntree = sp.sntree
@@ -217,40 +217,40 @@ function psd_completion!(ws::COSMO.Workspace)
   return nothing
 end
 
-complete!(μ::AbstractVector, ::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) = sp_ind
+complete!(μ::AbstractVector{T}, ::AbstractConvexSet{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) where {T <: AbstractFloat} = sp_ind
 
-function complete!(μ::AbstractVector, C::PsdCone{<: Real}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
+function complete!(μ::AbstractVector{T}, C::PsdCone{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) where {T <: AbstractFloat}
   sp = sp_arr[sp_ind]
 
   μ_view = view(μ, rows)
   # make this y = -μ
-  @. μ_view *= -1
+  @. μ_view *= -one(T)
 
   M = reshape(μ_view, C.sqrt_dim, C.sqrt_dim)
 
   psd_complete!(M, C.sqrt_dim, sp.sntree, sp.ordering)
 
-  @. μ_view *= -1
+  @. μ_view *= -one(T)
   return sp_ind + 1
 end
 
-function complete!(μ::AbstractVector, C::PsdConeTriangle{<: Real}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64})
+function complete!(μ::AbstractVector{T}, C::PsdConeTriangle{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) where {T <: AbstractFloat}
   sp = sp_arr[sp_ind]
 
   μ_view = view(μ, rows)
 
   # I want to psd complete y, which is -μ
-  populate_upper_triangle!(C.X, -μ_view, 1. / sqrt(2))
+  populate_upper_triangle!(C.X, -μ_view, one(T) / sqrt(T(2)))
   psd_complete!(C.X, C.sqrt_dim, sp.sntree, sp.ordering)
   extract_upper_triangle!(C.X, μ_view, sqrt(2))
-  @. μ_view *= -1
+  @. μ_view *= -one(T)
   return sp_ind + 1
 end
 
 
 # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)
 # input: A - positive definite completable matrix
-function psd_complete!(A::AbstractMatrix, N::Int64, sntree::SuperNodeTree, p::Array{Int64})
+function psd_complete!(A::AbstractMatrix{T}, N::Int64, sntree::SuperNodeTree, p::Array{Int64}) where {T <: AbstractFloat}
 
   # if a clique graph based merge strategy was used for this sparsity pattern, recompute a valid clique tree
   #recompute_clique_tree(sntree.strategy) && clique_tree_from_graph!(sntree, sntree.strategy)

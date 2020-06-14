@@ -1,38 +1,42 @@
-# Test script to test solver for a qp
+# # Quadratic Program
+#
+# We want to solve the following quadratic program with decision variable `x`:
+# $$
+# \begin{array}{ll} \text{minimize} &  1/2 x^\top P x + q^\top x \\
+# \text{subject to} &  l \leq A x \leq u
+# \end{array}
+# $$
+# The problem can be solved with `COSMO` in the following way. Start by defining the problem data
 
-using Test
-using COSMO, SparseArrays, LinearAlgebra
+using COSMO, SparseArrays, LinearAlgebra, Test
 
-# Quadratic program example from OSQP Doc
-# min 0.5 * x'Px +  q'x
-# s.t. l <= Ax <= u
-q = [1; 1.]
-P = sparse([4. 1; 1 2])
-A = [1. 1; 1 0; 0 1]
-l = [1.; 0; 0]
-u = [1; 0.7; 0.7]
+q = [1; 1.];
+P = sparse([4. 1; 1 2]);
+A = [1. 1; 1 0; 0 1];
+l = [1.; 0; 0];
+u = [1; 0.7; 0.7];
 
-# Define the constraint l <= Ax <= u with the help of a Nonnegatives set
+# First, we decide to solve the problem with two one-sided constraints using `COSMO.Nonnegatives` as the convex set:
 Aa = [-A; A]
 ba = [u; -l]
-constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives)
+constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives);
 
-# define example problem
-settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-4)
-
-
-model = COSMO.Model()
-assemble!(model, P, q, constraint1, settings = settings)
+# Next, we define the settings object, the model and then assemble everything:
+settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-4);
+model = COSMO.Model();
+assemble!(model, P, q, constraint1, settings = settings);
 res = COSMO.optimize!(model);
 
-# solve again by defining the constraints with the help of a box
-constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u))
 
-model = COSMO.Model()
-assemble!(model, P, q, constraint1, settings = settings)
+# Alternatively, we can also use two-sided constraints with `COSMO.Box`:
+constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u));
+
+model = COSMO.Model();
+assemble!(model, P, q, constraint1, settings = settings);
 res_box = COSMO.optimize!(model);
 
 
+# Let's check that the solution is correct:
 @testset "QP Problem" begin
   @test norm(res.x[1:2] - [0.3; 0.7], Inf) < 1e-3
   @test norm(res_box.x[1:2] - [0.3; 0.7], Inf) < 1e-3

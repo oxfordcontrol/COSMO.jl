@@ -17,6 +17,7 @@ with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data 
 * __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints into multiple smaller PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to solving the original problem.
 * __Smart clique merging__: After an initial decomposition of a structured SDP, COSMO recombines overlapping cliques/blocks to speed up the algorithm.
 * __Warm starting__: COSMO supports warm starting of the decision variables
+* __Arbitrary precision types__: You can solve problems with any floating point precision.
 * __Open Source__: Our code is available on [GitHub](https://github.com/oxfordcontrol/COSMO.jl) and distributed under the Apache 2.0 Licence
 
 ## Installation

@@ -118,6 +118,6 @@ function Constraint(A::AbstractVector{T}, b::AbstractVector{T}, args...) where {
 end
 
 
-function Base.show(io::IO, obj::COSMO.Constraint)
-	print(io,"Constraint\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convex_set))")
+function Base.show(io::IO, obj::COSMO.Constraint{T}) where {T <: AbstractFloat}
+	print(io,"Constraint{$(T)}\nSize of A: $(size(obj.A))\nConvexSet: $(typeof(obj.convex_set))")
 end

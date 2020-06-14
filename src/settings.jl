@@ -28,12 +28,12 @@ sigma | ADMM sigma step | 1e-6
 alpha | Relaxation parameter | 1.6
 eps_abs | Absolute residual tolerance | 1e-4
 eps_rel | Relative residual tolerance | 1e-4
-eps\\_prim\\_inf | Primal infeasibility tolerance | 1e-4
+eps\\_prim\\_inf | Primal infeasibility tolerance | 1e-6
 eps\\_dual\\_inf | Dual infeasibility tolerance | 1e-4
 max_iter | Maximum number of iterations | 2500
 verbose | Verbose printing | false
 verbose_timing | Verbose timing | false
-kkt_solver | Linear System solver | `CholmodKKTSolver`
+kkt_solver | Linear System solver | `QdldlKKTSolver`
 check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
@@ -125,3 +125,8 @@ end
 
 # The default case it to return a Settings{Float64} object
 Settings(args...; kwargs...) = Settings{DefaultFloat}(args...; kwargs...)
+
+
+function Base.show(io::IO, obj::COSMO.Settings{T}) where {T <: AbstractFloat}
+	println(io,"A COSMO.Settings{$(T)} object. To list the available options type `?` and `help?>COSMO.Settings`.")
+end

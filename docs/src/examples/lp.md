@@ -24,7 +24,7 @@ using COSMO, LinearAlgebra, SparseArrays, Test
 ##Define problem data:
 c = [1; 2; 3; 4.];
 A = Matrix(1.0I, 4, 4);
-b = [10; 10; 10; 10];
+b = [10.; 10; 10; 10];
 n = 4;
 nothing #hide
 ```
