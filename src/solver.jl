@@ -89,7 +89,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	x_tl = view(sol, 1:n) # i.e. xTilde
 	ν = view(sol, (n + 1):(n + m))
 
-	settings.verbose_timing && (iter_start = time())
+	iter_start = time()
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
@@ -178,7 +178,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	end #END-ADMM-MAIN-LOOP
 
-	settings.verbose_timing && (ws.times.iter_time = (time() - iter_start))
+	ws.times.iter_time = (time() - iter_start)
 	settings.verbose_timing && (ws.times.post_time = time())
 
 	# calculate primal and dual residuals
