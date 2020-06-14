@@ -9,18 +9,18 @@ const MOIU = MOI.Utilities
 const CI = MOI.ConstraintIndex
 const VI = MOI.VariableIndex
 
-const SparseTriplets = Tuple{Vector{Int}, Vector{Int}, Vector{<:Any}}
+const SparseTriplets{Tv} = Tuple{Vector{<:Integer}, Vector{<:Integer}, Vector{Tv}}
 
 const SingleVariable = MOI.SingleVariable
-const Affine = MOI.ScalarAffineFunction{Float64}
-const Quadratic = MOI.ScalarQuadraticFunction{Float64}
+const Affine = MOI.ScalarAffineFunction{<: AbstractFloat}
+const Quadratic = MOI.ScalarQuadraticFunction{<: AbstractFloat}
 const VectorOfVariables = MOI.VectorOfVariables
-const VectorAffine = MOI.VectorAffineFunction{Float64}
+const VectorAffine = MOI.VectorAffineFunction{<: AbstractFloat}
 
-const Interval = MOI.Interval{Float64}
-const LessThan = MOI.LessThan{Float64}
-const GreaterThan = MOI.GreaterThan{Float64}
-const EqualTo = MOI.EqualTo{Float64}
+const Interval = MOI.Interval{<: AbstractFloat}
+const LessThan = MOI.LessThan{<: AbstractFloat}
+const GreaterThan = MOI.GreaterThan{<: AbstractFloat}
+const EqualTo = MOI.EqualTo{<: AbstractFloat}
 const IntervalConvertible = Union{LessThan, GreaterThan, EqualTo, Interval}
 
 
@@ -40,34 +40,35 @@ export Optimizer
 # MAIN INTERFACE OBJECTS AND FUNCTIONS
 ##############################
 
-mutable struct Optimizer <: MOI.AbstractOptimizer
-    inner::COSMO.Model
+mutable struct Optimizer{T} <: MOI.AbstractOptimizer
+    inner::COSMO.Model{T}
     hasresults::Bool
-    results::COSMO.Result{Float64}
+    results::COSMO.Result{T}
     is_empty::Bool
     sense::MOI.OptimizationSense
-    objconstant::Float64
-    set_constant::Vector{Float64}
-    constr_constant::Vector{Float64}
+    objconstant::T
+    set_constant::Vector{T}
+    constr_constant::Vector{T}
     rowranges::Dict{Int, UnitRange{Int}}
     idxmap::MOIU.IndexMap
 
-    function Optimizer(; user_settings...)
-        inner = COSMO.Model()
+    function Optimizer{T}(; user_settings...) where {T <: AbstractFloat}
+        inner = COSMO.Model{T}()
         set_MOI_default_settings!(inner.settings)
         length(user_settings) > 0 && set_user_settings!(inner, user_settings)
         hasresults = false
-        results = COSMO.Result{Float64}()
+        results = COSMO.Result{T}()
         is_empty = true
         sense = MOI.MIN_SENSE
-        objconstant = 0.
-        set_constant = Float64[]
-        constr_constant = Float64[]
+        objconstant = zero(T)
+        set_constant = T[]
+        constr_constant = T[]
         rowranges = Dict{Int, UnitRange{Int}}()
         idxmap = MOIU.IndexMap()
         new(inner, hasresults, results, is_empty, sense, objconstant, set_constant, constr_constant, rowranges, idxmap)
     end
 end
+Optimizer(args...; kwargs...) = Optimizer{DefaultFloat}(args...; kwargs...)
 
 function printIdxmap(idxmap::MOIU.IndexMap)
     println(">>Variable Map with $(length(idxmap.varmap)) entries:")
@@ -110,15 +111,15 @@ end
 
 
 # MG: function to reset otimizer
-function MOI.empty!(optimizer::Optimizer)
+function MOI.empty!(optimizer::Optimizer{T}) where {T <: AbstractFloat}
     COSMO.empty_model!(optimizer.inner)
     optimizer.hasresults = false
-    optimizer.results = COSMO.Result{Float64}()
+    optimizer.results = COSMO.Result{T}()
     optimizer.is_empty = true
     optimizer.sense = MOI.MIN_SENSE # model parameter, so needs to be reset
-    optimizer.objconstant = 0.
-    optimizer.set_constant = Float64[]
-    optimizer.constr_constant = Float64[]   # the 5 in (3 * x1 + 2 * x2 + 5 ≤ 10 )
+    optimizer.objconstant = zero(T)
+    optimizer.set_constant = T[]
+    optimizer.constr_constant = T[]   # the 5 in (3 * x1 + 2 * x2 + 5 ≤ 10 )
     optimizer.idxmap = MOIU.IndexMap()
     optimizer.rowranges = Dict{Int, UnitRange{Int}}()
     optimizer
@@ -224,23 +225,23 @@ function allocate_cost_variables!(optimizer::Optimizer)
 end
 
 MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:Union{MOI.SingleVariable, Affine, Quadratic}}) = true
-function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.SingleVariable)
+function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.SingleVariable) where {T <: AbstractFloat}
     idxmap = dest.idxmap
     n = MOI.get(dest, MOI.NumberOfVariables())
-    dest.inner.p.q = zeros(n)
-    dest.inner.p.q[idxmap[f.variable].value] = 1
-    dest.inner.p.P = spzeros(n, n)
-    dest.objconstant = 0.
+    dest.inner.p.q = zeros(T, n)
+    dest.inner.p.q[idxmap[f.variable].value] = one(T)
+    dest.inner.p.P = spzeros(T, n, n)
+    dest.objconstant = zero(T)
     dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
     return nothing
 end
 
-function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.ScalarAffineFunction{Float64})
+function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.ScalarAffineFunction{T}) where {T <: AbstractFloat}
     idxmap = dest.idxmap
     n = MOI.get(dest, MOI.NumberOfVariables())
-    dest.inner.p.P = spzeros(n, n)
+    dest.inner.p.P = spzeros(T, n, n)
 
-    dest.inner.p.q = zeros(n)
+    dest.inner.p.q = zeros(T, n)
     processlinearterms!(dest.inner.p.q, f.terms)# idxmap)
 
     dest.objconstant = f.constant
@@ -248,7 +249,7 @@ function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.ScalarAffine
     return nothing
 end
 
-function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.ScalarQuadraticFunction{Float64})
+function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.ScalarQuadraticFunction{T}) where {T <: AbstractFloat}
     idxmap = dest.idxmap
     n = MOI.get(dest, MOI.NumberOfVariables())
 
@@ -258,7 +259,7 @@ function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f::MOI.ScalarQuadra
     symmetrize!(I, J, V)
     dest.inner.p.P = sparse(I, J, V, n, n)
 
-    dest.inner.p.q = zeros(n)
+    dest.inner.p.q = zeros(T, n)
     processlinearterms!(dest.inner.p.q, f.affine_terms)#, idxmap)
     dest.objconstant = f.constant
 
@@ -270,10 +271,10 @@ function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f)
     throw(MOI.UnsupportedAttribute(MOI.ObjectiveFunction{typeof(f)}()))
 end
 
-function apply_sense!(sense::MOI.OptimizationSense, P::AbstractMatrix, q::AbstractVector, c::Float64)
+function apply_sense!(sense::MOI.OptimizationSense, P::AbstractMatrix{T}, q::AbstractVector{T}, c::T) where {T <: AbstractFloat}
     if sense == MOI.MAX_SENSE
-        LinearAlgebra.rmul!(P, -1)
-        LinearAlgebra.rmul!(q, -1)
+        LinearAlgebra.rmul!(P, -one(T))
+        LinearAlgebra.rmul!(q, -one(T))
         c = -c
     end
     return c
@@ -289,7 +290,7 @@ end
 
 
 
-function symmetrize!(I::Vector{Int}, J::Vector{Int}, V::Vector)
+function symmetrize!(I::Vector{Ti}, J::Vector{Ti}, V::Vector{Tv}) where {Tv <: AbstractFloat, Ti <: Integer}
     n = length(V)
     (length(I) == length(J) == n) || error()
     for i = 1 : n
@@ -309,16 +310,16 @@ end
 # minus: if true, multiply the result by -1
 # d: dimension of set
 # rev: if true, we unscale instead (e.g. divide by √2 instead of multiply for PSD cone)
-_scalecoef(rows, coef, minus, ::Type{<:MOI.AbstractSet}, rev) = minus ? -coef : coef
-_scalecoef(rows, coef, minus, ::Union{Type{<:MOI.LessThan}, Type{<:MOI.Nonpositives}, Type{<:MOI.EqualTo}}, rev) = minus ? coef : -coef
-function _scalecoef(rows, coef, minus, ::Type{MOI.PositiveSemidefiniteConeTriangle}, rev)
-    scaling = minus ? -1 : 1
-    scaling2 = rev ? scaling / √2 : scaling * √2
+_scalecoef(rows, coef::Union{Vector{T}, T}, minus, ::Type{<:MOI.AbstractSet}, rev) where {T <: AbstractFloat} = minus ? -coef : coef
+_scalecoef(rows, coef::Union{Vector{T}, T}, minus, ::Union{Type{<:MOI.LessThan}, Type{<:MOI.Nonpositives}, Type{<:MOI.EqualTo}}, rev) where {T <: AbstractFloat} = minus ? coef : -coef
+function _scalecoef(rows, coef::Union{Vector{T}, T}, minus, ::Type{MOI.PositiveSemidefiniteConeTriangle}, rev) where {T <: AbstractFloat}
+    scaling = minus ? -one(T) : one(T)
+    scaling2 = rev ? scaling / sqrt(T(2)) : scaling * sqrt(T(2))
     output = copy(coef)
     idx = 0
     for i in 1:length(output)
         # See https://en.wikipedia.org/wiki/Triangular_number#Triangular_roots_and_tests_for_triangular_numbers
-        is_diagonal_index = isinteger(sqrt(8*rows[i] + 1))
+        is_diagonal_index = isinteger(sqrt(8 * rows[i] + 1))
         if is_diagonal_index
             output[i] *= scaling
         else
@@ -345,17 +346,17 @@ get_var_index(t::MOI.VectorAffineTerm) = get_var_index(t.scalar_term)
 coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
-function processconstraints!(optimizer::Optimizer, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}})
+function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}}) where {T <: AbstractFloat}
 
     m = mapreduce(length, +, values(rowranges), init=0)
 
-    b = zeros(Float64, m)
-    constant = zeros(Float64, m)
+    b = zeros(T, m)
+    constant = zeros(T, m)
     I = Int[]
     J = Int[]
-    V = Float64[]
-    COSMOconvexSets = Array{COSMO.AbstractConvexSet{Float64}}(undef, 0)
-    set_constant = zeros(Float64, m)
+    V = T[]
+    COSMOconvexSets = Array{COSMO.AbstractConvexSet{T}}(undef, 0)
+    set_constant = zeros(T, m)
     # loop over constraints and modify A, l, u and constants
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         processconstraints!((I, J, V), b, COSMOconvexSets, constant, set_constant, src, idxmap, rowranges, F, S)
@@ -372,15 +373,15 @@ function processconstraints!(optimizer::Optimizer, src::MOI.ModelLike, idxmap, r
     model = optimizer.inner
     model.p.A = A
     model.p.b = b
-    model.p.C = CompositeConvexSet(deepcopy(convex_sets))
+    model.p.C = CompositeConvexSet{T}(deepcopy(convex_sets))
     model.p.model_size = [size(A, 1); size(A,2 )]
     optimizer.constr_constant = constant
     return nothing
 end
 
-function processconstraints!(triplets::SparseTriplets, b::Vector, COSMOconvexSets::Array{COSMO.AbstractConvexSet{Float64}}, constant::Vector{Float64}, set_constant::Vector{Float64},
+function processconstraints!(triplets::SparseTriplets{T}, b::Vector{T}, COSMOconvexSets::Array{COSMO.AbstractConvexSet{T}}, constant::Vector{T}, set_constant::Vector{T},
         src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}},
-        F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet})
+        F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet}) where {T <: AbstractFloat}
     cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
     # loop over all constraints of same (F,S)
     for ci in cis_src
@@ -406,25 +407,25 @@ constant(f::MOI.ScalarAffineFunction) = f.constant
 
 
 # process constant for functions Union{Affine, SingleVariable}
-function processConstant!(b, row::Int, f::Affine, s)
+function processConstant!(b::AbstractVector{T}, row::Int, f::Affine, s) where {T <: AbstractFloat}
     b[row] = scalecoef(row, constant(f), false, s)
     nothing
 end
 
-function processConstant!(b, rows::UnitRange{Int}, f::VectorOfVariables, s)
-    b[rows] .= 0
+function processConstant!(b::AbstractVector{T}, rows::UnitRange{Int}, f::VectorOfVariables, s) where {T <: AbstractFloat}
+    b[rows] .= zero(T)
     nothing
 end
 
 # process constant for functions VectorAffineFunction{Float64}
-function processConstant!(b, rows::UnitRange{Int}, f::VectorAffine, s)
+function processConstant!(b::AbstractVector{T}, rows::UnitRange{Int}, f::VectorAffine, s) where {T <: AbstractFloat}
         b[rows] = scalecoef(nom_rows(rows, typeof(s)), f.constants, false, s)
     nothing
 end
 
 
 # process function like f(x) = coeff*x_1
-function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunction, row::Int, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets{T}, f::MOI.ScalarAffineFunction, row::Int, idxmap::MOIU.IndexMap, s::MOI.AbstractSet) where {T <: AbstractFloat}
     (I, J, V) = triplets
     for term in f.terms
         push!(I, row)
@@ -433,7 +434,7 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.ScalarAffineFunctio
     end
 end
 
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets{T}, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet) where {T <: AbstractFloat}
     (I, J, V) = triplets
     cols = zeros(length(rows))
     for (i, var) in enumerate(f.variables)
@@ -441,11 +442,11 @@ function processConstraint!(triplets::SparseTriplets, f::MOI.VectorOfVariables, 
     end
     append!(I, rows)
     append!(J, cols)
-    append!(V, scalecoef(nom_rows(rows, typeof(s)), ones(length(rows)), true, s))
+    append!(V, scalecoef(nom_rows(rows, typeof(s)), ones(T, length(rows)), true, s))
     nothing
 end
 
-function processConstraint!(triplets::SparseTriplets, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet)
+function processConstraint!(triplets::SparseTriplets{T}, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet) where {T <: AbstractFloat}
     (I, J, V) = triplets
 
     vis_src = get_var_index.(f.terms)
@@ -469,46 +470,46 @@ end
 ##############################
 
 # process the following sets Union{LessThan, GreaterThan, EqualTo}
-function processSet!(b::Vector, row::Int, cs, s::LessThan)
+function processSet!(b::Vector{T}, row::Int, cs, s::LessThan) where {T <: AbstractFloat}
     b[row] += s.upper
-    push!(cs, COSMO.Nonnegatives{Float64}(1))
+    push!(cs, COSMO.Nonnegatives{T}(1))
     nothing
 end
-function processSet!(b::Vector, row::Int, cs, s::GreaterThan)
+function processSet!(b::Vector{T}, row::Int, cs, s::GreaterThan) where {T <: AbstractFloat}
     b[row] -= s.lower
-    push!(cs, COSMO.Nonnegatives{Float64}(1))
+    push!(cs, COSMO.Nonnegatives{T}(1))
     nothing
 end
-function processSet!(b::Vector, row::Int, cs, s::EqualTo)
+function processSet!(b::Vector{T}, row::Int, cs, s::EqualTo) where {T <: AbstractFloat}
     b[row] += s.value
-    push!(cs, COSMO.ZeroSet{Float64}(1))
+    push!(cs, COSMO.ZeroSet{T}(1))
     nothing
 end
 
-function processSet!(b::Vector, row::Int, cs, s::MOI.Interval)
-    push!(cs, COSMO.Box{Float64}([s.lower], [s.upper]))
+function processSet!(b::Vector{T}, row::Int, cs, s::MOI.Interval) where {T <: AbstractFloat}
+    push!(cs, COSMO.Box{T}([s.lower], [s.upper]))
     nothing
 end
 
 # process the following sets Zeros
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::Zeros)
-    push!(cs, COSMO.ZeroSet{Float64}(length(rows)))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::Zeros) where {T <: AbstractFloat}
+    push!(cs, COSMO.ZeroSet{T}(length(rows)))
     nothing
 end
 
 # process the following sets Union{Zeros, Nonnegatives, Nonpositives}
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonnegatives)
-    push!(cs, COSMO.Nonnegatives{Float64}(length(rows)))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.Nonnegatives) where {T <: AbstractFloat}
+    push!(cs, COSMO.Nonnegatives{T}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.Nonpositives)
-    push!(cs, COSMO.Nonnegatives{Float64}(length(rows)))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.Nonpositives) where {T <: AbstractFloat}
+    push!(cs, COSMO.Nonnegatives{T}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::SOC)
-    push!(cs, COSMO.SecondOrderCone{Float64}(length(rows)))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::SOC) where {T <: AbstractFloat}
+    push!(cs, COSMO.SecondOrderCone{T}(length(rows)))
     nothing
 end
 
@@ -517,35 +518,35 @@ end
 #     nothing
 # end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle)
-    push!(cs, COSMO.PsdConeTriangle{Float64}(length(rows)))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle) where {T <: AbstractFloat}
+    push!(cs, COSMO.PsdConeTriangle{T}(length(rows)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.ExponentialCone)
-    push!(cs, COSMO.ExponentialCone{Float64}())
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.ExponentialCone) where {T <: AbstractFloat}
+    push!(cs, COSMO.ExponentialCone{T}())
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualExponentialCone)
-    push!(cs, COSMO.DualExponentialCone{Float64}())
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.DualExponentialCone) where {T <: AbstractFloat}
+    push!(cs, COSMO.DualExponentialCone{T}())
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PowerCone)
-    push!(cs, COSMO.PowerCone{Float64}(s.exponent))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.PowerCone) where {T <: AbstractFloat}
+    push!(cs, COSMO.PowerCone{T}(T(s.exponent)))
     nothing
 end
 
-function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.DualPowerCone)
-    push!(cs, COSMO.DualPowerCone{Float64}(s.exponent))
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.DualPowerCone) where {T <: AbstractFloat}
+    push!(cs, COSMO.DualPowerCone{T}(T(s.exponent)))
     nothing
 end
 
 
 # to reduce function calls combine, individual ZeroSets, Nonnegatives and Box constraints
 # This assumes that C is ordered by set type
-function merge_sets(C::Array{COSMO.AbstractConvexSet{Float64}})
+function merge_sets(C::Array{COSMO.AbstractConvexSet{T}}) where {T <: AbstractFloat}
 
     z_ind = findall(set -> typeof(set) <: COSMO.ZeroSet, C)
     nn_ind = findall(set -> typeof(set) <: COSMO.Nonnegatives, C)
@@ -561,10 +562,10 @@ function merge_sets(C::Array{COSMO.AbstractConvexSet{Float64}})
 
 
     num_merged_sets = length(other_ind) + num_z + num_nn + num_box
-    merged_sets = Array{COSMO.AbstractConvexSet{Float64}}(undef, num_merged_sets)
+    merged_sets = Array{COSMO.AbstractConvexSet{T}}(undef, num_merged_sets)
     set_ind = 1
-    length(z_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, z_ind, C, set_ind, COSMO.ZeroSet{Float64}))
-    length(nn_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, nn_ind, C, set_ind, COSMO.Nonnegatives{Float64}))
+    length(z_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, z_ind, C, set_ind, COSMO.ZeroSet{T}))
+    length(nn_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, nn_ind, C, set_ind, COSMO.Nonnegatives{T}))
     length(box_ind) > 0 && (set_ind = COSMO.merge_box!(merged_sets, box_ind, C, set_ind))
 
     for other in other_ind
@@ -575,7 +576,7 @@ function merge_sets(C::Array{COSMO.AbstractConvexSet{Float64}})
 end
 
 
-function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{Float64}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet, 1}, set_ind::Int64, set_type::DataType)
+function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet, 1}, set_ind::Int64, set_type::DataType) where {T <: AbstractFloat}
         if length(ind) > 1
             combined_dim = sum(x -> x.dim, C[ind])
         else
@@ -585,18 +586,18 @@ function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{Float64}, 1}, ind
         return set_ind + 1
 end
 
-function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{Float64}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet{Float64}, 1}, set_ind::Int64)
+function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet{T}, 1}, set_ind::Int64) where {T <: AbstractFloat}
         if length(ind) > 1
             combined_dim = sum(x -> x.dim, C[ind])
-            l = zeros(Float64, combined_dim)
-            u = zeros(Float64, combined_dim)
+            l = zeros(T, combined_dim)
+            u = zeros(T, combined_dim)
             row = 1
             for box in C[ind]
                 l[row:row + box.dim - 1] = box.l
                 u[row:row + box.dim - 1] = box.u
                 row += box.dim
             end
-            merged_sets[set_ind] = COSMO.Box(l, u)
+            merged_sets[set_ind] = COSMO.Box{T}(l, u)
         else
             merged_sets[set_ind] = C[ind[1]]
         end
@@ -606,7 +607,7 @@ end
 
 
 
-function pass_attributes!(dest::Optimizer, src::MOI.ModelLike, idxmap::MOIU.IndexMap, pass_attr::Function=MOI.set)
+function pass_attributes!(dest::Optimizer{T}, src::MOI.ModelLike, idxmap::MOIU.IndexMap, pass_attr::Function=MOI.set) where {T <: AbstractFloat}
     copy_names = false
 
     # Copy model attributes, e.g. ObjectiveFunction
@@ -809,12 +810,12 @@ end
 MOI.get(optimizer::Optimizer, ::MOI.Silent) = !optimizer.inner.settings.verbose
 
 MOI.supports(::Optimizer, ::MOI.TimeLimitSec) = true
-function MOI.set(optimizer::Optimizer, ::MOI.TimeLimitSec, value::Real)
-    MOI.set(optimizer, MOI.RawParameter("time_limit"), Float64(value))
+function MOI.set(optimizer::Optimizer{T}, ::MOI.TimeLimitSec, value::Real) where {T <: AbstractFloat}
+    MOI.set(optimizer, MOI.RawParameter("time_limit"), T(value))
 end
 
-function MOI.set(optimizer::Optimizer, attr::MOI.TimeLimitSec, ::Nothing)
-    MOI.set(optimizer, MOI.RawParameter("time_limit"), 0.0)
+function MOI.set(optimizer::Optimizer{T}, attr::MOI.TimeLimitSec, ::Nothing) where {T <: AbstractFloat}
+    MOI.set(optimizer, MOI.RawParameter("time_limit"), zero(T))
 end
 function MOI.get(optimizer::Optimizer, ::MOI.TimeLimitSec)
     return MOI.get(optimizer, MOI.RawParameter("time_limit"))

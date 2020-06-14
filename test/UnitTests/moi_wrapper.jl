@@ -283,8 +283,40 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
 
      end
 
+     @testset "BigFloat Test" begin
+         T = BigFloat
 
-    # # -------------------
+         # min 1/2 x'Px + q'x
+         # with  P = [4. 1;1 2]; q = [1; 1.]
+         # s.t. Ax <= u   <=> -Ax + u in Nonnegatives
+         #      Ax >= l   <=> Ax - l in Nonnegatives
+         # with A = [1. 1;1 0; 0 1];
+         l = T[1.; 0; 0];
+         u = T[1.; 0.7; 0.7]
+
+         model = MOIU.UniversalFallback(COSMOModelData{T}());
+         optimizer =  COSMO.Optimizer{T}();
+         MOI.set(optimizer, MOI.Silent(), true)
+
+         x = MOI.add_variables(model, 2);
+         objectiveFunction = MOI.ScalarQuadraticFunction{T}([MOI.ScalarAffineTerm(T(1.0), x[1]); MOI.ScalarAffineTerm(T(1.0), x[2])], [MOI.ScalarQuadraticTerm(T(4.0), x[1], x[1]); MOI.ScalarQuadraticTerm(T(1.0), x[1], x[2]); MOI.ScalarQuadraticTerm(T(2.0), x[2], x[2])] , zero(T));
+         MOI.set(model, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}(), objectiveFunction);
+         MOI.set(model, MOI.ObjectiveSense(), MOI.MIN_SENSE);
+         A = [MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(T(1.0), x[1])),MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(T(1.0), x[2])),MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(T(1.0), x[1])),MOI.VectorAffineTerm(3, MOI.ScalarAffineTerm(T(1.0), x[2]))];
+         con1 = MOI.add_constraint(model, MOI.VectorAffineFunction(A, -u), MOI.Nonpositives(3));
+         con2 = MOI.add_constraint(model, MOI.VectorAffineFunction(A, -l),MOI.Nonnegatives(3));
+
+         MOI.empty!(optimizer);
+         idxmap = MOI.copy_to(optimizer, model);
+         MOI.optimize!(optimizer);
+
+         @test optimizer.results.status == :Solved
+         @test typeof(optimizer.results) == COSMO.Result{BigFloat}
+         @test isapprox(optimizer.results.obj_val, 1.88, atol = 1e-3)
+     end
+
+
+    # # ------------------
     # # MOI - Test sets
     # --------------------
 
