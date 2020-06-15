@@ -3,7 +3,7 @@
 # -------------------------------------
 
 """
-	ResultTimes{T <: AbstractFloat}
+	ResultTimes
 
 Part of the Result object returned by the solver. ResultTimes contains timing results for certain parts of the algorithm:
 
@@ -330,7 +330,7 @@ Base.show(io::IO, model::COSMO.Workspace{T}) where {T} = println(io, "A COSMO Mo
 
 # Type alias facing the user
 """
-	Model()
+	Model{T <: AbstractFloat}()
 
 Initializes an empty COSMO model that can be filled with problem data using `assemble!(model, P, q,constraints; [settings, x0, s0, y0])`.
 """

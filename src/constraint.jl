@@ -1,6 +1,6 @@
 
 """
-	Constraint(A, b, convex_set_type, dim = 0, indices = 0:0)
+	Constraint{T <: AbstractFloat}(A, b, convex_set_type, dim = 0, indices = 0:0)
 
 Creates a COSMO constraint: `Ax + b ∈ convex_set`.
 
