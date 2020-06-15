@@ -1,3 +1,24 @@
+## Version 0.7.3 (15. June 2020)
+- We significantly improved the solver performance in this release. This is mainly achieved by direct assembly of the KKT matrix in CSC format, faster permutation and getting rid of some function overhead related to the `SplitVector` type. Moreover, we now made the solver precision type-agnostic, which means you can use any AbstractFloat type, e.g. `BigFloat` for your problem data (some limitations apply, see docs) and COSMO will solve the problem with that type.
+
+0b0f3b3 Always time `iter_start`
+6ff52a8 Make chordal decomposition code type agnostic
+3692d49 Make the MOI-wrapper precision-type-agnostic
+ae43c04 Add more strongly typed arguments
+4801beb Make solver work for ArbitraryFloat data
+8237358 🎨 Print result status in color
+8277eb0 Add minor performance improvements
+4a79217 Add fast lower triangle KKT assembly function
+906b9a0 Removed asserts. Direct access to SplitVector data. Removed CSC matrix casts. Removed some zipped calls.
+a6aa495 isolate triu KKT build for speed
+921e927 minor loop rewrites
+ae21123 fast triu csc assembly
+0184138 faster scalings and sqrt
+2a1d43a isolated Box scaling function
+b3c15ed faster norms and l/r scaling
+55f4511 faster qdldl
+
+
 ## Version 0.7.2 (22. March 2020)
 - We now handle the optional dependencies of external linear solver packages `Pardiso` and `IterativeSolvers` by using the `Requires.jl` package. Furthermore, we improve convergence of problems with box constraints in many cases. We also allow an automatic adaptive rho interval option, like in OSQP, which can be activated by setting `adaptive_rho_interval = 0` (automatic).
 
