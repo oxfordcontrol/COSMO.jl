@@ -17,7 +17,7 @@ function (options_factory::OptionsFactory{T})(args...; kwargs...) where {T}
 end
 
 """
-	COSMO.Settings{T}(; kws) where {T <: AbstractFloat}
+	COSMO.Settings{T}(; kwargs) where {T <: AbstractFloat}
 
 Creates a COSMO settings object that is used to pass user settings to the solver.
 
@@ -130,3 +130,4 @@ Settings(args...; kwargs...) = Settings{DefaultFloat}(args...; kwargs...)
 function Base.show(io::IO, obj::COSMO.Settings{T}) where {T <: AbstractFloat}
 	println(io,"A COSMO.Settings{$(T)} object. To list the available options type `?` and `help?>COSMO.Settings`.")
 end
+eltype(::Type{<:Settings{T}}) where {T} = T

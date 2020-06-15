@@ -30,11 +30,12 @@ COSMO.assemble!(model, P, q, constraints, x0 = x_0)
 function assemble!(model::Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractVector{T},
-	constraints::Union{Constraint{T}, Vector{Constraint{T}}}; settings::COSMO.Settings{T} = COSMO.Settings{T}(),
+	constraints::Union{Constraint{T}, Vector{Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings{T}(),
 	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where { T <: AbstractFloat}
 
 
 	!isa(constraints, Array) && (constraints = [constraints])
+	eltype(settings) == T || throw(ArgumentError("The precision types of the model and the settings don't match."))
 	type_checks(constraints)
 
 	merge_constraints!(constraints)
@@ -76,22 +77,24 @@ end
 
 
 # Handle case where q is a 2-dimensional array instead of a 1-dimensional array
-assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractMatrix{T}, args...; kwargs...) where {T} = assemble!(model, P, vec(q), args...; kwargs...)
-assemble!(model::COSMO.Model{T}, P::AbstractVector{T}, q::AbstractArray{T}, args...; kwargs...) where {T} = assemble!(model, P[:, :], q, args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::AbstractMatrix, q::AbstractMatrix, args...; kwargs...) where {T <: AbstractFloat} = assemble!(model, P, vec(q), args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::AbstractVector, q::AbstractArray, args...; kwargs...) where {T <: AbstractFloat} = assemble!(model, P[:, :], q, args...; kwargs...)
 # Handle 1-D cases
-assemble!(model::COSMO.Model{T}, P::T, q::T, args...; kwargs...) where {T} = assemble!(model, [P], [q], args...; kwargs...)
-# convert integer inputs to model type
-assemble!(model::COSMO.Model{T}, P::Integer, q::Integer, args...; kwargs...) where {T} = assemble!(model, Base.convert(T, P), Base.convert(T, q), args...; kwargs...)
-assemble!(model::COSMO.Model{T}, P::Real, q::Union{AbstractMatrix, AbstractVector}, args...; kwargs...) where {T} = assemble!(model, [P], q, args...; kwargs...)
-assemble!(model::COSMO.Model{T}, P::Union{AbstractMatrix, AbstractVector}, q::Real, args...; kwargs...) where {T} = assemble!(model, P, [q], args...; kwargs...)
-assemble!(model::COSMO.Model{T}, P::AbstractArray{Tb}, q::AbstractArray{Tb}, args...; kwargs...) where {T, Tb} = throw(ArgumentError("The precision types of model and `P` / `q` don't match."))
+assemble!(model::COSMO.Model{T}, P::Real, q::Real, args...; kwargs...) where {T <: AbstractFloat} = assemble!(model, Base.convert(T, P), Base.convert(T, q), args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::T, q::T, args...; kwargs...) where {T <: AbstractFloat} = assemble!(model, [P], [q], args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::Real, q::Union{AbstractMatrix{<: Real}, AbstractVector{<: Real}}, args...; kwargs...) where {T <: AbstractFloat} = assemble!(model, [P], q, args...; kwargs...)
+assemble!(model::COSMO.Model{T}, P::Union{AbstractMatrix{<: Real}, AbstractVector{<: Real}}, q::Real, args...; kwargs...) where {T <: AbstractFloat} = assemble!(model, P, [q], args...; kwargs...)
 
+# convert P, q to correct type
+assemble!(model::COSMO.Model{T}, P::AbstractMatrix{Tp}, q::AbstractVector{Tq}, args...; kwargs...) where {T <: AbstractFloat, Tp <: Real, Tq <: Real} = assemble!(model, Base.convert(AbstractMatrix{T}, P), Base.convert(AbstractVector{T}, q), args...; kwargs...)
+# Make sure constraints and model types are consistent
+assemble!(model::COSMO.Model{T}, P::AbstractMatrix{T}, q::AbstractVector{T}, constraints::Union{Constraint{Tc}, Vector{Constraint{Tc}}}; kwargs...) where {T <: AbstractFloat, Tc <: Real} = throw(ArgumentError("The precision types of the model and the costraint(s) don't match."))
 """
 	empty_model!(model)
 
 Resets all the fields of `model` to that of a model created with `COSMO.Model()` (apart from the settings).
 """
-function empty_model!(model::COSMO.Model{T}) where {T}
+function empty_model!(model::COSMO.Model{T}) where {T <: AbstractFloat}
 	model.p = ProblemData{T}()
 	model.sm = ScaleMatrices{T}()
 	model.vars = Variables{T}(1, 1, model.p.C)
@@ -106,7 +109,7 @@ function empty_model!(model::COSMO.Model{T}) where {T}
 end
 
 
-function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T}
+function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat}
 		ind == nothing && (ind = 1:length(z))
 		length(ind) != length(z0) && throw(DimensionMismatch("Dimension of warm starting vector doesn't match the length of index range ind."))
 		z[ind] = z0
@@ -117,7 +120,7 @@ end
 
 Provides the `COSMO.Model` with warm starting values for the primal variable `x`. `ind` can be used to warm start certain components of `x`.
 """
-warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.x, x0, ind)
+warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.x, x0, ind)
 warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T} = warm_start_primal!(model, x0, nothing)
 warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int64) where {T} = (model.vars.x[ind] = x0)
 
@@ -127,7 +130,7 @@ warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int64) where {T} = (model.
 
 Provides the `COSMO.Model` with warm starting values for the primal slack variable `s`. `ind` can be used to warm start certain components of `s`.
 """
-warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.s.data, s0, ind)
+warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.s.data, s0, ind)
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}) where {T} = warm_start_slack!(model, s0, nothing)
 warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int64) where {T} = (model.vars.s.data[ind] = s0)
 
@@ -137,7 +140,7 @@ warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int64) where {T} = (model.v
 
 Provides the `COSMO.Model` with warm starting values for the dual variable `y`. `ind` can be used to warm start certain components of `y`.
 """
-warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T} = _warm_start!(model.vars.μ, -y0, ind)
+warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.μ, -y0, ind)
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_dual!(model, y0, nothing)
 warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
 
@@ -218,7 +221,7 @@ function convert_copy(x::AbstractArray, argtype::Type)
 end
 
 # merge zeros sets and nonnegative sets
-function merge_constraints!(constraints::Array{COSMO.Constraint{T}}) where{T}
+function merge_constraints!(constraints::Array{COSMO.Constraint{T}}) where {T <: AbstractFloat}
 	# handle zeros sets
 	ind = findall(set->typeof(set) == ZeroSet{T}, map(x -> x.convex_set, constraints))
 	if length(ind) > 1
