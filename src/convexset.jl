@@ -812,7 +812,7 @@ end
 CompositeConvexSet(args...) = CompositeConvexSet{DefaultFloat}(args...)
 
 function project!(x::SplitVector{T}, C::CompositeConvexSet{T}) where{T}
-    for i = 1:length(C.sets)
+    Threads.@threads for i = 1:length(C.sets)
         project!(x.views[i],C.sets[i])
     end
 	#foreach(xC -> project!(xC[1], xC[2]), zip(x.views, C.sets))
