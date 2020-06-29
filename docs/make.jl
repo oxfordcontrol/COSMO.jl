@@ -42,7 +42,7 @@ makedocs(
   format = Documenter.HTML(
         prettyurls = !("local" in ARGS),
         canonical = "https://oxfordcontrol.github.io/COSMO.jl/stable/",
-        assets = ["assets/favicon.ico","assets/github_buttons.js"],
+        assets = ["assets/favicon.ico","assets/github_buttons.js", "assets/cosmo.css"],
         analytics = "UA-134239283-1",
   ),
   pages = [
