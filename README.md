@@ -3,11 +3,7 @@
     <img src="https://github.com/migarstka/COSMO_assets/blob/master/star_badge_2.png" align="right" width=6%>
 </div>
 <h1 align="center" margin=0px>
-  <br>
-  <img src="https://github.com/migarstka/COSMO_assets/blob/master/COSMO_logo_only.png" width=40%>
-  <br>
-  <img src="https://github.com/migarstka/COSMO_assets/blob/master/COSMO_text_only.png" width=50%>
-  <br>
+  <img src="https://github.com/migarstka/COSMO_assets/blob/master/cosmo_rocket_with_convex_set.png" width=80%>
 </h1>
 <p align="center">
   <a href="https://travis-ci.org/oxfordcontrol/COSMO.jl"><img src="https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master"></a>
