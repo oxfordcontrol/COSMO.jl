@@ -28,12 +28,11 @@ end
 # copy some .csv file for the logistic regression example to the build directory
 cp(joinpath(@__DIR__, "../examples/chip_data.txt"),
    joinpath(@__DIR__, "src/examples/chip_data.txt"); force = true)
-# Literate.markdown(example_path * "logistic_regression.jl", build_path; preprocess = fix_math_md, postprocess = postprocess, documenter = true, credit = true)
+
 
 
 
 examples_nav = fix_suffix.("./examples/" .* files)
-# push!(examples_nav, "logistic_regression.md")
 
 # find all other documentation source files that are build with Literate
 example_path = joinpath(@__DIR__, "src", "literate/")
@@ -50,7 +49,7 @@ makedocs(
   sitename="COSMO.jl",
   authors = "Michael Garstka and contributors.",
   format = Documenter.HTML(
-        prettyurls = !("local" in ARGS),
+        prettyurls = get(ENV, "CI", nothing) == "true",
         canonical = "https://oxfordcontrol.github.io/COSMO.jl/stable/",
         assets = ["assets/favicon.ico"; "assets/github_buttons.js"; "assets/custom.css"],
         analytics = "UA-134239283-1",
@@ -73,5 +72,4 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/oxfordcontrol/COSMO.jl.git",
-    target = "build")
+    repo = "github.com/oxfordcontrol/COSMO.jl.git")
