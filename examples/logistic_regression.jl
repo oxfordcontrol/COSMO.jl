@@ -31,7 +31,7 @@ plot(x1[1:n_half-1], x2[1:n_half-1], color = :blue, st=:scatter, markershape = :
 plot!(x1[n_half:end], x2[n_half:end], color = :red, st=:scatter, markershape = :circle, label = "Rejected")
 
 
-# The plot shows two test scores of $n$ microchip samples from a fabrication plant and whether the chip passed the quality check. Based on this data we would like to build a logistic model that takes into account the test scores and helps us predict the likelyhood of a chip being accepted.
+# The plot shows two test scores of $n$ microchip samples from a fabrication plant and whether the chip passed the quality check. Based on this data we would like to build a logistic model that takes into account the test scores and helps us predict the likelihood of a chip being accepted.
 #
 # ## Defining the logistic model
 # The logistic regression hypothesis is given by
@@ -53,7 +53,7 @@ plot!(x1[n_half:end], x2[n_half:end], color = :red, st=:scatter, markershape = :
 # $$
 # Consequently, we want to solve the following optimization problem:
 # $$
-# \text{maximize} \quad J(\theta) + \mu \|\theta \|_2,
+# \text{minimize} \quad -J(\theta) + \mu \|\theta \|_2,
 # $$
 #
 # where we added a regularization term with parameter $\mu$ to prevent overfitting.
@@ -82,7 +82,7 @@ X = map_feature(x1, x2);
 size(X)
 
 # ## Transformation into a conic optimisation problem
-# We can rewrite above likelyhood maximisation problem as a conic optimisation problem with exponential-cone-, second-order-cone-, equality-, and inequality constraints:
+# We can rewrite above likelihood maximisation problem as a conic optimisation problem with exponential-cone-, second-order-cone-, equality-, and inequality constraints:
 #
 # $$
 # \begin{array}{ll}
