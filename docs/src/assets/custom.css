@@ -1,3 +1,3 @@
-nav.toc .logo {
-    max-height: 10em;
+div#documenter .docs-sidebar .docs-logo > img {
+    max-height: 8em;
 }
