@@ -29,7 +29,7 @@ function _kktutils_check_dims(P::SparseMatrixCSC{Tv, Ti}, A::AbstractMatrix{Tv},
 end
 
 "Count the number of nnz in each column of the lower triangle of the KKT matrix `K`."
-function _count_lower_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, n::Ti) where {Tv <: AbstractFloat, Ti <: Integer}
+function _count_lower_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, n::Int) where {Tv <: AbstractFloat, Ti <: Integer}
     # count strict lower triangular values of P
     @inbounds for cidx = 1:n
         for j = (P.colptr[cidx]):(P.colptr[cidx+1]-1)
@@ -49,7 +49,7 @@ function _count_lower_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, 
 end
 
 "Count the number of nnz in each column of the upper triangle of the KKT matrix `K`."
-function _count_upper_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, n::Ti) where {Tv <: AbstractFloat, Ti <: Integer}
+function _count_upper_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, n::Int) where {Tv <: AbstractFloat, Ti <: Integer}
     # count nonzeros in the strict upper triangle of (P)
     @inbounds for cidx = 1:n
         for j = (P.colptr[cidx]):(P.colptr[cidx+1]-1)
@@ -72,7 +72,7 @@ function _count_upper_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, 
 end
 
 "Determine and fill in the rowvals `Ki` and nzvals `Kx` of the lower triangle of `K`."
-function _fill_lower_triangle!(Ki::Vector{Ti}, Kp::Vector{Ti}, Kx::Vector{Tv}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, R::Union{Tv, AbstractVector{Tv}}, S::Union{Tv, AbstractVector{Tv}}, KNextInCol::Vector{Ti}, m::Ti, n::Ti) where {Tv <: AbstractFloat, Ti <: Integer}
+function _fill_lower_triangle!(Ki::Vector{Ti}, Kp::Vector{Ti}, Kx::Vector{Tv}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, R::Union{Tv, AbstractVector{Tv}}, S::Union{Tv, AbstractVector{Tv}}, KNextInCol::Vector{Ti}, m::Int, n::Int) where {Tv <: AbstractFloat, Ti <: Integer}
     # tril(K) = | tril(P) + σI |         |
     #           |   A          | - 1/ρ I |
 
@@ -121,7 +121,7 @@ function _fill_lower_triangle!(Ki::Vector{Ti}, Kp::Vector{Ti}, Kx::Vector{Tv}, P
 end
 
 "Determine and fill in the rowvals `Ki` and nzvals `Kx` of the upper triangle of `K`."
-function _fill_upper_triangle!(Ki::Vector{Ti}, Kp::Vector{Ti}, Kx::Vector{Tv}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, R::Union{Tv, AbstractVector{Tv}}, S::Union{Tv, AbstractVector{Tv}}, KNextInCol::Vector{Ti}, m::Ti, n::Ti) where {Tv <: AbstractFloat, Ti <: Integer}
+function _fill_upper_triangle!(Ki::Vector{Ti}, Kp::Vector{Ti}, Kx::Vector{Tv}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, R::Union{Tv, AbstractVector{Tv}}, S::Union{Tv, AbstractVector{Tv}}, KNextInCol::Vector{Ti}, m::Int, n::Int) where {Tv <: AbstractFloat, Ti <: Integer}
     # triu(K) = | triu(P) + σI |    A'   |
     #           |              | - 1/ρ I |
 
@@ -264,13 +264,13 @@ function _assemble_kkt_full(P::SparseMatrixCSC{Tv, Ti}, A::AbstractMatrix{Tv}, s
 end
 
 "Update the diagonal `rho` entries in the lower right hand corner of the KKT matrix `K`."
-function update_kkt_matrix!(K::SparseMatrixCSC{Tv, Ti}, n::Ti, m::Ti, rho::Tv) where {Tv <: AbstractFloat, Ti <: Integer}
+function update_kkt_matrix!(K::SparseMatrixCSC{Tv, Ti}, n::Int, m::Int, rho::Tv) where {Tv <: AbstractFloat, Ti <: Integer}
     @inbounds @simd for i = (n + 1):(n + m)
         K[i, i] = -one(Tv) / rho
     end
 end
 
-function update_kkt_matrix!(K::SparseMatrixCSC{Tv, Ti}, n::Ti, m::Ti, rho_vec::AbstractVector{Tv}) where {Tv <: AbstractFloat, Ti <: Integer}
+function update_kkt_matrix!(K::SparseMatrixCSC{Tv, Ti}, n::Int, m::Int, rho_vec::AbstractVector{Tv}) where {Tv <: AbstractFloat, Ti <: Integer}
     @inbounds @simd for i = (n + 1):(n + m)
         K[i, i] = -one(Tv) / rho_vec[i - n]
     end

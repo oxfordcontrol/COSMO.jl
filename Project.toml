@@ -4,6 +4,7 @@ authors = ["Michael <michael@garstka.org>"]
 version = "0.7.7"
 
 [deps]
+AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 IterTools = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -20,6 +21,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 UnsafeArrays = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 
 [compat]
+AMD = "^0.4.0"
 DataStructures = "^0.17.0"
 IterTools = "^1"
 MathOptInterface = "~0.9.16"
