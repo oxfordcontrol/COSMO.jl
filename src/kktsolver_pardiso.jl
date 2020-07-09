@@ -1,4 +1,5 @@
-using .Pardiso: Pardiso, set_solver!, pardisoinit, set_phase!, set_iparm!, set_msglvl!, get_iparm, pardiso, PardisoSolver, MKLPardisoSolver, get_nprocs, set_nprocs!, set_matrixtype!
+using .Pardiso: Pardiso, set_solver!, pardisoinit, set_phase!, set_iparm!, set_msglvl!, get_iparm, pardiso, PardisoSolver, MKLPardisoSolver, get_nprocs, set_nprocs!, set_matrixtype!, set_perm!
+using AMD
 export PardisoDirectKKTSolver, PardisoIndirectKKTSolver, MKLPardisoSolver
 
 abstract type AbstractPardisoKKTSolver <: AbstractKKTSolver end
@@ -114,6 +115,11 @@ function _pardiso_common_init(P, A, sigma, rho, Solver::Type, iparm::Dict{Int64,
     set_iparm!(ps, 2, 3)    #Parallel METIS reordering
     set_iparm!(ps, 8, 0)    #Number of iterative refinement steps (auto, performs them only if perturbed pivots are obtained)
     set_iparm!(ps, 10, 13)  #Perturb the pivot elements with 1E-13
+
+    #PARDISO ordering seems super slow?  Provide a
+    #user assigned ordering via AMD instead
+    set_perm!(ps, amd(K))
+    set_iparm!(ps,5,1)      #Tells Pardiso to use the user ordering
 
     # set user specific parameters
     for (i, v) in iparm
