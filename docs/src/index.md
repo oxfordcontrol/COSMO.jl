@@ -92,11 +92,10 @@ X_sol = JuMP.value.(X)
 obj_value = JuMP.objective_value(m)
 ```
 
-## Presentation Video
-A video of the presentation at JuMP-dev is available here:
-```@raw html
-<a href="https://www.youtube.com/watch?v=H4Q0ZXDqB70" target="_blank"><img src="https://raw.githubusercontent.com/migarstka/COSMO_assets/master/jump_dev_video.png" alt="JuMP dev presentation video" width="400" border="10"/></a>
-```
+## Related talks
+- A video of my presentation at JuMP-dev is available here: [COSMO.jl at JuMP-dev](https://www.youtube.com/watch?v=H4Q0ZXDqB70)
+- A presentation on chordal decomposition and clique merging is available here: [Chordal decomposition and clique merging](https://vimeo.com/439962112)
+
 
 ## Credits
 
