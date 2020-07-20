@@ -38,7 +38,7 @@ Settings: ϵ_abs = 1.0e-04, ϵ_rel = 1.0e-04,
           check termination every 40 iter,
           check infeasibility every 40 iter,
           KKT system solver: QDLDL
-Setup Time: 0.09ms
+Setup Time: 0.1ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-2.0835e-01	1.2796e+00	2.3510e-01	1.0000e-01
@@ -50,7 +50,7 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 80
 Optimal objective: 1.88
-Runtime: 0.001s (0.55ms)</code></pre><p>Alternatively, we can also use two-sided constraints with <code>COSMO.Box</code>:</p><pre><code class="language-julia">constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u));
+Runtime: 0.001s (0.52ms)</code></pre><p>Alternatively, we can also use two-sided constraints with <code>COSMO.Box</code>:</p><pre><code class="language-julia">constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u));
 
 model = COSMO.Model();
 assemble!(model, P, q, constraint1, settings = settings);
@@ -73,7 +73,7 @@ Settings: ϵ_abs = 1.0e-04, ϵ_rel = 1.0e-04,
           check termination every 40 iter,
           check infeasibility every 40 iter,
           KKT system solver: QDLDL
-Setup Time: 12.29ms
+Setup Time: 12.26ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-7.8808e-03	1.0079e+00	2.0033e+02	1.0000e-01
@@ -85,11 +85,11 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 80
 Optimal objective: 1.88
-Runtime: 0.115s (115.05ms)</code></pre><p>Let&#39;s check that the solution is correct:</p><pre><code class="language-julia">@testset &quot;QP Problem&quot; begin
+Runtime: 0.1s (99.83ms)</code></pre><p>Let&#39;s check that the solution is correct:</p><pre><code class="language-julia">@testset &quot;QP Problem&quot; begin
   @test norm(res.x[1:2] - [0.3; 0.7], Inf) &lt; 1e-3
   @test norm(res_box.x[1:2] - [0.3; 0.7], Inf) &lt; 1e-3
   @test abs(res.obj_val - 1.88) &lt; 1e-3
   @test abs(res_box.obj_val - 1.88) &lt; 1e-3
 end
 nothing</code></pre><pre><code class="language-none">Test Summary: | Pass  Total
-QP Problem    |    4      4</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lp/">« Linear Program</a><a class="docs-footer-nextpage" href="../svm_primal/">Support Vector Machine »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 8 July 2020 10:48">Wednesday 8 July 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+QP Problem    |    4      4</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lp/">« Linear Program</a><a class="docs-footer-nextpage" href="../svm_primal/">Support Vector Machine »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 20 July 2020 17:51">Monday 20 July 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
