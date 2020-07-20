@@ -2,7 +2,7 @@
 
 For very large sparse semidefinite programs (SDPs) it is often helpful to analyse the sparsity structure of the PSD constraint(s). If the equality constraints impose a sparsity structure on the matrix variable, one PSD constraint on a large matrix variable can be decomposed into several smaller constraints. This results usually in a significant speedup and reduction in solve time.
 
-The following example gives a short overview on chordal decomposition and clique merging. For more details, take a look at our [paper](https://arxiv.org/abs/1911.05615) on clique merging.
+The following example gives a short overview on chordal decomposition and clique merging. For more details, take a look at our [paper](https://arxiv.org/abs/1911.05615) on clique merging or watch the corresponding [presentation](https://vimeo.com/439962112) that I gave on the topic.
 
 ## Example problem
 Let's consider the following SDP in standard dual form:
