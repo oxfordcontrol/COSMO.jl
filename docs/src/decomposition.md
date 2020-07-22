@@ -125,7 +125,7 @@ Under _sets_ we can indeed see that `COSMO` solved a problem with five PSD const
 
 
 ## Clique merging
-After we have found the cliques of the sparsity pattern, we are allowed to merge any two of them back together. For the graph of the sparsity pattern this just means adding more edges or treating some _structural_ zeros as _numerical_ zeros. The main reason to merge two cliques is that they might overlap a lot and therefore it is not advantageous to treat them as two different blocks. Consider the two extreme cases below:
+After we have found the cliques of the sparsity pattern, we are allowed to merge some of them back together. For the graph of the sparsity pattern this just means adding more edges or treating some _structural_ zeros as _numerical_ zeros. The main reason to merge two cliques is that they might overlap a lot and therefore it is not advantageous to treat them as two different blocks. Consider the two extreme cases below:
 
 ![](assets/extrem_case1.jpg)
 ![](assets/extrem_case2.jpg)
