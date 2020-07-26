@@ -58,13 +58,13 @@ After cliques have been merged, a valid clique tree will be recomputed from the
 consolidated clique graph.
 """
 mutable struct SuperNodeTree
-	snd::Array{Array{Int64,1},1} #vertices of supernodes stored in one array (also called residuals)
+	snd::Union{Array{Set{Int64}, 1}, Array{Array{Int64, 1}, 1}} #vertices of supernodes stored in one array (also called residuals)
 	snd_par::Array{Int64,1}  # parent of supernode k is supernode j=snd_par[k]
 	snd_post::Array{Int64,1} # post order of supernodal elimination tree
-	snd_child::Array{Array{Int64,1},1}
+	snd_child::Array{Set{Int64},1}
 	post::Array{Int64} # post ordering of the vertices in elim tree σ(j) = v
 	par::Array{Int64}
-	sep::Array{Array{Int64,1},1} #vertices of clique seperators
+	sep::Union{Array{Set{Int64},1}, Array{Array{Int64, 1}, 1}} #vertices of clique seperators
 	nBlk::Array{Int64,1} #sizes of submatrizes defined by each clique, sorted by post-ordering, e.g. size of clique with order 3 => nBlk[3]
 	num::Int64 # number of supernodes / cliques in tree
 	merge_log::MergeLog
@@ -78,7 +78,7 @@ mutable struct SuperNodeTree
 		#sort_children!(child, post)
 		# faster algorithm according to Vandenberghe p.308
 		degrees = higher_degrees(L)
-		snd, snd_par = find_supernodes(par, post, degrees)
+		snd, snd_par = find_supernodes(par, post, degrees, merge_strategy)
 
 		snd_child = child_from_par(snd_par)
 	 	snd_post = post_order(snd_par, snd_child)
@@ -87,33 +87,33 @@ mutable struct SuperNodeTree
 		# the supernodes then represent the full clique
 		# after the clique merging a new clique tree will be computed before psd completion is performed
 	 	if typeof(merge_strategy) <: AbstractGraphBasedMerge
-			add_separators!(L, snd, snd_par, post)
+			sep = [Set{Int64}() for i = 1:length(snd)]
+			add_separators!(L, snd, sep, snd_par, post)
 			@. snd_par = -1
-			snd_child = [Int64[] for i = 1:length(snd)]
-			sep = [Int64[] for i = 1:length(snd)]
+			snd_child = [Set{Int64}() for i = 1:length(snd)]
 			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
 	 	# If the merge strategy is tree based keep the supernodes and separators in to different locations
 		else
 	 		# given the supernodes (clique residuals) find the clique separators
-			sep = find_separators(L, snd, snd_par, post)
+			sep = find_separators(L, snd, snd_par, post, merge_strategy)
 			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
 
 		end
 	end
 
-	function COSMO.SuperNodeTree(cliques::Array{Array{Int64,1},1}, N::Int64)
-    snd_child = [Int64[] for i = 1:N]
-    snd_par = -1 * ones(length(cliques))
-    sep = [Int64[] for i = 1:length(cliques)]
-    snd_post = zeros(length(cliques))
-    new(cliques, snd_par, snd_post, snd_child, collect(1:N), [0], sep, [1], length(cliques), COSMO.MergeLog(), COSMO.CliqueGraphMerge())
+	function COSMO.SuperNodeTree(cliques::Array{Set{Int64},1}, N::Int64)
+	    snd_child = [Set{Int64}() for i = 1:N]
+	    snd_par = -1 * ones(Int64, length(cliques))
+	    sep = [Set{Int64}() for i = 1:length(cliques)]
+	    snd_post = zeros(Int64, length(cliques))
+	    new(cliques, snd_par, snd_post, snd_child, collect(1:N), [0], sep, [1], length(cliques), COSMO.MergeLog(), COSMO.CliqueGraphMerge())
 	end
 
 
 	# FIXME: only for debugging purposes
-	function SuperNodeTree(res, par, snd_post, sep, merge_strategy; post::Array{Int64, 1} = [1])
+	function SuperNodeTree(snd, par, snd_post, sep, merge_strategy; post::Array{Int64, 1} = [1])
 		child = child_from_par(par)
-  	new(res, par, snd_post, child, post, [1], sep, [1], length(res), MergeLog(), merge_strategy)
+  	new(snd, par, snd_post, child, post, [1], sep, [1], length(res), MergeLog(), merge_strategy)
 	end
 end
 
@@ -177,7 +177,7 @@ end
 # perform a depth-first-search to determine the post order of the tree defined by parent and children vectors
 # FIXME: This can be made a lot faster for the case that merges happened, i.e. Nc != length(par)
 
-function post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}}, Nc::Int64)
+function post_order(par::Array{Int64,1}, child::Union{Array{Array{Int64, 1}, 1}, Array{Set{Int64}, 1}}, Nc::Int64)
 
 	order = (Nc + 1) * ones(Int64, length(par))
 	root = findall(x ->x == 0, par)[1]
@@ -197,12 +197,12 @@ function post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}}, Nc::Int64
 	Nc != length(par) && resize!(post, Nc)
 	return post
 end
-post_order(par::Array{Int64,1}, child::Array{Array{Int64,1}}) = post_order(par, child, length(par))
+post_order(par::Array{Int64,1}, child::Union{Array{Array{Int64, 1}, 1}, Array{Set{Int64},1}}) = post_order(par, child, length(par))
 
 
 function child_from_par(par::Array{Int64,1})
 
-	child = [Array{Int64}(undef, 0) for i = 1:length(par)]
+	child = [Set{Int64}() for i = 1:length(par)]
 	for i = 1:length(par)
 		par_ = par[i]
 		par_ != 0 && push!(child[par_], i)
@@ -463,14 +463,22 @@ function pothen_sun(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{In
 	return sn_par, sn_ind
 end
 
-function find_supernodes(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{Int64,1})
+function initialise_sets(N::Int64, strategy::AbstractGraphBasedMerge)
+	return [Set{Int64}() for i = 1:N]
+end
+
+function initialise_sets(N::Int64, strategy::AbstractMergeStrategy)
+	return [Int64[] for i = 1:N]
+end
+
+function find_supernodes(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{Int64,1}, strategy::AbstractMergeStrategy)
 	supernode_par, snInd = pothen_sun(par, post, degrees)
 	# number of vertices
 	N = length(par)
 	# number of representative vertices == number of supernodes
 	Nrep = length(supernode_par)
-	snode = [Array{Int64}(undef, 0) for i = 1:N]
-
+	# snode = [Set{Int64}() for i = 1:N]
+	snode = initialise_sets(N, strategy)
 	for iii = 1:N
 		f = snInd[iii]
 		if f < 0
@@ -484,11 +492,11 @@ function find_supernodes(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Arr
 
 end
 
-function find_separators(L, snodes::Array{Array{Int64,1},1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
+function find_separators(L, snodes::Union{Array{Set{Int64}, 1}, Array{Array{Int64, 1},1}}, supernode_par::Array{Int64,1}, post::Array{Int64,1}, strategy::AbstractMergeStrategy)
 	postInv = invert_order(post)
 
 	Nc = length(supernode_par)
-	sep = [Array{Int64}(undef, 0) for i = 1:Nc]
+	sep = initialise_sets(Nc, strategy)
 
 	for iii = 1:Nc
 		vRep = snodes[iii][1]
@@ -504,22 +512,23 @@ function find_separators(L, snodes::Array{Array{Int64,1},1}, supernode_par::Arra
 
 end
 
-function add_separators!(L::SparseMatrixCSC, snodes::Array{Array{Int64,1},1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
+function add_separators!(L::SparseMatrixCSC, snodes::Array{Set{Int64},1}, separators::Array{Set{Int64}, 1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
 	postInv = invert_order(post)
 
 	Nc = length(supernode_par)
 
 	for iii = 1:Nc
 		snode = snodes[iii]
-		vRep = snode[1]
+		sep = separators[iii]
+		vRep = minimum(snode)
 
 		adjPlus = find_higher_order_neighbors(L, vRep)
 		for neighbor in adjPlus
 			if !in(neighbor, snode)
 				push!(snode, neighbor)
+				push!(sep, neighbor)
 			end
 		end
-		sort!(snode)
 	end
 	return nothing
 end
@@ -544,7 +553,7 @@ function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int64, 1})
 	for snd_ind in t.snd_post
 	  s = snd[snd_ind]
 	  l = length(s)
-	  p[k:k+l-1] = s
+	  p[k:k+l-1] = sort(collect(s))
 	  s[:] = collect(k:1:k+l-1)
 	  k += l
 	end
