@@ -11,7 +11,7 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	for (iii, set) in enumerate(sort(ws.p.C.sets, by = x -> -x.dim))
 		set_name = split(string(typeof(set).name), ".")[end]
 		iii == 1 ? println("Sets:"*" "^5*"$(set_name) of dim: $(set.dim)") : println(" "^10*"$(set_name) of dim: $(set.dim)")
-		if iii > 5
+		if iii == 5
 			println(" "^10*"... and $(length(ws.p.C.sets)-5) more")
 			break
 		end
