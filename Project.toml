@@ -19,11 +19,11 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 UnsafeArrays = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 
 [compat]
-DataStructures = "~0.17.0"
+DataStructures = "^0.17.0"
 MathOptInterface = "~0.9.7"
 QDLDL = "~0.1.4"
-Requires ="~0.5"
-UnsafeArrays = "^0.3"
+Requires ="^1"
+UnsafeArrays = "0.3, 1"
 julia = "^1"
 
 [extras]
