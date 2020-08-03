@@ -1,3 +1,15 @@
+## Version 0.7.4 (3. August 2020)
+- This version mostly contains minor changes and small bug fixes as well as some updates to the documentation.
+
+- `6626c6d` [#114] Restrict dependencies less
+- `2dcf4a8` Print correct number of sets in verbose output
+- `58ef719` Untrack Manifest.toml
+- `9cdd856` Fix sign error in logistic regression example
+- `5ea43c7` Update Documenter to latest version
+- `ce6a10a` Fix navigation bar error
+- `732f76c` Move Logistic regression to Documentation
+- `14e3182` Change logo in docs
+
 ## Version 0.7.3 (15. June 2020)
 - We significantly improved the solver performance in this release. This is mainly achieved by direct assembly of the KKT matrix in CSC format, faster permutation and getting rid of some function overhead related to the `SplitVector` type. Moreover, we now made the solver precision type-agnostic, which means you can use any AbstractFloat type, e.g. `BigFloat` for your problem data (some limitations apply, see docs) and COSMO will solve the problem with that type.
 
