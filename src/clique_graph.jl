@@ -108,15 +108,6 @@ function DFS_hashtable!(component::Set{Int64}, v::Int64, visited::Dict{Int64, Bo
 end
 
 
-"Return the number of elements in s ∩ s2."
-function intersect_dim(s::Set, s2::Set)
-    dim = 0
-    for e in s
-        e in s2 && (dim += 1)
-    end
-    return dim
-end
-
 "Check if s ∩ s2 == s3."
 function inter_equal(s::Set{Int64}, s2::Set{Int64}, s3::Set{Int64})
     dim = 0
@@ -164,55 +155,4 @@ function ispermissible(edge::Tuple{Int64, Int64}, adjacency_table::Dict{Int64, S
         intersect(snd[c_1], snd[neighbor]) != intersect(snd[c_2], snd[neighbor]) && return false
     end
     return true
-end
-
-
-heapleft(i::Integer) = 2i
-heapright(i::Integer) = 2i + 1
-heapparent(i::Integer) = div(i, 2)
-
-
-mutable struct BinaryHeapMax{T}
-    order::Vector{Int64}
-    weights::Vector{T}
-
-    function BinaryHeapMax{T}(weights::Array{T}) where {T <: Real}
-        order = collect(1:length(weights))
-        build_max_heap!(order, weights)
-        return new(order, weights) # weights is a reference on edges.nzval
-    end
-end
-BinaryHeapMax(weights::Array{T}) where {T <: Real} = BinaryHeapMax{T}(weights)
-
-function build_max_heap!(arr::Vector{Int64}, vals::Vector{T}) where {T}
-    for i = div(length(arr), 2):-1:1
-        max_heapify!(arr, vals, i)
-    end
-end
-
-function max_heapify!(arr::Vector{Int64}, vals::Vector{T}, i::Int64) where {T}
-    println("Start with i=$(i)")
-    left = heapleft(i)
-    right = heapright(i)
-    largest = copy(i)
-    @show(left, right, largest)
-    @show(arr, vals)
-    if left <= length(arr) && vals[arr[left]] > vals[arr[largest]]
-        largest = left
-    end
-    if right <= length(arr) && vals[arr[right]] > vals[arr[largest]]
-        largest = right
-    end
-
-    if largest != i
-        ai = arr[i]
-        arr[i] = copy(arr[largest])
-        arr[largest] = ai
-        @show(i, largest, arr)
-        println("Next step:")
-        max_heapify!(arr, vals, largest)
-    else
-        println("Nope")
-    end
-    return nothing
 end

@@ -174,3 +174,31 @@ function gmean(a::AbstractArray{T}) where T<:Real
 	end
 	return exp(s / n)
 end
+
+
+function check_clique_tree(snd, sep, snd_par, snd_child)
+	# c.t. should have one root
+	ind = findall( x -> x == 0, snd_par)
+	length(ind) == 1 || return false
+
+	for (ch, p) in enumerate(snd_par)
+		# removed
+		if p == -1
+			isempty(snd[ch]) || return false
+			isempty(sep[ch]) || return false
+		# root
+		elseif p == 0
+			isempty(sep[ch]) || return false
+			# find all children of ch
+			children = findall(x -> x == ch, snd_par)
+			mapreduce(x -> x ∈ snd_child[ch], *,  children) || return false
+		else
+			intersect(union(snd[ch], sep[ch]), union(snd[p], sep[p])) == sep[ch] || return false
+			children = findall(x -> x == ch, snd_par)
+			if !isempty(children)
+				mapreduce(x -> x ∈ snd_child[ch], *,  children) || return false
+			end
+		end
+	end
+	return true
+end

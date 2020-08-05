@@ -15,6 +15,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
   include("./UnitTests/psd_completion.jl")
   include("./UnitTests/psd_completion_and_merging.jl")
   include("./UnitTests/clique_merging_example.jl")
+  include("./UnitTests/reduced_clique_graph.jl")
   include("./UnitTests/chordal_decomposition_triangle.jl")
   include("./UnitTests/InfeasibilityTests/runTests.jl")
 
