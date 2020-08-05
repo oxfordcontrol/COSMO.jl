@@ -113,7 +113,7 @@ mutable struct SuperNodeTree
 	# FIXME: only for debugging purposes
 	function SuperNodeTree(snd, par, snd_post, sep, merge_strategy; post::Array{Int64, 1} = [1])
 		child = child_from_par(par)
-  	new(snd, par, snd_post, child, post, [1], sep, [1], length(res), MergeLog(), merge_strategy)
+  	new(snd, par, snd_post, child, post, [1], sep, [1], length(snd), MergeLog(), merge_strategy)
 	end
 end
 

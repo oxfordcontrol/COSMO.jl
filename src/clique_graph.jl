@@ -61,7 +61,7 @@ function separator_graph(clique_ind::Array{Int64,1}, separator::Set{Int64}, snd:
     for pair in subsets(clique_ind, Val{2}())
         ca = pair[1]
         cb = pair[2]
-        # if intersect_dim(snd[ca], snd[cb]) > length(separator)
+         # if intersect_dim(snd[ca], snd[cb]) > length(separator)
         if !inter_equal(snd[ca], snd[cb], separator)
             if haskey(H, ca)
                 push!(H[ca], cb)
@@ -153,21 +153,6 @@ function compute_adjacency_table(edges::SparseMatrixCSC{Float64, Int64}, num_ver
      end
      return table
 end
-
-# "Mark edges as `permissible[edge] = 1` if all common neighbors of CA - edge - CB intersect with CA and CB in the same way. We are lazy here and only consider edges with nonnegative weights."
-# function mark_positive_permissible_edges!(permissible::Array{Bool}, adjacency_table::Dict{Int64, Set{Int64}},  inter::Array{Int64, 1}, weights::Array{Float64, 1}, snd::Array{Set{Int64}, 1} , sep::Array{Set{Int64}, 1})
-#
-#     for (k, edge) in enumerate(edges)
-#         if weights[k] >= 0
-#             c_1 = edge[1]
-#             c_2 = edge[2]
-#
-#             common_neighbors = intersect(adjacency_table[c_1], adjacency_table[c_2])
-#             i = inter(snd)
-#         end
-#     end
-#
-# end
 
 "Check whether `edge` is permissible for a merge. An edge is permissible if for every common neighbor N, C_1 ∩ N == C_2 ∩ N or if no common neighbors exist."
 function ispermissible(edge::Tuple{Int64, Int64}, adjacency_table::Dict{Int64, Set{Int64}}, snd::Array{Set{Int64}, 1})

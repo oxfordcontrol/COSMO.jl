@@ -6,11 +6,12 @@ using COSMO, Test, LinearAlgebra, Random
 snd = [Set([4, 5]); Set([1, 4, 6]); Set([1, 7]); Set([1, 8]); Set([1, 3, 4]); Set([1,2,3]); Set([2, 3, 9]); Set([3, 4, 11]); Set([3, 10])]
 sep = [Set([1, 3]); Set([1, 4]); Set([2, 3]); Set([3, 4]); Set([1]); Set([3]); Set([4])]
 
-rows, cols, inter = COSMO.compute_reduced_clique_graph!(sep, snd)
-
+rows, cols = COSMO.compute_reduced_clique_graph!(sep, snd)
+for
+edges = (rows, cols)
 # compare this to the known reference solution
 edges_ref = [(2, 1), (5, 1), (8, 1), (9, 8), (9, 5), (9, 7), (7, 6), (6, 4), (5, 4), (4, 2), (4, 3), (3, 2), (5, 3), (6, 3), (9, 6), (8, 5), (5, 2), (6, 5)]
-permissible_ref = falses(length(edges))
+permissible_ref = falses(length(edges_ref))
 permissible_ref[[7, 11, 16, 17, 18]] .= true
 @testset "Reduced clique graph" begin
 
@@ -22,17 +23,17 @@ permissible_ref[[7, 11, 16, 17, 18]] .= true
     end
     end
     @test edges_contained
-
-    # check that the intersections are correct
-    intersections_correct = true
-    for (k, inter) in enumerate(inter)
-        edge = edges[k]
-        if sep[inter] != intersect(snd[edge[1]], snd[edge[2]])
-            intersections_correct = true
-            break
-        end
-    end
-    @test intersections_correct
+    #
+    # # check that the intersections are correct
+    # intersections_correct = true
+    # for (k, inter) in enumerate(inter)
+    #     edge = edges[k]
+    #     if sep[inter] != intersect(snd[edge[1]], snd[edge[2]])
+    #         intersections_correct = true
+    #         break
+    #     end
+    # end
+    # @test intersections_correct
 
     # let's make a supernodetree structure to test merging related functions
     N = 11

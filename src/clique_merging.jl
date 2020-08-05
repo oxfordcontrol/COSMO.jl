@@ -102,7 +102,7 @@ end
 # 5. update!() - update the tree/graph and strategy
 function _merge_cliques!(t::SuperNodeTree, strategy::AbstractMergeStrategy)
   initialise!(t, strategy)
-  k = 1
+  # k = 1
   while !strategy.stop
     # find merge candidates
     # println("Start Traverse")
@@ -118,9 +118,9 @@ function _merge_cliques!(t::SuperNodeTree, strategy::AbstractMergeStrategy)
     # update strategy information after the merge
     update!(strategy, t, cand, do_merge)
     t.num == 1 && break
-    k == strategy.num_merges && break
+    # k == strategy.num_merges && break
     strategy.stop && break
-    k += 1
+    # k += 1
   end
   return nothing
 end
@@ -175,18 +175,20 @@ function merge_child!(t::SuperNodeTree, cand::Array{Int64, 1})
   p, ch = determine_parent(t, cand[1], cand[2])
 
   # merge child's vertex sets into parent's vertex set
-  push!(t.snd[p], t.snd[ch]...)
-  t.snd[ch] = [] #necessary or just leave it
-  t.sep[ch] = []
+  union!(t.snd[p], t.snd[ch])
+  empty!(t.snd[ch])
+  empty!(t.sep[ch])
 
   # update parent structure
-  @. t.snd_par[t.snd_child[ch]] = p
+  for grandch in t.snd_child[ch]
+    t.snd_par[grandch] = p
+  end
   t.snd_par[ch] = -1 #-1 instead of NaN, effectively remove that entry from the parent list
 
   # update children structure
-  filter!(x -> x != ch, t.snd_child[p])
-  push!(t.snd_child[p], t.snd_child[ch]...)
-  t.snd_child[ch] = []
+  delete!(t.snd_child[p], ch)
+  union!(t.snd_child[p], t.snd_child[ch])
+  empty!(t.snd_child[ch])
 
   # decrement number of cliques in tree
   t.num -= 1
@@ -290,11 +292,11 @@ end
 " Traverse tree `t` in descending topological order and return parent and clique (root has highest order)."
 function traverse(t::SuperNodeTree, strategy::ParentChildMerge)
   c = t.snd_post[strategy.clique_ind]
-  return [t.snd_par[c]; c], 0.
+  return [t.snd_par[c]; c]
 end
 
 "Decide whether to merge the two cliques with clique indices `cand`."
-function evaluate(t, strategy::ParentChildMerge, cand::Array{Int64, 1})
+function evaluate(t::SuperNodeTree, strategy::ParentChildMerge, cand::Array{Int64, 1})
   strategy.stop && return false
   par = cand[1]
   c = cand[2]
