@@ -91,6 +91,14 @@ mutable struct ParentChildMerge <: AbstractTreeBasedMerge
   end
 end
 
+"Free unneccessary memory after merging completed."
+function free_clique_graph!(strategy::AbstractGraphBasedMerge)
+  strategy.edges = spzeros(0, 0)
+  strategy.p = Int[]
+  strategy.adjacency_table = Dict{Int64, Set{Int64}}()
+  return nothing
+end
+
 # Main clique merging routine:
 # 1. initialise!() - tree and strategy
 # 2. traverse() - find the next merge candidates
@@ -151,6 +159,8 @@ function merge_cliques!(t::SuperNodeTree, strategy::AbstractGraphBasedMerge)
   t.snd = sort.(collect.(t.snd))
   t.sep = sort.(collect.(t.sep))
 
+  # free up memory
+  free_clique_graph!(t.strategy)
   return nothing
 end
 
