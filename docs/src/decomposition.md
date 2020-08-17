@@ -9,7 +9,7 @@ Let's consider the following SDP in standard dual form:
 ```math
 \begin{array}{ll}
  \text{minimize} & c^\top x \\
-  \text{subject to} &\displaystyle \sum_{i=1}^m A_i x + S = B\\
+  \text{subject to} &\displaystyle \sum_{i=1}^m A_i x_i + S = B\\
                   & S \in \mathbb{S}^n_+,
 \end{array}
 ```
