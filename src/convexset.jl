@@ -26,7 +26,7 @@ function project!(x::AbstractVector{T}, ::ZeroSet{T}) where{T}
 end
 
 function in_dual(x::AbstractVector{T}, ::ZeroSet{T}, tol::T) where{T}
-	true
+	return true
 end
 
 function in_pol_recc(x::AbstractVector{T}, ::ZeroSet{T}, tol::T) where{T}
@@ -72,11 +72,11 @@ function project!(x::AbstractVector{T}, C::Nonnegatives{T}) where{T}
 end
 
 function in_dual(x::AbstractVector{T}, ::Nonnegatives{T}, tol::T) where{T}
-	!any( x-> (x < -tol), x)
+	return !any( x-> (x < -tol), x)
 end
 
 function in_pol_recc(x::AbstractVector{T}, ::Nonnegatives{T}, tol::T) where{T}
-	!any( x-> (x > tol), x)
+	return !any( x-> (x > tol), x)
 end
 
 # ----------------------------------------------------
@@ -779,7 +779,7 @@ end
 function support_function(x::AbstractVector{T}, B::Box{T}, tol::T) where{T}
     s = 0.
     for i in eachindex(x)
-        s+= ( abs(x[i] > tol) && x[i] > 0) ? x[i]*B.u[i] : x[i]*B.l[i]
+        s+= ( abs(x[i]) > tol && x[i] > 0) ? x[i]*B.u[i] : x[i]*B.l[i]
     end
     return s
 end
