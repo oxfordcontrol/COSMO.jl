@@ -154,7 +154,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		# automatically choose adaptive rho interval if enabled in the settings
 		if settings.adaptive_rho && settings.adaptive_rho_interval == 0
 			# set the adaptive rho interval if a certain fraction of the setup time has passed
-			if (time() - iter_start) > settings.adaptive_rho_fraction * ws.times.setup_time
+			if ((time() - iter_start) - ws.times.proj_time) > settings.adaptive_rho_fraction * ws.times.setup_time
 				# round adaptive time interval to a multiple of the check_termination setting (and at least that)
 				if settings.check_termination > 0
 					settings.adaptive_rho_interval = round_multiple(iter, settings.check_termination)
