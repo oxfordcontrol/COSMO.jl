@@ -16,7 +16,7 @@
 # Let's set up the problem for $n = 20$ and with a specially structured (banded) $W$:
 
 #-
-using LinearAlgebra, Random, COSMO, IterTools, JuMP
+using LinearAlgebra, Random, COSMO, JuMP, IterTools
 
 rng = Random.MersenneTwister(212313);
 n = 20;
