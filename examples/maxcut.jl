@@ -22,7 +22,7 @@ graphplot(W, names = 1:n, edgelabel = W,  fontsize = 12, nodeshape =:circle)
 # $$
 # where $y_i = 1$ indicates that $v_i \in S$ and $y_i = -1$ indicates that $v_i \in \bar{S}$. This problem is of interest in the field of integrated circuit design, where one tries to minimize the number of cross-layer connections in a circuit under layout constraints.
 
-# For more complicated graphs this problem quickly becomes hard to solve to optimality and in fact is known to be NP-hard. For this example we are interested in the randomized approximation algorithm that relaxes the problem to an SDP and was devised in Goemans and Williamson (1995)`[1]` (see for more details).
+# For more complicated graphs this problem quickly becomes hard to solve to optimality and in fact is known to be NP-hard. For this example we are interested in the randomized approximation algorithm that relaxes the problem to an SDP and was devised in Goemans and Williamson (1995) \[1\] (see for more details).
 
 # The approach can be divided into three steps:
 # 1. Solve a relaxed SDP to obtain $Y^*$

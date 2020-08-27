@@ -13,7 +13,7 @@ end
 
 
 # find all example source files
-exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "portfolio_optimization.jl"; "sum_of_squares.jl"; "lovasz.jl"; "two_way_partitioning.jl"];
+exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "portfolio_optimization.jl"; "sum_of_squares.jl"; "lovasz.jl"];
 example_path = joinpath(@__DIR__, "../examples/")
 build_path =  joinpath(@__DIR__, "src", "examples/")
 files = readdir(example_path)
