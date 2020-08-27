@@ -13,7 +13,7 @@ end
 
 
 # find all example source files
-exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "portfolio_optimization.jl"; "sum_of_squares.jl"];
+exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "portfolio_optimization.jl"; "sum_of_squares.jl"; "lovasz.jl"; "two_way_partitioning.jl"];
 example_path = joinpath(@__DIR__, "../examples/")
 build_path =  joinpath(@__DIR__, "src", "examples/")
 files = readdir(example_path)
@@ -28,8 +28,6 @@ end
 # copy some .csv file for the logistic regression example to the build directory
 cp(joinpath(@__DIR__, "../examples/chip_data.txt"),
    joinpath(@__DIR__, "src/examples/chip_data.txt"); force = true)
-
-
 
 
 examples_nav = fix_suffix.("./examples/" .* files)

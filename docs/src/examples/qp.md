@@ -43,7 +43,7 @@ res = COSMO.optimize!(model);
 nothing #hide
 ```
 
-Alternatively we can also use two-sided constraints with `COSMO.Box`:
+Alternatively, we can also use two-sided constraints with `COSMO.Box`:
 
 ```@example qp
 constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u));

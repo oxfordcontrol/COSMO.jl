@@ -165,9 +165,9 @@ end
 # To add the decision boundary we have to plot the line indicating $50\%$ probability of acceptance, i.e. $g(\theta^\top x) = g(z)  = 0.5$ which we get at $z=0$.
 
 #-
-plot(x1[1:n_half-1], x2[1:n_half-1], color = :blue, st=:scatter, markershape = :cross, aspect_ratio=:equal, label = "Accepted", xlabel = "x1 - Microchip Test Score 1", ylabel = "x2 - Microchip Test Score 2")
-plot!(x1[n_half:end], x2[n_half:end], color = :red, st=:scatter, markershape = :circle, label = "Rejected")
-contour!(u, v, z', levels = [0.], c = :black, linewidth=2)
+plot(x1[1:n_half-1], x2[1:n_half-1], color = :blue, st = :scatter, markershape = :cross, aspect_ratio=:equal, label = "Accepted", xlabel = "x1 - Microchip Test Score 1", ylabel = "x2 - Microchip Test Score 2")
+plot!(x1[n_half:end], x2[n_half:end], color = :red, st = :scatter, markershape = :circle, label = "Rejected")
+contour!(u, v, z', levels = [0.], c = :black, linewidth = 2)
 
 # ## Solving the optimisation problem directly with COSMO
 # We can solve the problem directly in COSMO by using its modeling interface. The problem will have $nn = 5 n + n_\theta + 1$ variables. Let us define the cost function  $\frac{1}{2}x^\top P x + q^\top x$:
