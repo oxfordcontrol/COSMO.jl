@@ -10,18 +10,83 @@ ga('send', 'pageview', {'page': location.pathname + location.search + location.h
 \text{subject to} &amp;  x_i^2 = 1, \quad i=1,\dots, n,
 \end{array}\]</div><p>with <span>$x \in \mathbf{R}^n$</span> and <span>$W \in \mathbf{S}^n$</span>. The problem can be interpreted as finding a partition of the points <span>$i = 1,\dots, n$</span> into two sets, where the cost of two points in the same set is <span>$W_{ij}$</span> and <span>$-W_{ij}$</span> otherwise. Brute forcing the solution <span>$x^*$</span> takes <span>$2^n$</span> attempts and becomes quickly intractable, e.g. for <span>$n \geq 30$</span>. However, a lower-bound for this problem can be computed by solving the convex dual of the problem:</p><div>\[\begin{array}{ll} \text{maximize} &amp;  -\sum_i \nu \\
 \text{subject to} &amp;  W + \text{diag}(\nu) \in \mathbf{S}_+^n.
-\end{array}\]</div><p>Solving this problem with optimal objective <span>$d^*$</span> yields a lower bound as least as good as a lower bound based on the minimum eigenvalue <span>$d^* \geq \lambda_{\text{min}}(W)$</span>. Let&#39;s set up the problem for <span>$n = 20$</span> and with a specially structured (banded) <span>$W$</span>:</p><pre><code class="language-">using LinearAlgebra, Random, COSMO, IterTools, JuMP
+\end{array}\]</div><p>Solving this problem with optimal objective <span>$d^*$</span> yields a lower bound as least as good as a lower bound based on the minimum eigenvalue <span>$d^* \geq \lambda_{\text{min}}(W)$</span>. Let&#39;s set up the problem for <span>$n = 20$</span> and with a specially structured (banded) <span>$W$</span>:</p><pre><code class="language-julia">using LinearAlgebra, Random, COSMO, JuMP, IterTools
 
 rng = Random.MersenneTwister(212313);
 n = 20;
 
 W = diagm(0 =&gt; randn(rng, n));
 W += diagm(1 =&gt; randn(rng, n-1));
-W = Symmetric(W)</code></pre><p>As you can see, the matrix <span>$W$</span> imposes a structure on the LMI-constraint. Accordingly, COSMO will be able to use chordal decomposition to decompose the LMI constraint into multiple smaller constraints. This can make a significant difference in the performance of the algorithm for large <span>$n$</span>.</p><pre><code class="language-">model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+W = Symmetric(W)</code></pre><pre><code class="language-none">20×20 LinearAlgebra.Symmetric{Float64,Array{Float64,2}}:
+ 1.6562   1.03129     0.0        …   0.0        0.0        0.0     
+ 1.03129  1.38424     0.0970901      0.0        0.0        0.0     
+ 0.0      0.0970901   0.648929       0.0        0.0        0.0     
+ 0.0      0.0        -0.210802       0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0        …   0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0        …   0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.0        0.0        0.0     
+ 0.0      0.0         0.0        …   0.0        0.0        0.0     
+ 0.0      0.0         0.0            0.500723   0.0        0.0     
+ 0.0      0.0         0.0           -0.951779   0.518206   0.0     
+ 0.0      0.0         0.0            0.518206  -0.136439  -0.175429
+ 0.0      0.0         0.0            0.0       -0.175429   0.781579</code></pre><p>As you can see, the matrix <span>$W$</span> imposes a structure on the LMI-constraint. Accordingly, COSMO will be able to use chordal decomposition to decompose the LMI constraint into multiple smaller constraints. This can make a significant difference in the performance of the algorithm for large <span>$n$</span>.</p><pre><code class="language-julia">model = JuMP.Model(with_optimizer(COSMO.Optimizer));
 @variable(model, ν[1:n]);
 @objective(model, Max, -ones(n)&#39; * ν )
 @constraint(model, Symmetric(W + diagm(ν) )  in JuMP.PSDCone());
-JuMP.optimize!(model)</code></pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-">JuMP.objective_value(model)</code></pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-">function brute_force_optimisation(W, n)
+JuMP.optimize!(model)</code></pre><pre><code class="language-none">┌ Warning: `with_optimizer` is deprecated. Adapt the following example to update your code:
+│ `with_optimizer(Ipopt.Optimizer)` becomes `Ipopt.Optimizer`.
+│   caller = top-level scope at none:0
+└ @ Core none:0
+------------------------------------------------------------------
+          COSMO v0.7.4 - A Quadratic Objective Conic Solver
+                         Michael Garstka
+                University of Oxford, 2017 - 2020
+------------------------------------------------------------------
+
+Problem:  x ∈ R^{38},
+          constraints: A ∈ R^{57x38} (56 nnz),
+          matrix size to factor: 95x95,
+          Floating-point precision: Float64
+Sets:     PsdConeTriangle of dim: 3
+          PsdConeTriangle of dim: 3
+          PsdConeTriangle of dim: 3
+          PsdConeTriangle of dim: 3
+          PsdConeTriangle of dim: 3
+          ... and 14 more
+Decomp:   Num of original PSD cones: 1
+          Num decomposable PSD cones: 1
+          Num PSD cones after decomposition: 19
+          Merge Strategy: CliqueGraphMerge
+Settings: ϵ_abs = 1.0e-04, ϵ_rel = 1.0e-04,
+          ϵ_prim_inf = 1.0e-06, ϵ_dual_inf = 1.0e-04,
+          ρ = 0.1, σ = 1e-06, α = 1.6,
+          max_iter = 2500,
+          scaling iter = 10 (on),
+          check termination every 40 iter,
+          check infeasibility every 40 iter,
+          KKT system solver: QDLDL
+Setup Time: 0.13ms
+
+Iter:	Objective:	Primal Res:	Dual Res:	Rho:
+1	-6.1146e+02	1.7072e+01	5.9998e-01	1.0000e-01
+40	2.4801e+01	2.0059e-01	3.3774e-03	1.0000e-01
+80	2.5628e+01	1.3578e-03	3.6897e-04	1.0000e-01
+120	2.5624e+01	2.8736e-07	1.6902e-07	1.0000e-01
+
+------------------------------------------------------------------
+&gt;&gt;&gt; Results
+Status: Solved
+Iterations: 120
+Optimal objective: 25.62
+Runtime: 0.004s (3.83ms)</code></pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre><code class="language-none">-25.623709770986764</code></pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-julia">function brute_force_optimisation(W, n)
    opt_obj = Inf
    opt_x = Inf * ones(n)
 
@@ -35,4 +100,4 @@ JuMP.optimize!(model)</code></pre><p>Looking at the solver output you can see ho
    end
    return opt_obj, opt_x
 end
-opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 27 August 2020 18:04">Thursday 27 August 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><pre><code class="language-none">(-25.623709242765823, [-1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0])</code></pre><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 27 August 2020 19:48">Thursday 27 August 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
