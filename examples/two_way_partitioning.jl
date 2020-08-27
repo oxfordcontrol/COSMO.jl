@@ -25,7 +25,7 @@ W = diagm(0 => randn(rng, n));
 W += diagm(1 => randn(rng, n-1));
 W = Symmetric(W)
 
-# As you can see, the W imposes a structure on the LMI-constraint. Accordingly, COSMO will be able to use chordal decomposition to decompose the LMI constraint into multiple smaller constraints. This can make a significant difference in the performance of the algorithm for large $n$.
+# As you can see, the matrix $W$ imposes a structure on the LMI-constraint. Accordingly, COSMO will be able to use chordal decomposition to decompose the LMI constraint into multiple smaller constraints. This can make a significant difference in the performance of the algorithm for large $n$.
 
 #-
 
