@@ -1,4 +1,4 @@
-# # Maximum cut problem
+# # Maximum Cut Problem
 #
 # We are interested in solving an approximation to the maximum cut problem using semidefinite programming.
 # Consider the graph $G(V,E)$ with weights $w_{ij}$ shown below:
@@ -54,7 +54,10 @@ model = JuMP.Model(with_optimizer(COSMO.Optimizer));
 @objective(model, Max, 1 / 4 * dot(L, Y));
 @constraint(model, [i = 1:n], Y[i, i] == 1.);
 JuMP.optimize!(model)
+
+#-
 Yopt = JuMP.value.(Y);
+obj_val = JuMP.objective_value(model_dual)
 
 # ## Solving the dual SDP
 # Notice that the decision matrix $Y$ is generally dense (as correctly classified in the solver output above). Therefore, we won't be able to utilize COSMO's chordal decomposition features. However, assuming strong duality, it turns out that we can also solve the dual problem, which is given by:
@@ -64,7 +67,7 @@ Yopt = JuMP.value.(Y);
 #                   & S \in \mathbf{S}_{+}^n.
 # \end{array}
 # $$
-# As you can see, the matrix $S$ is constrained to have zeros in places specified by the graph (Laplacian). Therefore, COSMO can try to decompose this SDP and speed up its algorithm (see solver output):
+# As you can see, the matrix $S$ is constrained to have zeros in places specified by the graph (Laplacian). Therefore, COSMO can try to decompose this SDP (see solver output) and speed up its algorithm:
 
 #-
 model_dual = JuMP.Model(with_optimizer(COSMO.Optimizer, complete_dual = true));
@@ -72,12 +75,14 @@ model_dual = JuMP.Model(with_optimizer(COSMO.Optimizer, complete_dual = true));
 @objective(model_dual, Min,  sum(γ));
 @constraint(model_dual, lmi, Symmetric(-1/4 * L + diagm(γ)) in JuMP.PSDCone());
 JuMP.optimize!(model_dual)
-obj_val = JuMP.objective_value(model)
+
+#-
+obj_val = JuMP.objective_value(model_dual)
 
 # The primal variable $Y^*$ can be recovered from the dual variable associated with the LMI-constraint:
 #-
 Yopt = dual(lmi)
-# For this to work we have to enable PSD completion of the dual variable in COSMO. Now, that we have a solution we can perform the remaining steps in the approximation algorithm.
+# To get the correct positive semidefinite dual variable, we have to enable PSD completion of the dual variable in COSMO. Now, that we have a solution we can perform the remaining steps in the approximation algorithm.
 
 # ## Cholesky factorisation of Y
 # Compute the Cholesky factorisation of $Y = V^\top V$ to find the unit vectors $v_1, \dots, v_n$.
@@ -91,7 +96,7 @@ for i in 1:n
 end
 
 # ## Rounding the approximate solution
-# It remains to round the unit vectors $v_i$ using a random vector $r$ with each compent drawn from $\mathcal{N}(0, 1)$, to obtain the $y_i$'s:
+# It remains to round the unit vectors $v_i$ using a random vector $r$ with each component drawn from $\mathcal{N}(0, 1)$, to obtain the $y_i$'s:
 
 #-
 r = rand(rng, n)
