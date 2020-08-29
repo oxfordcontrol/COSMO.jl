@@ -11,7 +11,7 @@ W[1, 2] = 1; W[1, 4] = 8;
 W[2, 3] = 2; W[2, 4] = 10;
 W[3, 4] = 6;
 W = Symmetric(W)
-graphplot(W, names = 1:n, edgelabel = W,  fontsize = 12, nodeshape =:circle)
+graphplot(W, names = 1:n, edgelabel = W,  x = [0; 1; 1; 0], y = [1; 1; 0; 0], fontsize = 12, nodeshape =:circle)
 
 # The maximum cut problem tries to find a cut or a partition of the graph's vertices into two complementary sets $S$ and $\bar{S}$ such that the total weight of the edges between the two sets is maximized. For this small graph the problem is trivial. The optimal solution is $S = \{1,2,3 \}$ and $\bar{S}=\{4\}$.
 # Formally, this problem can be written as a mixed-integer optimisation problem:
