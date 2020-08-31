@@ -63,7 +63,7 @@ obj_val = JuMP.objective_value(model_dual)
 # Notice that the decision matrix $Y$ is generally dense (as correctly classified in the solver output above). Therefore, we won't be able to utilize COSMO's chordal decomposition features. However, assuming strong duality, it turns out that we can also solve the dual problem, which is given by:
 # $$
 # \begin{array}{ll} \text{minimize} &  \sum_i \gamma_i \\
-# \text{subject to} & \text{diag}(\gamma) - \frac{1}{4} L = S. \\
+# \text{subject to} & \text{diag}(\gamma) - \frac{1}{4} L = S \\
 #                   & S \in \mathbf{S}_{+}^n.
 # \end{array}
 # $$
