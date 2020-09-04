@@ -608,24 +608,34 @@ end
 
 
 function pass_attributes!(dest::Optimizer{T}, src::MOI.ModelLike, idxmap::MOIU.IndexMap, pass_attr::Function=MOI.set) where {T <: AbstractFloat}
-    copy_names = false
+
 
     # Copy model attributes, e.g. ObjectiveFunction
     attrs = MOI.get(src, MOI.ListOfModelAttributesSet())
-    MOIU._pass_attributes(dest, src, copy_names, idxmap, attrs, tuple(), tuple(), tuple(), MOIU.load)
+    attrs = filter(attr -> !(attr isa MOI.Name), attrs)
+
+    MOIU._pass_attributes(dest, src, idxmap, attrs, tuple(), tuple(), tuple(), MOIU.load)
 
     # Copy variable attributes, e.g. VariablePrimalStart
     var_attr = MOI.get(src, MOI.ListOfVariableAttributesSet())
-    vis_src = MOI.get(src, MOI.ListOfVariableIndices())
-    vis_dest = map(vi -> idxmap[vi], vis_src)
-    MOIU._pass_attributes(dest, src, copy_names, idxmap, var_attr, (VI,), (vis_src,), (vis_dest,), MOIU.load)
+    # We don't support MOI.VariableNames at this point
+    var_attr = filter(attr -> !(attr isa MOI.VariableName), var_attr)
+    if !isempty(var_attr)
+        vis_src = MOI.get(src, MOI.ListOfVariableIndices())
+        vis_dest = map(vi -> idxmap[vi], vis_src)
+        MOIU._pass_attributes(dest, src, idxmap, var_attr, (VI,), (vis_src,), (vis_dest,), MOIU.load)
+    end
 
     # Copy constraint attributes, e.g. ConstraintPrimalStart
     for (F, S) in MOI.get(src, MOI.ListOfConstraints())
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         attrs = MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
-        cis_dest = map(ci -> idxmap[ci], cis_src)
-        MOIU._pass_attributes(dest, src, copy_names, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), MOIU.load)
+        # we don't support MOI.ConstraintName at this point
+        attrs = filter(attr -> !(attr isa MOI.ConstraintName), attrs)
+        if !isempty(attrs)
+            cis_dest = map(ci -> idxmap[ci], cis_src)
+            MOIU._pass_attributes(dest, src, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), MOIU.load)
+        end
     end
     return nothing
 end
