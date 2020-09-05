@@ -4,7 +4,7 @@
 # Assume that we have a portfolio with $n$ assets at the beginning of time period $t$. Given some forecasts on risks and expected returns we try to find the optimal trade vector that rebalances the portfolio to achieve a good balance between expected risk (variance) $x^\top \Sigma x$ and returns $\mu^\top x$. In it's most simple form we want to solve:
 # $$
 # \begin{array}{ll} \text{maximize} &  \mu^\top x - \gamma (x^\top \Sigma x)\\
-# \text{subject to} &  1^\top x = w + 1^\top x^0 \\
+# \text{subject to} &  1^\top x = d + 1^\top x^0 \\
 #                    &  x  \geq 0,
 # \end{array}
 # $$
@@ -56,7 +56,7 @@ expected_risk_basic = sqrt(dot(y_opt, y_opt))
 # $$
 # \begin{array}{ll} \text{minimize} &  - \mu^\top x \\
 # \text{subject to} &    \|M^\top x\| \leq \gamma \\
-#                   &  1^\top x = w + 1^\top x^0 \\
+#                   &  1^\top x = d + 1^\top x^0 \\
 #                    &  x  \geq 0.
 # \end{array}
 # $$
