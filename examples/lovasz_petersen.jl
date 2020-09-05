@@ -62,7 +62,27 @@ status = JuMP.optimize!(model)
 # The optimal objective is given by:
 #-
 JuMP.objective_value(model)
-
 # Which is the correct known value for the Petersen Graph.
+#
+## Allowing Chordal Decomposition
+# As you can see in the solver output above, COSMO didn't use chordal decomposition to speed up the computation. However, looking at the problem it is obvious that certain entries of $X$ are constrained to be zero. This problem is a nice example that shows that it matters how the problem is passed to JuMP in order for COSMO to recognize the problem structure. In the above code JuMP creates one constraint for `X` to be `PSD` and some separate constraints for some elements of `X` to be zero. These constraints are handled separately in JuMP and in COSMO so COSMO will not be able to infer anything about the structure of `X`. Instead consider the following alternative:
+#-
+
+## Complete complementary matrix Ec to E
+Ec = zeros(n, n)
+for j = 1:n, i = 1:j
+  E[i, j] == 0 && (Ec[i, j] = 1.)
+end
+Ec = Symmetric(Ec)
+
+model2 = JuMP.Model(with_optimizer(COSMO.Optimizer, decompose = true));
+@variable(model2, X[1:n, 1:n], Symmetric)
+@objective(model2, Max, sum(Ec .* X))
+@constraint(model2, tr(X) == 1.)
+@constraint(model2,  Ec .* X   in JuMP.PSDCone())
+
+status2 = JuMP.optimize!(model2)
+
+
 # ## References
 # [1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)

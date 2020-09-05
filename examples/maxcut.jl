@@ -75,8 +75,6 @@ model_dual = JuMP.Model(with_optimizer(COSMO.Optimizer, complete_dual = true));
 @objective(model_dual, Min,  sum(γ));
 @constraint(model_dual, lmi, Symmetric(-1/4 * L + diagm(γ)) in JuMP.PSDCone());
 JuMP.optimize!(model_dual)
-
-#-
 obj_val = JuMP.objective_value(model_dual)
 
 # The primal variable $Y^*$ can be recovered from the dual variable associated with the LMI-constraint:
