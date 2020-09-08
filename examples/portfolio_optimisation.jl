@@ -25,7 +25,7 @@ x0 = zeros(n);
 
 # We can now write the problem as a QP:
 # $$
-# \begin{array}{ll} \text{minimize} &  x^\top D x + y^\top y + \gamma^{-1} \mu^\top x \\
+# \begin{array}{ll} \text{minimize} &  x^\top D x + y^\top y - \gamma^{-1} \mu^\top x \\
 # \text{subject to} &  y = F^\top x \\
 #                   &  1^\top x = d + 1^\top x^0 \\
 #                    &  x  \geq 0.
@@ -110,7 +110,7 @@ Plots.plot(risks, returns, xlabel = "Standard deviation (risk)", ylabel = "Expec
 # $$
 # c_j(\delta_j) = a_j |\delta_j| + b_j |\delta_j|^{3/2},
 # $$
-# where the first term models the bid-ask spread and broker fees for asset $j$. The second term models the impact on the market that our trade has. This is obviously only a factor if the volume of our trade is significant. The constant $b_j$ is a function of the total volume traded in the considered time periode and the price volatility of the asset and has to be estimated by the trader. To make this example simple we consider the same coefficients $a$ and $b$ for every asset. The $|\delta_j|^{3/2}$ term can be easily modeled using a power cone constraint $\mathcal{K}_{pow} = \{(x, y, z) \mid x^\alpha y^{(1-\alpha)} \geq |z|, x \geq 0, y \geq 0, 0 \geq \alpha \geq 1 \}$. In fact this can be used to model any market impact function with exponent greater than 1.
+# where the first term models the bid-ask spread and broker fees for asset $j$. The second term models the impact on the market that our trade has. This is obviously only a factor if the volume of our trade is significant. The constant $b_j$ is a function of the total volume traded in the considered time periode and the price volatility of the asset and has to be estimated by the trader. To make this example simple we consider the same coefficients $a$ and $b$ for every asset. The $|\delta_j|^{3/2}$ term can be easily modeled using a power cone constraint $\mathcal{K}_{pow} = \{(x, y, z) \mid x^\alpha y^{(1-\alpha)} \geq |z|, x \geq 0, y \geq 0, 0 \leq \alpha \leq 1 \}$. In fact this can be used to model any market impact function with exponent greater than 1.
 # We can write the total transaction cost $a^\top s + b^\top t$ where $s_j$ bounds the absolute value of $\delta_j$ and $t_{j}$ is used to bound the term $|x_j - x_j^0|^{3/2} \leq t_{j}$ using a power cone formulation: $(t_{j}, 1, x_j - x_j^0) \in \mathcal{K}_{pow}(2/3)$.
 
 #-
