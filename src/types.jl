@@ -254,20 +254,55 @@ end
 # -------------------------------------
 
 struct Variables{T}
+	w::Vector{T}
+	w_prev::Vector{T}
 	x::Vector{T}
 	s::SplitVector{T}
 	μ::Vector{T}
 
 	function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 		m == C.dim || throw(DimensionMismatch("set dimension is not m"))
+		w = zeros(T, n +  m)
+		w_prev = zeros(T, n + m)
 		x = zeros(T, n)
 		s = SplitVector(zeros(T, m), C)
 		μ = zeros(T, m)
-		new(x, s, μ)
+		new(w, w_prev, x, s, μ)
 	end
 end
 
 Variables(args...) = Variables{DefaultFloat}(args...)
+
+mutable struct IterateHistory
+	x_data::AbstractMatrix
+	s_data::AbstractMatrix
+	y_data::AbstractMatrix
+	v_data::AbstractMatrix
+	r_prim_data::AbstractVector
+	r_dual_data::AbstractVector
+	eta_data::AbstractArray
+	alpha_data::AbstractArray
+	cond_data::AbstractVector
+	aa_fail_data::AbstractVector
+
+	function IterateHistory(m, n, mem)
+		new(zeros(n, 0), zeros(m, 0), zeros(m, 0), zeros(m + n, 0), Float64[], Float64[], zeros(mem, 0), zeros(mem + 1, 0), Float64[], Int64[])
+	end
+end
+
+function update_iterate_history!(history::IterateHistory, x, s, y, v, r_prim, r_dual, eta::Vector{Float64}, cond::Float64)
+	history.x_data = hcat(history.x_data, x)
+	history.s_data = hcat(history.s_data, s)
+	history.y_data = hcat(history.y_data, y)
+	history.v_data = hcat(history.v_data, v)
+	history.cond_data = push!(history.cond_data, cond)
+	push!(history.r_prim_data, r_prim)
+	push!(history.r_dual_data, r_dual)
+
+	alphas = compute_alphas(eta)
+	history.alpha_data = hcat(history.alpha_data, alphas)
+	history.eta_data = hcat(history.eta_data, eta)
+end
 
 struct UtilityVariables{T}
   vec_m::Vector{T}
@@ -310,6 +345,7 @@ mutable struct Workspace{T}
 	ci::ChordalInfo{T}
 	vars::Variables{T}
   	utility_vars::UtilityVariables{T}
+	w::Vector{T} #α-averaged ADMM variable
 	δx::Vector{T}
 	δy::SplitVector{T}
 	s_tl::Vector{T}
@@ -322,6 +358,7 @@ mutable struct Workspace{T}
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
+	accelerator::AbstractAccelerator{T}
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
@@ -329,12 +366,13 @@ mutable struct Workspace{T}
 		vars = Variables{T}(1, 1, p.C)
     	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
+		w = zeros(0)
 		δx = zeros(0)
 		δy = SplitVector(zeros(T, 1), p.C)
 		s_tl = zeros(0)
 		ls = zeros(0)
 		sol = zeros(0)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0])
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, w, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

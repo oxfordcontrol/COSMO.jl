@@ -27,6 +27,7 @@ end
 
 include("./algebra.jl")
 include("./projections.jl")
+include("./acceleration.jl")
 include("./trees.jl")
 include("./clique_graph.jl")
 include("./clique_merging.jl")

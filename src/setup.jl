@@ -41,6 +41,9 @@ function setup!(ws::COSMO.Workspace)
 		end
 		ws.states.KKT_FACTORED = true
 	end
+
+	# instantiate accelerator
+	set_accelerator!(ws)
 end
 
 function allocate_set_memory!(ws::COSMO.Workspace)
@@ -62,4 +65,23 @@ function classify_constraints!(ws::COSMO.Workspace)
 		end
 	end
 	return nothing
+end
+
+function set_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
+  # if the user passed in a custom AbstractAccelerator, e.g. with different value for memory, don't change it
+  m, n = ws.p.model_size
+  # ensure memory is not bigger than problem dimension
+  acc_mem = min(m, ws.settings.acc_men)
+  if typeof(ws.accelerator) == EmptyAccelerator{T}
+    if ws.settings.accelerator == :empty
+      nothing
+    elseif ws.settings.accelerator == :anderson1
+      ws.accelerator = AndersonAccelerator{T}(m + n, is_type1 = true, mem = acc_mem)
+    elseif ws.settings.accelerator == :anderson2
+      ws.accelerator = AndersonAccelerator{T}(m + n, is_type1 = false, mem = acc_mem)
+    else
+      @warn("Your specification for settings.accelerator = $(ws.settings.accelerator) is unknown. Continue without acceleration.")
+      ws.accelerator = EmptyAccelerator{T}()
+    end
+  end
 end

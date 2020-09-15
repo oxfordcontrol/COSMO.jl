@@ -9,6 +9,7 @@ function admm_step!(x::Vector{T},
 	s_tl::Vector{T},
 	ls::Vector{T},
 	sol::Vector{T},
+	w::Vector{T},
 	kkt_solver::AbstractKKTSolver,
 	q::Vector{T},
 	b::Vector{T},
@@ -18,25 +19,29 @@ function admm_step!(x::Vector{T},
 	m::Int,
 	n::Int,
 	set::CompositeConvexSet{T}) where {T <: AbstractFloat}
-	# linear solve
+
+	# 1) Projection step of w
+	@. x = w[1:n]
+	@. s = w[n+1:end]
+	# Project onto cone
+	p_time = @elapsed project!(s, set)
+	# we recover μ from s and w
+	@. μ = ρ * (w[n+1:end] - s)
+
+	# 2) linear solve
 	# Create right hand side for linear system
 	# deconstructed solution vector is ls = [x_tl(n+1); ν(n+1)]
 	# x_tl and ν are automatically updated, since they are views on sol
-	@. ls[1:n] = σ * x - q
-	@. ls[(n + 1):end] = b - s.data + μ / ρ
-	solve!(kkt_solver,sol,ls)
+	@. ls[1:n] = T(2) * σ * x - σ * w[1:n] - q
+	@. ls[(n + 1):end] = b - T(2) * s.data + w[(n + 1):end]
+	solve!(kkt_solver, sol, ls)
 
-	# Over relaxation
-	@. x = α * x_tl + (1.0 - α) * x
-	@. s_tl = s.data - (ν + μ) / ρ
-	@. s_tl = α * s_tl + (1.0 - α) * s.data
-	@. s.data = s_tl + μ / ρ
+	# x_tl and ν are automatically updated as they are views into sol
+	@. s_tl = T(2) * s.data - w[n+1:end] - ν  / ρ
 
-	# Project onto cone
-	p_time = @elapsed project!(s, set)
-
-	# update dual variable μ
-	@. μ = μ + ρ * (s_tl - s.data)
+	# 3) dual variable update with over-relaxation
+	@. w[1:n] = w[1:n] + α * (x_tl - x)
+	@. w[n+1:end] = w[n+1:end] + α * (s_tl - s)
 	return p_time
 end
 
@@ -91,18 +96,25 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	time_limit_start = time()
 
 	m, n = ws.p.model_size
+	iter_history = IterateHistory(m, n, settings.acc_mem)
+	update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(ws.settings.acc_mem), NaN)
+
 	COSMO.allocate_loop_variables!(ws, m, n)
 
-	x_tl = view(ws.sol, 1:n) # i.e. xTilde
-	ν = view(ws.sol, (n + 1):(n + m))
+	@. w[1:n] = ws.vars.x[1:n]
+	@. w[n+1:end] = ws.vars.s.data
 
-	# change state of the workspace
-	ws.states.IS_OPTIMIZED = true
-
+	x_tl = view(sol, 1:n) # i.e. xTilde
+	ν = view(sol, (n + 1):(n + m))
 	iter_start = time()
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
+
+		if num_iter > 1
+			update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev)
+			accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
+		end
 
 		# For infeasibility detection: Record the previous step just in time
 		if mod(iter, settings.check_infeasibility) == settings.check_infeasibility - 1
@@ -112,7 +124,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 		ws.times.proj_time += COSMO.admm_step!(
 			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
-			x_tl, ws.s_tl, ws.ls, ws.sol,
+			x_tl, ws.s_tl, ws.ls, ws.sol, ws.w,
 			ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,
 			settings.alpha, settings.sigma,
 			m, n, ws.p.C);
@@ -221,6 +233,10 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
 	free_memory!(ws)
 
+	if typeof(ws.accelerator) <: AndersonAccelerator{Float64}
+		iter_history.aa_fail_data = ws.accelerator.fail_counter
+	end
+
 	return Result{T}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
@@ -238,12 +254,14 @@ function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T 
 		ws.s_tl = zeros(T, m)
 		ws.ls = zeros(T, n + m)
 		ws.sol = zeros(T, n + m)
+		ws.w = zeros(T, n + m) # the α-averaged variable of the algorithm
 	else
 		@. ws.δx = zero(T)
 		@. ws.δy.data = zero(T)
 		@. ws.s_tl = zero(T)
 		@. ws.ls = zero(T)
 		@. ws.sol = zero(T)
+		@. ws.w = zero(T)
 	end
 
 end

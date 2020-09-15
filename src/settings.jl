@@ -43,6 +43,7 @@ complete_dual | Activate to complete the dual variable after decomposition | fal
 merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
 compact_transformation | Choose how a decomposed problem is transformed | true
 time_limit | Set solver time limit in s | 0
+accelerator | Acceleration scheme | :empty
 """
 mutable struct Settings{T <: AbstractFloat}
 	rho::T
@@ -77,6 +78,8 @@ mutable struct Settings{T <: AbstractFloat}
 	obj_true_tol::T
 	merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}
 	compact_transformation::Bool
+	accelerator::Symbol
+	acc_mem::Int64
 	#constructor
 	function Settings{T}(;
 		rho::Real=T(0.1),
@@ -110,7 +113,9 @@ mutable struct Settings{T <: AbstractFloat}
 		obj_true::Real = T(NaN),
 		obj_true_tol::Real = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
-		compact_transformation::Bool = true
+		compact_transformation::Bool = true,
+		accelerator = :empty,
+		acc_mem = 5
 		) where {T <: AbstractFloat}
 		if !isa(kkt_solver, OptionsFactory)
 			kkt_solver = with_options(kkt_solver)
@@ -119,7 +124,7 @@ mutable struct Settings{T <: AbstractFloat}
 		if !isa(merge_strategy, OptionsFactory)
 			merge_strategy = with_options(merge_strategy)
 		end
-		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation)
+		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, acc_mem)
 	end
 end
 
