@@ -94,7 +94,7 @@ for i in 1:n
 end
 
 # ## Rounding the approximate solution
-# It remains to round the unit vectors $v_i$ using a random vector $r$ with each component drawn from $\mathcal{N}(0, 1)$, to obtain the $y_i$'s:
+# It remains to round the unit vectors $v_i$ using a random vector $r$ with each component drawn from $\mathcal{U}(0, 1)$, to obtain the $y_i$'s:
 
 #-
 r = rand(rng, n)
