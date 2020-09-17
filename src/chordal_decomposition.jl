@@ -119,7 +119,7 @@ function reverse_decomposition!(ws::COSMO.Workspace{T}, settings::COSMO.Settings
 
   mO = ws.ci.originalM
   nO = ws.ci.originalN
-
+  @show(nO, mO)
   vars = Variables{T}(mO, nO, ws.ci.originalC)
   vars.x .= ws.vars.x[1:nO]
 
@@ -150,9 +150,9 @@ function fill_dual_variables!(ws::COSMO.Workspace{T}, vars::COSMO.Variables{T}) 
   # # to remove the overlaps we take the average of the values for each overlap by dividing by the number of blocks that overlap in a particular entry, i.e. number of 1s in each row of H
   rowInd, nnzs = number_of_overlaps_in_rows(H)
 
-  for iii=1:length(rowInd)
+  for iii = 1:length(rowInd)
     ri = rowInd[iii]
-    vars.μ[ri] .= vars.μ[ri] / nnzs[iii]
+    vars.μ[ri] = vars.μ[ri] / nnzs[iii]
   end
   return nothing
 end
