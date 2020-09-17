@@ -421,12 +421,8 @@ for j = 1:n
     end
   end
 end
-status = JuMP.optimize!(model)</code></pre><pre><code class="language-none">┌ Warning: `with_optimizer` is deprecated. Adapt the following example to update your code:
-│ `with_optimizer(Ipopt.Optimizer)` becomes `Ipopt.Optimizer`.
-│   caller = top-level scope at none:0
-└ @ Core none:0
-------------------------------------------------------------------
-          COSMO v0.7.4 - A Quadratic Objective Conic Solver
+status = JuMP.optimize!(model)</code></pre><pre><code class="language-none">------------------------------------------------------------------
+          COSMO v0.7.5 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2020
 ------------------------------------------------------------------
@@ -445,7 +441,7 @@ Settings: ϵ_abs = 1.0e-04, ϵ_rel = 1.0e-04,
           check termination every 40 iter,
           check infeasibility every 40 iter,
           KKT system solver: QDLDL
-Setup Time: 0.17ms
+Setup Time: 0.27ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-1.2711e+03	2.1055e+01	1.0052e+00	1.0000e-01
@@ -459,4 +455,4 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 160
 Optimal objective: -4
-Runtime: 0.564s (564.2ms)</code></pre><p>The optimal objective is given by:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre><code class="language-none">4.000019244164618</code></pre><p>Which is the correct known value for the Petersen Graph.</p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><p>[1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../logistic_regression/">« Logistic Regression</a><a class="docs-footer-nextpage" href="../lp/">Linear Program »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 17 September 2020 08:29">Thursday 17 September 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Runtime: 0.423s (422.85ms)</code></pre><p>The optimal objective is given by:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre><code class="language-none">4.000019244164618</code></pre><p>Which is the correct known value for the Petersen Graph.</p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><p>[1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../logistic_regression/">« Logistic Regression</a><a class="docs-footer-nextpage" href="../lp/">Linear Program »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 17 September 2020 09:18">Thursday 17 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

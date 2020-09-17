@@ -214,12 +214,8 @@ L = diagm(0 =&gt; W * ones(n)) - W;</code></pre><p>Given the Laplacian matrix <s
 @variable(model, Y[1:n, 1:n], PSD);
 @objective(model, Max, 1 / 4 * dot(L, Y));
 @constraint(model, [i = 1:n], Y[i, i] == 1.);
-JuMP.optimize!(model)</code></pre><pre><code class="language-none">┌ Warning: `with_optimizer` is deprecated. Adapt the following example to update your code:
-│ `with_optimizer(Ipopt.Optimizer)` becomes `Ipopt.Optimizer`.
-│   caller = top-level scope at none:0
-└ @ Core none:0
-------------------------------------------------------------------
-          COSMO v0.7.4 - A Quadratic Objective Conic Solver
+JuMP.optimize!(model)</code></pre><pre><code class="language-none">------------------------------------------------------------------
+          COSMO v0.7.5 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2020
 ------------------------------------------------------------------
@@ -238,7 +234,7 @@ Settings: ϵ_abs = 1.0e-04, ϵ_rel = 1.0e-04,
           check termination every 40 iter,
           check infeasibility every 40 iter,
           KKT system solver: QDLDL
-Setup Time: 0.1ms
+Setup Time: 0.15ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-5.2357e+02	3.6239e+01	1.9188e+00	1.0000e-01
@@ -251,7 +247,7 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 120
 Optimal objective: -24
-Runtime: 0.019s (19.22ms)</code></pre><pre><code class="language-">Yopt = JuMP.value.(Y);
+Runtime: 0.02s (19.84ms)</code></pre><pre><code class="language-">Yopt = JuMP.value.(Y);
 obj_val = JuMP.objective_value(model_dual)</code></pre><h2 id="Solving-the-dual-SDP-1"><a class="docs-heading-anchor" href="#Solving-the-dual-SDP-1">Solving the dual SDP</a><a class="docs-heading-anchor-permalink" href="#Solving-the-dual-SDP-1" title="Permalink"></a></h2><p>Notice that the decision matrix <span>$Y$</span> is generally dense (as correctly classified in the solver output above). Therefore, we won&#39;t be able to utilize COSMO&#39;s chordal decomposition features. However, assuming strong duality, it turns out that we can also solve the dual problem, which is given by:</p><div>\[\begin{array}{ll} \text{minimize} &amp;  \sum_i \gamma_i \\
 \text{subject to} &amp; \text{diag}(\gamma) - \frac{1}{4} L = S \\
                   &amp; S \in \mathbf{S}_{+}^n.
@@ -279,4 +275,4 @@ y</code></pre><pre><code class="language-none">4-element Array{Float64,1}:
   1.0
   1.0
   1.0
- -1.0</code></pre><p>For larger graphs this rounding step could be repeated several times to improve the rounding. As expected <span>$S = \{1, 2, 3\}$</span> and <span>$\bar{S}=\{ 4\}$</span>.</p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><p>[1] Goemans and Williamson - Improved Approximation Algorithms for Maximum Cut and Satisfiability Problems Using Semidefinite Programs (1995)</p><p>[2] Post-processing code steps 2 and 3 from this <a href="https://github.com/jump-dev/JuMP.jl/blob/master/examples/max_cut_sdp.jl">JuMP example</a></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lp/">« Linear Program</a><a class="docs-footer-nextpage" href="../portfolio_optimisation/">Portfolio Optimisation »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 17 September 2020 08:29">Thursday 17 September 2020</span>. Using Julia version 1.0.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ -1.0</code></pre><p>For larger graphs this rounding step could be repeated several times to improve the rounding. As expected <span>$S = \{1, 2, 3\}$</span> and <span>$\bar{S}=\{ 4\}$</span>.</p><h2 id="References-1"><a class="docs-heading-anchor" href="#References-1">References</a><a class="docs-heading-anchor-permalink" href="#References-1" title="Permalink"></a></h2><p>[1] Goemans and Williamson - Improved Approximation Algorithms for Maximum Cut and Satisfiability Problems Using Semidefinite Programs (1995)</p><p>[2] Post-processing code steps 2 and 3 from this <a href="https://github.com/jump-dev/JuMP.jl/blob/master/examples/max_cut_sdp.jl">JuMP example</a></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lp/">« Linear Program</a><a class="docs-footer-nextpage" href="../portfolio_optimisation/">Portfolio Optimisation »</a></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 17 September 2020 09:18">Thursday 17 September 2020</span>. Using Julia version 1.5.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
