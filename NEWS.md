@@ -1,3 +1,14 @@
+## Version 0.7.5 (17. September 2020)
+- This version implements the reduced clique graph merge strategy which fixes some edge cases that occurred in the previous merge strategy. It also makes this COSMO version compatible with the latest MathOptInterface release v0.9.16
+
+- `95dbdf9` <#116> Make COSMO compatible with MOI v0.9.16
+- `8d869f5` Fix wrong bracket in Box support function check
+- `91bb113` Free clique graph related memory after the merging
+- `9729d3c` Clean-up reduced clique graph code
+- `09eb9e5` Make ParCh strategy work with sets
+- `381db30` Implement **reduced** clique graph merge
+
+
 ## Version 0.7.4 (3. August 2020)
 - This version mostly contains minor changes and small bug fixes as well as some updates to the documentation.
 
