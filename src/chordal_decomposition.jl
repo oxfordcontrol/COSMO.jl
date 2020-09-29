@@ -119,7 +119,6 @@ function reverse_decomposition!(ws::COSMO.Workspace{T}, settings::COSMO.Settings
 
   mO = ws.ci.originalM
   nO = ws.ci.originalN
-  @show(nO, mO)
   vars = Variables{T}(mO, nO, ws.ci.originalC)
   vars.x .= ws.vars.x[1:nO]
 
