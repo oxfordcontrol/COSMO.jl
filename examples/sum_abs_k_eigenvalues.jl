@@ -1,8 +1,8 @@
 # # Minimizing the sum of the k-largest λ
 #
-# We show how to minimize the the sum of absolute value of the `k` largest eigenvalues of a symmetric matrix $A \in \mathbb{S}^n$. This problem can be solved as a semidefinite program. The primal and dual forms are stated in *Alizadeh* \[1\]:
+# We show how to find the sum of absolute value of the `k` largest eigenvalues of a symmetric matrix $A \in \mathbb{S}^n$. This problem can be solved as a semidefinite program. The primal and dual forms are stated in *Alizadeh* \[1\]:
 # $$
-# \begin{array}{llll} \text{maximize} &   \text{Tr}(AY) - \text{Tr}(AW) &    \text{minimize} &  kz + Tr(U) + tr(V)            \\
+# \begin{array}{llll} \text{maximize} &   \text{Tr}(AY) - \text{Tr}(AW) &    \text{minimize} &  kz + Tr(U) + Tr(V)            \\
 # \text{subject to} &  \text{Tr}(Y + W) = k                             &   \text{subject to} &   zI + V - A \succeq 0            \\
 #                   &  0 \preceq  Y \preceq I                           &  &                    zI + U + A \succeq 0             \\
 #                   &  0 \preceq  W \preceq I                           & &                     U, V \succeq 0,
@@ -17,7 +17,7 @@ n = 10
 A = 5 .* randn(rng, 10, 10)
 A = Symmetric(A, :U)
 
-# We are interested in minimizing the sum of absolute values of the `k=3` largest eigenvalues. Let's formulate the problem in JuMP with COSMO as the backend solver:
+# We are interested in minimizing the sum of absolute values of the `k=3` largest eigenvalues. Let's formulate the problem in `JuMP` with `COSMO` as the backend solver:
 
 k = 3
 model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true));
@@ -54,6 +54,17 @@ status = JuMP.optimize!(model)
 opt_objective = JuMP.objective_value(model)
 
 # This gives the same result.
+# ## Problem with A as variable
+#
+# Above problems are mostly helpful for illustrative purpose. It is obviously easier to find the sum of the k-largest eigenvalues by simply computing the eigenvalues of $A$. However, above results become useful if finding $A$ itself is part of the problem. For example, assume we want to find a valid matrix $A$ under the constraints: $C\, \text{vec}(A) = b$ with the minimum sum of absolute values of the k-largest eigenvalues. We can then solve the equivalent problem:
+# $$
+# \begin{array}{ll} \text{minimize} &  kz + Tr(U) + Tr(V)     \\
+#  \text{subject to} &   C \text{vec}(A) = b \\
+#                    & zI + V - A \succeq 0            \\
+#                    &    zI + U + A \succeq 0             \\
+#                    &   U, V \succeq 0.
+# \end{array}
+# $$
 #
 # ## References
 # [1] Alizadeh - Interior point methods in semidefinite programming with applications to combinatorial optimization (1995)
