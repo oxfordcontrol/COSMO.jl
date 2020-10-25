@@ -1,7 +1,7 @@
 name = "COSMO"
 uuid = "1e616198-aa4e-51ec-90a2-23f7fbd31d8d"
 authors = ["Michael <michael@garstka.org>"]
-version = "0.7.5"
+version = "0.7.6"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
