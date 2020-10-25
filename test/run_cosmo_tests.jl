@@ -21,7 +21,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
 
   # floating-point precision type agnostic unit tests
   # N.B.: Some infeasibility tests rely on sufficient precision (at least Float64 in some cases)
-  # SDPs are currently only supported with Float32
+  # SDPs are currently only supported with Float32/Float64
   include("./UnitTests/simple.jl")
   include("./UnitTests/constraints.jl")
   include("./UnitTests/model.jl")
@@ -33,6 +33,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
   include("./UnitTests/algebra.jl")
   include("./UnitTests/splitvector.jl")
   include("./UnitTests/interface.jl")
+  include("./UnitTests/interface_python.jl")
   include("./UnitTests/kktsolver.jl")
   include("./UnitTests/print.jl")
 

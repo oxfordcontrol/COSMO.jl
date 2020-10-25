@@ -180,6 +180,115 @@ function set!(model::COSMO.Model{T},
 	nothing
 end
 
+# a specific function that takes the sparse matrices P, A in (rowval, colptr, nzval)-form for easy interoperability with python interface
+function set!(model::COSMO.Model{Tf},
+	Prowval::Vector{Ti},
+	Pcolptr::Vector{Ti},
+	Pnzval::Vector{Tf},
+	q::Vector{Tf},
+	Arowval::Vector{Ti},
+	Acolptr::Vector{Ti},
+	Anzval::Vector{Tf},
+	b::Vector{Tf},
+	cone::Dict, m::Int64, n::Int64, settings::COSMO.Settings{Tf} = COSMO.Settings{Tf}()) where {Tf <: AbstractFloat, Ti <: Integer}
+
+	# construct the sparse matrices
+	if Ti isa Int32
+		Prowval = juliafy_integers(Prowval)
+		Arowval = juliafy_integers(Arowval)
+		Pcolptr = juliafy_integers(Pcolptr)
+		Acolptr = juliafy_integers(Acolptr)
+	end
+
+	P = SparseMatrixCSC{Tf, Int64}(n, n, Pcolptr, Prowval, Pnzval)
+	A = SparseMatrixCSC{Tf, Int64}(m, n, Acolptr, Arowval, Anzval)
+
+	check_dimensions(P, q, A, b)
+
+	model.p.P = P
+	model.p.q = q
+	model.p.A = A
+	model.p.b = b
+	model.p.model_size = [m; n]
+	convex_sets = convex_sets_from_dict(cone)
+	model.p.C = CompositeConvexSet{Tf}(convex_sets)
+
+	pre_allocate_variables!(model)
+ 	model.settings = settings
+	nothing
+end
+
+# handle the case where settings is a transformed python dictionary
+function set!(model::COSMO.Model{Tf},
+	Prowval::Vector{Ti},
+	Pcolptr::Vector{Ti},
+	Pnzval::Vector{Tf},
+	q::Vector{Tf},
+	Arowval::Vector{Ti},
+	Acolptr::Vector{Ti},
+	Anzval::Vector{Tf},
+	b::Vector{Tf},
+	cone::Dict, m::Int64, n::Int64, settings_dict::Dict) where {Tf <: AbstractFloat, Ti <: Integer}
+
+	settings = COSMO.Settings(settings_dict)
+	COSMO.set!(model, Prowval, Pcolptr, Pnzval, q, Arowval, Acolptr, Anzval, b, cone, m, n, settings)
+
+end
+
+function juliafy_integers(arr::Vector{Int32})
+	# 1-based indexing
+	@. arr += 1
+	# convert to 64bit
+	return Base.convert.(Int64, arr)
+end
+
+# given the cone-dict in scs format create an array of COSMO.AbstractConvexSet(s)
+function convex_sets_from_dict(cone::Dict)
+	convex_sets = Vector{COSMO.AbstractConvexSet{Float64}}(undef, 0)
+	haskey(cone, "f") && push!(convex_sets, COSMO.ZeroSet(cone["f"]))
+	haskey(cone, "l") && push!(convex_sets, COSMO.Nonnegatives(cone["l"]))
+
+	# second-order cones
+	if haskey(cone, "q")
+		socp_dim = cone["q"]
+		for dim in socp_dim
+			push!(convex_sets, COSMO.SecondOrderCone(dim))
+		end
+	end
+	# sdp triangle cones
+	if haskey(cone, "s")
+		sdp_dim = cone["s"]
+		for dim in sdp_dim
+			push!(convex_sets, COSMO.PsdConeTriangle(dim))
+		end
+	end
+	# primal exponential cones
+	if haskey(cone, "ep")
+		for k = 1:cone["ep"]
+			push!(convex_sets, COSMO.ExponentialCone())
+		end
+	end
+	# dual exponential cones
+	if haskey(cone, "ed")
+		for k = 1:cone["ed"]
+			push!(convex_sets, COSMO.DualExponentialCone())
+		end
+	end
+	# power cones
+	if haskey(cone, "p")
+		pow_exponents = cone["p"]
+		for exponent in pow_exponents
+			if exponent >= 0
+				push!(convex_sets, COSMO.PowerCone(exponent))
+			else
+				push!(convex_sets, COSMO.DualPowerCone(-1. * exponent))
+			end
+		end
+	end
+	return convex_sets
+end
+
+
 function check_dimensions(P, q, A, b)
 	size(A, 1) != length(b) && throw(DimensionMismatch("The dimensions of matrix A and vector b don't match."))
 	size(A, 2) != length(q) && throw(DimensionMismatch("The dimensions of matrix A and vector q don't match."))

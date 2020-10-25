@@ -131,3 +131,22 @@ function Base.show(io::IO, obj::COSMO.Settings{T}) where {T <: AbstractFloat}
 	println(io,"A COSMO.Settings{$(T)} object. To list the available options type `?` and `help?>COSMO.Settings`.")
 end
 eltype(::Type{<:Settings{T}}) where {T} = T
+
+
+function Settings(d::Dict)
+
+	# converts strings to julia types by look-up
+	string_settings_converter = Dict("QdldlKKTSolver" => COSMO.QdldlKKTSolver, "CholmodKKTSolver" => COSMO.CholmodKKTSolver, "NoMerge" => COSMO.NoMerge, "ParentChildMerge" => COSMO.ParentChildMerge, "CliqueGraphMerge" => COSMO.CliqueGraphMerge)
+
+	settings = COSMO.Settings{DefaultFloat}()
+	# convert pure dictionary settings to COSMO.Settings object
+	settings = COSMO.Settings()
+	for (key, val) in d
+		if key in ["kkt_solver"; "merge_strategy"]
+			setfield!(settings, Symbol(key), with_options(string_settings_converter[val]))
+		else
+			setfield!(settings, Symbol(key), val)
+		end
+	end
+	return settings
+end
