@@ -1,3 +1,4 @@
+print_version() = println(COSMO.version())
 
 function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 

@@ -20,6 +20,10 @@ function __init__()
     end
 end
 
+function version()
+    v"0.7.5"
+end
+
 
 include("./algebra.jl")
 include("./projections.jl")
