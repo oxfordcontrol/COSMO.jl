@@ -193,7 +193,7 @@ function set!(model::COSMO.Model{Tf},
 	cone::Dict, m::Int64, n::Int64, settings::COSMO.Settings{Tf} = COSMO.Settings{Tf}()) where {Tf <: AbstractFloat, Ti <: Integer}
 
 	# construct the sparse matrices
-	if Ti isa Int32
+	if Ti == Int32
 		Prowval = juliafy_integers(Prowval)
 		Arowval = juliafy_integers(Arowval)
 		Pcolptr = juliafy_integers(Pcolptr)
@@ -217,6 +217,7 @@ function set!(model::COSMO.Model{Tf},
  	model.settings = settings
 	nothing
 end
+
 
 # handle the case where settings is a transformed python dictionary
 function set!(model::COSMO.Model{Tf},
