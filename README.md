@@ -69,10 +69,15 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
 ```
 A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
 
+
+
 ## Contributing
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
 - Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues). Please report any issues or bugs that you encounter.
 - As an open source project we are also interested in any projects and applications that use COSMO. Please let us know!
+
+## Python - Interface
+COSMO can also be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
 
 ## Licence 🔍
 This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
