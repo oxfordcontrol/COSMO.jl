@@ -57,7 +57,7 @@ JuMP.optimize!(model)
 
 #-
 Yopt = JuMP.value.(Y);
-obj_val = JuMP.objective_value(model_dual)
+obj_val = JuMP.objective_value(model)
 
 # ## Solving the dual SDP
 # Notice that the decision matrix $Y$ is generally dense (as correctly classified in the solver output above). Therefore, we won't be able to utilize COSMO's chordal decomposition features. However, assuming strong duality, it turns out that we can also solve the dual problem, which is given by:
