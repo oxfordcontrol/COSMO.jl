@@ -874,14 +874,18 @@ function in_pol_recc!(x::AbstractVector{T}, cone::AbstractConvexSet{T}, tol::T) 
   return in_pol_recc(x, cone, tol)
 end
 
-function scale!(cone::AbstractConvexCone{T}, ::AbstractVector{T}) where{T}
+function scale!(cone::AbstractConvexSet{T}, ::AbstractVector{T}) where{T}
   return nothing
 end
+
+# The fall-back method. Notice that this is conservative as not all custom cones that users might define have to be scalar-scaled.
+rectify_scaling!(E, work, set::AbstractConvexSet{T}) where {T} = rectify_scalar_scaling!(E, work)
 
 function rectify_scaling!(E, work, set::Union{SecondOrderCone{T}, PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, DensePsdConeTriangle{T}, PowerCone{T}, DualPowerCone{T}, ExponentialCone{T}, DualExponentialCone{T}}) where{T}
   return rectify_scalar_scaling!(E, work)
 end
 rectify_scaling!(E, work, set::Union{ZeroSet{<:Real}, Nonnegatives{<:Real}, Box{<:Real}}) = false
+
 
 #-------------------------
 # generic set operations
