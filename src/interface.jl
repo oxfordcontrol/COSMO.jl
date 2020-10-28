@@ -190,7 +190,7 @@ function set!(model::COSMO.Model{Tf},
 	Acolptr::Vector{Ti},
 	Anzval::Vector{Tf},
 	b::Vector{Tf},
-	cone::Dict, m::Int64, n::Int64, settings::COSMO.Settings{Tf} = COSMO.Settings{Tf}()) where {Tf <: AbstractFloat, Ti <: Integer}
+	cone::Dict, l::Union{Nothing, Vector{Tf}}, u::Union{Nothing, Vector{Tf}}, m::Int64, n::Int64, settings::COSMO.Settings{Tf} = COSMO.Settings{Tf}()) where {Tf <: AbstractFloat, Ti <: Integer}
 
 	# construct the sparse matrices
 	if Ti == Int32
@@ -210,7 +210,7 @@ function set!(model::COSMO.Model{Tf},
 	model.p.A = A
 	model.p.b = b
 	model.p.model_size = [m; n]
-	convex_sets = convex_sets_from_dict(cone)
+	convex_sets = convex_sets_from_dict(cone, l, u)
 	model.p.C = CompositeConvexSet{Tf}(convex_sets)
 
 	pre_allocate_variables!(model)
@@ -229,10 +229,10 @@ function set!(model::COSMO.Model{Tf},
 	Acolptr::Vector{Ti},
 	Anzval::Vector{Tf},
 	b::Vector{Tf},
-	cone::Dict, m::Int64, n::Int64, settings_dict::Dict) where {Tf <: AbstractFloat, Ti <: Integer}
+	cone::Dict, l::Union{Nothing, Vector{Tf}}, u::Union{Nothing, Vector{Tf}}, m::Int64, n::Int64, settings_dict::Dict) where {Tf <: AbstractFloat, Ti <: Integer}
 
 	settings = COSMO.Settings(settings_dict)
-	COSMO.set!(model, Prowval, Pcolptr, Pnzval, q, Arowval, Acolptr, Anzval, b, cone, m, n, settings)
+	COSMO.set!(model, Prowval, Pcolptr, Pnzval, q, Arowval, Acolptr, Anzval, b, cone, l, u, m, n, settings)
 
 end
 
@@ -244,7 +244,7 @@ function juliafy_integers(arr::Vector{Int32})
 end
 
 # given the cone-dict in scs format create an array of COSMO.AbstractConvexSet(s)
-function convex_sets_from_dict(cone::Dict)
+function convex_sets_from_dict(cone::Dict, l::Union{AbstractVector, Nothing}, u::Union{AbstractVector, Nothing})
 	convex_sets = Vector{COSMO.AbstractConvexSet{Float64}}(undef, 0)
 	haskey(cone, "f") && push!(convex_sets, COSMO.ZeroSet(cone["f"]))
 	haskey(cone, "l") && push!(convex_sets, COSMO.Nonnegatives(cone["l"]))
@@ -285,6 +285,10 @@ function convex_sets_from_dict(cone::Dict)
 				push!(convex_sets, COSMO.DualPowerCone(-1. * exponent))
 			end
 		end
+	end
+	# box constraints
+	if haskey(cone, "b")
+		push!(convex_sets, COSMO.Box(l, u))
 	end
 	return convex_sets
 end
