@@ -30,6 +30,7 @@ function chordal_decomposition!(ws::COSMO.Workspace{T}) where {T <: AbstractFloa
     end
     pre_allocate_variables!(ws)
     ws.ci.decompose = true
+    ws.states.IS_CHORDAL_DECOMPOSED = true
   else
     ws.ci.decompose = false
   end

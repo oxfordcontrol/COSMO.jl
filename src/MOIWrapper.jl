@@ -142,6 +142,7 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     pre_allocate_variables!(dest.inner)
 
     dest.is_empty = false
+    dest.inner.states.IS_ASSEMBLED = true
     dest.idxmap = idxmap
     # pass attributes, e.g. objective, warm strarting vars, etc.
     dest.sense = MOI.get(src, MOI.ObjectiveSense())

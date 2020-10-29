@@ -110,13 +110,16 @@ function scale_ruiz!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	ws.sm.cinv[]     = one(T) ./ c
 
 	# scale the potentially warm started variables
-	ws.vars.x[:] = ws.sm.Dinv * ws.vars.x
-	ws.vars.μ[:] = ws.sm.Einv * ws.vars.μ
-	ws.vars.s.data[:] = ws.sm.E * ws.vars.s.data
-
-	ws.vars.μ  .*= c
+	scale_variables!(ws.vars.x, ws.vars.μ, ws.vars.s, ws.sm.Dinv, ws.sm.Einv, ws.sm.E, ws.sm.c)
 
 	return nothing
+end
+
+function scale_variables!(x::AbstractVector{T}, μ::AbstractVector{T}, s::COSMO.SplitVector{T}, Dinv::Union{IdentityMatrix, AbstractMatrix{T}}, Einv::Union{IdentityMatrix, AbstractMatrix{T}}, E::Union{IdentityMatrix, AbstractMatrix{T}}, c::Base.RefValue{T}) where {T <: AbstractFloat}
+	x[:] = Dinv * x
+	μ[:] = Einv * μ
+	s.data[:] = E * s.data
+	@. μ *= c[]
 end
 
 function inv_sqrt!(A::Vector{T}) where{T <: Real}
@@ -156,7 +159,7 @@ function scale_data!(P::AbstractMatrix{T}, A::AbstractMatrix{T}, q::AbstractVect
 	lrmul!(Ds, P, Ds) # P[:,:] = Ds*P*Ds
 	lrmul!(Es, A, Ds) # A[:,:] = Es*A*Ds
 	q[:] = Ds * q
-	b[:] = Es * b      
+	b[:] = Es * b
 	if cs != one(T)
 		scalarmul!(P,cs)
 		q .*= cs
@@ -172,10 +175,10 @@ function reverse_scaling!(ws::COSMO.Workspace)
 	ws.vars.μ[:] = ws.sm.E * ws.vars.μ
 	ws.vars.μ  .*= cinv
 
-	# reverse scaling for model data
-	if ws.flags.REVERSE_SCALE_PROBLEM_DATA
-		scale_data!(ws.p.P, ws.p.A, ws.p.q, ws.p.b,
-			ws.sm.Dinv, ws.sm.Einv, cinv)
-	end
 	return nothing
 end
+
+
+
+reverse_problem_scaling!(ws::COSMO.Workspace) = scale_data!(ws.p.P, ws.p.A, ws.p.q, ws.p.b,
+		ws.sm.Dinv, ws.sm.Einv, ws.sm.cinv[])

@@ -26,7 +26,7 @@ using COSMO, Test, LinearAlgebra, SparseArrays
     con4 = COSMO.Constraint(-A_lmi, zeros(21), COSMO.PsdConeTriangle(21))
 
     model = COSMO.Model()
-    assemble!(model, spzeros(10, 10), q, [con1; con2; con3; con4], settings = COSMO.Settings(compact_transformation = true, decompose = true))
+    assemble!(model, spzeros(10, 10), q, [con1; con2; con3; con4], settings = COSMO.Settings(compact_transformation = true, decompose = true, eps_abs = 1e-5, eps_rel = 1e-5))
     res = COSMO.optimize!(model);
     Y = reshape(res.x[2:end], 3, 3)
     # check inequality constraints

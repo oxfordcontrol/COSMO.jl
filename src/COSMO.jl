@@ -4,7 +4,7 @@ module COSMO
 using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools
 
 
-export assemble!, warmStart!, empty_model!
+export assemble!, warm_start!, empty_model!, update!
 
 const DefaultFloat = Float64
 const DefaultInt   = LinearAlgebra.BlasInt

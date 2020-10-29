@@ -101,12 +101,20 @@ for TestFloat in UnitTestFloats
             x0 = res1.x
             y0 = res1.y
             s0 = res1.s
-
             model = COSMO.Model{TestFloat}()
             assemble!(model, p.P, p.q, p.constraints, settings = settings)
             COSMO.warm_start_primal!(model, x0)
             COSMO.warm_start_dual!(model, y0)
-            COSMO.warm_start_slack!(model, s0)
+
+            # check that warm starting was applied correctly
+            @test model.vars.x == x0
+            @test model.vars.μ == -y0
+            @test norm(model.vars.s.data - s0, 2) < 1e-4
+
+            # actually, warm start with a bit of noise
+            COSMO.warm_start_primal!(model, x0 .+ TestFloat(0.01) * rand(rng, TestFloat, n))
+            COSMO.warm_start_dual!(model, y0 .+ TestFloat(0.01) * rand(rng, TestFloat, m))
+
             res2 = COSMO.optimize!(model);
 
             @test res1.status == :Solved && res2.status == :Solved && res2.iter < res1.iter

@@ -10,13 +10,16 @@ function setup!(ws::COSMO.Workspace)
 
   	allocate_set_memory!(ws)
 	# scale problem data
-	if ws.settings.scaling != 0
+	if ws.settings.scaling != 0 && !ws.states.IS_SCALED
 		if ws.settings.verbose_timing
 			ws.times.scaling_time = @elapsed scale_ruiz!(ws)
 		else
 			scale_ruiz!(ws)
 		end
+		ws.states.IS_SCALED = true
 	else
+		# even if the problem data is already scaled, we still have to scale our (potentially warm-started) variables
+		scale_variables!(ws.vars.x, ws.vars.μ, ws.vars.s, ws.sm.Dinv, ws.sm.Einv, ws.sm.E, ws.sm.c)
 		ws.times.scaling_time = 0.
 	end
 
@@ -24,23 +27,28 @@ function setup!(ws::COSMO.Workspace)
 	ws.row_ranges = get_set_indices(ws.p.C.sets)
 	classify_constraints!(ws)
 
-	set_rho_vec!(ws)
+	# only set ρ to settings value if this is the first time solving, otherwise keep ρ in sync with value used in KKT-factorisation
+	if !ws.states.IS_OPTIMIZED
+		set_rho_vec!(ws)
+	end
 
 	# create a KKT solver object populated with our data
-	if(ws.flags.FACTOR_LHS)
+	if !ws.states.KKT_FACTORED
 		if ws.settings.verbose_timing
 			ws.times.init_factor_time = @elapsed _make_kkt_solver!(ws)
 		else
 			_make_kkt_solver!(ws)
 		end
-
+		ws.states.KKT_FACTORED = true
 	end
 end
 
 function allocate_set_memory!(ws::COSMO.Workspace)
-  for (k, C) in enumerate(ws.p.C.sets)
-    allocate_memory!(C)
-  end
+	if !ws.states.IS_OPTIMIZED
+		for (k, C) in enumerate(ws.p.C.sets)
+			allocate_memory!(C)
+		end
+	end
 end
 
 "For inequality and box constraints, check if any constraints are obviously loose or tight."

@@ -19,7 +19,7 @@ custom_settings = COSMO.Settings(verbose = true);
 assemble!(model, P, q, constraints, settings = custom_settings)
 ```
 ---
-The optional keyword arguments `x0`, `s0`, and `y0` can be used to provide the solver with warm starting values for the primal variable `x`, the primal slack variable `s` and the dual variable `y`.
+The optional keyword arguments `x0` and `y0` can be used to provide the solver with warm starting values for the primal variable `x` and the dual variable `y`.
 
 ```julia
 x_0 = [1.0; 5.0; 3.0]
@@ -31,7 +31,7 @@ function assemble!(model::Model{T},
 	P::AbstractMatrix{T},
 	q::AbstractVector{T},
 	constraints::Union{Constraint{T}, Vector{Constraint{T}}}; settings::COSMO.Settings = COSMO.Settings{T}(),
-	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing, s0::Union{Vector{T}, Nothing} = nothing) where { T <: AbstractFloat}
+	x0::Union{Vector{T}, Nothing} = nothing, y0::Union{Vector{T}, Nothing} = nothing) where { T <: AbstractFloat}
 
 
 	!isa(constraints, Array) && (constraints = [constraints])
@@ -39,8 +39,8 @@ function assemble!(model::Model{T},
 	type_checks(constraints)
 
 	merge_constraints!(constraints)
-	model.p.P = issparse(P) ? P : sparse(P)
-	model.p.q = q
+	model.p.P = issparse(P) ? deepcopy(P) : sparse(P)
+	model.p.q = deepcopy(q)
 	n = length(q)
 	m = sum(map( x-> x.dim, map( x-> x.convex_set, constraints)))
 
@@ -67,10 +67,11 @@ function assemble!(model::Model{T},
 	# only allocate if it's not a cd problem
 	pre_allocate_variables!(model)
 
+	# set state of the model
+	model.states.IS_ASSEMBLED = true
 
 	# if user provided (full) warm starting variables, update model
 	x0 != nothing && warm_start_primal!(model, x0)
-	s0 != nothing && warm_start_slack!(model, s0)
 	y0 != nothing && warm_start_dual!(model, y0)
 	nothing
 end
@@ -97,14 +98,16 @@ Resets all the fields of `model` to that of a model created with `COSMO.Model()`
 function empty_model!(model::COSMO.Model{T}) where {T <: AbstractFloat}
 	model.p = ProblemData{T}()
 	model.sm = ScaleMatrices{T}()
+	model.ci = ChordalInfo{T}()
 	model.vars = Variables{T}(1, 1, model.p.C)
 	model.utility_vars = UtilityVariables{T}(1, 1)
 	model.ρ = zero(T)
 	model.ρvec = T[]
 	model.kkt_solver = nothing
-	model.flags = Flags()
+	model.states = States()
 	model.rho_updates = T[]
 	model.times = ResultTimes()
+	model.row_ranges = [0:0]
 	nothing
 end
 
@@ -121,9 +124,28 @@ end
 Provides the `COSMO.Model` with warm starting values for the primal variable `x`. `ind` can be used to warm start certain components of `x`.
 """
 warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.x, x0, ind)
-warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T} = warm_start_primal!(model, x0, nothing)
+
 warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int64) where {T} = (model.vars.x[ind] = x0)
 
+# if the full vector for x is provided, we can automatically warm start s = b - A*x as well
+function warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T <: AbstractFloat}
+	warm_start_primal!(model, x0, nothing)
+
+	# as scaling of (x, s, y) happens automatically in the solver, compute an un-scaled version of s0
+	if model.states.IS_SCALED
+		# scaled x0s
+		mul!(model.utility_vars.vec_n,  model.sm.Dinv, x0)
+		# scaled s0 = b - A * x0s
+		mul!(model.utility_vars.vec_m,model.p.A, model.utility_vars.vec_n) # A * x0s
+		@. model.utility_vars.vec_m *= -one(T)
+		@. model.utility_vars.vec_m += model.p.b
+		# unscaled s0 = Einv * s0s
+		s0 = model.sm.Einv * model.utility_vars.vec_m
+	else
+		s0 = model.p.b - model.p.A * x0
+	end
+	warm_start_slack!(model, s0)
+end
 
 """
 	warm_start_slack!(model, s0, [ind])
@@ -143,6 +165,48 @@ Provides the `COSMO.Model` with warm starting values for the dual variable `y`. 
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.μ, -y0, ind)
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_dual!(model, y0, nothing)
 warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
+
+"""
+	warm_start!(model, x0, y0)
+
+Provides the `COSMO.Model` with warm starting values for the primal variable `x` and the dual variable `y`.
+"""
+function warm_start!(model::COSMO.Model{T}, x0::Vector{T}, y0::Vector{T}) where {T <: AbstractFloat}
+	warm_start_primal!(model, x0)
+	warm_start_dual!(model, y0)
+end
+
+
+"""
+	update!(model, q = nothing, b = nothing)
+
+Updates the model data for `b` or `q`. This can be done without refactoring the KKT matrix. The vectors will be appropriatly scaled.
+"""
+function update!(model::COSMO.Model{T}; q::Union{Vector{T}, Nothing} = nothing, b::Union{Vector{T}, Nothing} = nothing) where {T <: AbstractFloat}
+	m, n = model.p.model_size
+	!model.states.IS_ASSEMBLED && error("Model has to be assembled once before one can start updating q or b.")
+	if !isnothing(q)
+		length(q) != n && throw(DimensionMismatch("The dimension of q, does not agree with the model dimension, n."))
+		model.states.IS_CHORDAL_DECOMPOSED && error("Problem vector q can not be updated if the model has been chordally decomposed before.")
+		if model.states.IS_SCALED
+			# if the internal model is scaled, also scale q
+			mul!(model.p.q, model.sm.D, q)
+			model.p.q .*= model.sm.c[]
+		else
+			@. model.p.q = q
+		end
+	end
+
+	if !isnothing(b)
+		length(b) != m && throw(DimensionMismatch("The dimension of b, does not agree with the model dimension, m."))
+		model.states.IS_CHORDAL_DECOMPOSED && error("Problem vector b can not be updated if the model has been chordally decomposed before.")
+		if model.states.IS_SCALED
+			mul!(model.p.b, model.sm.E, b)
+		else
+			@. model.p.b = b
+		end
+	end
+end
 
 """
 	set!(model, P, q, A, b, convex_sets, [settings])
@@ -177,6 +241,9 @@ function set!(model::COSMO.Model{T},
 
 	pre_allocate_variables!(model)
  	model.settings = deepcopy(settings)
+
+	# set state of the model
+	model.states.IS_ASSEMBLED = true
 	nothing
 end
 
@@ -215,6 +282,9 @@ function set!(model::COSMO.Model{Tf},
 
 	pre_allocate_variables!(model)
  	model.settings = settings
+	# set state of the model
+	model.states.IS_ASSEMBLED = true
+
 	nothing
 end
 
@@ -411,7 +481,7 @@ function process_constraint!(p::COSMO.ProblemData{T}, row_num::Int64, A::Union{A
 end
 
 
-function pre_allocate_variables!(ws::Workspace{T}) where {T <: AbstractFloat}
+function pre_allocate_variables!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
   m, n = ws.p.model_size
   ws.vars = Variables{T}(m, n, ws.p.C)
   ws.utility_vars = UtilityVariables{T}(m, n)

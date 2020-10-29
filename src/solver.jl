@@ -50,23 +50,34 @@ optimize!(model)
 Attempts to solve the optimization problem defined in `COSMO.Model` object with the user settings defined in `COSMO.Settings`. Returns a `COSMO.Result` object.
 """
 function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
+
+	!ws.states.IS_ASSEMBLED && throw(ErrorException("The model has to be assembled! / set! before optimize!() can be called."))
+
+	# start timer
 	solver_time_start = time()
+
 	settings = ws.settings
+
 	# perform chordal decomposition
 	if settings.decompose
-		ws.times.graph_time = @elapsed COSMO.chordal_decomposition!(ws)
+		if !ws.states.IS_CHORDAL_DECOMPOSED
+			ws.times.graph_time = @elapsed COSMO.chordal_decomposition!(ws)
+		elseif ws.ci.decompose
+			pre_allocate_variables!(ws)
+		end
 	end
+
 	# create scaling variables
 	# with scaling    -> uses mutable diagonal scaling matrices
 	# without scaling -> uses identity matrices
-	ws.sm = (settings.scaling > 0) ? ScaleMatrices{T}(ws.p.model_size[1], ws.p.model_size[2]) : ScaleMatrices{T}()
-
-	# perform preprocessing steps (scaling, initial KKT factorization)
+	if !ws.states.IS_SCALED
+		ws.sm = (settings.scaling > 0) ? COSMO.ScaleMatrices{T}(ws.p.model_size[1], ws.p.model_size[2]) : COSMO.ScaleMatrices{T}()
+	end
 
 	# we measure times always in Float64
 	ws.times.factor_update_time = 0.
 	ws.times.proj_time  = 0. #reset projection time
-	ws.times.setup_time = @elapsed setup!(ws);
+	ws.times.setup_time = @elapsed COSMO.setup!(ws);
 
 	# instantiate variables
 	status = :Unsolved
@@ -74,20 +85,19 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	r_prim = T(Inf)
 	r_dual = T(Inf)
 	num_iter = 0
+
 	# print information about settings to the screen
 	settings.verbose && print_header(ws)
 	time_limit_start = time()
 
 	m, n = ws.p.model_size
-	δx = zeros(T, n)
-	δy = SplitVector{T}(zeros(T, m), ws.p.C)
+	COSMO.allocate_loop_variables!(ws, m, n)
 
-	s_tl = zeros(T, m) # i.e. sTilde
+	x_tl = view(ws.sol, 1:n) # i.e. xTilde
+	ν = view(ws.sol, (n + 1):(n + m))
 
-	ls = zeros(T, n + m)
-	sol = zeros(T, n + m)
-	x_tl = view(sol, 1:n) # i.e. xTilde
-	ν = view(sol, (n + 1):(n + m))
+	# change state of the workspace
+	ws.states.IS_OPTIMIZED = true
 
 	iter_start = time()
 
@@ -96,13 +106,13 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 		# For infeasibility detection: Record the previous step just in time
 		if mod(iter, settings.check_infeasibility) == settings.check_infeasibility - 1
-			@. δx = ws.vars.x
-			@. δy.data = ws.vars.μ
+			@. ws.δx = ws.vars.x
+			@. ws.δy.data = ws.vars.μ
 		end
 
-		ws.times.proj_time += admm_step!(
+		ws.times.proj_time += COSMO.admm_step!(
 			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
-			x_tl, s_tl, ls, sol,
+			x_tl, ws.s_tl, ws.ls, ws.sol,
 			ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,
 			settings.alpha, settings.sigma,
 			m, n, ws.p.C);
@@ -135,16 +145,16 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		if mod(iter, settings.check_infeasibility) == 0
 
 			# compute deltas for infeasibility detection
-			@. δx = ws.vars.x - δx
-			@. δy.data -= ws.vars.μ
+			@. ws.δx = ws.vars.x - ws.δx
+			@. ws.δy.data -= ws.vars.μ
 
-			if is_primal_infeasible!(δy, ws)
+			if is_primal_infeasible!(ws.δy, ws)
 				status = :Primal_infeasible
 				cost = Inf
 				break
 			end
 
-			if is_dual_infeasible!(δx, ws)
+			if is_dual_infeasible!(ws.δx, ws)
 				status = :Dual_infeasible
 				cost = -Inf
 				break
@@ -190,8 +200,6 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# reverse scaling for scaled feasible cases
 	if settings.scaling != 0
 		reverse_scaling!(ws)
-		# FIXME: Another cost calculation is not necessary since cost value is not affected by scaling
-		cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q)
 	end
 
 	#reverse chordal decomposition
@@ -220,4 +228,22 @@ end
 
 function free_memory!(ws)
 	free_memory!(ws.kkt_solver)
+end
+
+function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int64, n::Int64 ) where {T <: AbstractFloat}
+
+	if length(ws.δx) != n || length(ws.ls) != m + n
+		ws.δx = zeros(T, n)
+		ws.δy = SplitVector{T}(zeros(T, m), ws.p.C)
+		ws.s_tl = zeros(T, m)
+		ws.ls = zeros(T, n + m)
+		ws.sol = zeros(T, n + m)
+	else
+		@. ws.δx = zero(T)
+		@. ws.δy.data = zero(T)
+		@. ws.s_tl = zero(T)
+		@. ws.ls = zero(T)
+		@. ws.sol = zero(T)
+	end
+
 end

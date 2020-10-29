@@ -23,6 +23,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
   # N.B.: Some infeasibility tests rely on sufficient precision (at least Float64 in some cases)
   # SDPs are currently only supported with Float32/Float64
   include("./UnitTests/simple.jl")
+  include("./UnitTests/model_modifications.jl")
   include("./UnitTests/constraints.jl")
   include("./UnitTests/model.jl")
   include("./UnitTests/socp-lasso.jl")
