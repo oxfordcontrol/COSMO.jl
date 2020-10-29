@@ -167,3 +167,9 @@ It holds:
 `setup_time` = `graph_time`+ `init_factor_time` + `scaling_time`,
 
 `proj_time` is a subset of `iter_time`.
+
+## Updating the model
+In some cases we want to solve a large number of similar models. COSMO allows you to update the model problem data vectors `q` and `b` after the first call of `optimize!()`. After changing the problem data, COSMO can reuse the factorisation step of the KKT matrix from the previous problem which can save a lot of time in the case of LPs and QPs.
+```@docs
+COSMO.update!
+```

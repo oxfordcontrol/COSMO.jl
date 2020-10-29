@@ -64,12 +64,10 @@ uuid = "6e34b625-4abd-537c-b88f-471c36dfa7a0"
 version = "1.0.6+5"
 
 [[COSMO]]
-deps = ["DataStructures", "IterTools", "LinearAlgebra", "MathOptInterface", "Pkg", "Printf", "QDLDL", "Random", "Requires", "SparseArrays", "Statistics", "SuiteSparse", "Test", "UnsafeArrays"]
-git-tree-sha1 = "b20d5be3c0fccf605ef6283eb3e3a3c95253d16f"
-repo-rev = "master"
-repo-url = "https://github.com/oxfordcontrol/COSMO.jl.git"
+deps = ["AMD", "DataStructures", "IterTools", "LinearAlgebra", "MathOptInterface", "Pkg", "Printf", "QDLDL", "Random", "Requires", "SparseArrays", "Statistics", "SuiteSparse", "Test", "UnsafeArrays"]
+path = ".."
 uuid = "1e616198-aa4e-51ec-90a2-23f7fbd31d8d"
-version = "0.7.6"
+version = "0.7.7"
 
 [[Calculus]]
 deps = ["LinearAlgebra"]
