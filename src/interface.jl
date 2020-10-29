@@ -185,7 +185,7 @@ Updates the model data for `b` or `q`. This can be done without refactoring the 
 function update!(model::COSMO.Model{T}; q::Union{Vector{T}, Nothing} = nothing, b::Union{Vector{T}, Nothing} = nothing) where {T <: AbstractFloat}
 	m, n = model.p.model_size
 	!model.states.IS_ASSEMBLED && error("Model has to be assembled once before one can start updating q or b.")
-	if !isnothing(q)
+	if q != nothing
 		length(q) != n && throw(DimensionMismatch("The dimension of q, does not agree with the model dimension, n."))
 		model.states.IS_CHORDAL_DECOMPOSED && error("Problem vector q can not be updated if the model has been chordally decomposed before.")
 		if model.states.IS_SCALED
@@ -197,7 +197,7 @@ function update!(model::COSMO.Model{T}; q::Union{Vector{T}, Nothing} = nothing, 
 		end
 	end
 
-	if !isnothing(b)
+	if b != nothing
 		length(b) != m && throw(DimensionMismatch("The dimension of b, does not agree with the model dimension, m."))
 		model.states.IS_CHORDAL_DECOMPOSED && error("Problem vector b can not be updated if the model has been chordally decomposed before.")
 		if model.states.IS_SCALED
