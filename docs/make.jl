@@ -58,7 +58,9 @@ makedocs(
         "Getting Started" =>  "getting_started.md",
         "JuMP Interface" => "jump.md",
         "Linear System Solver" => "lin_solver.md",
+        "Custom Cone Constraint" => "./literate/build/custom_cone.md",
         "Chordal Decomposition" => "decomposition.md",
+        "Model Updates" => "./literate/build/portfolio_model_updates.md",
         "Arbitrary Precision" => "./literate/build/arbitrary_precision.md",
         "Performance Tips" => "performance.md"
         ],
@@ -70,5 +72,5 @@ makedocs(
     ]
 )
 
-# deploydocs(
-#     repo = "github.com/oxfordcontrol/COSMO.jl.git")
+deploydocs(
+    repo = "github.com/oxfordcontrol/COSMO.jl.git")

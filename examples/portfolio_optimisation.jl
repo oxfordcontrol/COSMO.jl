@@ -96,14 +96,19 @@ for (k, gamma) in enumerate(gammas)
     coeff = - 1/gamma * μ
     JuMP.set_objective_coefficient.(model, x, coeff)
     JuMP.optimize!(model)
-    x_opt = JuMP.value.(x);
-    y_opt = JuMP.value.(y);
+    local x_opt = JuMP.value.(x);
+    local y_opt = JuMP.value.(y);
     returns[k] = dot(μ, x_opt)
     risks[k] = sqrt(dot(y_opt, y_opt))
 end
 # We can now plot the risk-return trade-off curve:
 using Plots
 Plots.plot(risks, returns, xlabel = "Standard deviation (risk)", ylabel = "Expected return", title = "Risk-return trade-off for efficient portfolios", legend = false)
+
+# !!! note
+#     When the model is updated in `JuMP` as above the `JuMP.model` is copied in full to `COSMO`. We are trying to improve the interface with respect to model updates in the future. Until then you can use [Model Updates](@ref) in `COSMO`s native interface.
+
+
 
 # ## Transaction costs
 # In the model above we assume that trading the assets is free and does not impact the market. However, this is clearly not the case in reality. To make the example more realistic consider the following cost $c_j$ associated with the trade $δ_j = x_j - x_j^0$:
