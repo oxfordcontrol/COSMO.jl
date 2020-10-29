@@ -11,7 +11,7 @@ implement the following functions:
  - initialise!: Initialise the graph / tree from the input clique graph / tree, allocate memory
  - traverse: A method that determines how the clique tree / graph is traversed
  - evaluate: A method that decides whether to merge two cliques
- - update!: A method to update local strategy-related information after a merge
+ - update_strategy!: A method to update local strategy-related information after a merge
 """
 abstract type AbstractMergeStrategy end
 

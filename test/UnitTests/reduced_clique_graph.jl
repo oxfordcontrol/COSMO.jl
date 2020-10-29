@@ -56,7 +56,7 @@ permissible_ref[[7, 11, 16, 17, 18]] .= true
     @test t.snd[5] == Set([1,3,4,6])
 
     # update the graph information
-    COSMO.update!(t.strategy, t, cand, true)
+    COSMO.update_strategy!(t.strategy, t, cand, true)
 
     @test !haskey(t.strategy.adjacency_table, 2)
     @test mapreduce(x -> 2 ∈ x, +,  t.strategy.adjacency_table) == 0 #check that all 2's are deleted
@@ -73,7 +73,7 @@ permissible_ref[[7, 11, 16, 17, 18]] .= true
     COSMO.merge_two_cliques!(t, cand, t.strategy)
     @test isempty(t.snd[6])
     @test t.snd[7] == Set([1,2,3,9])
-    COSMO.update!(t.strategy, t, cand, true)
+    COSMO.update_strategy!(t.strategy, t, cand, true)
     @test !haskey(t.strategy.adjacency_table, 6)
     @test mapreduce(x -> 6 ∈ x, +,  t.strategy.adjacency_table) == 0 #check that all 6's are deleted
 

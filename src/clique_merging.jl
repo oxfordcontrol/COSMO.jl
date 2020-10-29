@@ -104,7 +104,7 @@ end
 # 2. traverse() - find the next merge candidates
 # 3. evalute() - evaluate wether to merge them or not
 # 4. log() - log the decision
-# 5. update!() - update the tree/graph and strategy
+# 5. update_strategy!() - update the tree/graph and strategy
 function _merge_cliques!(t::SuperNodeTree, strategy::AbstractMergeStrategy)
   initialise!(t, strategy)
 
@@ -120,7 +120,7 @@ function _merge_cliques!(t::SuperNodeTree, strategy::AbstractMergeStrategy)
     log_merge!(t, do_merge, cand)
 
     # update strategy information after the merge
-    update!(strategy, t, cand, do_merge)
+    update_strategy!(strategy, t, cand, do_merge)
     t.num == 1 && break
     strategy.stop && break
 
@@ -295,7 +295,7 @@ function evaluate(t::SuperNodeTree, strategy::CliqueGraphMerge, cand::Array{Int6
 end
 
 " After a merge attempt, update the strategy information."
-function update!(strategy::ParentChildMerge, t::SuperNodeTree, cand::Array{Int64, 1}, do_merge::Bool)
+function update_strategy!(strategy::ParentChildMerge, t::SuperNodeTree, cand::Array{Int64, 1}, do_merge::Bool)
   # try to merge last node of order 1, then stop
   if strategy.clique_ind == 1
     strategy.stop = true
@@ -306,7 +306,7 @@ function update!(strategy::ParentChildMerge, t::SuperNodeTree, cand::Array{Int64
 end
 
 "After a merge happened, update the reduced clique graph."
-function update!(strategy::CliqueGraphMerge, t::SuperNodeTree, cand::Array{Int64, 1}, do_merge::Bool)
+function update_strategy!(strategy::CliqueGraphMerge, t::SuperNodeTree, cand::Array{Int64, 1}, do_merge::Bool)
 
   # After a merge operation update the information of the strategy
   if do_merge
