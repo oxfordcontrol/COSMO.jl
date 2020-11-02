@@ -49,7 +49,7 @@ end
 
       # Solve with OSSDP
       model = COSMO.Model{T}()
-      assemble!(model, P, q, [cs1; cs2; cs3])
+      assemble!(model, P, q, [cs1; cs2; cs3], settings = COSMO.Settings{T}(eps_abs = 5e-4, eps_rel = 5e-4))
       res = COSMO.optimize!(model);
 
       @testset "SOCP - Lasso (T = $(T))" begin

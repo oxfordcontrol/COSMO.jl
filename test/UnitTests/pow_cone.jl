@@ -129,7 +129,7 @@ for T in UnitTestFloats
             cs2 = COSMO.Constraint(T[1. 0 0; 0 1 0], T[-0.8; -0.2], COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2])
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(alpha = 1.2, eps_abs = 1e-3, eps_rel = 1e-3))
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
