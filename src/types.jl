@@ -345,7 +345,6 @@ mutable struct Workspace{T}
 	ci::ChordalInfo{T}
 	vars::Variables{T}
   	utility_vars::UtilityVariables{T}
-	w::Vector{T} #α-averaged ADMM variable
 	δx::Vector{T}
 	δy::SplitVector{T}
 	s_tl::Vector{T}
@@ -366,13 +365,12 @@ mutable struct Workspace{T}
 		vars = Variables{T}(1, 1, p.C)
     	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		w = zeros(0)
 		δx = zeros(0)
 		δy = SplitVector(zeros(T, 1), p.C)
 		s_tl = zeros(0)
 		ls = zeros(0)
 		sol = zeros(0)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, w, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}())
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

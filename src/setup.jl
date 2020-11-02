@@ -71,7 +71,7 @@ function set_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
   # if the user passed in a custom AbstractAccelerator, e.g. with different value for memory, don't change it
   m, n = ws.p.model_size
   # ensure memory is not bigger than problem dimension
-  acc_mem = min(m, ws.settings.acc_men)
+  acc_mem = min(m, ws.settings.acc_mem)
   if typeof(ws.accelerator) == EmptyAccelerator{T}
     if ws.settings.accelerator == :empty
       nothing

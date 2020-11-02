@@ -96,16 +96,21 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	time_limit_start = time()
 
 	m, n = ws.p.model_size
-	iter_history = IterateHistory(m, n, settings.acc_mem)
-	update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(ws.settings.acc_mem), NaN)
+	iter_history = COSMO.IterateHistory(m, n, settings.acc_mem)
+	COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(ws.settings.acc_mem), NaN)
 
 	COSMO.allocate_loop_variables!(ws, m, n)
 
-	@. w[1:n] = ws.vars.x[1:n]
-	@. w[n+1:end] = ws.vars.s.data
+	# warm starting the operator variable
+	@. ws.vars.w[1:n] = ws.vars.x[1:n]
+	@. ws.vars.w[n+1:n+m] = 1 / ws.ρvec * ws.vars.μ + ws.vars.s.data
 
-	x_tl = view(sol, 1:n) # i.e. xTilde
-	ν = view(sol, (n + 1):(n + m))
+	x_tl = view(ws.sol, 1:n) # i.e. xTilde
+	ν = view(ws.sol, (n + 1):(n + m))
+
+	# change state of the workspace
+	ws.states.IS_OPTIMIZED = true
+
 	iter_start = time()
 
 	for iter = 1:settings.max_iter
@@ -121,10 +126,11 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			@. ws.δx = ws.vars.x
 			@. ws.δy.data = ws.vars.μ
 		end
+		@. ws.vars.w_prev = ws.vars.w
 
 		ws.times.proj_time += COSMO.admm_step!(
 			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
-			x_tl, ws.s_tl, ws.ls, ws.sol, ws.w,
+			x_tl, ws.s_tl, ws.ls, ws.sol, ws.vars.w,
 			ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,
 			settings.alpha, settings.sigma,
 			m, n, ws.p.C);
@@ -254,14 +260,12 @@ function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T 
 		ws.s_tl = zeros(T, m)
 		ws.ls = zeros(T, n + m)
 		ws.sol = zeros(T, n + m)
-		ws.w = zeros(T, n + m) # the α-averaged variable of the algorithm
 	else
 		@. ws.δx = zero(T)
 		@. ws.δy.data = zero(T)
 		@. ws.s_tl = zero(T)
 		@. ws.ls = zero(T)
 		@. ws.sol = zero(T)
-		@. ws.w = zero(T)
 	end
 
 end
