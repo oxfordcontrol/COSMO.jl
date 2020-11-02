@@ -319,8 +319,8 @@ struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
     # # ------------------
     # # MOI - Test sets
     # --------------------
-
-    optimizer = COSMO.Optimizer(eps_abs = 1e-5, eps_rel = 1e-5, check_termination = 25, check_infeasibility = 50)
+    # alpha = 0.8 here is a temporary fix for alpha-averaged algorithm
+    optimizer = COSMO.Optimizer(eps_abs = 1e-5, eps_rel = 1e-5, check_termination = 25, check_infeasibility = 50, alpha = 0.8)
     MOI.set(optimizer, MOI.Silent(), true)
 
     cache = MOIU.UniversalFallback(MOIU.Model{Float64}())
