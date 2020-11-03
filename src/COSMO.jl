@@ -46,7 +46,7 @@ include("./solver.jl")
 include("./interface.jl")
 include("./MOIWrapper.jl")
 
-include("precompile.jl")
-_precompile_()
+# include("precompile.jl")
+# _precompile_()
 
 end #end module

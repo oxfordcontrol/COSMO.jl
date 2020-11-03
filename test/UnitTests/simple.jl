@@ -109,7 +109,7 @@ for TestFloat in UnitTestFloats
             # check that warm starting was applied correctly
             @test model.vars.x == x0
             @test model.vars.μ == -y0
-            @test norm(model.vars.s.data - s0, 2) < 1e-3
+            @test norm(model.vars.s.data - s0, 2) < 1e-4
 
             # actually, warm start with a bit of noise
             COSMO.warm_start_primal!(model, x0 .+ TestFloat(0.01) * rand(rng, TestFloat, n))

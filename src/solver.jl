@@ -1,7 +1,31 @@
 const LinsolveSubarray{T} = SubArray{T, 1, Vector{T},Tuple{UnitRange{Int}},true}
 
+"""
+	admm_z!
+Evaluates the proximal operator of the Indicator function I_{R^n × K}.
+"""
+function admm_z!(x::Vector{T},
+	s::SplitVector{T},
+	μ::Vector{T},
+	w::Vector{T},
+	ρ::Vector{T},
+	set::CompositeConvexSet{T}, m::Int64, n::Int64) where {T <: AbstractFloat}
+	# 1) Projection step of w onto R^n x K
+	@. x = w[1:n]
 
-function admm_step!(x::Vector{T},
+	@. s.data = w[n+1:end]
+	p_time = @elapsed project!(s, set)
+
+	# we recover μ from s and w
+	@. μ = ρ * (w[n+1:end] - s)
+	return p_time
+end
+
+"""
+	admm_x!
+Evaluates the proximal operator of 1/2 x'Px + q'x s.t. Ax + s == b.
+"""
+function admm_x!(x::Vector{T},
 	s::SplitVector{T},
 	μ::Vector{T},
 	ν::LinsolveSubarray{T},
@@ -38,12 +62,18 @@ function admm_step!(x::Vector{T},
 
 	# x_tl and ν are automatically updated as they are views into sol
 	@. s_tl = T(2) * s.data - w[n+1:end] - ν  / ρ
+end
 
-	# 3) dual variable update with over-relaxation
+"""
+	admm_w!
+ADMM-operator variable `w` update with over-relaxation parameter α.
+"""
+function admm_w!(x::Vector{T}, s::SplitVector{T}, x_tl::LinsolveSubarray{T}, s_tl::Vector{T}, w::Vector{T}, α::T, m::Int64, n::Int64) where {T <: AbstractFloat}
 	@. w[1:n] = w[1:n] + α * (x_tl - x)
 	@. w[n+1:end] = w[n+1:end] + α * (s_tl - s)
-	return p_time
 end
+
+
 
 # SOLVER ROUTINE
 # -------------------------------------
@@ -113,6 +143,10 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	iter_start = time()
 
+	# do one initialisation step to make ADMM iterates agree with standard ADMM
+	admm_x!(ws.vars.x, ws.vars.s, ws.vars.μ, ν, x_tl, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.alpha, settings.sigma, m, n)
+	admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+
 	for iter = 1:settings.max_iter
 		num_iter += 1
 
@@ -128,31 +162,19 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		end
 		@. ws.vars.w_prev = ws.vars.w
 
-		ws.times.proj_time += COSMO.admm_step!(
-			ws.vars.x, ws.vars.s, ws.vars.μ, ν,
-			x_tl, ws.s_tl, ws.ls, ws.sol, ws.vars.w,
-			ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,
-			settings.alpha, settings.sigma,
-			m, n, ws.p.C);
-
-		# compute residuals (based on optimality conditions of the problem) to check for termination condition
-		# compute them every {settings.check_termination} step
-
+		ws.times.proj_time += admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n)
 
 		# check convergence with residuals every {settings.checkIteration} steps
 		if mod(iter, settings.check_termination) == 0 || iter == 1
 			r_prim, r_dual = calculate_residuals!(ws)
-
 			# update cost
 			cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 			if abs(cost) > 1e20
 				status = :Unsolved
 				break
 			end
-
 			# print iteration steps
 			settings.verbose && print_iteration(ws, iter, cost, r_prim, r_dual)
-
 			if has_converged(ws, r_prim, r_dual)
 				status = :Solved
 				break
@@ -197,6 +219,9 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		# adapt rhoVec if enabled
 		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0)
 			adapt_rho_vec!(ws)
+			# adapt w[n+1:end]
+			@. ws.vars.w[n+1:end] = one(T) / ws.ρvec * ws.vars.μ + ws.vars.s.data
+
 		end
 
 		if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
@@ -204,6 +229,9 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			break
 		end
 
+		admm_x!(ws.vars.x, ws.vars.s, ws.vars.μ, ν, x_tl, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.alpha, settings.sigma, m, n)
+		admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+		# @show(iter, ws.vars.x, ws.vars.s, ws.vars.μ)
 	end #END-ADMM-MAIN-LOOP
 
 	ws.times.iter_time = (time() - iter_start)

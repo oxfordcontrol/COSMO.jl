@@ -24,7 +24,7 @@ for T in UnitTestFloats
             constraints = [constraint]
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, constraints, settings = COSMO.Settings{T}(alpha = 1.4))
+            assemble!(model, P, q, constraints)
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
