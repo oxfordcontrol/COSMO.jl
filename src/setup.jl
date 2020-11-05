@@ -76,11 +76,11 @@ function set_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
     if ws.settings.accelerator == :empty
       nothing
     elseif ws.settings.accelerator == :anderson1
-      ws.accelerator = AndersonAccelerator{T}(m + n, is_type1 = true, mem = acc_mem)
+      ws.accelerator = AndersonAccelerator{T, NoRegularizer, Type1, RollingMemory}(m + n, mem = acc_mem)
     elseif ws.settings.accelerator == :anderson2
-      ws.accelerator = AndersonAccelerator{T}(m + n, is_type1 = false, mem = acc_mem)
+      ws.accelerator = AndersonAccelerator{T, NoRegularizer, Type2, RollingMemory}(m + n, mem = acc_mem)
     else
-      @warn("Your specification for settings.accelerator = $(ws.settings.accelerator) is unknown. Continue without acceleration.")
+      @warn("Your specification for settings.accelerator = $(ws.settings.accelerator) is unknown. Continuing without acceleration.")
       ws.accelerator = EmptyAccelerator{T}()
     end
   end
