@@ -86,9 +86,11 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
   M::AbstractMatrix{T}
   λ::T # regularisation parameter
   reg_log::Vector{T} # log regularisation size
+  update_time::Float64
+  accelerate_time::Float64
 
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), zeros(T, 0))
+    new(true, 0, 0, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), zeros(T, 0), 0., 0.)
   end
 
   function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 4, λ = 1e-8) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
@@ -97,7 +99,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, zeros(T, 0))
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, zeros(T, 0), 0., 0.)
   end
 end
 
@@ -116,6 +118,7 @@ function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
   aa.iter = 0
   aa.init_phase = true
   aa.cond = 0.
+  # accelerator_time = 0. ?
 end
 
 
@@ -154,6 +157,10 @@ function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector
     aa.init_phase = false
     return nothing
   end
+
+  update_time_start = time()
+
+
   j = (aa.iter % aa.mem) + 1 # (aa.iter % aa.mem) number of cols filled, j is the next col where data should be entered
 
   if j == 1 && aa.iter != 0
@@ -177,6 +184,8 @@ function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector
   @. aa.f_last = aa.f
 
   aa.iter += 1
+  aa.update_time += time() - update_time_start
+  return nothing
 end
 
 apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}) where {T, R, BT} = false
@@ -210,6 +219,7 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
 
   l = min(aa.iter, aa.mem) #number of columns filled with data
   l < 3 && return true
+  accelerate_time_start = time()
 
   if l < aa.mem
     eta = view(aa.eta, 1:l)
@@ -240,13 +250,13 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
       # @warn("Acceleration failed at aa.iter: $(aa.iter) because of norm(eta).")
     end
     push!(aa.fail_counter, num_iter)
-
+    aa.accelerate_time += time() - accelerate_time_start
     return false
   else
      # @show(eta)
     aa.num_accelerated_steps += 1
     g[:] = g - G * eta
-    # return g - G * eta
+    aa.accelerate_time += time() - accelerate_time_start
     return true
   end
 end
