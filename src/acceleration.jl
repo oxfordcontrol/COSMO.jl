@@ -95,7 +95,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
     new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), zeros(T, 0), 0., 0.)
   end
 
-  function AndersonAccelerator{T, R, BT, M}(; dim::Int64, mem::Int64 = 4, λ = 1e-8) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
@@ -323,7 +323,7 @@ struct EmptyAccelerator{T} <: AbstractAccelerator
   end
 end
 EmptyAccelerator(args...; kwargs...) = EmptyAccelerator{Float64}(args...; kwargs...)
-EmptyAccelerator{T}(; dim::Int64) where {T <: AbstractFloat} = EmptyAccelerator{T}()
+EmptyAccelerator{T}(dim::Int64) where {T <: AbstractFloat} = EmptyAccelerator{T}()
 
 function update_history!(ea::EmptyAccelerator{T}, x::AbstractVector{T}, g::AbstractVector{T}) where {T <: AbstractFloat}
   return nothing

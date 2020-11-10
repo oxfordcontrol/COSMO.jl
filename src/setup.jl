@@ -12,7 +12,7 @@ function _make_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
   m, n = ws.p.model_size
   # ensure memory is not bigger than problem dimension
   if typeof(ws.accelerator) == EmptyAccelerator{T}
-	  ws.accelerator = ws.settings.accelerator(dim = m + n)
+	  ws.accelerator = ws.settings.accelerator(m + n)
   end
 end
 

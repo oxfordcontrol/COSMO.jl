@@ -127,8 +127,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	m, n = ws.p.model_size
 	mem = get_mem(ws.accelerator)
-	iter_history = COSMO.IterateHistory(m, n, mem)
-	COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(mem), NaN)
+	# iter_history = COSMO.IterateHistory(m, n, mem)
+	# COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(mem), NaN)
 
 	COSMO.allocate_loop_variables!(ws, m, n)
 
@@ -268,9 +268,9 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
 	free_memory!(ws)
 
-	if typeof(ws.accelerator) <: AndersonAccelerator{Float64}
-		iter_history.aa_fail_data = ws.accelerator.fail_counter
-	end
+	# if typeof(ws.accelerator) <: AndersonAccelerator{Float64}
+	# # 	iter_history.aa_fail_data = ws.accelerator.fail_counter
+	# end
 
 	return Result{T}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
