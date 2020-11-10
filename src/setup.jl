@@ -6,6 +6,18 @@ function _make_kkt_solver!(ws::COSMO.Workspace)
 						ws.ρvec)
 end
 
+
+function _make_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
+  # if the user passed in a custom AbstractAccelerator, e.g. with different value for memory, don't change it
+  m, n = ws.p.model_size
+  # ensure memory is not bigger than problem dimension
+  if typeof(ws.accelerator) == EmptyAccelerator{T}
+	  ws.accelerator = ws.settings.accelerator(dim = m + n)
+  end
+end
+
+
+
 function setup!(ws::COSMO.Workspace)
 
   	allocate_set_memory!(ws)
@@ -43,7 +55,7 @@ function setup!(ws::COSMO.Workspace)
 	end
 
 	# instantiate accelerator
-	set_accelerator!(ws)
+	_make_accelerator!(ws)
 end
 
 function allocate_set_memory!(ws::COSMO.Workspace)
@@ -65,23 +77,4 @@ function classify_constraints!(ws::COSMO.Workspace)
 		end
 	end
 	return nothing
-end
-
-function set_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
-  # if the user passed in a custom AbstractAccelerator, e.g. with different value for memory, don't change it
-  m, n = ws.p.model_size
-  # ensure memory is not bigger than problem dimension
-  acc_mem = min(m, ws.settings.acc_mem)
-  if typeof(ws.accelerator) == EmptyAccelerator{T}
-    if ws.settings.accelerator == :empty
-      nothing
-    elseif ws.settings.accelerator == :anderson1
-      ws.accelerator = AndersonAccelerator{T, NoRegularizer, Type1, RollingMemory}(m + n, mem = acc_mem)
-    elseif ws.settings.accelerator == :anderson2
-      ws.accelerator = AndersonAccelerator{T, NoRegularizer, Type2, RollingMemory}(m + n, mem = acc_mem)
-    else
-      @warn("Your specification for settings.accelerator = $(ws.settings.accelerator) is unknown. Continuing without acceleration.")
-      ws.accelerator = EmptyAccelerator{T}()
-    end
-  end
 end

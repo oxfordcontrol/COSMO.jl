@@ -126,8 +126,9 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	time_limit_start = time()
 
 	m, n = ws.p.model_size
-	iter_history = COSMO.IterateHistory(m, n, settings.acc_mem)
-	COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(ws.settings.acc_mem), NaN)
+	mem = get_mem(ws.accelerator)
+	iter_history = COSMO.IterateHistory(m, n, mem)
+	COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(mem), NaN)
 
 	COSMO.allocate_loop_variables!(ws, m, n)
 

@@ -1,3 +1,5 @@
+export NoRegularizer, TikonovRegularizer, FrobeniusNormRegularizer, Type1, Type2, RollingMemory, RestartedMemory, AndersonAccelerator, EmptyAccelerator
+
 # An abstract type for fixed-point acceleration methods
 # Fixed point problem x = g(x) with residual f(x) = x - g(x)
 """
@@ -7,9 +9,9 @@ Abstract supertype for acceleration objects that can be used to speed up a fixed
   - update_history!(aa::AbstractAccelerator{T}, g::AbstractVector{T}, x::AbstractVector{T})
   - accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AbstractAccelerator, num_iter)
 """
-abstract type AbstractAccelerator{T <: AbstractFloat}  end
+abstract type AbstractAccelerator end
 
-
+get_mem(:: AbstractAccelerator) = 0
 # ---------------------------
 # AndersonAccelerator
 # ---------------------------
@@ -65,7 +67,7 @@ Accelerator object implementing Anderson Acceleration. Parameterized by:
  - BT: Broyden-type, i.e. Type-I or Type-II
  - M: AbstractMemory, how full memory buffers are handled
 """
-mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
+mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   init_phase::Bool
   mem::Int64
   dim::Int64
@@ -90,10 +92,10 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
   accelerate_time::Float64
 
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), zeros(T, 0), 0., 0.)
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), zeros(T, 0), 0., 0.)
   end
 
-  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 4, λ = 1e-8) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+  function AndersonAccelerator{T, R, BT, M}(; dim::Int64, mem::Int64 = 4, λ = 1e-8) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
@@ -102,6 +104,17 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
     new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, zeros(T, 0), 0., 0.)
   end
 end
+# define some default constructors for parameters
+AndersonAccelerator(args...; kwargs...)  = AndersonAccelerator{Float64, NoRegularizer, Type2, RollingMemory}(args...; kwargs...)
+AndersonAccelerator{T}(args...; kwargs...) where {T <: AbstractFloat} = AndersonAccelerator{T, NoRegularizer, Type2, RollingMemory}(args...; kwargs...)
+AndersonAccelerator{BT}(args...; kwargs...) where {BT <: AbstractBroydenType} = AndersonAccelerator{Float64, NoRegularizer, BT, RollingMemory}(args...; kwargs...)
+AndersonAccelerator{M}(args...; kwargs...) where {M <: AbstractMemory} = AndersonAccelerator{Float64, NoRegularizer, Type2, M}(args...; kwargs...)
+AndersonAccelerator{R}(args...; kwargs...) where {R <: AbstractRegularizer} = AndersonAccelerator{Float64, R, Type2, RollingMemory}(args...; kwargs...)
+
+get_type(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = BT
+get_memory(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = M
+get_regularizer(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = R
+get_mem(aa::AndersonAccelerator) = aa.mem 
 
 
 function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
@@ -304,7 +317,13 @@ end
 # EmptyAccelerator
 # ---------------------------
 
-struct EmptyAccelerator{T} <: AbstractAccelerator{T} end
+struct EmptyAccelerator{T} <: AbstractAccelerator 
+  function EmptyAccelerator{T}() where {T <: AbstractFloat}
+      return new{T}()
+  end
+end
+EmptyAccelerator(args...; kwargs...) = EmptyAccelerator{Float64}(args...; kwargs...)
+EmptyAccelerator{T}(; dim::Int64) where {T <: AbstractFloat} = EmptyAccelerator{T}()
 
 function update_history!(ea::EmptyAccelerator{T}, x::AbstractVector{T}, g::AbstractVector{T}) where {T <: AbstractFloat}
   return nothing

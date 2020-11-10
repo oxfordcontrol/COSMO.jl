@@ -299,9 +299,9 @@ function update_iterate_history!(history::IterateHistory, x, s, y, v, r_prim, r_
 	push!(history.r_prim_data, r_prim)
 	push!(history.r_dual_data, r_dual)
 
-	alphas = compute_alphas(eta)
-	history.alpha_data = hcat(history.alpha_data, alphas)
-	history.eta_data = hcat(history.eta_data, eta)
+	# alphas = compute_alphas(eta)
+	# history.alpha_data = hcat(history.alpha_data, alphas)
+	# history.eta_data = hcat(history.eta_data, eta)
 end
 
 struct UtilityVariables{T}
@@ -357,7 +357,7 @@ mutable struct Workspace{T}
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
-	accelerator::AbstractAccelerator{T}
+	accelerator::AbstractAccelerator
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
