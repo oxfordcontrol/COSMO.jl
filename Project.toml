@@ -22,7 +22,7 @@ UnsafeArrays = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 
 [compat]
 AMD = "^0.4.0"
-DataStructures = "^0.17.0"
+DataStructures = "^0.17.0, ^0.18.0"
 IterTools = "^1"
 MathOptInterface = "~0.9.16"
 QDLDL = "~0.1.4"
