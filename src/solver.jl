@@ -150,8 +150,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
-
-		if num_iter > 1
+		check_activation!(ws.accelerator, num_iter)
+		if is_active(ws.accelerator)
 			update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev)
 			accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
 		end
@@ -168,6 +168,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		# check convergence with residuals every {settings.checkIteration} steps
 		if mod(iter, settings.check_termination) == 0 || iter == 1
 			r_prim, r_dual = calculate_residuals!(ws)
+			
+			check_activation!(ws.accelerator, r_prim, r_dual)
 			# update cost
 			cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 			if abs(cost) > 1e20
@@ -298,3 +300,4 @@ function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T 
 	end
 
 end
+

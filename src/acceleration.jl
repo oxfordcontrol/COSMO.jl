@@ -12,6 +12,7 @@ Abstract supertype for acceleration objects that can be used to speed up a fixed
 abstract type AbstractAccelerator end
 
 get_mem(:: AbstractAccelerator) = 0
+is_active(::AbstractAccelerator) = true
 # ---------------------------
 # AndersonAccelerator
 # ---------------------------
@@ -87,21 +88,24 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   G::AbstractMatrix{T}
   M::AbstractMatrix{T}
   λ::T # regularisation parameter
+  start_iter::Int64 # start acceleration after x iterations of the main algorithm
+  start_accuracy::T # start acceleration after required accuracy
+  activated::Bool # a flag that shows that the accelerator has been started
   reg_log::Vector{T} # log regularisation size
   update_time::Float64
   accelerate_time::Float64
 
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), zeros(T, 0), 0., 0.)
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), 0, 0., false, zeros(T, 0), 0., 0.)
   end
 
-  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, zeros(T, 0), 0., 0.)
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, start_iter, start_accuracy, false, zeros(T, 0), 0., 0.)
   end
 end
 # define some default constructors for parameters
@@ -141,6 +145,33 @@ function empty_caches!(aa::AndersonAccelerator)
   aa.G .= 0;
   aa.iter = 0 #this is important as for the RestartedMemory it holds information how many rows are full
 end
+
+is_active(aa::AndersonAccelerator) = aa.active
+
+function check_activation!(aa::AndersonAccelerator, num_iter::Int64)
+  if aa.active
+    return nothing
+  else
+    if num_iter >= aa.start_iter
+      aa.active = true
+    end
+  end
+  return nothing
+end
+check_activation!(aa::AbstractAccelerator, num_iter::Int64) = nothing
+check_activation!(aa::AbstractAccelerator, r_prim::T, r_dual::T) where {T <: AbstractFloat} = nothing
+
+function check_activation!(aa::AndersonAccelerator, r_prim::T, r_dual::T) where {T <: AbstractFloat}
+  if aa.active
+    return nothing
+  else
+    if r_prim <= aa.start_accuracy && r_dual <= aa.start_iter
+      aa.active = true
+    end
+  end
+  return nothing
+end
+
 
 
 
