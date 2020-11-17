@@ -169,7 +169,7 @@ function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
 
   aa.iter = 0
   aa.init_phase = true
-  aa.cond = 0.
+  aa.cond .= 0.
   # accelerator_time = 0. ?
 end
 
@@ -336,15 +336,16 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
     @. aa.w_acc = g 
     aa.w_acc -= G * eta
     aa.accelerate_time += time() - accelerate_time_start
+    # println("accelerated!, iter: $(num_iter)")
   	# safeguard the acceleration
     if aa.safeguarded
       nrm_f_acc = fixed_point_residual_norm(rws, ws, aa.w_acc)
       @show(nrm_f_acc, norm(aa.f, 2))
         if nrm_f_acc <= aa.τ * norm(aa.f, 2)  #acc.f = (w_prev - w)
           @. g = aa.w_acc
-          println("Point accepted")
-        else
-          println("Point declined")
+          # println("Point accepted")
+        # else
+          # println("Point declined")
         end
     else # or just overwrite anyway
       @. g = aa.w_acc	

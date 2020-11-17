@@ -221,9 +221,13 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 		# adapt rhoVec if enabled
 		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0)
-			adapt_rho_vec!(ws)
-			# adapt w[n+1:end]
-			@. ws.vars.w[n+1:end] = one(T) / ws.ρvec * ws.vars.μ + ws.vars.s.data
+			was_adapted = adapt_rho_vec!(ws)
+			# changing the rho changes the ADMM operator, so restart accelerator
+			if was_adapted
+				empty_history!(ws.accelerator)
+				# adapt w[n+1:end]
+				@. ws.vars.w[n+1:end] = one(T) / ws.ρvec * ws.vars.μ + ws.vars.s.data
+			end
 
 		end
 
@@ -234,7 +238,6 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 		COSMO.admm_x!(ws.vars.x, ws.vars.s, ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
 		COSMO.admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
-		# @show(iter, ws.vars.x, ws.vars.s, ws.vars.μ)
 	end #END-ADMM-MAIN-LOOP
 
 	ws.times.iter_time = (time() - iter_start)

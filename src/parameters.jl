@@ -64,8 +64,10 @@ function adapt_rho_vec!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# only update rho if significantly different than current rho
 	if (new_rho > settings.adaptive_rho_tolerance * ws.ρ) || (new_rho < (one(T) ./ settings.adaptive_rho_tolerance) * ws.ρ)
 		update_rho_vec!(new_rho, ws)
+		return true
+	else
+		return false
 	end
-	return nothing
 end
 
 function update_rho_vec!(new_rho::T, ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
