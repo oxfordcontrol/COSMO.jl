@@ -27,9 +27,7 @@ Evaluates the proximal operator of 1/2 x'Px + q'x s.t. Ax + s == b.
 """
 function admm_x!(x::Vector{T},
 	s::SplitVector{T},
-	μ::Vector{T},
 	ν::LinsolveSubarray{T},
-	x_tl::LinsolveSubarray{T},
 	s_tl::Vector{T},
 	ls::Vector{T},
 	sol::Vector{T},
@@ -37,8 +35,7 @@ function admm_x!(x::Vector{T},
 	kkt_solver::AbstractKKTSolver,
 	q::Vector{T},
 	b::Vector{T},
-	ρ::Vector{T},
-	α::T,
+	ρ::Vector{T},	
 	σ::T,
 	m::Int,
 	n::Int,
@@ -70,7 +67,7 @@ ADMM-operator variable `w` update with over-relaxation parameter α.
 """
 function admm_w!(x::Vector{T}, s::SplitVector{T}, x_tl::LinsolveSubarray{T}, s_tl::Vector{T}, w::Vector{T}, α::T, m::Int64, n::Int64) where {T <: AbstractFloat}
 	@. w[1:n] = w[1:n] + α * (x_tl - x)
-	@. w[n+1:end] = w[n+1:end] + α * (s_tl - s)
+	@. w[n+1:end] = w[n+1:end] + α * (s_tl - s.data)
 end
 
 
@@ -130,6 +127,10 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# iter_history = COSMO.IterateHistory(m, n, mem)
 	# COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(mem), NaN)
 
+	# extra workspace for supervision
+	
+	rws = COSMO.ResidualWorkspace{T}(m, n, ws.p.C)
+	
 	COSMO.allocate_loop_variables!(ws, m, n)
 
 	# warm starting the operator variable
@@ -145,15 +146,15 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	iter_start = time()
 
 	# do one initialisation step to make ADMM iterates agree with standard ADMM
-	admm_x!(ws.vars.x, ws.vars.s, ws.vars.μ, ν, x_tl, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.alpha, settings.sigma, m, n)
-	admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+	COSMO.admm_x!(ws.vars.x, ws.vars.s, ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
+	COSMO.admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
-		check_activation!(ws.accelerator, num_iter)
-		if is_active(ws.accelerator)
-			update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev)
-			accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
+		COSMO.check_activation!(ws.accelerator, num_iter, r_prim, r_dual)
+		if is_actived(ws.accelerator)
+			COSMO.update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev)
+			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter, rws = rws, ws = ws)
 		end
 
 		# For infeasibility detection: Record the previous step just in time
@@ -163,13 +164,12 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		end
 		@. ws.vars.w_prev = ws.vars.w
 
-		ws.times.proj_time += admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n)
+		ws.times.proj_time += COSMO.admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n)
 
 		# check convergence with residuals every {settings.checkIteration} steps
 		if mod(iter, settings.check_termination) == 0 || iter == 1
 			r_prim, r_dual = calculate_residuals!(ws)
 			
-			check_activation!(ws.accelerator, r_prim, r_dual)
 			# update cost
 			cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 			if abs(cost) > 1e20
@@ -232,8 +232,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			break
 		end
 
-		admm_x!(ws.vars.x, ws.vars.s, ws.vars.μ, ν, x_tl, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.alpha, settings.sigma, m, n)
-		admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+		COSMO.admm_x!(ws.vars.x, ws.vars.s, ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
+		COSMO.admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
 		# @show(iter, ws.vars.x, ws.vars.s, ws.vars.μ)
 	end #END-ADMM-MAIN-LOOP
 

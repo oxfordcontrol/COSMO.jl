@@ -329,7 +329,16 @@ mutable struct States
 	States() = new(false, false, false, false, false)
 end
 
-
+mutable struct ResidualWorkspace{T}
+	x::Vector{T}
+	s::SplitVector{T}
+	s_tl::Vector{T}
+	ls::Vector{T}
+	sol::Vector{T}
+	function ResidualWorkspace{T}(m::Int64, n::Int64, C) where {T <: AbstractFloat}
+		new(zeros(T, n), SplitVector(zeros(T, m), C), zeros(T, m), zeros(T, m+n), zeros(T, m+n))
+	end
+end
 # -------------------------------------
 # Top level container for all solver data
 # -------------------------------------

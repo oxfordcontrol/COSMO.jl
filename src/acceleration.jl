@@ -1,5 +1,5 @@
 export NoRegularizer, TikonovRegularizer, FrobeniusNormRegularizer, Type1, Type2, RollingMemory, RestartedMemory, AndersonAccelerator, EmptyAccelerator
-
+export IterActivation, AccuracyActivation, IterOrAccuracyActivation, ImmediateActivation
 # An abstract type for fixed-point acceleration methods
 # Fixed point problem x = g(x) with residual f(x) = x - g(x)
 """
@@ -12,7 +12,9 @@ Abstract supertype for acceleration objects that can be used to speed up a fixed
 abstract type AbstractAccelerator end
 
 get_mem(:: AbstractAccelerator) = 0
-is_active(::AbstractAccelerator) = true
+is_actived(::AbstractAccelerator) = true
+is_safeguarding(::AbstractAccelerator) = false
+
 # ---------------------------
 # AndersonAccelerator
 # ---------------------------
@@ -57,6 +59,37 @@ The accelerator will delete the history once the memory buffers are full.
 """
 struct RestartedMemory <: AbstractMemory end
 
+abstract type AbstractActivationReason end
+"Activate accelerator after `start_iter` iterations of the main algorithm."
+struct IterActivation <: AbstractActivationReason
+  start_iter::Int64
+  function IterActivation(start_iter::Int64)
+    start_iter < 2 && ArgumentError("start_iter has to be at least 2.")
+    new(start_iter)
+  end
+end
+"Activate accelerator after accuracy of main algorithm <= `start_accuracy`."
+struct AccuracyActivation <: AbstractActivationReason
+  start_accuracy::Float64
+  function AccuracyActivation(start_accuracy::Float64)
+    start_accuracy >= 0. && ArgumentError("start_accuracy has to be a non-negative number.")
+    new(start_accuracy)
+  end 
+end
+"Activate accelerator after accuracy of main algorithm <= `start_accuracy` or iter >= `start_iter`."
+struct IterOrAccuracyActivation <: AbstractActivationReason
+  start_accuracy::Float64
+  start_iter::Int64
+  function IterOrAccuracyActivation(start_accuracy::Float64, start_iter::Int64)
+    start_accuracy >= 0. && ArgumentError("start_accuracy has to be a non-negative number.")
+    start_iter < 2 && ArgumentError("start_iter has to be at least 2.")
+    new(start_accuracy, start_iter)
+  end 
+end
+"Activate accelerator immediately."
+struct ImmediateActivation <: AbstractActivationReason end
+
+
 
 """
     AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
@@ -78,6 +111,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   fail_eta::Array{Int64}
   fail_singular::Array{Int64}
   cond::Array{Float64, 2}
+  w_acc::AbstractVector{T}
   x_last::AbstractVector{T}
   g_last::AbstractVector{T}
   f::AbstractVector{T}
@@ -88,24 +122,25 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   G::AbstractMatrix{T}
   M::AbstractMatrix{T}
   λ::T # regularisation parameter
-  start_iter::Int64 # start acceleration after x iterations of the main algorithm
-  start_accuracy::T # start acceleration after required accuracy
+  τ::T # safeguarding slack parameters  
+  activation_reason::AbstractActivationReason 
   activated::Bool # a flag that shows that the accelerator has been started
+  safeguarded::Bool 
   reg_log::Vector{T} # log regularisation size
   update_time::Float64
   accelerate_time::Float64
 
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), 0, 0., false, zeros(T, 0), 0., 0.)
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, zeros(T, 0), 0., 0.)
   end
 
-  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 1.1, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, start_iter, start_accuracy, false, zeros(T, 0), 0., 0.)
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, zeros(T, 0), 0., 0.)
   end
 end
 # define some default constructors for parameters
@@ -119,14 +154,14 @@ get_type(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = BT
 get_memory(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = M
 get_regularizer(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = R
 get_mem(aa::AndersonAccelerator) = aa.mem 
-
+is_safeguarding(aa::AndersonAccelerator) = aa.safeguarded
 
 function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
   aa.F .= 0;
   aa.X .= 0;
   aa.G .= 0;
 
-  aa.f .= 0;
+  # aa.f .= 0; we need it for safeguarding
   aa.f_last .= 0;
   aa.g_last .= 0;
   aa.x_last .= 0;
@@ -146,32 +181,33 @@ function empty_caches!(aa::AndersonAccelerator)
   aa.iter = 0 #this is important as for the RestartedMemory it holds information how many rows are full
 end
 
-is_active(aa::AndersonAccelerator) = aa.active
+is_actived(aa::AndersonAccelerator) = aa.activated
 
-function check_activation!(aa::AndersonAccelerator, num_iter::Int64)
-  if aa.active
-    return nothing
-  else
-    if num_iter >= aa.start_iter
-      aa.active = true
-    end
-  end
-  return nothing
-end
-check_activation!(aa::AbstractAccelerator, num_iter::Int64) = nothing
-check_activation!(aa::AbstractAccelerator, r_prim::T, r_dual::T) where {T <: AbstractFloat} = nothing
 
-function check_activation!(aa::AndersonAccelerator, r_prim::T, r_dual::T) where {T <: AbstractFloat}
-  if aa.active
-    return nothing
-  else
-    if r_prim <= aa.start_accuracy && r_dual <= aa.start_iter
-      aa.active = true
-    end
-  end
-  return nothing
+# dispatch on the activation reason
+check_activation!(aa::AndersonAccelerator, args...; kwargs...) = check_activation!(aa, aa.activation_reason, args...; kwargs...)
+
+function check_activation!(aa::AndersonAccelerator, activation_reason::ImmediateActivation, num_iter::Int64, r_prim::T, r_dual::T) where {T <: AbstractFloat}
+    (!aa.activated && num_iter >= 2) && (aa.activated = true)
 end
 
+function check_activation!(aa::AndersonAccelerator, activation_reason::IterActivation, num_iter::Int64, r_prim::T, r_dual::T) where {T <: AbstractFloat}
+  (!aa.activated && num_iter >= activation_reason.start_iter) && (aa.activated = true)
+end
+
+function check_activation!(aa::AndersonAccelerator, activation_reason::AccuracyActivation, num_iter::Int64, r_prim::T, r_dual::T) where {T <: AbstractFloat}
+  (!aa.activated && r_prim <= activation_reason.start_accuracy && r_dual <= activation_reason.start_accuracy) && (aa.activated = true)
+end
+
+function check_activation!(aa::AndersonAccelerator, activation_reason::IterOrAccuracyActivation, num_iter::Int64, r_prim::T, r_dual::T) where {T <: AbstractFloat}
+  if !aa.activated
+    if r_prim <= activation_reason.start_accuracy && r_dual <= activation_reason.start_accuracy
+      aa.activated = true
+    elseif num_iter >= activation_reason.start_iter
+      aa.activated = true
+    end
+  end
+end
 
 
 
@@ -259,7 +295,7 @@ function _gesv!(A, B)
 end
 
 
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter) where {T <: AbstractFloat, R <: AbstractRegularizer}
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws::Union{Workspace{T}, Nothing} = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
 
   l = min(aa.iter, aa.mem) #number of columns filled with data
   l < 3 && return true
@@ -288,19 +324,31 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
   if (info < 0 || norm(eta, 2) > 1e4)
     if info < 0
       push!(aa.fail_singular, num_iter)
-      #@warn("Acceleration failed at aa.iter: $(aa.iter) because of info.")
     elseif norm(eta, 2) > 1e4
       push!(aa.fail_eta, num_iter)
-      # @warn("Acceleration failed at aa.iter: $(aa.iter) because of norm(eta).")
     end
     push!(aa.fail_counter, num_iter)
     aa.accelerate_time += time() - accelerate_time_start
     return false
   else
-     # @show(eta)
     aa.num_accelerated_steps += 1
-    g[:] = g - G * eta
+    # calculate the accelerated candidate point
+    @. aa.w_acc = g 
+    aa.w_acc -= G * eta
     aa.accelerate_time += time() - accelerate_time_start
+  	# safeguard the acceleration
+    if aa.safeguarded
+      nrm_f_acc = fixed_point_residual_norm(rws, ws, aa.w_acc)
+      @show(nrm_f_acc, norm(aa.f, 2))
+        if nrm_f_acc <= aa.τ * norm(aa.f, 2)  #acc.f = (w_prev - w)
+          @. g = aa.w_acc
+          println("Point accepted")
+        else
+          println("Point declined")
+        end
+    else # or just overwrite anyway
+      @. g = aa.w_acc	
+    end
     return true
   end
 end
@@ -364,6 +412,7 @@ function empty_history!(ea::EmptyAccelerator{T}) where {T <: AbstractFloat}
   return nothing
 end
 
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::EmptyAccelerator{T}, iter) where {T <: AbstractFloat}
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::EmptyAccelerator{T}, args...; kwargs... ) where {T <: AbstractFloat}
   return true
 end
+check_activation!(aa::EmptyAccelerator, args...; kwargs...) = nothing

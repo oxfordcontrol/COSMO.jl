@@ -117,3 +117,35 @@ function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::Spars
 	mul!(temp, P, x)
 	return cinv * (T(0.5) * dot(temp, x) + dot(q, x))
 end
+
+
+# compute the norm of the fixed point residual of the ADMM-operator f = w_acc - T(w_acc), ||f||_2
+function fixed_point_residual_norm(rws::ResidualWorkspace{T}, ws::Workspace{T}, w_acc::Vector{T}) where {T <: AbstractFloat}
+	m, n = ws.p.model_size
+	σ = ws.settings.sigma
+	ρ = ws.ρvec
+	α = ws.settings.alpha
+
+	# admm_z!
+	@. rws.x = w_acc[1:n]
+	@. rws.s.data = w_acc[n+1:end]
+	project!(rws.s, ws.p.C)
+
+	# admm_x!
+	@. rws.ls[1:n] = T(2) * σ * rws.x - σ * w_acc[1:n] - ws.p.q
+	@. rws.ls[(n + 1):end] = ws.p.b - T(2) * rws.s.data + w_acc[(n + 1):end]
+	solve!(ws.kkt_solver, rws.sol, rws.ls)
+	# x_tl == sol[1:n]
+	# ν == sol[(n+1):end] 
+	# x_tl and ν are automatically updated as they are views into sol
+	@. rws.s_tl = T(2) * rws.s.data - w_acc[n+1:end] - rws.sol[(n+1):end]   / ρ
+
+	# admm w!
+	# use ls for w_next
+	@. rws.ls[1:n] = w_acc[1:n] + α * (rws.sol[1:n]  - rws.x)
+	@. rws.ls[n+1:end] = w_acc[n+1:end] + α * (rws.s_tl - rws.s.data)
+	# TODO: Should we really use a relaxed operator with α to check the residual?
+	# compute the norm of the residual w_acc - ls
+	rws.ls .-= w_acc
+	return norm(rws.ls, 2)
+end
