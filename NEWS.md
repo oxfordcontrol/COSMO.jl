@@ -1,3 +1,18 @@
+## Version 0.7.8 (21. November 2020)
+- `f0070a1` Bump DataStructures.jl to support v0.18 (#119)
+- `fd5b2b5` Add doc for model updates
+- `316e328` Fix bracket bug in cost computation
+- `ef731a4` Rename update!(strategy,...) to update_strategy!(strategy,...)
+- `cbe6cc3` Add update!-model to docs
+- `04283c2` Handle the model state more precisely
+- `5db323f` Fix slow Pardiso KKT solver
+
+## Version 0.7.7 (28. October 2020)
+Fixes bugs in the interface functions for the Python interface.
+
+## Version 0.7.6 (25. October 2020)
+This version adds some interface functions specifically for the Python interface: cosmo-python.
+
 ## Version 0.7.5 (17. September 2020)
 - This version implements the reduced clique graph merge strategy which fixes some edge cases that occurred in the previous merge strategy. It also makes this COSMO version compatible with the latest MathOptInterface release v0.9.16
 
