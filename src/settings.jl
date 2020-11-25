@@ -38,11 +38,12 @@ check_termination | Check termination interval | 40
 check_infeasibility | Check infeasibility interval | 40
 scaling | Number of scaling iterations | 10
 adaptive_rho | Automatic adaptation of step size parameter | true
+adaptive_rho_max_adaptions | Max number of rho adaptions | typemax(Int64) (deactivated)
 decompose | Activate to decompose chordal psd constraints | true
 complete_dual | Activate to complete the dual variable after decomposition | false
 merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
 compact_transformation | Choose how a decomposed problem is transformed | true
-time_limit | Set solver time limit in s | 0
+time_limit | Set solver time limit in s | 0 (deactivated)
 accelerator | Acceleration scheme | `EmptyAccelerator`
 """
 mutable struct Settings{T <: AbstractFloat}
@@ -65,6 +66,7 @@ mutable struct Settings{T <: AbstractFloat}
 	adaptive_rho_interval::Int
 	adaptive_rho_tolerance::T
 	adaptive_rho_fraction::T
+	adaptive_rho_max_adaptions::Int64
 	verbose_timing::Bool
 	RHO_MIN::T
 	RHO_MAX::T
@@ -100,6 +102,7 @@ mutable struct Settings{T <: AbstractFloat}
 		adaptive_rho_interval::Int = 40,
 		adaptive_rho_tolerance::Int = 5,
 		adaptive_rho_fraction::Real = T(0.4),
+		adaptive_rho_max_adaptions::Int64 = typemax(Int64),
 		verbose_timing::Bool = false,
 		RHO_MIN::Real = T(1e-6),
 		RHO_MAX::Real = T(1e6),
@@ -126,7 +129,7 @@ mutable struct Settings{T <: AbstractFloat}
 		if !isa(accelerator, OptionsFactory)
 			accelerator = with_options(accelerator)
 		end
-		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator)
+		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator)
 	end
 end
 

@@ -219,8 +219,10 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			end
 		end
 
-		# adapt rhoVec if enabled
-		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0)
+		# adapt ρvec at the appropriate intervals if 
+		# - rho adaption is active {settings.adaptive_rho}
+		# - rho has not been adapted {settings.adaptive_rho_max_adaptions} yet
+		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0) && (num_rho_adaptions(ws.rho_updates) < settings.adaptive_rho_max_adaptions)
 			was_adapted = adapt_rho_vec!(ws)
 			# changing the rho changes the ADMM operator, so restart accelerator
 			if was_adapted
