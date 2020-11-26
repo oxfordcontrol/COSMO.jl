@@ -89,6 +89,25 @@ end
 "Activate accelerator immediately."
 struct ImmediateActivation <: AbstractActivationReason end
 
+"""
+    ResidualWorkspace{T}
+
+Some extra workspace for safeguarding (temporary for testing)
+"""
+mutable struct ResidualWorkspace{T}
+	x::Vector{T}
+	s::SplitVector{T}
+	μ::Vector{T}
+	s_tl::Vector{T}
+	ls::Vector{T}
+	sol::Vector{T}
+	ν::SubArray{T, 1, Vector{T},Tuple{UnitRange{Int64}}, true}
+	function ResidualWorkspace{T}(m::Int64, n::Int64, C) where {T <: AbstractFloat}
+		sol = zeros(T, m + n)
+		ν = view(sol, (n + 1):(n + m))
+		new(zeros(T, n), SplitVector(zeros(T, m), C), zeros(T, m), zeros(T, m), zeros(T, m + n), sol, ν)
+	end
+end
 
 
 """
@@ -315,7 +334,7 @@ function _gesv!(A, B)
 end
 
 # function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter  ) where {T <: AbstractFloat, R <: AbstractRegularizer}
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws::Union{Workspace{T}, Nothing} = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
 
   l = min(aa.iter, aa.mem) #number of columns filled with data
   if l < 3
@@ -357,8 +376,7 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
     aa.accelerate_time += time() - accelerate_time_start
     return false
   else
-    aa.num_accelerated_steps += 1
-    # calculate the accelerated candidate point
+     # calculate the accelerated candidate point
     @. aa.w_acc = g 
     aa.w_acc -= G * eta
     aa.accelerate_time += time() - accelerate_time_start
@@ -371,12 +389,15 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
       nrm_f_acc = fixed_point_residual_norm(rws, ws, aa.w_acc)
       push!(aa.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
       if nrm_f_acc <= nrm_tol
+       aa.num_accelerated_steps += 1
+
         @. g = aa.w_acc
         push!(aa.acceleration_status, (num_iter, :acc_guarded_accepted))
       else
         push!(aa.acceleration_status, (num_iter, :acc_guarded_declined))
       end
     else # or just overwrite anyway
+      aa.num_accelerated_steps += 1
       @. g = aa.w_acc	
       push!(aa.acceleration_status, (num_iter, :acc_unguarded))
     end

@@ -329,20 +329,7 @@ mutable struct States
 	States() = new(false, false, false, false, false)
 end
 
-mutable struct ResidualWorkspace{T}
-	x::Vector{T}
-	s::SplitVector{T}
-	μ::Vector{T}
-	s_tl::Vector{T}
-	ls::Vector{T}
-	sol::Vector{T}
-	ν::SubArray{T, 1, Vector{T},Tuple{UnitRange{Int64}}, true}
-	function ResidualWorkspace{T}(m::Int64, n::Int64, C) where {T <: AbstractFloat}
-		sol = zeros(T, m + n)
-		ν = view(sol, (n + 1):(n + m))
-		new(zeros(T, n), SplitVector(zeros(T, m), C), zeros(T, m), zeros(T, m), zeros(T, m + n), sol, ν)
-	end
-end
+
 # -------------------------------------
 # Top level container for all solver data
 # -------------------------------------
