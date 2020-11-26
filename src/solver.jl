@@ -151,7 +151,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
-		COSMO.check_activation!(ws.accelerator, num_iter, r_prim, r_dual)
+		COSMO.check_activation!(ws.accelerator, num_iter)
 		if is_actived(ws.accelerator)
 			COSMO.update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
 			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
