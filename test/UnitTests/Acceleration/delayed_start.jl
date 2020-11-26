@@ -27,6 +27,7 @@ using COSMO, SparseArrays, LinearAlgebra, Test
     
     # acceleration delayed by accuracy of the algorithm 
     check_termination = 40
+    delayed_acc = 1e-1
     accelerator = with_options(AndersonAccelerator{Float64, NoRegularizer, Type2, RollingMemory}, mem = 5, safeguarded = false, activation_reason = AccuracyActivation(delayed_acc))
     settings = COSMO.Settings(check_termination = check_termination, eps_abs = 1e-5, eps_rel = 1e-5, accelerator = accelerator);
     model = COSMO.Model();

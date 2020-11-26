@@ -11,6 +11,7 @@ include("../COSMOTestUtils.jl")
   include("./adaptive_rho_acc_restarts.jl")
   include("./max_rho_adaption.jl")
   include("./delayed_start.jl")
+  include("./safeguarding.jl")
 
 end
 nothing

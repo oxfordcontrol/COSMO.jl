@@ -131,24 +131,16 @@ function fixed_point_residual_norm(rws::ResidualWorkspace{T}, ws::Workspace{T}, 
 	α = ws.settings.alpha
 
 	# admm_z!
-	@. rws.x = w_acc[1:n]
-	@. rws.s.data = w_acc[n+1:end]
-	project!(rws.s, ws.p.C)
-
+	admm_z!(rws.x, rws.s, rws.μ, w_acc, ρ, ws.p.C, m, n)
+	
 	# admm_x!
-	@. rws.ls[1:n] = T(2) * σ * rws.x - σ * w_acc[1:n] - ws.p.q
-	@. rws.ls[(n + 1):end] = ws.p.b - T(2) * rws.s.data + w_acc[(n + 1):end]
-	solve!(ws.kkt_solver, rws.sol, rws.ls)
-	# x_tl == sol[1:n]
-	# ν == sol[(n+1):end] 
-	# x_tl and ν are automatically updated as they are views into sol
-	@. rws.s_tl = T(2) * rws.s.data - w_acc[n+1:end] - rws.sol[(n+1):end]   / ρ
-
+	admm_x!(rws.x, rws.s, rws.ν, rws.s_tl, rws.ls, rws.sol, w_acc, ws.kkt_solver, ws.p.q, ws.p.b, ρ, σ, m, n)
+	
 	# admm w!
 	# use ls for w_next
 	@. rws.ls[1:n] = w_acc[1:n] + α * (rws.sol[1:n]  - rws.x)
 	@. rws.ls[n+1:end] = w_acc[n+1:end] + α * (rws.s_tl - rws.s.data)
-	# TODO: Should we really use a relaxed operator with α to check the residual?
+	
 	# compute the norm of the residual w_acc - ls
 	rws.ls .-= w_acc
 	return norm(rws.ls, 2)

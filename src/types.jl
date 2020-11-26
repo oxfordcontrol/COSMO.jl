@@ -332,11 +332,15 @@ end
 mutable struct ResidualWorkspace{T}
 	x::Vector{T}
 	s::SplitVector{T}
+	μ::Vector{T}
 	s_tl::Vector{T}
 	ls::Vector{T}
 	sol::Vector{T}
+	ν::SubArray{T, 1, Vector{T},Tuple{UnitRange{Int64}}, true}
 	function ResidualWorkspace{T}(m::Int64, n::Int64, C) where {T <: AbstractFloat}
-		new(zeros(T, n), SplitVector(zeros(T, m), C), zeros(T, m), zeros(T, m+n), zeros(T, m+n))
+		sol = zeros(T, m + n)
+		ν = view(sol, (n + 1):(n + m))
+		new(zeros(T, n), SplitVector(zeros(T, m), C), zeros(T, m), zeros(T, m), zeros(T, m + n), sol, ν)
 	end
 end
 # -------------------------------------
@@ -367,6 +371,7 @@ mutable struct Workspace{T}
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
 	accelerator::AbstractAccelerator
+	rws::ResidualWorkspace{T}
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
@@ -379,7 +384,8 @@ mutable struct Workspace{T}
 		s_tl = zeros(0)
 		ls = zeros(0)
 		sol = zeros(0)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}())
+		rws = ResidualWorkspace{T}(1, 1, p.C)
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}(), rws)
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

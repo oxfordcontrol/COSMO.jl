@@ -132,9 +132,10 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   accelerate_time::Float64
   restart_iter::Vector{Tuple{Int64, Symbol}} # iterations when a restart occurred 
   acceleration_status::Vector{Tuple{Int64, Symbol}}
+  safeguarding_status::Vector{Tuple{Int64, T, T, T}} 
   
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0))
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0))
   end
 
   function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 1.1, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
@@ -143,7 +144,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0))
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0))
   end
 end
 # define some default constructors for parameters
@@ -313,8 +314,8 @@ function _gesv!(A, B)
   end
 end
 
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter  ) where {T <: AbstractFloat, R <: AbstractRegularizer}
-# function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws::Union{Workspace{T}, Nothing} = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
+# function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter  ) where {T <: AbstractFloat, R <: AbstractRegularizer}
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws::Union{Workspace{T}, Nothing} = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
 
   l = min(aa.iter, aa.mem) #number of columns filled with data
   if l < 3
@@ -364,16 +365,17 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
     # println("accelerated!, iter: $(num_iter)")
   	# safeguard the acceleration
     if aa.safeguarded
+      @. aa.f = x - g 
+      nrm_f = norm(aa.f, 2)
+      nrm_tol = aa.τ * nrm_f
       nrm_f_acc = fixed_point_residual_norm(rws, ws, aa.w_acc)
-      @show(nrm_f_acc, norm(aa.f, 2))
-        if nrm_f_acc <= aa.τ * norm(aa.f, 2)  #acc.f = (w_prev - w)
-          @. g = aa.w_acc
-          push!(aa.acceleration_status, (num_iter, :acc_guarded_accepted))
-          # println("Point accepted")
-        # else
-          # println("Point declined")
-        end
+      push!(aa.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
+      if nrm_f_acc <= nrm_tol
+        @. g = aa.w_acc
+        push!(aa.acceleration_status, (num_iter, :acc_guarded_accepted))
+      else
         push!(aa.acceleration_status, (num_iter, :acc_guarded_declined))
+      end
     else # or just overwrite anyway
       @. g = aa.w_acc	
       push!(aa.acceleration_status, (num_iter, :acc_unguarded))

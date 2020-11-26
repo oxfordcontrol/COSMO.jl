@@ -128,8 +128,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(mem), NaN)
 
 	# extra workspace for supervision
-	
-	rws = COSMO.ResidualWorkspace{T}(m, n, ws.p.C)
+	ws.rws = COSMO.ResidualWorkspace{T}(m, n, ws.p.C)
 	
 	COSMO.allocate_loop_variables!(ws, m, n)
 
@@ -154,8 +153,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		COSMO.check_activation!(ws.accelerator, num_iter)
 		if is_actived(ws.accelerator)
 			COSMO.update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
-			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
-			# COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter, rws = rws, ws = ws)
+			# COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
+			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter, rws = ws.rws, ws = ws)
 		end
 
 		# For infeasibility detection: Record the previous step just in time
