@@ -153,8 +153,9 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		num_iter += 1
 		COSMO.check_activation!(ws.accelerator, num_iter, r_prim, r_dual)
 		if is_actived(ws.accelerator)
-			COSMO.update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev)
-			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter, rws = rws, ws = ws)
+			COSMO.update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
+			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
+			# COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter, rws = rws, ws = ws)
 		end
 
 		# For infeasibility detection: Record the previous step just in time
@@ -227,6 +228,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			# changing the rho changes the ADMM operator, so restart accelerator
 			if was_adapted
 				empty_history!(ws.accelerator)
+				log_restart!(ws.accelerator, iter, :rho_adapted)
 				# adapt w[n+1:end]
 				@. ws.vars.w[n+1:end] = one(T) / ws.ρvec * ws.vars.μ + ws.vars.s.data
 			end

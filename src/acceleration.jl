@@ -127,11 +127,14 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   activated::Bool # a flag that shows that the accelerator has been started
   safeguarded::Bool 
   reg_log::Vector{T} # log regularisation size
+  # logging 
   update_time::Float64
   accelerate_time::Float64
-
+  restart_iter::Vector{Tuple{Int64, Symbol}} # iterations when a restart occurred 
+  
+  
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, zeros(T, 0), 0., 0.)
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0))
   end
 
   function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 1.1, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
@@ -140,7 +143,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, zeros(T, 0), 0., 0.)
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0))
   end
 end
 # define some default constructors for parameters
@@ -170,6 +173,7 @@ function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
   aa.iter = 0
   aa.init_phase = true
   aa.cond .= 0.
+
   # accelerator_time = 0. ?
 end
 
@@ -179,6 +183,10 @@ function empty_caches!(aa::AndersonAccelerator)
   aa.X .= 0;
   aa.G .= 0;
   aa.iter = 0 #this is important as for the RestartedMemory it holds information how many rows are full
+end
+
+function log_restart!(aa::AndersonAccelerator, iter::Int64, reason::Symbol) 
+  push!(aa.restart_iter,(iter, reason))
 end
 
 is_actived(aa::AndersonAccelerator) = aa.activated
@@ -229,7 +237,7 @@ end
 - Update history of accelerator `acc` with iterates g = g(xi) and xi
 - Computes residuals f = x - g
 """
-function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector{T}, x::AbstractVector{T}) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector{T}, x::AbstractVector{T}, num_iter::Int64) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
   if aa.init_phase
     @. aa.x_last = x
     @. aa.g_last = g
@@ -244,7 +252,7 @@ function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector
   j = (aa.iter % aa.mem) + 1 # (aa.iter % aa.mem) number of cols filled, j is the next col where data should be entered
 
   if j == 1 && aa.iter != 0
-    apply_memory_approach!(aa) # for a RestartedMemory approach we want to flush the data cache matrices and start from scratch
+    apply_memory_approach!(aa, num_iter) # for a RestartedMemory approach we want to flush the data cache matrices and start from scratch
   end
 
   # compute residual
@@ -268,9 +276,10 @@ function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector
   return nothing
 end
 
-apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}) where {T, R, BT} = false
-function apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RestartedMemory}) where {T, R, BT}
+apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}, num_iter) where {T, R, BT} = false
+function apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RestartedMemory}, num_iter) where {T, R, BT}
     empty_caches!(aa)
+    log_restart!(aa, num_iter, :memory_full)
     return true
 end
 
@@ -294,8 +303,8 @@ function _gesv!(A, B)
   end
 end
 
-
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws::Union{Workspace{T}, Nothing} = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter  ) where {T <: AbstractFloat, R <: AbstractRegularizer}
+# function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws::Union{Workspace{T}, Nothing} = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
 
   l = min(aa.iter, aa.mem) #number of columns filled with data
   l < 3 && return true
@@ -405,7 +414,7 @@ end
 EmptyAccelerator(args...; kwargs...) = EmptyAccelerator{Float64}(args...; kwargs...)
 EmptyAccelerator{T}(dim::Int64) where {T <: AbstractFloat} = EmptyAccelerator{T}()
 
-function update_history!(ea::EmptyAccelerator{T}, x::AbstractVector{T}, g::AbstractVector{T}) where {T <: AbstractFloat}
+function update_history!(ea::EmptyAccelerator{T}, args...; kwargs...) where {T <: AbstractFloat}
   return nothing
 end
 
@@ -417,3 +426,4 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::EmptyAccele
   return true
 end
 check_activation!(aa::EmptyAccelerator, args...; kwargs...) = nothing
+log_restart!(aa::AbstractAccelerator, iter::Int64, reason::Symbol) = nothing
