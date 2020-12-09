@@ -12,9 +12,9 @@ Abstract supertype for acceleration objects that can be used to speed up a fixed
 abstract type AbstractAccelerator end
 
 get_mem(:: AbstractAccelerator) = 0
-is_actived(::AbstractAccelerator) = true
+is_active(::AbstractAccelerator) = true
 is_safeguarding(::AbstractAccelerator) = false
-
+was_succesful(::AbstractAccelerator) = false
 # ---------------------------
 # AndersonAccelerator
 # ---------------------------
@@ -144,7 +144,8 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   τ::T # safeguarding slack parameters  
   activation_reason::AbstractActivationReason 
   activated::Bool # a flag that shows that the accelerator has been started
-  safeguarded::Bool 
+  safeguarded::Bool # a flag that indicates whether the accelerator operates in safeguarded mode
+  success::Bool # a flag to indicate whether the last attempted acceleration was successful
   reg_log::Vector{T} # log regularisation size
   # logging 
   update_time::Float64
@@ -154,7 +155,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   safeguarding_status::Vector{Tuple{Int64, T, T, T}} 
   
   function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0))
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, false, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0))
   end
 
   function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 1.1, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
@@ -163,7 +164,7 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0))
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0))
   end
 end
 # define some default constructors for parameters
@@ -178,7 +179,8 @@ get_memory(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = M
 get_regularizer(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = R
 get_mem(aa::AndersonAccelerator) = aa.mem 
 is_safeguarding(aa::AndersonAccelerator) = aa.safeguarded
-
+is_active(aa::AndersonAccelerator) = aa.activated
+was_succesful(aa::AndersonAccelerator) = aa.success 
 function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
   aa.F .= 0;
   aa.X .= 0;
@@ -208,8 +210,6 @@ end
 function log_restart!(aa::AndersonAccelerator, iter::Int64, reason::Symbol) 
   push!(aa.restart_iter,(iter, reason))
 end
-
-is_actived(aa::AndersonAccelerator) = aa.activated
 
 
 # dispatch on the activation reason
@@ -334,12 +334,12 @@ function _gesv!(A, B)
 end
 
 # function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter  ) where {T <: AbstractFloat, R <: AbstractRegularizer}
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter; rws::Union{Nothing, ResidualWorkspace} = nothing, ws = nothing   ) where {T <: AbstractFloat, R <: AbstractRegularizer}
-
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter::Int64) where {T <: AbstractFloat, R <: AbstractRegularizer}
+  aa.success = false
   l = min(aa.iter, aa.mem) #number of columns filled with data
   if l < 3
     push!(aa.acceleration_status, (num_iter, :not_enough_cols))
-     return true
+     return nothing
   end
   accelerate_time_start = time()
 
@@ -374,35 +374,14 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
     # push!(aa.fail_counter, num_iter)
     
     aa.accelerate_time += time() - accelerate_time_start
-    return false
+    return nothing
   else
-     # calculate the accelerated candidate point
-    @. aa.w_acc = g 
-    aa.w_acc -= G * eta
+    # calculate the accelerated candidate point
+    # g = g - G * eta
+    BLAS.gemv!('N', -one(T), G, eta, one(T), g)
     aa.accelerate_time += time() - accelerate_time_start
-    # println("accelerated!, iter: $(num_iter)")
-  	# safeguard the acceleration
-    if aa.safeguarded
-      @. aa.f = x - g 
-      nrm_f = norm(aa.f, 2)
-      nrm_tol = aa.τ * nrm_f
-      nrm_f_acc = fixed_point_residual_norm(rws, ws, aa.w_acc)
-      push!(aa.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
-      if nrm_f_acc <= nrm_tol
-       aa.num_accelerated_steps += 1
-
-        @. g = aa.w_acc
-        push!(aa.acceleration_status, (num_iter, :acc_guarded_accepted))
-      else
-        push!(aa.acceleration_status, (num_iter, :acc_guarded_declined))
-      end
-    else # or just overwrite anyway
-      aa.num_accelerated_steps += 1
-      @. g = aa.w_acc	
-      push!(aa.acceleration_status, (num_iter, :acc_unguarded))
-    end
-    
-    return true
+    aa.success = true
+    return nothing
   end
 end
 
@@ -469,4 +448,5 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::EmptyAccele
   return true
 end
 check_activation!(aa::EmptyAccelerator, args...; kwargs...) = nothing
+was_succesful(aa::EmptyAccelerator) = false
 log_restart!(aa::AbstractAccelerator, iter::Int64, reason::Symbol) = nothing

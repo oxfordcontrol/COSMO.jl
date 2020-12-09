@@ -17,8 +17,13 @@ function admm_z!(x::Vector{T},
 	p_time = @elapsed project!(s, set)
 
 	# we recover μ from s and w
-	@. μ = ρ * (w[n+1:end] - s)
+	@. μ = ρ * (w[n+1:end] - s.data)
 	return p_time
+end
+
+"The dual variable μ can be recovered from w, s via Moreau decomposition: μ = ρ (w - Π(w))."
+function recover_μ!(μ::Vector{T}, w::Vector{T}, s::SplitVector{T}, ρ::Vector{T}) where {T <: AbstractFloat}
+	@. μ = ρ * (w[n+1:end] - s.data)
 end
 
 """
@@ -126,18 +131,13 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	mem = get_mem(ws.accelerator)
 	# iter_history = COSMO.IterateHistory(m, n, mem)
 	# COSMO.update_iterate_history!(iter_history, ws.vars.x, ws.vars.s, -ws.vars.μ, ws.vars.w, r_prim, r_dual, zeros(mem), NaN)
-
-	# extra workspace for supervision
-	ws.rws = COSMO.ResidualWorkspace{T}(m, n, ws.p.C)
 	
+
 	COSMO.allocate_loop_variables!(ws, m, n)
 
 	# warm starting the operator variable
 	@. ws.vars.w[1:n] = ws.vars.x[1:n]
 	@. ws.vars.w[n+1:n+m] = 1 / ws.ρvec * ws.vars.μ + ws.vars.s.data
-
-	x_tl = view(ws.sol, 1:n) # i.e. xTilde
-	ν = view(ws.sol, (n + 1):(n + m))
 
 	# change state of the workspace
 	ws.states.IS_OPTIMIZED = true
@@ -145,27 +145,25 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	iter_start = time()
 
 	# do one initialisation step to make ADMM iterates agree with standard ADMM
-	COSMO.admm_x!(ws.vars.x, ws.vars.s, ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
-	COSMO.admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+	COSMO.admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
+	COSMO.admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
-		COSMO.check_activation!(ws.accelerator, num_iter)
-		if is_actived(ws.accelerator)
-			COSMO.update_history!(ws.accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
-			# COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter)
-			COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, ws.accelerator, num_iter, rws = ws.rws, ws = ws)
-		end
-
-		# For infeasibility detection: Record the previous step just in time
-		if mod(iter, settings.check_infeasibility) == settings.check_infeasibility - 1
-			@. ws.δx = ws.vars.x
+	
+		acceleration_pre!(ws.accelerator, ws, num_iter)
+		
+		if !was_succesful(ws.accelerator) && iter >= settings.check_infeasibility
 			@. ws.δy.data = ws.vars.μ
 		end
+			
+		# ADMM steps
 		@. ws.vars.w_prev = ws.vars.w
-
-		ws.times.proj_time += COSMO.admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n)
-
+		ws.times.proj_time += admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n) 
+		admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
+		admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
+		
+		acceleration_post!(ws.accelerator, ws, num_iter)
 		# check convergence with residuals every {settings.checkIteration} steps
 		if mod(iter, settings.check_termination) == 0 || iter == 1
 			r_prim, r_dual = calculate_residuals!(ws)
@@ -184,12 +182,16 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			end
 		end
 
+		# computing δy requires one extra projection if acceleration is used, therefore update only
+		# during times when acceleration wasn't used
+		if !was_succesful(ws.accelerator) && iter > settings.check_infeasibility
+			@. ws.δy.data -= ws.vars.μ
+		end
 		# check infeasibility conditions every {settings.checkInfeasibility} steps
 		if mod(iter, settings.check_infeasibility) == 0
 
-			# compute deltas for infeasibility detection
-			@. ws.δx = ws.vars.x - ws.δx
-			@. ws.δy.data -= ws.vars.μ
+			# compute δx for infeasibility detection
+			@. ws.δx = ws.vars.w[1:n] - ws.vars.w_prev[1:n]
 
 			if is_primal_infeasible!(ws.δy, ws)
 				status = :Primal_infeasible
@@ -239,8 +241,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			break
 		end
 
-		COSMO.admm_x!(ws.vars.x, ws.vars.s, ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
-		COSMO.admm_w!(ws.vars.x, ws.vars.s, x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+
 	end #END-ADMM-MAIN-LOOP
 
 	ws.times.iter_time = (time() - iter_start)
@@ -305,5 +306,72 @@ function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T 
 		@. ws.sol = zero(T)
 	end
 
+	ws.x_tl = view(ws.sol, 1:n) # i.e. xTilde
+	ws.ν = view(ws.sol, (n + 1):(n + m))
 end
 
+"""
+	acceleration_pre!(accelerator, ws, num_iter)
+
+A function that the accelerator can use before the nominal ADMM operator step. 
+
+In the case of an Anderson Accelerator this is used to calculate an accelerated candidate vector, that overwrites the current iterate.
+"""
+function acceleration_pre!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
+	COSMO.check_activation!(accelerator, num_iter)
+	if is_active(accelerator)
+		COSMO.update_history!(accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
+		# overwrite w here
+		COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, accelerator, num_iter)
+	end 
+end
+acceleration_pre!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
+
+"""
+	acceleration_post!(accelerator, ws, num_iter)
+
+A function that the accelerator can use after the nominal ADMM operator step. 
+
+In the case of an Anderson Accelerator this is used to check the quality of the accelerated candidate vector and take measures if the vector is of bad quality.
+"""
+function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
+	if accelerator.success
+		if is_safeguarding(accelerator) && is_active(accelerator)
+			
+			# norm(w_prev - w, 2) 
+			# use accelerator.f here to get f = (x - g) as w_prev has been overwritten before this function call
+			nrm_f = norm(accelerator.f, 2)
+			nrm_tol = nrm_f * accelerator.τ
+			
+			# compute residual norm of accelerated point
+			@. accelerator.f = ws.vars.w_prev - ws.vars.w	
+			nrm_f_acc = norm(accelerator.f, 2)
+			
+			# Safeguarding check: f(w_acc) = w_prev_acc - w_acc <= τ f(w_prev) = τ * (w_prev - w) 
+			# if safeguarding check fails, discard the accelerated candidate point and do a normal ADMM step instead
+			if nrm_f_acc > nrm_tol
+				push!(accelerator.acceleration_status, (num_iter, :acc_guarded_declined))
+				# don't use accelerated candidate point. Reset w = g_last
+				for i in eachindex(ws.accelerator.g_last)
+					ws.vars.w_prev[i] = ws.accelerator.g_last[i]
+					ws.vars.w[i] = ws.accelerator.g_last[i]
+				end
+				m, n = ws.p.model_size 
+				admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n) 
+				
+				admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
+				admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
+
+			else
+				accelerator.num_accelerated_steps += 1
+				push!(accelerator.acceleration_status, (num_iter, :acc_guarded_accepted))
+			end
+			# For debugging: log the decision
+			push!(accelerator.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
+		else
+			push!(accelerator.acceleration_status, (num_iter, :acc_unguarded))
+			accelerator.num_accelerated_steps += 1
+		end
+	end
+end
+acceleration_post!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing

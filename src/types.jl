@@ -350,6 +350,8 @@ mutable struct Workspace{T}
 	s_tl::Vector{T}
 	ls::Vector{T}
 	sol::Vector{T}
+	x_tl::SubArray{T}
+	ν::SubArray{T}
 	ρ::T
 	ρvec::Vector{T}
 	kkt_solver::Union{AbstractKKTSolver,Nothing}
@@ -358,7 +360,7 @@ mutable struct Workspace{T}
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
 	accelerator::AbstractAccelerator
-	rws::ResidualWorkspace{T}
+
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
@@ -366,13 +368,14 @@ mutable struct Workspace{T}
 		vars = Variables{T}(1, 1, p.C)
     	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		δx = zeros(0)
+		δx = zeros(T, 0)
 		δy = SplitVector(zeros(T, 1), p.C)
-		s_tl = zeros(0)
-		ls = zeros(0)
-		sol = zeros(0)
-		rws = ResidualWorkspace{T}(1, 1, p.C)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}(), rws)
+		s_tl = zeros(T,0)
+		ls = zeros(T, 0)
+		sol = zeros(T, 1)
+		x_tl = view(sol, 1:1)
+		ν = view(sol, 1:1)
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0], EmptyAccelerator{T}())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
