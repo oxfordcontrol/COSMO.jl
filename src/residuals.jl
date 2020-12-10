@@ -123,25 +123,3 @@ function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::Spars
 end
 
 
-# compute the norm of the fixed point residual of the ADMM-operator f = w_acc - T(w_acc), ||f||_2
-function fixed_point_residual_norm(rws::ResidualWorkspace{T}, ws::Workspace{T}, w_acc::Vector{T}) where {T <: AbstractFloat}
-	m, n = ws.p.model_size
-	σ = ws.settings.sigma
-	ρ = ws.ρvec
-	α = ws.settings.alpha
-
-	# admm_z!
-	admm_z!(rws.x, rws.s, rws.μ, w_acc, ρ, ws.p.C, m, n)
-	
-	# admm_x!
-	admm_x!(rws.x, rws.s, rws.ν, rws.s_tl, rws.ls, rws.sol, w_acc, ws.kkt_solver, ws.p.q, ws.p.b, ρ, σ, m, n)
-	
-	# admm w!
-	# use ls for w_next
-	@. rws.ls[1:n] = w_acc[1:n] + α * (rws.sol[1:n]  - rws.x)
-	@. rws.ls[n+1:end] = w_acc[n+1:end] + α * (rws.s_tl - rws.s.data)
-	
-	# compute the norm of the residual w_acc - ls
-	rws.ls .-= w_acc
-	return norm(rws.ls, 2)
-end

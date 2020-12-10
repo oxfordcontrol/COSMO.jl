@@ -4,25 +4,23 @@ const LinsolveSubarray{T} = SubArray{T, 1, Vector{T},Tuple{UnitRange{Int}},true}
 	admm_z!
 Evaluates the proximal operator of the Indicator function I_{R^n × K}.
 """
-function admm_z!(x::Vector{T},
-	s::SplitVector{T},
-	μ::Vector{T},
+function admm_z!(x::Vector{T}, s::SplitVector{T},
 	w::Vector{T},
 	ρ::Vector{T},
 	set::CompositeConvexSet{T}, m::Int64, n::Int64) where {T <: AbstractFloat}
 	# 1) Projection step of w onto R^n x K
-	@. x = w[1:n]
+	@. x = w[1:n] #this is handled via a view, so no updating necessary
 
 	@. s.data = w[n+1:end]
 	p_time = @elapsed project!(s, set)
 
 	# we recover μ from s and w
-	@. μ = ρ * (w[n+1:end] - s.data)
+	# @. μ = ρ * (w[n+1:end] - s.data)
 	return p_time
 end
 
 "The dual variable μ can be recovered from w, s via Moreau decomposition: μ = ρ (w - Π(w))."
-function recover_μ!(μ::Vector{T}, w::Vector{T}, s::SplitVector{T}, ρ::Vector{T}) where {T <: AbstractFloat}
+function recover_μ!(μ::Vector{T}, w::Vector{T}, s::SplitVector{T}, ρ::Vector{T}, n::Int64) where {T <: AbstractFloat}
 	@. μ = ρ * (w[n+1:end] - s.data)
 end
 
@@ -30,8 +28,7 @@ end
 	admm_x!
 Evaluates the proximal operator of 1/2 x'Px + q'x s.t. Ax + s == b.
 """
-function admm_x!(x::Vector{T},
-	s::SplitVector{T},
+function admm_x!(s::SplitVector{T},
 	ν::LinsolveSubarray{T},
 	s_tl::Vector{T},
 	ls::Vector{T},
@@ -58,7 +55,7 @@ function admm_x!(x::Vector{T},
 	# Create right hand side for linear system
 	# deconstructed solution vector is ls = [x_tl(n+1); ν(n+1)]
 	# x_tl and ν are automatically updated, since they are views on sol
-	@. ls[1:n] = T(2) * σ * x - σ * w[1:n] - q
+	@. ls[1:n] = σ * w[1:n] - q	# T(2) * σ * x - σ * w[1:n] - q, as x == w[1:n] at that point
 	@. ls[(n + 1):end] = b - T(2) * s.data + w[(n + 1):end]
 	solve!(kkt_solver, sol, ls)
 
@@ -70,8 +67,8 @@ end
 	admm_w!
 ADMM-operator variable `w` update with over-relaxation parameter α.
 """
-function admm_w!(x::Vector{T}, s::SplitVector{T}, x_tl::LinsolveSubarray{T}, s_tl::Vector{T}, w::Vector{T}, α::T, m::Int64, n::Int64) where {T <: AbstractFloat}
-	@. w[1:n] = w[1:n] + α * (x_tl - x)
+function admm_w!(s::SplitVector{T}, x_tl::LinsolveSubarray{T}, s_tl::Vector{T}, w::Vector{T}, α::T, m::Int64, n::Int64) where {T <: AbstractFloat}
+	@. w[1:n] = w[1:n] + α * (x_tl - w[1:n]) 
 	@. w[n+1:end] = w[n+1:end] + α * (s_tl - s.data)
 end
 
@@ -145,8 +142,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	iter_start = time()
 
 	# do one initialisation step to make ADMM iterates agree with standard ADMM
-	COSMO.admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
-	COSMO.admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
+	COSMO.admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
+	COSMO.admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
 
 	for iter = 1:settings.max_iter
 		num_iter += 1
@@ -154,18 +151,22 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		acceleration_pre!(ws.accelerator, ws, num_iter)
 		
 		if !was_succesful(ws.accelerator) && iter >= settings.check_infeasibility
+			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n) # μ_k kept in sync with s_k, w already updated to w_{k+1}
 			@. ws.δy.data = ws.vars.μ
 		end
 			
 		# ADMM steps
 		@. ws.vars.w_prev = ws.vars.w
-		ws.times.proj_time += admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n) 
-		admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
-		admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
+		ws.times.proj_time += admm_z!(ws.vars.x, ws.vars.s, ws.vars.w, ws.ρvec, ws.p.C, m, n) 
+		admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
+		admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
 		
 		acceleration_post!(ws.accelerator, ws, num_iter)
+
+		# 
 		# check convergence with residuals every {settings.checkIteration} steps
 		if mod(iter, settings.check_termination) == 0 || iter == 1
+			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
 			r_prim, r_dual = calculate_residuals!(ws)
 			
 			# update cost
@@ -185,6 +186,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		# computing δy requires one extra projection if acceleration is used, therefore update only
 		# during times when acceleration wasn't used
 		if !was_succesful(ws.accelerator) && iter > settings.check_infeasibility
+			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
 			@. ws.δy.data -= ws.vars.μ
 		end
 		# check infeasibility conditions every {settings.checkInfeasibility} steps
@@ -225,6 +227,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		# - rho adaption is active {settings.adaptive_rho}
 		# - rho has not been adapted {settings.adaptive_rho_max_adaptions} yet
 		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0) && (num_rho_adaptions(ws.rho_updates) < settings.adaptive_rho_max_adaptions)
+			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
 			was_adapted = adapt_rho_vec!(ws)
 			# changing the rho changes the ADMM operator, so restart accelerator
 			if was_adapted
@@ -243,6 +246,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 
 	end #END-ADMM-MAIN-LOOP
+	 
+	recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
 
 	ws.times.iter_time = (time() - iter_start)
 	settings.verbose_timing && (ws.times.post_time = time())
@@ -355,9 +360,9 @@ function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T
 				# don't use accelerated candidate point. Reset w = g_last
 				reset_accelerated_vector!(ws.vars.w, ws.vars.w_prev, accelerator.g_last)	
 				m, n = ws.p.model_size 
-				admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n) 			
-				admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
-				admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
+				admm_z!(ws.vars.x, ws.vars.s, ws.vars.w, ws.ρvec, ws.p.C, m, n) 			
+				admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
+				admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
 
 			else
 				accelerator.num_accelerated_steps += 1
