@@ -345,8 +345,6 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
   end
   accelerate_time_start = time()
 
-  assemble_inv_matrix!(aa.M, aa.X, aa.F, aa)
-
   if l < aa.mem
     eta = view(aa.eta, 1:l) #use unsafe views
     X = view(aa.X, :, 1:l)
@@ -360,13 +358,11 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
     G = aa.G
     F = aa.F
   end
-  # assemble_inv_matrix!(M, X, F, aa)
+  assemble_inv_matrix!(M, X, F, aa)
 
   # depending on method type
   initialise_eta!(eta, aa, X, F)
-  if num_iter == 8 || num_iter == 16
-    @show(num_iter, eta)
-  end
+
   # aa.eta = aa.M  \ (X' * f) (type1)
   info = solve_linear_sys!(M, X, F, eta, aa)
 
