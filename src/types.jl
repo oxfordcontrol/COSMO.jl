@@ -256,15 +256,15 @@ end
 struct Variables{T}
 	w::Vector{T}
 	w_prev::Vector{T}
-	x::Vector{T}
+	x::SubArray{T}
 	s::SplitVector{T}
 	μ::Vector{T}
 
 	function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 		m == C.dim || throw(DimensionMismatch("set dimension is not m"))
-		w = zeros(T, n +  m)
+		w = zeros(T, n + m)
 		w_prev = zeros(T, n + m)
-		x = zeros(T, n)
+		x = view(w_prev, 1:n) #x is a view onto w_prev, to keep it in sync with s and μ 
 		s = SplitVector(zeros(T, m), C)
 		μ = zeros(T, m)
 		new(w, w_prev, x, s, μ)

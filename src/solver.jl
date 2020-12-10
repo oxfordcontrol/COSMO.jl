@@ -4,17 +4,18 @@ const LinsolveSubarray{T} = SubArray{T, 1, Vector{T},Tuple{UnitRange{Int}},true}
 	admm_z!
 Evaluates the proximal operator of the Indicator function I_{R^n × K}.
 """
-function admm_z!(x::Vector{T}, s::SplitVector{T},
+function admm_z!(s::SplitVector{T},
 	w::Vector{T},
-	ρ::Vector{T},
-	set::CompositeConvexSet{T}, m::Int64, n::Int64) where {T <: AbstractFloat}
+	set::CompositeConvexSet{T}, n::Int64) where {T <: AbstractFloat}
 	# 1) Projection step of w onto R^n x K
-	@. x = w[1:n] #this is handled via a view, so no updating necessary
+	# @. x = w[1:n] #this is handled via a view: x = view(w_prev, 1:n), prev to keep it in sync with s
 
+	# 2) s = Π(w)
 	@. s.data = w[n+1:end]
 	p_time = @elapsed project!(s, set)
 
-	# we recover μ from s and w
+	# 3) y = ρ * (w - Π(w)) (Moreau decomposition)
+	# we recover μ from s and w just-in-time
 	# @. μ = ρ * (w[n+1:end] - s.data)
 	return p_time
 end
@@ -157,7 +158,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			
 		# ADMM steps
 		@. ws.vars.w_prev = ws.vars.w
-		ws.times.proj_time += admm_z!(ws.vars.x, ws.vars.s, ws.vars.w, ws.ρvec, ws.p.C, m, n) 
+		ws.times.proj_time += admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 
 		admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
 		admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
 		
@@ -360,7 +361,7 @@ function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T
 				# don't use accelerated candidate point. Reset w = g_last
 				reset_accelerated_vector!(ws.vars.w, ws.vars.w_prev, accelerator.g_last)	
 				m, n = ws.p.model_size 
-				admm_z!(ws.vars.x, ws.vars.s, ws.vars.w, ws.ρvec, ws.p.C, m, n) 			
+				admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 			
 				admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
 				admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
 

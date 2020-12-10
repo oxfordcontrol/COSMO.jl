@@ -112,7 +112,7 @@ function empty_model!(model::COSMO.Model{T}) where {T <: AbstractFloat}
 end
 
 
-function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat}
+function _warm_start!(z::AbstractVector{T}, z0::AbstractVector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat}
 		ind == nothing && (ind = 1:length(z))
 		length(ind) != length(z0) && throw(DimensionMismatch("Dimension of warm starting vector doesn't match the length of index range ind."))
 		z[ind] = z0
@@ -128,7 +128,7 @@ warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{In
 warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Integer) where {T} = (model.vars.x[ind] = x0)
 
 # if the full vector for x is provided, we can automatically warm start s = b - A*x as well
-function warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T <: AbstractFloat}
+function warm_start_primal!(model::COSMO.Model{T}, x0::AbstractVector{T}) where {T <: AbstractFloat}
 	warm_start_primal!(model, x0, nothing)
 
 	# as scaling of (x, s, y) happens automatically in the solver, compute an un-scaled version of s0
