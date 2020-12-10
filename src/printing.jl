@@ -73,6 +73,8 @@ function print_accelerator(s::AbstractAccelerator)
 		Ty = get_type(s)
 		return "Anderson($(Ty), $(M), mem = $(s.mem))"
 	elseif s isa EmptyAccelerator
-		return "empty"
+		return "none"
+	else
+		return "Unknown Accelerator"
 	end
 end
