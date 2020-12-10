@@ -335,43 +335,59 @@ A function that the accelerator can use after the nominal ADMM operator step.
 In the case of an Anderson Accelerator this is used to check the quality of the accelerated candidate vector and take measures if the vector is of bad quality.
 """
 function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
+	acc_post_time_start = time()
 	if accelerator.success
 		if is_safeguarding(accelerator) && is_active(accelerator)
 			
 			# norm(w_prev - w, 2) 
 			# use accelerator.f here to get f = (x - g) as w_prev has been overwritten before this function call
-			nrm_f = norm(accelerator.f, 2)
+			nrm_f = compute_non_accelerated_res_norm(accelerator.f)
 			nrm_tol = nrm_f * accelerator.τ
 			
 			# compute residual norm of accelerated point
-			@. accelerator.f = ws.vars.w_prev - ws.vars.w	
-			nrm_f_acc = norm(accelerator.f, 2)
+			nrm_f_acc = compute_accelerated_res_norm!(accelerator.f, ws.vars.w, ws.vars.w_prev)
 			
 			# Safeguarding check: f(w_acc) = w_prev_acc - w_acc <= τ f(w_prev) = τ * (w_prev - w) 
 			# if safeguarding check fails, discard the accelerated candidate point and do a normal ADMM step instead
 			if nrm_f_acc > nrm_tol
-				push!(accelerator.acceleration_status, (num_iter, :acc_guarded_declined))
+				accelerator.activate_logging && push!(accelerator.acceleration_status, (num_iter, :acc_guarded_declined))
+				accelerator.num_safe_declined += 1
 				# don't use accelerated candidate point. Reset w = g_last
-				for i in eachindex(ws.accelerator.g_last)
-					ws.vars.w_prev[i] = ws.accelerator.g_last[i]
-					ws.vars.w[i] = ws.accelerator.g_last[i]
-				end
+				reset_accelerated_vector!(ws.vars.w, ws.vars.w_prev, accelerator.g_last)	
 				m, n = ws.p.model_size 
-				admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n) 
-				
+				admm_z!(ws.vars.x, ws.vars.s, ws.vars.μ, ws.vars.w, ws.ρvec, ws.p.C, m, n) 			
 				admm_x!(ws.vars.x, ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
 				admm_w!(ws.vars.x, ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
 
 			else
 				accelerator.num_accelerated_steps += 1
-				push!(accelerator.acceleration_status, (num_iter, :acc_guarded_accepted))
+				accelerator.num_safe_accepted += 1
+				accelerator.activate_logging && push!(accelerator.acceleration_status, (num_iter, :acc_guarded_accepted))
+
 			end
 			# For debugging: log the decision
-			push!(accelerator.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
+			accelerator.activate_logging && push!(accelerator.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
 		else
-			push!(accelerator.acceleration_status, (num_iter, :acc_unguarded))
+			accelerator.activate_logging && push!(accelerator.acceleration_status, (num_iter, :acc_unguarded))
 			accelerator.num_accelerated_steps += 1
 		end
 	end
+	accelerator.acc_post_time += time() - acc_post_time_start
 end
+
+function compute_non_accelerated_res_norm(f::AbstractVector{T}) where {T <: AbstractFloat}
+	return norm(f, 2)
+end
+
+function compute_accelerated_res_norm!(f::AbstractVector{T}, w::AbstractVector{T}, w_prev::AbstractVector{T}) where {T <: AbstractFloat}
+	@. f = w_prev - w
+	return norm(f, 2)	
+end
+
+function reset_accelerated_vector!(w::AbstractVector{T}, w_prev::AbstractVector{T}, g_last::AbstractVector{T}) where {T <: AbstractFloat}
+		@. w_prev = g_last
+		@. w = g_last
+end
+
+
 acceleration_post!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
