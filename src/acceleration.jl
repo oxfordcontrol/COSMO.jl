@@ -200,14 +200,13 @@ function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
   aa.init_phase = true
   aa.cond .= 0.
 
-  # accelerator_time = 0. ?
 end
 
-
+"Reset the pointer that tracks the number of valid rows in the cached history of past vectors."
 function empty_caches!(aa::AndersonAccelerator)
-  aa.F .= 0;
-  aa.X .= 0;
-  aa.G .= 0;
+  # aa.F .= 0; #to save time we can leave the old data in here, this is a potential source of problems if the indexing of valid data gets messed up
+  # aa.X .= 0;
+  # aa.G .= 0;
   aa.iter = 0 #this is important as for the RestartedMemory holds information on how many rows are full
 end
 
@@ -272,16 +271,16 @@ end
 - Computes residuals f = x - g
 """
 function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector{T}, x::AbstractVector{T}, num_iter::Int64) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+  update_time_start = time()  
+
+  # compute residual
+  @. aa.f = x - g
+
   if aa.init_phase
-    @. aa.x_last = x
-    @. aa.g_last = g
-    @. aa.f_last = x - g
+    set_prev_vectors!(aa.x_last, aa.g_last, aa.f_last, x, g, aa.f)
     aa.init_phase = false
     return nothing
   end
-
-  update_time_start = time()
-
 
   j = (aa.iter % aa.mem) + 1 # (aa.iter % aa.mem) number of cols filled, j is the next col where data should be entered
 
@@ -289,26 +288,55 @@ function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector
     apply_memory_approach!(aa, num_iter) # for a RestartedMemory approach we want to flush the data cache matrices and start from scratch
   end
 
-  # compute residual
-  @. aa.f = x - g
-
-  # fill memory with deltas
-  @. aa.X[:, j] = x - aa.x_last
-  @. aa.G[:, j] = g - aa.g_last
-  @. aa.F[:, j] = aa.f - aa.f_last
-
+  # store Δx, Δg, Δf in X, G, F
+  fill_caches!(j, aa.X, aa.G, aa.F, x, g, aa.f, aa.x_last, aa.g_last, aa.f_last)
 
   # set previous values for next iteration
-  @. aa.x_last = x
-  @. aa.g_last = g
-  @. aa.f_last = aa.f
+  set_prev_vectors!(aa.x_last, aa.g_last, aa.f_last, x, g, aa.f)
 
   aa.iter += 1
   aa.update_time += time() - update_time_start
   return nothing
 end
 
-apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}, num_iter) where {T, R, BT} = false
+" Update the history matrices X = [Δxi, Δxi+1, ...], G = [Δgi, Δgi+1, ...] and F = [Δfi, Δfi+1, ...]."
+function fill_caches!(j::Int64, X::AbstractMatrix{T}, G::AbstractMatrix{T}, F::AbstractMatrix{T}, x::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}, x_last::AbstractVector{T}, g_last::AbstractVector{T}, f_last::AbstractVector{T}) where {T <: AbstractFloat}
+  # fill memory with deltas
+  @. X[:, j] = x - x_last # Δx
+  @. G[:, j] = g - g_last # Δg
+  @. F[:, j] = f - f_last # Δf
+  return nothing
+end
+
+function fill_caches2!(j::Int64, X::AbstractMatrix{T}, G::AbstractMatrix{T}, F::AbstractMatrix{T}, x::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}, x_last::AbstractVector{T}, g_last::AbstractVector{T}, f_last::AbstractVector{T}) where {T <: AbstractFloat}
+  # fill memory with deltas
+  @inbounds @simd for i in eachindex(x)
+    X[i, j] = x[i] - x_last[i] # Δx
+  end
+  @inbounds @simd for i in eachindex(g) 
+    G[i, j] = g[i] - g_last[i] # Δg
+  end
+  @inbounds @simd for i in eachindex(f)
+    F[i, j] = f[i] - f_last[i] # Δf
+  end
+  
+  return nothing
+end
+
+
+
+
+
+" Store a copy of the last x, g, f to be able to compute Δx, Δg, Δf at the next step."
+function set_prev_vectors!(x_last::AbstractVector{T}, g_last::AbstractVector{T}, f_last::AbstractVector{T}, x::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}) where {T <: AbstractFloat}
+  @. x_last = x
+  @. g_last = g
+  @. f_last = f
+  return nothing
+end
+
+
+apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}, num_iter) where {T, R, BT} = nothing
 function apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RestartedMemory}, num_iter) where {T, R, BT}
     empty_caches!(aa)
     aa.activate_logging && log_restart!(aa, num_iter, :memory_full)
@@ -346,11 +374,11 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
   accelerate_time_start = time()
 
   if l < aa.mem
-    eta = view(aa.eta, 1:l) #use unsafe views
-    X = view(aa.X, :, 1:l)
-    M = view(aa.M, 1:l, 1:l)
-    G = view(aa.G, :, 1:l)
-    F = view(aa.F, :, 1:l)
+    eta = uview(aa.eta, 1:l)
+    X = uview(aa.X, :, 1:l)
+    M = uview(aa.M, 1:l, 1:l)
+    G = uview(aa.G, :, 1:l)
+    F = uview(aa.F, :, 1:l)
   else
     eta = aa.eta
     X = aa.X
