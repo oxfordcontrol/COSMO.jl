@@ -1,5 +1,6 @@
 export NoRegularizer, TikonovRegularizer, FrobeniusNormRegularizer, Type1, Type2, RollingMemory, RestartedMemory, AndersonAccelerator, EmptyAccelerator
 export IterActivation, AccuracyActivation, IterOrAccuracyActivation, ImmediateActivation
+export QRDecomp, NormalEquations
 # An abstract type for fixed-point acceleration methods
 # Fixed point problem x = g(x) with residual f(x) = x - g(x)
 """
@@ -30,13 +31,28 @@ struct FrobeniusNormRegularizer <: AbstractRegularizer end
 struct NoRegularizer <: AbstractRegularizer end
 
 """
+    AbstractLeastSquaresMethod
+
+Abstract supertype for least squares solution method when Type-II acceleration is used
+"""
+abstract type AbstractLeastSquaresMethod end
+struct NormalEquations <: AbstractLeastSquaresMethod end
+struct QRDecomp <: AbstractLeastSquaresMethod end
+
+"""
     AbstractBroydenType
 
 Abstract supertype for the Broyden type of the accelerator.
 """
 abstract type AbstractBroydenType end
 struct Type1 <: AbstractBroydenType end
-struct Type2 <: AbstractBroydenType end
+struct Type2{LSM} <: AbstractBroydenType 
+  function Type2{LSM}() where {LSM <: AbstractLeastSquaresMethod}
+    return new{LSM}()
+  end
+end
+
+
 
 """
     AbstractMemory
@@ -89,38 +105,18 @@ end
 "Activate accelerator immediately."
 struct ImmediateActivation <: AbstractActivationReason end
 
-"""
-    ResidualWorkspace{T}
-
-Some extra workspace for safeguarding (temporary for testing)
-"""
-mutable struct ResidualWorkspace{T}
-	x::Vector{T}
-	s::SplitVector{T}
-	μ::Vector{T}
-	s_tl::Vector{T}
-	ls::Vector{T}
-	sol::Vector{T}
-	ν::SubArray{T, 1, Vector{T},Tuple{UnitRange{Int64}}, true}
-	function ResidualWorkspace{T}(m::Int64, n::Int64, C) where {T <: AbstractFloat}
-		sol = zeros(T, m + n)
-		ν = view(sol, (n + 1):(n + m))
-		new(zeros(T, n), SplitVector(zeros(T, m), C), zeros(T, m), zeros(T, m), zeros(T, m + n), sol, ν)
-	end
-end
-
 
 """
-    AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator{T}
+    AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator{T}
 
 Accelerator object implementing Anderson Acceleration. Parameterized by:
 
  - T: AbstractFloat, floating-point type
- - R: AbstractRegularizer
- - BT: Broyden-type, i.e. Type-I or Type-II
- - M: AbstractMemory, how full memory buffers are handled
+ - RE: AbstractRegularizer
+ - BT: Broyden-type, i.e. Type1 or Type2
+ - MT: AbstractMemory, how full memory buffers are handled
 """
-mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
+mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
   init_phase::Bool
   mem::Int64
   dim::Int64
@@ -140,6 +136,8 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   X::AbstractMatrix{T}
   G::AbstractMatrix{T}
   M::AbstractMatrix{T}
+  Q::AbstractMatrix{T}
+  R::AbstractMatrix{T}
   λ::T # regularisation parameter
   τ::T # safeguarding slack parameters  
   activation_reason::AbstractActivationReason 
@@ -158,25 +156,52 @@ mutable struct AndersonAccelerator{T, R, BT, M} <: AbstractAccelerator
   num_safe_declined::Int64
   activate_logging::Bool
   
-  function AndersonAccelerator{T, R, BT, M}() where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0),  0, 0, false)
+  function AndersonAccelerator{T, RE, BT, MT}() where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
+    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0),  0, 0, false)
   end
 
-  function AndersonAccelerator{T, R, BT, M}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+  function AndersonAccelerator{T, RE, BT, MT}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
     # mem shouldn't be bigger than the dimension
     mem = min(mem, dim)
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), zeros(T, dim), zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, dim, mem), zeros(T, mem, mem), λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
+    F = zeros(T, dim, mem)
+    X = zeros(T, dim, mem)
+    G = zeros(T, dim, mem)
+    M = zeros(T, mem, mem)
+    Q = zeros(T, 0, 0)
+    R = zeros(T, 0, 0)
+    x_last = zeros(T, dim) 
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
   end
+
+  function AndersonAccelerator{T, RE, Type2{QRDecomp}, MT}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, MT <: AbstractMemory}
+    mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
+    dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
+
+    # mem shouldn't be bigger than the dimension
+    mem = min(mem, dim)
+
+    # for QR decomposition we don't need some of the caches
+    x_last = zeros(T, 0)
+    F = zeros(T, 0, 0)
+    X = zeros(T, 0, 0)
+    G = zeros(T, dim, mem)
+    M = zeros(T, 0, 0)
+    Q = zeros(T, dim, mem)
+    R = zeros(T, mem, mem)
+  
+    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
+  end
+
 end
 # define some default constructors for parameters
-AndersonAccelerator(args...; kwargs...)  = AndersonAccelerator{Float64, NoRegularizer, Type2, RollingMemory}(args...; kwargs...)
-AndersonAccelerator{T}(args...; kwargs...) where {T <: AbstractFloat} = AndersonAccelerator{T, NoRegularizer, Type2, RollingMemory}(args...; kwargs...)
+AndersonAccelerator(args...; kwargs...)  = AndersonAccelerator{Float64, NoRegularizer, Type2{NormalEquations}, RollingMemory}(args...; kwargs...)
+AndersonAccelerator{T}(args...; kwargs...) where {T <: AbstractFloat} = AndersonAccelerator{T, NoRegularizer, Type2{NormalEquations}, RollingMemory}(args...; kwargs...)
 AndersonAccelerator{BT}(args...; kwargs...) where {BT <: AbstractBroydenType} = AndersonAccelerator{Float64, NoRegularizer, BT, RollingMemory}(args...; kwargs...)
-AndersonAccelerator{M}(args...; kwargs...) where {M <: AbstractMemory} = AndersonAccelerator{Float64, NoRegularizer, Type2, M}(args...; kwargs...)
-AndersonAccelerator{R}(args...; kwargs...) where {R <: AbstractRegularizer} = AndersonAccelerator{Float64, R, Type2, RollingMemory}(args...; kwargs...)
+AndersonAccelerator{M}(args...; kwargs...) where {M <: AbstractMemory} = AndersonAccelerator{Float64, NoRegularizer, Type2{NormalEquations}, M}(args...; kwargs...)
+AndersonAccelerator{R}(args...; kwargs...) where {R <: AbstractRegularizer} = AndersonAccelerator{Float64, R, Type2{NormalEquations}, RollingMemory}(args...; kwargs...)
 
 get_type(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = BT
 get_memory(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = M
@@ -202,9 +227,10 @@ function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
 
 end
 
-"Reset the pointer that tracks the number of valid rows in the cached history of past vectors."
+"Reset the pointer that tracks the number of valid cols in the cached history of past vectors."
 function empty_caches!(aa::AndersonAccelerator)
-  # aa.F .= 0; #to save time we can leave the old data in here, this is a potential source of problems if the indexing of valid data gets messed up
+  #to save time we can leave the old data in here, this is a potential source of problems if the indexing of valid data gets messed up
+  # aa.F .= 0; 
   # aa.X .= 0;
   # aa.G .= 0;
   aa.iter = 0 #this is important as for the RestartedMemory holds information on how many rows are full
@@ -240,37 +266,16 @@ function check_activation!(aa::AndersonAccelerator, activation_reason::AccuracyA
     end 
   end
 end
-# function check_activation!(aa::AndersonAccelerator, activation_reason::IterOrAccuracyActivation, num_iter::Int64, r_prim::T, r_dual::T) where {T <: AbstractFloat}
-#   if !aa.activated
-#     if r_prim <= activation_reason.start_accuracy && r_dual <= activation_reason.start_accuracy
-#       aa.activated = true
-#     elseif num_iter >= activation_reason.start_iter
-#       aa.activated = true
-#     end
-#   end
-# end
 
-
-
-function compute_alphas(eta::Vector{T}) where {T <: AbstractFloat}
-  n = length(eta)
-  alpha = zeros(T, n+1)
-  alpha[1] = eta[1]
-  for i = 2:n
-    alpha[i] = eta[i] - eta[i-1]
-  end
-  alpha[n + 1] = 1 - eta[n]
-  return alpha
-end
 
 
 """
   update_history!(aa, g, x)
 
-- Update history of accelerator `acc` with iterates g = g(xi) and xi
+- Update history of accelerator `aa` with iterates g = g(xi)
 - Computes residuals f = x - g
 """
-function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector{T}, x::AbstractVector{T}, num_iter::Int64) where {T <: AbstractFloat, R <: AbstractRegularizer, BT <: AbstractBroydenType, M <: AbstractMemory}
+function update_history!(aa::AndersonAccelerator{T, RE, BT, MT}, g::AbstractVector{T}, x::AbstractVector{T}, num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
   update_time_start = time()  
 
   # compute residual
@@ -299,6 +304,68 @@ function update_history!(aa::AndersonAccelerator{T, R, BT, M}, g::AbstractVector
   return nothing
 end
 
+# This method is a copy of the method above to test TypeII with QR decomposition
+function update_history!(aa::AndersonAccelerator{T, RE, Type2{QRDecomp}, RestartedMemory}, g::AbstractVector{T}, x::AbstractVector{T}, num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
+
+  update_time_start = time()  
+
+  # compute residual
+  @. aa.f = x - g
+
+  if aa.init_phase
+    set_prev_vectors!(aa.g_last, aa.f_last, g, aa.f)
+    aa.init_phase = false
+    return nothing
+  end
+
+  j = (aa.iter % aa.mem) + 1 # (aa.iter % aa.mem) number of cols filled, j is the next col where data should be entered
+
+  if j == 1 && aa.iter != 0
+    apply_memory_approach!(aa, num_iter) # for a RestartedMemory approach we want to flush the data cache matrices and start from scratch
+  end
+
+  #G[:, j] = Δg
+  fill_delta!(j, aa.G, g, aa.g_last)
+  
+  # use f_last memory to store Δf = f - f_last 
+  compute_Δf!(aa.f_last, aa.f)
+
+  # QR decomposition step
+  qr!(aa.Q, aa.R, aa.f_last, j)
+
+  # set previous values for next iteration
+  set_prev_vectors!(aa.g_last, aa.f_last, g, aa.f)
+
+  aa.iter += 1
+  aa.update_time += time() - update_time_start
+  return nothing
+end
+
+# adapted from https://github.com/JuliaNLSolvers/NLsolve.jl
+# add new column to QR-Factorisation: F = QR 
+function qr!(Q::AbstractMatrix{T}, R::AbstractMatrix{T}, Δf::AbstractVector{T}, j::Int64) where {T <: AbstractFloat}
+  
+  n, m = size(Q)
+  n == length(Δf) || throw(DimensionMismatch())
+  m == LinearAlgebra.checksquare(R) || throw(DimensionMismatch())
+  1 ≤ j ≤ m || throw(ArgumentError())
+
+  @inbounds for k in 1:(j - 1)
+    qk = uview(Q, :, k)
+    ip = dot(qk, Δf)
+    R[k, j] = ip
+
+    axpy!(-ip, qk, Δf)
+  end
+  @inbounds begin
+    nrm_f = norm(Δf, 2)
+    R[j, j] = nrm_f
+    @. Q[:, j] = Δf / nrm_f
+  end
+  return nothing
+end
+
+
 " Update the history matrices X = [Δxi, Δxi+1, ...], G = [Δgi, Δgi+1, ...] and F = [Δfi, Δfi+1, ...]."
 function fill_caches!(j::Int64, X::AbstractMatrix{T}, G::AbstractMatrix{T}, F::AbstractMatrix{T}, x::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}, x_last::AbstractVector{T}, g_last::AbstractVector{T}, f_last::AbstractVector{T}) where {T <: AbstractFloat}
   # fill memory with deltas
@@ -308,26 +375,23 @@ function fill_caches!(j::Int64, X::AbstractMatrix{T}, G::AbstractMatrix{T}, F::A
   return nothing
 end
 
-function fill_caches2!(j::Int64, X::AbstractMatrix{T}, G::AbstractMatrix{T}, F::AbstractMatrix{T}, x::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}, x_last::AbstractVector{T}, g_last::AbstractVector{T}, f_last::AbstractVector{T}) where {T <: AbstractFloat}
-  # fill memory with deltas
-  @inbounds @simd for i in eachindex(x)
-    X[i, j] = x[i] - x_last[i] # Δx
+" Update a single history matrices V = [vgi, vgi+1, ...] ."
+function fill_delta!(j::Int64, V::AbstractMatrix{T}, v::AbstractVector{T}, v_last::AbstractVector{T}) where {T <: AbstractFloat}
+  @inbounds @simd for i in eachindex(v)
+    V[i, j] = v[i] - v_last[i]
   end
-  @inbounds @simd for i in eachindex(g) 
-    G[i, j] = g[i] - g_last[i] # Δg
-  end
-  @inbounds @simd for i in eachindex(f)
-    F[i, j] = f[i] - f_last[i] # Δf
-  end
-  
-  return nothing
 end
 
+"Compute Δf = f - f_last and store result in f_last."
+function compute_Δf!(f_last::AbstractVector{T}, f::AbstractVector{T}) where {T <: AbstractFloat}
+  
+  @inbounds for i in eachindex(f_last)
+    f_last[i] *= -one(T)
+    f_last[i] += f[i]
+  end
+end
 
-
-
-
-" Store a copy of the last x, g, f to be able to compute Δx, Δg, Δf at the next step."
+"Store a copy of the last x, g, f to be able to compute Δx, Δg, Δf at the next step."
 function set_prev_vectors!(x_last::AbstractVector{T}, g_last::AbstractVector{T}, f_last::AbstractVector{T}, x::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}) where {T <: AbstractFloat}
   @. x_last = x
   @. g_last = g
@@ -335,19 +399,25 @@ function set_prev_vectors!(x_last::AbstractVector{T}, g_last::AbstractVector{T},
   return nothing
 end
 
+function set_prev_vectors!(g_last::AbstractVector{T}, f_last::AbstractVector{T}, g::AbstractVector{T}, f::AbstractVector{T}) where {T <: AbstractFloat}
+  @. g_last = g
+  @. f_last = f
+  return nothing
+end
 
-apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}, num_iter) where {T, R, BT} = nothing
+"Depending on the AndersonAccelerator parameter AbstractMemory, dispatch on the correct method that handles the case when the memory buffers are full."
 function apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RestartedMemory}, num_iter) where {T, R, BT}
     empty_caches!(aa)
     aa.activate_logging && log_restart!(aa, num_iter, :memory_full)
     return true
 end
+apply_memory_approach!(aa::AndersonAccelerator{T, R, BT, RollingMemory}, num_iter) where {T, R, BT} = nothing
 
 function assemble_inv_matrix!(W::AbstractMatrix{T}, X::AbstractMatrix{T}, F::AbstractMatrix{T}, aa::AndersonAccelerator{T, R, Type1, M}) where {T <: AbstractFloat, R <: AbstractRegularizer, M <: AbstractMemory}
   mul!(W, X', F)
 end
 
-function assemble_inv_matrix!(W::AbstractMatrix{T}, X::AbstractMatrix{T}, F::AbstractMatrix{T}, aa::AndersonAccelerator{T, R, Type2, M}) where {T <: AbstractFloat, R <: AbstractRegularizer, M <: AbstractMemory}
+function assemble_inv_matrix!(W::AbstractMatrix{T}, X::AbstractMatrix{T}, F::AbstractMatrix{T}, aa::AndersonAccelerator{T, R, Type2{NormalEquations}, M}) where {T <: AbstractFloat, R <: AbstractRegularizer, M <: AbstractMemory}
   mul!(W, F', F)
 end
 
@@ -363,8 +433,8 @@ function _gesv!(A, B)
   end
 end
 
-# function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter  ) where {T <: AbstractFloat, R <: AbstractRegularizer}
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, R}, num_iter::Int64) where {T <: AbstractFloat, R <: AbstractRegularizer}
+
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, RE}, num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
   aa.success = false
   l = min(aa.iter, aa.mem) #number of columns filled with data
   if l < 3
@@ -393,15 +463,16 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
 
   # aa.eta = aa.M  \ (X' * f) (type1)
   info = solve_linear_sys!(M, X, F, eta, aa)
-
-  if (info < 0 || norm(eta, 2) > 1e4)
-    if info < 0
+  
+  # num_iter < 100 && num_iter > 0 && @show(num_iter, eta)
+  # if (info < 0 || norm(eta, 2) > 1e4)
+    # if info < 0
       # push!(aa.fail_singular, num_iter)
-      aa.activate_logging && push!(aa.acceleration_status, (num_iter, :fail_singular))
-    elseif norm(eta, 2) > 1e4
+      # aa.activate_logging && push!(aa.acceleration_status, (num_iter, :fail_singular))
+    if norm(eta, 2) > 1e4
       # push!(aa.fail_eta, num_iter)
       aa.activate_logging && push!(aa.acceleration_status, (num_iter, :fail_eta_norm))
-    end
+    # end
     # push!(aa.fail_counter, num_iter)
     
     aa.accelerate_time += time() - accelerate_time_start
@@ -416,12 +487,57 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
   end
 end
 
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, RE, Type2{QRDecomp}} , num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
+  aa.success = false
+  l = min(aa.iter, aa.mem) #number of columns filled with data
+  if l < 3
+     aa.activate_logging && push!(aa.acceleration_status, (num_iter, :not_enough_cols))
+     return nothing
+  end
+  accelerate_time_start = time()
+
+  # if l <= aa.mem
+    eta = uview(aa.eta, 1:l)
+    G = uview(aa.G, :, 1:l)
+    Q = uview(aa.Q, :, 1:l)
+    R = UpperTriangular(uview(aa.R, 1:l, 1:l)) 
+  # else
+  #   eta = aa.eta
+  #   G = aa.G
+  #   Q = aa.Q
+  #   R = UpperTriangular(aa.R)
+  # end
+  
+  # solve least squares problem ||f_k - η Fk ||_2 where Fk = QR 
+  # initialise_eta!(eta, aa, X, F)
+  mul!(eta, Q', aa.f) # vec(aa.f)? 
+  ldiv!(R, eta)
+  # num_iter < 100 && num_iter > 0 && @show(num_iter, eta)
+  
+  # TODO: maybe replace this with a check of the condition number of R
+  if norm(eta, 2) > 1e4
+    aa.activate_logging && push!(aa.acceleration_status, (num_iter, :fail_eta_norm))
+    aa.accelerate_time += time() - accelerate_time_start
+    return nothing
+  else
+    # calculate the accelerated candidate point
+    # g = g - G * eta
+    BLAS.gemv!('N', -one(T), G, eta, one(T), g)
+
+    
+    aa.accelerate_time += time() - accelerate_time_start
+    aa.success = true
+    return nothing
+  end
+end
+
+
 
 function initialise_eta!(eta::AbstractVector{T}, aa::AndersonAccelerator{T, R, Type1}, X::AbstractMatrix{T}, F::AbstractMatrix{T}) where {T <: AbstractFloat, R <: AbstractRegularizer}
   mul!(eta, X', aa.f)
 end
 
-function initialise_eta!(eta::AbstractVector{T}, aa::AndersonAccelerator{T, R, Type2}, X::AbstractMatrix{T}, F::AbstractMatrix{T}) where {T <: AbstractFloat, R <: AbstractRegularizer}
+function initialise_eta!(eta::AbstractVector{T}, aa::AndersonAccelerator{T, R, Type2{NormalEquations}}, X::AbstractMatrix{T}, F::AbstractMatrix{T}) where {T <: AbstractFloat, R <: AbstractRegularizer}
   mul!(eta, F', aa.f)
 end
 
