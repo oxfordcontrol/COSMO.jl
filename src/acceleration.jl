@@ -126,18 +126,18 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
   fail_eta::Array{Int64}
   fail_singular::Array{Int64}
   cond::Array{Float64, 2}
-  w_acc::AbstractVector{T}
-  x_last::AbstractVector{T}
-  g_last::AbstractVector{T}
-  f::AbstractVector{T}
-  f_last::AbstractVector{T}
-  eta::AbstractVector{T}
-  F::AbstractMatrix{T}
-  X::AbstractMatrix{T}
-  G::AbstractMatrix{T}
-  M::AbstractMatrix{T}
-  Q::AbstractMatrix{T}
-  R::AbstractMatrix{T}
+  w_acc::Vector{T}
+  x_last::Vector{T}
+  g_last::Vector{T}
+  f::Vector{T}
+  f_last::Vector{T}
+  eta::Vector{T}
+  F::Matrix{T}
+  X::Matrix{T}
+  G::Matrix{T}
+  M::Matrix{T}
+  Q::Matrix{T}
+  R::Matrix{T}
   λ::T # regularisation parameter
   τ::T # safeguarding slack parameters  
   activation_reason::AbstractActivationReason 
@@ -377,7 +377,7 @@ end
 
 " Update a single history matrices V = [vgi, vgi+1, ...] ."
 function fill_delta!(j::Int64, V::AbstractMatrix{T}, v::AbstractVector{T}, v_last::AbstractVector{T}) where {T <: AbstractFloat}
-  @inbounds @simd for i in eachindex(v)
+  @inbounds for i in eachindex(v)
     V[i, j] = v[i] - v_last[i]
   end
 end
@@ -463,7 +463,7 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
 
   # aa.eta = aa.M  \ (X' * f) (type1)
   info = solve_linear_sys!(M, X, F, eta, aa)
-  
+
   # num_iter < 100 && num_iter > 0 && @show(num_iter, eta)
   # if (info < 0 || norm(eta, 2) > 1e4)
     # if info < 0
@@ -487,7 +487,7 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
   end
 end
 
-function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, RE, Type2{QRDecomp}} , num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
+function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, RE, Type2{QRDecomp}}, num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
   aa.success = false
   l = min(aa.iter, aa.mem) #number of columns filled with data
   if l < 3
@@ -500,7 +500,7 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
     eta = uview(aa.eta, 1:l)
     G = uview(aa.G, :, 1:l)
     Q = uview(aa.Q, :, 1:l)
-    R = UpperTriangular(uview(aa.R, 1:l, 1:l)) 
+    R = uview(aa.R, 1:l, 1:l) 
   # else
   #   eta = aa.eta
   #   G = aa.G
@@ -511,7 +511,12 @@ function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAcc
   # solve least squares problem ||f_k - η Fk ||_2 where Fk = QR 
   # initialise_eta!(eta, aa, X, F)
   mul!(eta, Q', aa.f) # vec(aa.f)? 
-  ldiv!(R, eta)
+  info = solve_linear_sys!(R, eta, aa)
+  if info < 0
+    aa.activate_logging && push!(aa.acceleration_status, (num_iter, :fail_cond_r))
+    aa.accelerate_time += time() - accelerate_time_start
+    return nothing
+  end
   # num_iter < 100 && num_iter > 0 && @show(num_iter, eta)
   
   # TODO: maybe replace this with a check of the condition number of R
@@ -565,6 +570,17 @@ function solve_linear_sys!(M::AbstractMatrix{T}, X::AbstractMatrix{T}, F::Abstra
   info = _gesv!(M, eta)
 end
 
+
+function solve_linear_sys!(R::AbstractMatrix{T}, eta::AbstractVector{T}, aa::AndersonAccelerator{T, Re, Type2{QRDecomp}}) where {T <: AbstractFloat, Re <: NoRegularizer}
+  try
+    LAPACK.trtrs!('U', 'N', 'N', R, eta)
+    # LinearAlgebra.ldiv!(R, eta)
+    # LinearAlgebra.BLAS.trsv!('U', 'N', 'N', R, eta) # seems to be equally fast
+    return 1
+   catch
+     return -1
+  end
+end
 
 
 function print_failure_rate(aa::AndersonAccelerator{<: AbstractFloat})
