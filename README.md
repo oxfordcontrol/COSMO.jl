@@ -6,7 +6,7 @@
   <img src="https://github.com/migarstka/COSMO_assets/blob/master/cosmo_rocket_with_convex_set.png" width=70%>
 </h1>
 <p align="center">
-  <a href="https://travis-ci.org/oxfordcontrol/COSMO.jl"><img src="https://travis-ci.org/oxfordcontrol/COSMO.jl.svg?branch=master"></a>
+   <a href="https://github.com/oxfordcontrol/COSMO.jl/actions"><img src="https://github.com/oxfordcontrol/COSMO.jl/workflows/ci/badge.svg?branch=master"></a>
   <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg"></a>
   <a href="https://oxfordcontrol.github.io/COSMO.jl/stable"><img src="https://img.shields.io/badge/Documentation-stable-purple.svg"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
