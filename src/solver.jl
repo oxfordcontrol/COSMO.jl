@@ -115,7 +115,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	ws.times.setup_time = @elapsed COSMO.setup!(ws);
 
 	# instantiate variables
-	status = :Unsolved
+	status = :Undetermined
 	cost = T(Inf)
 	r_prim = T(Inf)
 	r_dual = T(Inf)
@@ -135,7 +135,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	# warm starting the operator variable
 	@. ws.vars.w[1:n] = ws.vars.x[1:n]
-	@. ws.vars.w[n+1:n+m] = 1 / ws.ρvec * ws.vars.μ + ws.vars.s.data
+	@. ws.vars.w[n+1:n+m] = one(T) / ws.ρvec * ws.vars.μ + ws.vars.s.data
 
 	# change state of the workspace
 	ws.states.IS_OPTIMIZED = true
@@ -159,92 +159,17 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		# ADMM steps
 		@. ws.vars.w_prev = ws.vars.w
 		ws.times.proj_time += admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 
+		apply_rho_adaptation_rules!(ws.ρvec, ws.rho_updates, settings, iter, iter_start, ws.times, ws, n)
 		admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
 		admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
 		
 		acceleration_post!(ws.accelerator, ws, num_iter)
 
-		# 
-		# check convergence with residuals every {settings.checkIteration} steps
-		if mod(iter, settings.check_termination) == 0 || iter == 1
-			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
-			r_prim, r_dual = calculate_residuals!(ws)
-			
-			# update cost
-			cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
-			if abs(cost) > 1e20
-				status = :Unsolved
-				break
-			end
-			# print iteration steps
-			settings.verbose && print_iteration(ws, iter, cost, r_prim, r_dual)
-			if has_converged(ws, r_prim, r_dual)
-				status = :Solved
-				break
-			end
-		end
-
-		# computing δy requires one extra projection if acceleration is used, therefore update only
-		# during times when acceleration wasn't used
-		if !was_succesful(ws.accelerator) && iter > settings.check_infeasibility
-			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
-			@. ws.δy.data -= ws.vars.μ
-		end
-		# check infeasibility conditions every {settings.checkInfeasibility} steps
-		if mod(iter, settings.check_infeasibility) == 0
-
-			# compute δx for infeasibility detection
-			@. ws.δx = ws.vars.w[1:n] - ws.vars.w_prev[1:n]
-
-			if is_primal_infeasible!(ws.δy, ws)
-				status = :Primal_infeasible
-				cost = Inf
-				break
-			end
-
-			if is_dual_infeasible!(ws.δx, ws)
-				status = :Dual_infeasible
-				cost = -Inf
-				break
-			end
-		end
-
-		# automatically choose adaptive rho interval if enabled in the settings
-		if settings.adaptive_rho && settings.adaptive_rho_interval == 0
-			# set the adaptive rho interval if a certain fraction of the setup time has passed
-			if (time() - iter_start) > settings.adaptive_rho_fraction * ws.times.setup_time
-				# round adaptive time interval to a multiple of the check_termination setting (and at least that)
-				if settings.check_termination > 0
-					settings.adaptive_rho_interval = round_multiple(iter, settings.check_termination)
-					settings.adaptive_rho_interval = max(settings.adaptive_rho_interval, settings.check_termination)
-				else
-					settings.adaptive_rho_interval = round_multiple(iter, 25)
-					settings.adaptive_rho_interval = max(settings.adaptive_rho_interval, 25)
-				end
-			end
-		end
-
-		# adapt ρvec at the appropriate intervals if 
-		# - rho adaption is active {settings.adaptive_rho}
-		# - rho has not been adapted {settings.adaptive_rho_max_adaptions} yet
-		if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0) && (num_rho_adaptions(ws.rho_updates) < settings.adaptive_rho_max_adaptions)
-			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
-			was_adapted = adapt_rho_vec!(ws)
-			# changing the rho changes the ADMM operator, so restart accelerator
-			if was_adapted
-				empty_history!(ws.accelerator)
-				log_restart!(ws.accelerator, iter, :rho_adapted)
-				# adapt w[n+1:end]
-				@. ws.vars.w[n+1:end] = one(T) / ws.ρvec * ws.vars.μ + ws.vars.s.data
-			end
-
-		end
-
-		if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
-			status = :Time_limit_reached
+		# convergence / infeasibility / timelimit checks
+		cost, status, r_prim, r_dual = check_termination!(ws, settings, num_iter, cost, status, r_prim, r_dual, time_limit_start, n)
+		if status != :Undetermined
 			break
 		end
-
 
 	end #END-ADMM-MAIN-LOOP
 	 
@@ -291,12 +216,13 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 end
 
-
+"Free all memory before exiting optimize!"
 function free_memory!(ws)
 	free_memory!(ws.kkt_solver)
 end
 
-function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T <: AbstractFloat}
+"Allocate ADMM- helper variables once the problem dimension is determined."
+function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int) where {T <: AbstractFloat}
 
 	if length(ws.δx) != n || length(ws.ls) != m + n
 		ws.δx = zeros(T, n)
@@ -314,6 +240,7 @@ function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T 
 
 	ws.x_tl = view(ws.sol, 1:n) # i.e. xTilde
 	ws.ν = view(ws.sol, (n + 1):(n + m))
+	ws.rho_update_due = false
 end
 
 """
@@ -332,6 +259,7 @@ function acceleration_pre!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}
 	end 
 end
 acceleration_pre!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
+
 
 """
 	acceleration_post!(accelerator, ws, num_iter)
@@ -381,19 +309,143 @@ function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T
 	accelerator.acc_post_time += time() - acc_post_time_start
 end
 
+acceleration_post!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
+
 function compute_non_accelerated_res_norm(f::AbstractVector{T}) where {T <: AbstractFloat}
 	return norm(f, 2)
 end
 
+"Computes the nonexpansive operator residual norm, i.e. f(w_prev) = || w_prev - w ||_2."
 function compute_accelerated_res_norm!(f::AbstractVector{T}, w::AbstractVector{T}, w_prev::AbstractVector{T}) where {T <: AbstractFloat}
 	@. f = w_prev - w
 	return norm(f, 2)	
 end
 
+"Reset ADMM variables to last non-accelerated point."
 function reset_accelerated_vector!(w::AbstractVector{T}, w_prev::AbstractVector{T}, g_last::AbstractVector{T}) where {T <: AbstractFloat}
 		@. w_prev = g_last
 		@. w = g_last
 end
 
+"""
+	apply_rho_adaptation_rules!()
 
-acceleration_post!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
+Adapts the step-size parameter ρ when multiple conditions are satisfied.
+
+- If automatic rho interval is active, the `adaptive_rho_interval` is chosen as a fraction of the setup time.
+
+- Adapt rho if the iteration count reaches a multiple of `adaptive_rho_interval` and the maximum number of allowable updates has not been reached (`adaptive_rho_max_adaptions`).
+- If an `accelerator` is used, update rho at the next possible iterations, i.e. at the next non-accelerated iteration.
+"""
+function apply_rho_adaptation_rules!(ρvec::Vector{T}, rho_updates::Vector{T}, settings::Settings{T}, iter::Int64, iter_start::Float64, times::ResultTimes{Float64}, ws::Workspace{T}, n::Int64) where {T <: AbstractFloat}
+	# automatically choose adaptive rho interval if enabled in the settings
+	if settings.adaptive_rho && settings.adaptive_rho_interval == 0
+		# set the adaptive rho interval if a certain fraction of the setup time has passed
+		if (time() - iter_start) > settings.adaptive_rho_fraction * times.setup_time
+			# round adaptive time interval to a multiple of the check_termination setting (and at least that)
+			if settings.check_termination > 0
+				settings.adaptive_rho_interval = round_multiple(iter, settings.check_termination)
+				settings.adaptive_rho_interval = max(settings.adaptive_rho_interval, settings.check_termination)
+			else
+				settings.adaptive_rho_interval = round_multiple(iter, 25)
+				settings.adaptive_rho_interval = max(settings.adaptive_rho_interval, 25)
+			end
+		end
+	end
+
+	# adapt ρvec at the appropriate intervals if 
+	# - rho adaption is active {settings.adaptive_rho}
+	# - rho has not been adapted {settings.adaptive_rho_max_adaptions} times yet
+	if settings.adaptive_rho && (settings.adaptive_rho_interval > 0) && (mod(iter, settings.adaptive_rho_interval) == 0) && (num_rho_adaptions(rho_updates) < settings.adaptive_rho_max_adaptions)
+		ws.rho_update_due = true
+	end
+	
+
+	# adapt rho at the next possible iteration
+	# when an accelerator is used this will take place at the next non-accelerated iteration
+	if rho_update_suggested(ws.rho_update_due, ws.accelerator)
+		ws.rho_update_due = false
+		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ρvec, n)
+		was_adapted = adapt_rho_vec!(ws)
+		# changing the rho changes the ADMM operator, so restart accelerator
+		if was_adapted
+			empty_history!(ws.accelerator)
+			log_restart!(ws.accelerator, iter, :rho_adapted)
+			# adapt w[n+1:end]
+			@. ws.vars.w[n+1:end] = one(T) / ρvec * ws.vars.μ + ws.vars.s.data
+		end
+
+	end
+end
+
+rho_update_suggested(rho_update_due::Bool, aa::AbstractAccelerator) = rho_update_due
+
+function rho_update_suggested(rho_update_due::Bool, aa::AndersonAccelerator)
+ 		if rho_update_due && !aa.success
+		return true
+	else
+		return false
+	end
+end
+
+"""
+	check_termination!()
+
+Checks the algorithms termination conditions at intervals specified in the `settings` and updates the algorithm `status`:
+- residuals are "small enough" --> :Solved
+- cost value out-ouf-range --> :Unsolved
+- infeasibility conditions satisfied --> :Primal_infeasible / :Dual_infeasible
+- time limit constraint reached --> :Time_limit_reached
+"""
+function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64, cost::T, status::Symbol, r_prim::T, r_dual::T, time_limit_start::Float64, n::Int64) where {T <: AbstractFloat}
+
+	# check convergence with residuals every {settings.checkIteration} steps
+	if mod(iter, settings.check_termination) == 0 || iter == 1
+		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
+		r_prim, r_dual = calculate_residuals!(ws)
+		
+		# update cost
+		cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
+		if abs(cost) > 1e20
+			status = :Unsolved
+			return cost, status, r_prim, r_dual
+		end
+		# print iteration steps
+		settings.verbose && print_iteration(ws, iter, cost, r_prim, r_dual)
+		if has_converged(ws, r_prim, r_dual)
+			status = :Solved
+			return cost, status, r_prim, r_dual	
+		end
+	end
+
+	# computing δy requires one extra projection if acceleration is used, therefore update only
+	# during times when acceleration wasn't used
+	if !was_succesful(ws.accelerator) && iter > settings.check_infeasibility
+		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
+		@. ws.δy.data -= ws.vars.μ
+	end
+	# check infeasibility conditions every {settings.checkInfeasibility} steps
+	if mod(iter, settings.check_infeasibility) == 0
+
+		# compute δx for infeasibility detection
+		@. ws.δx = ws.vars.w[1:n] - ws.vars.w_prev[1:n]
+
+		if is_primal_infeasible!(ws.δy, ws)
+			status = :Primal_infeasible
+			cost = Inf
+			return cost, status, r_prim, r_dual
+		end
+
+		if is_dual_infeasible!(ws.δx, ws)
+			status = :Dual_infeasible
+			cost = -Inf
+			return cost, status, r_prim, r_dual
+		end
+	end
+
+
+	if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
+		status = :Time_limit_reached
+	end
+	return cost, status, r_prim, r_dual
+end

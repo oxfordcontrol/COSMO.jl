@@ -106,6 +106,7 @@ function empty_model!(model::COSMO.Model{T}) where {T <: AbstractFloat}
 	model.kkt_solver = nothing
 	model.states = States()
 	model.rho_updates = T[]
+	model.rho_update_due = false
 	model.times = ResultTimes()
 	model.row_ranges = [0:0]
 	nothing
