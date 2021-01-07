@@ -119,6 +119,7 @@ Accelerator object implementing Anderson Acceleration. Parameterized by:
 mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
   init_phase::Bool
   mem::Int64
+  min_mem::Int64
   dim::Int64
   iter::Int64
   num_accelerated_steps::Int64
@@ -157,10 +158,10 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
   activate_logging::Bool
   
   function AndersonAccelerator{T, RE, BT, MT}() where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
-    new(true, 0, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0),  0, 0, false)
+    new(true, 0, 3, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 0, 2), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0),  0, 0, false)
   end
 
-  function AndersonAccelerator{T, RE, BT, MT}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
+  function AndersonAccelerator{T, RE, BT, MT}(dim::Int64; mem::Int64 = 5, min_mem::Int64 = 3, λ::T = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
@@ -173,10 +174,10 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
     Q = zeros(T, 0, 0)
     R = zeros(T, 0, 0)
     x_last = zeros(T, dim) 
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
+    new(true, mem, min_mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
   end
 
-  function AndersonAccelerator{T, RE, Type2{QRDecomp}, MT}(dim::Int64; mem::Int64 = 5, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, MT <: AbstractMemory}
+  function AndersonAccelerator{T, RE, Type2{QRDecomp}, MT}(dim::Int64; mem::Int64 = 5, min_mem::Int64 = 3, λ = 1e-8, start_iter::Int64 = 2, start_accuracy::T = Inf, safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, MT <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
@@ -192,7 +193,7 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
     Q = zeros(T, dim, mem)
     R = zeros(T, mem, mem)
   
-    new(true, mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
+    new(true, mem, min_mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), zeros(Float64, 0, 2), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
   end
 
 end
@@ -437,7 +438,7 @@ end
 function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, RE}, num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
   aa.success = false
   l = min(aa.iter, aa.mem) #number of columns filled with data
-  if l < 3
+  if l < aa.min_mem
      aa.activate_logging && push!(aa.acceleration_status, (num_iter, :not_enough_cols))
      return nothing
   end
@@ -490,7 +491,7 @@ end
 function accelerate!(g::AbstractVector{T}, x::AbstractVector{T}, aa::AndersonAccelerator{T, RE, Type2{QRDecomp}}, num_iter::Int64) where {T <: AbstractFloat, RE <: AbstractRegularizer}
   aa.success = false
   l = min(aa.iter, aa.mem) #number of columns filled with data
-  if l < 3
+  if l < aa.min_mem
      aa.activate_logging && push!(aa.acceleration_status, (num_iter, :not_enough_cols))
      return nothing
   end
