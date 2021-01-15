@@ -86,14 +86,14 @@ mutable struct Settings{T <: AbstractFloat}
 		rho::Real=T(0.1),
 		sigma::Real=T(1e-6),
 		alpha::Real=T(1.6),
-		eps_abs::Real=T(1e-4),
-		eps_rel::Real=T(1e-4),
+		eps_abs::Real=T(1e-5),
+		eps_rel::Real=T(1e-5),
 		eps_prim_inf::Real=T(1e-5),
-		eps_dual_inf::Real=T(1e-4),
+		eps_dual_inf::Real=T(1e-5),
 		max_iter::Integer=5000,
 		verbose::Bool=false,
 		kkt_solver=QdldlKKTSolver,
-		check_termination::Int=40,
+		check_termination::Int=25,
 		check_infeasibility::Int=40,
 		scaling::Integer=10,
 		MIN_SCALING::Real = T(1e-4),
@@ -102,7 +102,7 @@ mutable struct Settings{T <: AbstractFloat}
 		adaptive_rho_interval::Int = 40,
 		adaptive_rho_tolerance::Int = 5,
 		adaptive_rho_fraction::Real = T(0.4),
-		adaptive_rho_max_adaptions::Int64 = typemax(Int64),
+		adaptive_rho_max_adaptions::Int = typemax(Int),
 		verbose_timing::Bool = false,
 		RHO_MIN::Real = T(1e-6),
 		RHO_MAX::Real = T(1e6),
@@ -116,7 +116,7 @@ mutable struct Settings{T <: AbstractFloat}
 		obj_true_tol::Real = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
 		compact_transformation::Bool = true,
-		accelerator = EmptyAccelerator{T},
+		accelerator = with_options(AndersonAccelerator{T, NoRegularizer, Type2{QRDecomp}, RestartedMemory}, mem = 10, safeguarded = true, τ = T(2.0))
 		) where {T <: AbstractFloat}
 		if !isa(kkt_solver, OptionsFactory)
 			kkt_solver = with_options(kkt_solver)
