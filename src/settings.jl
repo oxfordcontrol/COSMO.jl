@@ -116,7 +116,7 @@ mutable struct Settings{T <: AbstractFloat}
 		obj_true_tol::Real = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
 		compact_transformation::Bool = true,
-		accelerator = with_options(AndersonAccelerator{T, NoRegularizer, Type2{QRDecomp}, RestartedMemory}, mem = 10, safeguarded = true, τ = T(2.0))
+		accelerator = with_options(AndersonAccelerator{T, NoRegularizer, Type2{QRDecomp}, RestartedMemory}, mem = 10)
 		) where {T <: AbstractFloat}
 		if !isa(kkt_solver, OptionsFactory)
 			kkt_solver = with_options(kkt_solver)

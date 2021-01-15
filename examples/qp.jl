@@ -22,7 +22,7 @@ ba = [u; -l]
 constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives);
 
 # Next, we define the settings object, the model and then assemble everything:
-settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-4, accelerator = AndersonAccelerator);
+settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-4, accelerator = EmptyAccelerator);
 model = COSMO.Model();
 assemble!(model, P, q, constraint1, settings = settings);
 res = COSMO.optimize!(model);

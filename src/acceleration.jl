@@ -14,7 +14,6 @@ abstract type AbstractAccelerator end
 
 get_mem(:: AbstractAccelerator) = 0
 is_active(::AbstractAccelerator) = true
-is_safeguarding(::AbstractAccelerator) = false
 was_succesful(::AbstractAccelerator) = false
 # ---------------------------
 # AndersonAccelerator
@@ -139,10 +138,8 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
   Q::Matrix{T}
   R::Matrix{T}
   λ::T # regularisation parameter
-  τ::T # safeguarding slack parameters  
   activation_reason::AbstractActivationReason 
   activated::Bool # a flag that shows that the accelerator has been started
-  safeguarded::Bool # a flag that indicates whether the accelerator operates in safeguarded mode
   success::Bool # a flag to indicate whether the last attempted acceleration was successful
   reg_log::Vector{T} # log regularisation size
   # logging 
@@ -157,10 +154,10 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
   activate_logging::Bool
   
   function AndersonAccelerator{T, RE, BT, MT}() where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
-    new(true, 0, 3, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), T(1.1), ImmediateActivation(), false, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0),  0, 0, false)
+    new(true, 0, 3, 0, 0, 0, zeros(Int64, 0), zeros(Int64, 0), zeros(Int64, 0), zeros(T, 1), zeros(T, 1), zeros(T, 1),  zeros(T, 1), zeros(T, 1), zeros(T, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zeros(T, 1, 1), zero(T), ImmediateActivation(), false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0),  Vector{Tuple{Int64, T, T, T}}(undef, 0),  0, 0, false)
   end
 
-  function AndersonAccelerator{T, RE, BT, MT}(dim::Int64; mem::Int64 = 5, min_mem::Int64 = 3, λ::T = T(1e-8), start_iter::Int64 = 2, start_accuracy::T = T(Inf), safeguarded::Bool = false, τ::T = 2.0, activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
+  function AndersonAccelerator{T, RE, BT, MT}(dim::Int64; mem::Int64 = 10, min_mem::Int64 = 3, λ::T = T(1e-8), start_iter::Int64 = 2, start_accuracy::T = T(Inf), activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, BT <: AbstractBroydenType, MT <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
@@ -173,10 +170,10 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
     Q = zeros(T, 0, 0)
     R = zeros(T, 0, 0)
     x_last = zeros(T, dim) 
-    new(true, mem, min_mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
+    new(true, mem, min_mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, activation_reason, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
   end
 
-  function AndersonAccelerator{T, RE, Type2{QRDecomp}, MT}(dim::Int64; mem::Int64 = 5, min_mem::Int64 = 3, λ::T = T(1e-8), start_iter::Int64 = 2, start_accuracy::T = T(Inf), safeguarded::Bool = false, τ::T = T(2), activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, MT <: AbstractMemory}
+  function AndersonAccelerator{T, RE, Type2{QRDecomp}, MT}(dim::Int64; mem::Int64 = 10, min_mem::Int64 = 3, λ::T = T(1e-8), start_iter::Int64 = 2, start_accuracy::T = T(Inf), activation_reason::AbstractActivationReason = ImmediateActivation()) where {T <: AbstractFloat, RE <: AbstractRegularizer, MT <: AbstractMemory}
     mem <= 2 && throw(DomainError(mem, "Memory has to be bigger than two."))
     dim <= 0 && throw(DomainError(dim, "Dimension has to be a positive integer."))
 
@@ -192,7 +189,7 @@ mutable struct AndersonAccelerator{T, RE, BT, MT} <: AbstractAccelerator
     Q = zeros(T, dim, mem)
     R = zeros(T, mem, mem)
   
-    new(true, mem, min_mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, τ, activation_reason, false, safeguarded, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
+    new(true, mem, min_mem, dim, 0, 0, zeros(Int64,0), zeros(Int64,0), zeros(Int64,0), x_last, zeros(T,dim), zeros(T, dim), zeros(T, dim),  zeros(T, dim), zeros(T, mem), F, X, G, M, Q, R, λ, activation_reason, false, false, zeros(T, 0), 0., 0., 0., Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, Symbol}}(undef, 0), Vector{Tuple{Int64, T, T, T}}(undef, 0), 0, 0, false)
   end
 
 end
@@ -207,8 +204,7 @@ get_type(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = BT
 get_memory(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = M
 get_regularizer(::AndersonAccelerator{T, R, BT, M}) where {T,R, BT, M} = R
 get_mem(aa::AndersonAccelerator) = aa.mem 
-is_safeguarding(aa::AndersonAccelerator) = aa.safeguarded
-is_active(aa::AndersonAccelerator) = aa.activated
+dis_active(aa::AndersonAccelerator) = aa.activated
 was_succesful(aa::AndersonAccelerator) = aa.success 
 function empty_history!(aa::AndersonAccelerator{T}) where {T <: AbstractFloat}
   aa.F .= 0;

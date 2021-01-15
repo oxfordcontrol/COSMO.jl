@@ -268,12 +268,12 @@ In the case of an Anderson Accelerator this is used to check the quality of the 
 function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
 	acc_post_time_start = time()
 	if accelerator.success
-		if is_safeguarding(accelerator) && is_active(accelerator)
+		if ws.accelerator_safeguarding && is_active(accelerator)
 			
 			# norm(w_prev - w, 2) 
 			# use accelerator.f here to get f = (x - g) as w_prev has been overwritten before this function call
 			nrm_f = compute_non_accelerated_res_norm(accelerator.f)
-			nrm_tol = nrm_f * accelerator.τ
+			nrm_tol = nrm_f * ws.safeguarding_tol
 			
 			# compute residual norm of accelerated point
 			nrm_f_acc = compute_accelerated_res_norm!(accelerator.f, ws.vars.w, ws.vars.w_prev)
