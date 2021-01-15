@@ -35,11 +35,11 @@ for T in UnitTestFloats
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2])
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(eps_abs = T(1e-3), eps_rel = T(1e-3)))
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
-            @test isapprox(res.obj_val, -5, atol=1e-3)
+            @test isapprox(res.obj_val, T(-5), atol=1e-2)
         end
 
         # Run infeasibility tests only if precision(T) is high enough
