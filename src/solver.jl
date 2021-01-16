@@ -148,7 +148,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	
 		acceleration_pre!(ws.accelerator, ws, num_iter)
 		
-		if !was_succesful(ws.accelerator) && iter >= settings.check_infeasibility
+		if !was_successful(ws.accelerator) && iter >= settings.check_infeasibility
 			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n) # μ_k kept in sync with s_k, w already updated to w_{k+1}
 			@. ws.δy.data = ws.vars.μ
 		end
@@ -205,10 +205,6 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
 	free_memory!(ws)
 
-	# if typeof(ws.accelerator) <: AndersonAccelerator{Float64}
-	# # 	iter_history.aa_fail_data = ws.accelerator.fail_counter
-	# end
-
 	return Result{T}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
 
 end
@@ -238,90 +234,6 @@ function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int) where {T <
 	ws.x_tl = view(ws.sol, 1:n) # i.e. xTilde
 	ws.ν = view(ws.sol, (n + 1):(n + m))
 	ws.rho_update_due = false
-end
-
-"""
-	acceleration_pre!(accelerator, ws, num_iter)
-
-A function that the accelerator can use before the nominal ADMM operator step. 
-
-In the case of an Anderson Accelerator this is used to calculate an accelerated candidate vector, that overwrites the current iterate.
-"""
-function acceleration_pre!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
-	COSMO.check_activation!(accelerator, num_iter)
-	if is_active(accelerator)
-		COSMO.update_history!(accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
-		# overwrite w here
-		COSMO.accelerate!(ws.vars.w, ws.vars.w_prev, accelerator, num_iter)
-	end 
-end
-acceleration_pre!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
-
-
-"""
-	acceleration_post!(accelerator, ws, num_iter)
-
-A function that the accelerator can use after the nominal ADMM operator step. 
-
-In the case of an Anderson Accelerator this is used to check the quality of the accelerated candidate vector and take measures if the vector is of bad quality.
-"""
-function acceleration_post!(accelerator::AndersonAccelerator{T}, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
-	acc_post_time_start = time()
-	if accelerator.success
-		if ws.accelerator_safeguarding && is_active(accelerator)
-			
-			# norm(w_prev - w, 2) 
-			# use accelerator.f here to get f = (x - g) as w_prev has been overwritten before this function call
-			nrm_f = compute_non_accelerated_res_norm(accelerator.f)
-			nrm_tol = nrm_f * ws.safeguarding_tol
-			
-			# compute residual norm of accelerated point
-			nrm_f_acc = compute_accelerated_res_norm!(accelerator.f, ws.vars.w, ws.vars.w_prev)
-			
-			# Safeguarding check: f(w_acc) = w_prev_acc - w_acc <= τ f(w_prev) = τ * (w_prev - w) 
-			# if safeguarding check fails, discard the accelerated candidate point and do a normal ADMM step instead
-			if nrm_f_acc > nrm_tol
-				accelerator.activate_logging && push!(accelerator.acceleration_status, (num_iter, :acc_guarded_declined))
-				accelerator.num_safe_declined += 1
-				# don't use accelerated candidate point. Reset w = g_last
-				reset_accelerated_vector!(ws.vars.w, ws.vars.w_prev, accelerator.g_last)	
-				m, n = ws.p.model_size 
-				admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 			
-				admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
-				admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
-
-			else
-				accelerator.num_accelerated_steps += 1
-				accelerator.num_safe_accepted += 1
-				accelerator.activate_logging && push!(accelerator.acceleration_status, (num_iter, :acc_guarded_accepted))
-
-			end
-			# For debugging: log the decision
-			accelerator.activate_logging && push!(accelerator.safeguarding_status, (num_iter, nrm_f_acc, nrm_tol, nrm_f))
-		else
-			accelerator.activate_logging && push!(accelerator.acceleration_status, (num_iter, :acc_unguarded))
-			accelerator.num_accelerated_steps += 1
-		end
-	end
-	accelerator.acc_post_time += time() - acc_post_time_start
-end
-
-acceleration_post!(accelerator::AbstractAccelerator, args...; kwargs...) = nothing
-
-function compute_non_accelerated_res_norm(f::AbstractVector{T}) where {T <: AbstractFloat}
-	return norm(f, 2)
-end
-
-"Computes the nonexpansive operator residual norm, i.e. f(w_prev) = || w_prev - w ||_2."
-function compute_accelerated_res_norm!(f::AbstractVector{T}, w::AbstractVector{T}, w_prev::AbstractVector{T}) where {T <: AbstractFloat}
-	@. f = w_prev - w
-	return norm(f, 2)	
-end
-
-"Reset ADMM variables to last non-accelerated point."
-function reset_accelerated_vector!(w::AbstractVector{T}, w_prev::AbstractVector{T}, g_last::AbstractVector{T}) where {T <: AbstractFloat}
-		@. w_prev = g_last
-		@. w = g_last
 end
 
 """
@@ -366,8 +278,7 @@ function apply_rho_adaptation_rules!(ρvec::Vector{T}, rho_updates::Vector{T}, s
 		was_adapted = adapt_rho_vec!(ws)
 		# changing the rho changes the ADMM operator, so restart accelerator
 		if was_adapted
-			empty_history!(ws.accelerator)
-			log_restart!(ws.accelerator, iter, :rho_adapted)
+			restart!(ws.accelerator, iter, :rho_adapted)
 			# adapt w[n+1:end]
 			@. ws.vars.w[n+1:end] = one(T) / ρvec * ws.vars.μ + ws.vars.s.data
 		end
@@ -378,7 +289,7 @@ end
 rho_update_suggested(rho_update_due::Bool, aa::AbstractAccelerator) = rho_update_due
 
 function rho_update_suggested(rho_update_due::Bool, aa::AndersonAccelerator)
- 		if rho_update_due && !aa.success
+ 		if rho_update_due && !was_successful(aa)
 		return true
 	else
 		return false
@@ -417,7 +328,7 @@ function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64
 
 	# computing δy requires one extra projection if acceleration is used, therefore update only
 	# during times when acceleration wasn't used
-	if !was_succesful(ws.accelerator) && iter > settings.check_infeasibility
+	if !was_successful(ws.accelerator) && iter > settings.check_infeasibility
 		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
 		@. ws.δy.data -= ws.vars.μ
 	end

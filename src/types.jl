@@ -363,6 +363,7 @@ mutable struct Workspace{T}
 	accelerator::AbstractAccelerator
 	accelerator_safeguarding::Bool # a flag that indicates whether the accelerator operates in safeguarded mode
 	safeguarding_tol::T
+	activation_reason::AbstractActivationReason
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
@@ -377,7 +378,7 @@ mutable struct Workspace{T}
 		sol = zeros(T, 1)
 		x_tl = view(sol, 1:1)
 		ν = view(sol, 1:1)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator{T}(), true, T(2))
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator{T}(), true, T(2), ImmediateActivation())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
