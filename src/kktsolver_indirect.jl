@@ -1,5 +1,5 @@
 using .LinearMaps, .IterativeSolvers
-
+export CGIndirectKKTSolver, MINRESIndirectKKTSolver
 mutable struct IndirectReducedKKTSolver{TP, TA, T} <: AbstractKKTSolver
     m::Integer
     n::Integer
