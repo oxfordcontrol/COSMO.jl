@@ -48,8 +48,10 @@ function _count_lower_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, 
     Kcolnz .+= 1
 end
 
-"Count the number of nnz in each column of the upper triangle of the KKT matrix `K`."
-function _count_upper_triangle!(Kcolnz::Vector{Ti}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, n::Int) where {Tv <: AbstractFloat, Ti <: Integer}
+"""
+Count the number of nnz in each column of the upper triangle of the KKT matrix `K`.
+"""
+function _count_upper_triangle!(Kcolnz::Vector{<:Integer}, P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, n::Integer) where {Tv <: AbstractFloat, Ti <: Integer}
     # count nonzeros in the strict upper triangle of (P)
     @inbounds for cidx = 1:n
         for j = (P.colptr[cidx]):(P.colptr[cidx+1]-1)
