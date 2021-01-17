@@ -125,7 +125,7 @@ Provides the `COSMO.Model` with warm starting values for the primal variable `x`
 """
 warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.x, x0, ind)
 
-warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int) where {T} = (model.vars.x[ind] = x0)
+warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Integer) where {T} = (model.vars.x[ind] = x0)
 
 # if the full vector for x is provided, we can automatically warm start s = b - A*x as well
 function warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T <: AbstractFloat}
@@ -154,7 +154,7 @@ Provides the `COSMO.Model` with warm starting values for the primal slack variab
 """
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.s.data, s0, ind)
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}) where {T} = warm_start_slack!(model, s0, nothing)
-warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int) where {T} = (model.vars.s.data[ind] = s0)
+warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Integer) where {T} = (model.vars.s.data[ind] = s0)
 
 # Notice that the sign of the dual variable y is inverted here, since internally the dual variable μ = -y is used
 """
@@ -164,7 +164,7 @@ Provides the `COSMO.Model` with warm starting values for the dual variable `y`. 
 """
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.μ, -y0, ind)
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_dual!(model, y0, nothing)
-warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int) where {T} = (model.vars.μ[ind] = -y0)
+warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Integer) where {T} = (model.vars.μ[ind] = -y0)
 
 """
 	warm_start!(model, x0, y0)
