@@ -146,7 +146,7 @@ function compute_adjacency_table(edges::SparseMatrixCSC{Float64, Int}, num_verti
 end
 
 "Check whether `edge` is permissible for a merge. An edge is permissible if for every common neighbor N, C_1 ∩ N == C_2 ∩ N or if no common neighbors exist."
-function ispermissible(edge::Tuple{Int, Int}, adjacency_table::Dict{Int, Set{Int}}, snd::Array{Set{Int}, 1})
+function ispermissible(edge::Tuple{Integer, Integer}, adjacency_table::Dict{Int, Set{Int}}, snd::Array{Set{Int}, 1})
     c_1 = edge[1]
     c_2 = edge[2]
     common_neighbors = intersect(adjacency_table[c_1], adjacency_table[c_2])
