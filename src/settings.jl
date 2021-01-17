@@ -52,16 +52,16 @@ mutable struct Settings{T <: AbstractFloat}
 	eps_rel::T
 	eps_prim_inf::T
 	eps_dual_inf::T
-	max_iter::Int64
+	max_iter::Int
 	verbose::Bool
 	kkt_solver::Union{Type{<: AbstractKKTSolver}, OptionsFactory{<: AbstractKKTSolver}}
-	check_termination::Int64
-	check_infeasibility::Int64
-	scaling::Int64
+	check_termination::Int
+	check_infeasibility::Int
+	scaling::Int
 	MIN_SCALING::T
 	MAX_SCALING::T
 	adaptive_rho::Bool
-	adaptive_rho_interval::Int64
+	adaptive_rho_interval::Int
 	adaptive_rho_tolerance::T
 	adaptive_rho_fraction::T
 	verbose_timing::Bool
@@ -89,14 +89,14 @@ mutable struct Settings{T <: AbstractFloat}
 		max_iter::Integer=2500,
 		verbose::Bool=false,
 		kkt_solver=QdldlKKTSolver,
-		check_termination::Int64=40,
-		check_infeasibility::Int64=40,
+		check_termination::Int=40,
+		check_infeasibility::Int=40,
 		scaling::Integer=10,
 		MIN_SCALING::Real = T(1e-4),
 		MAX_SCALING::Real = T(1e4),
 		adaptive_rho::Bool = true,
-		adaptive_rho_interval::Int64 = 40,
-		adaptive_rho_tolerance::Int64 = 5,
+		adaptive_rho_interval::Int = 40,
+		adaptive_rho_tolerance::Int = 5,
 		adaptive_rho_fraction::Real = T(0.4),
 		verbose_timing::Bool = false,
 		RHO_MIN::Real = T(1e-6),

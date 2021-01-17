@@ -12,7 +12,7 @@ A supertype for weights that are based on the complexity of clique-related opera
 solver algorithm.
 
 All subtypes have to define the function:
-`compute_complexity_savings(n_1::Int64, n_2::Int64, n_m::Int64, edge_weight::Subtype) --> Float64`
+`compute_complexity_savings(n_1::Int, n_2::Int, n_m::Int, edge_weight::Subtype) --> Float64`
 
 with
   - n_1: `|C_1|`
@@ -59,13 +59,13 @@ See also: *Garstka, Cannon, Goulart - A clique graph based merging strategy for 
 """
 mutable struct CliqueGraphMerge <: AbstractGraphBasedMerge
   stop::Bool                                  # a flag to indicate that merging should be stopped
-  edges::SparseMatrixCSC{Float64, Int64}      # the edges and weights of the reduced clique graph
-  p::Array{Int64, 1}                          # as a workspace variable to store the sorting of weights
-  adjacency_table::Dict{Int64, Set{Int64}}    # a double structure of edges, to allow fast lookup of neighbors
+  edges::SparseMatrixCSC{Float64, Int}      # the edges and weights of the reduced clique graph
+  p::Array{Int, 1}                          # as a workspace variable to store the sorting of weights
+  adjacency_table::Dict{Int, Set{Int}}    # a double structure of edges, to allow fast lookup of neighbors
   edge_weight::AbstractEdgeWeight             # used to dispatch onto the correct scoring function
   clique_tree_recomputed::Bool                # a flag to indicate whether a final clique tree has been recomputed from the clique graph
   function CliqueGraphMerge(; edge_weight = ComplexityWeight())
-    new(false, spzeros(0, 0),  Int64[], Dict{Int64, Set{Int64}}(), edge_weight, false)
+    new(false, spzeros(0, 0),  Int[], Dict{Int, Set{Int}}(), edge_weight, false)
   end
 end
 
@@ -82,9 +82,9 @@ The initial clique tree is traversed in topological order and a clique ``\\mathc
 """
 mutable struct ParentChildMerge <: AbstractTreeBasedMerge
   stop::Bool
-  clique_ind::Int64
-  t_fill::Int64
-  t_size::Int64
+  clique_ind::Int
+  t_fill::Int
+  t_size::Int
 
   function ParentChildMerge(; t_fill = 8, t_size = 8)
     new(false, 2, t_fill, t_size)
@@ -95,7 +95,7 @@ end
 function free_clique_graph!(strategy::AbstractGraphBasedMerge)
   strategy.edges = spzeros(0, 0)
   strategy.p = Int[]
-  strategy.adjacency_table = Dict{Int64, Set{Int64}}()
+  strategy.adjacency_table = Dict{Int, Set{Int}}()
   return nothing
 end
 
@@ -150,7 +150,7 @@ function merge_cliques!(t::SuperNodeTree, strategy::AbstractGraphBasedMerge)
   # since for now we have a graph, not a tree, a post ordering or a parent structure does not make sense. Therefore just number
   # the non-empty supernodes in t.snd
   t.snd_post = findall(x -> !isempty(x), t.snd)
-  t.snd_par = -ones(Int64, length(t.snd))
+  t.snd_par = -ones(Int, length(t.snd))
 
   # recomute a clique tree from the clique graph
   t.num > 1 && clique_tree_from_graph!(t)
@@ -175,7 +175,7 @@ function calculate_block_dimensions!(t::SuperNodeTree)
 end
 
 " Merge two cliques `cand` of the tree `t` that are in a parent - child relationship."
-function merge_child!(t::SuperNodeTree, cand::Array{Int64, 1})
+function merge_child!(t::SuperNodeTree, cand::Array{Int, 1})
   # determine which clique is the parent
   p, ch = determine_parent(t, cand[1], cand[2])
 
@@ -201,7 +201,7 @@ function merge_child!(t::SuperNodeTree, cand::Array{Int64, 1})
 end
 
 "Given the clique graph `t` merge the two cliques with indices in `cand`."
-function merge_two_cliques!(t::SuperNodeTree, cand::Array{Int64, 1}, strategy::AbstractGraphBasedMerge)
+function merge_two_cliques!(t::SuperNodeTree, cand::Array{Int, 1}, strategy::AbstractGraphBasedMerge)
   c_1 = cand[1]
   c_2 = cand[2]
   # merge clique c_2 into c_1
@@ -215,7 +215,7 @@ function merge_two_cliques!(t::SuperNodeTree, cand::Array{Int64, 1}, strategy::A
 end
 
 "Given the clique tree `t` merge the two cliques with indices in `cand` as parent-child."
-merge_two_cliques!(t::SuperNodeTree, cand::Array{Int64, 1}, strategy::ParentChildMerge) = merge_child!(t, cand)
+merge_two_cliques!(t::SuperNodeTree, cand::Array{Int, 1}, strategy::ParentChildMerge) = merge_child!(t, cand)
 
 # compute the edges and weights of the initial reduced clique graph
 function initialise!(t::SuperNodeTree, strategy::CliqueGraphMerge)
@@ -226,7 +226,7 @@ function initialise!(t::SuperNodeTree, strategy::CliqueGraphMerge)
   weights = compute_weights!(rows, cols, t.snd, strategy.edge_weight)
 
   strategy.edges = sparse(rows, cols, weights, t.num, t.num)
-  strategy.p = zeros(Int64, length(strategy.edges.nzval))
+  strategy.p = zeros(Int, length(strategy.edges.nzval))
   strategy.adjacency_table = compute_adjacency_table(strategy.edges, t.num)
   return nothing
 end
@@ -238,7 +238,7 @@ end
 
 
 "Compute the edge weight between all cliques specified by the edges (rows, cols)."
-function compute_weights!(rows::Array{Int64, 1}, cols::Array{Int64, 1}, snd::Array{Set{Int64}, 1}, edge_weight::AbstractComplexityWeight)
+function compute_weights!(rows::Array{Int, 1}, cols::Array{Int, 1}, snd::Array{Set{Int}, 1}, edge_weight::AbstractComplexityWeight)
   weights = zeros(Float64, length(rows))
   for k = 1:length(rows)
     c_1 = snd[rows[k]]
@@ -275,7 +275,7 @@ function traverse(t::SuperNodeTree, strategy::ParentChildMerge)
 end
 
 "Decide whether to merge the two cliques with clique indices `cand`."
-function evaluate(t::SuperNodeTree, strategy::ParentChildMerge, cand::Array{Int64, 1})
+function evaluate(t::SuperNodeTree, strategy::ParentChildMerge, cand::Array{Int, 1})
   strategy.stop && return false
   par = cand[1]
   c = cand[2]
@@ -285,7 +285,7 @@ function evaluate(t::SuperNodeTree, strategy::ParentChildMerge, cand::Array{Int6
 end
 
 
-function evaluate(t::SuperNodeTree, strategy::CliqueGraphMerge, cand::Array{Int64, 1})
+function evaluate(t::SuperNodeTree, strategy::CliqueGraphMerge, cand::Array{Int, 1})
   do_merge = (strategy.edges[cand[1], cand[2]] >= 0)
 
   if !do_merge
@@ -295,7 +295,7 @@ function evaluate(t::SuperNodeTree, strategy::CliqueGraphMerge, cand::Array{Int6
 end
 
 " After a merge attempt, update the strategy information."
-function update_strategy!(strategy::ParentChildMerge, t::SuperNodeTree, cand::Array{Int64, 1}, do_merge::Bool)
+function update_strategy!(strategy::ParentChildMerge, t::SuperNodeTree, cand::Array{Int, 1}, do_merge::Bool)
   # try to merge last node of order 1, then stop
   if strategy.clique_ind == 1
     strategy.stop = true
@@ -306,7 +306,7 @@ function update_strategy!(strategy::ParentChildMerge, t::SuperNodeTree, cand::Ar
 end
 
 "After a merge happened, update the reduced clique graph."
-function update_strategy!(strategy::CliqueGraphMerge, t::SuperNodeTree, cand::Array{Int64, 1}, do_merge::Bool)
+function update_strategy!(strategy::CliqueGraphMerge, t::SuperNodeTree, cand::Array{Int, 1}, do_merge::Bool)
 
   # After a merge operation update the information of the strategy
   if do_merge
@@ -400,7 +400,7 @@ end
 
 # Assuming the complexity of the projection is roughly O(n^3), how many operations are saved by projection the merged cliques
 # instead of the individual cliques
-compute_complexity_savings(n_1::Int64, n_2::Int64, n_m::Int64, edge_weight::ComplexityWeight) = n_1^3 + n_2^3 - n_m^3
+compute_complexity_savings(n_1::Int, n_2::Int, n_m::Int, edge_weight::ComplexityWeight) = n_1^3 + n_2^3 - n_m^3
 
 
 """
@@ -427,7 +427,7 @@ function max_elem(A::SparseMatrixCSC)
 end
 
 
-function edge_from_index(A::SparseMatrixCSC{Float64, Int64}, ind::Int64)
+function edge_from_index(A::SparseMatrixCSC{Float64, Int}, ind::Int)
   # find the edge for that value
   row = A.rowval[ind]
   n = size(A, 2)
@@ -445,7 +445,7 @@ end
 
 
 " Given two cliques `c1` and `c2` in the tree `t`, return the parent clique first."
-function determine_parent(t::SuperNodeTree, c1::Int64, c2::Int64)
+function determine_parent(t::SuperNodeTree, c1::Int, c2::Int)
   if in(c2, t.snd_child[c1])
     return c1, c2
   else
@@ -454,12 +454,12 @@ function determine_parent(t::SuperNodeTree, c1::Int64, c2::Int64)
 end
 
 """
-find_neighbors(edges::SparseMatrixCSC, c::Int64)
+find_neighbors(edges::SparseMatrixCSC, c::Int)
 
 Find all the cliques connected to `c` which are given by the nonzeros in `(c, 1:c-1)` and `(c+1:n, c)`.
 """
-function find_neighbors(edges::SparseMatrixCSC, c::Int64)
-  neighbors = zeros(Int64, 0)
+function find_neighbors(edges::SparseMatrixCSC, c::Int)
+  neighbors = zeros(Int, 0)
   m, n = size(edges)
   # find all nonzero columns in row c up to column c
   if c > 1
@@ -475,7 +475,7 @@ end
 return neighbors
 end
 
-function clique_intersections!(E::SparseMatrixCSC, snd::Array{Set{Int64}, 1})
+function clique_intersections!(E::SparseMatrixCSC, snd::Array{Set{Int}, 1})
   # iterate over the nonzeros of the connectivity matrix E which represents the clique graph and replace the value by
   # |C_i ∩ C_j|
   rows = rowvals(E)
@@ -490,7 +490,7 @@ end
 
 
 """
-    kruskal!(E::SparseMatrixCSC, num_cliques::Int64)
+    kruskal!(E::SparseMatrixCSC, num_cliques::Int)
 
 Kruskal's algorithm to find a maximum weight spanning tree from the clique intersection graph.
 
@@ -499,7 +499,7 @@ Kruskal's algorithm to find a maximum weight spanning tree from the clique inter
 
  This is a modified version of https://github.com/JuliaGraphs/LightGraphs.jl/blob/master/src/spanningtrees/kruskal.jl
  """
-function kruskal!(E::SparseMatrixCSC, num_cliques::Int64)
+function kruskal!(E::SparseMatrixCSC, num_cliques::Int)
   num_initial_cliques = size(E, 2)
   connected_c = DataStructures.IntDisjointSets(num_initial_cliques)
 
@@ -527,7 +527,7 @@ function kruskal!(E::SparseMatrixCSC, num_cliques::Int64)
 end
 
 
-function assign_children!(snd_par::Array{Int64, 1}, snd_child::Array{Set{Int64}, 1}, c::Int64, edges::SparseMatrixCSC)
+function assign_children!(snd_par::Array{Int, 1}, snd_child::Array{Set{Int}, 1}, c::Int, edges::SparseMatrixCSC)
   # determine neighbors
   neighbors = find_neighbors(edges, c)
   for n in neighbors
@@ -543,7 +543,7 @@ end
 
 
 " Given the maximum weight spanning tree represented by `E`, determine a parent structure `snd_par` for the clique tree."
-function determine_parent_cliques!(snd_par::Array{Int64, 1}, snd_child::Array{Set{Int64}, 1}, cliques::Array{Set{Int64}, 1}, post::Array{Int64, 1}, E::SparseMatrixCSC)
+function determine_parent_cliques!(snd_par::Array{Int, 1}, snd_child::Array{Set{Int}, 1}, cliques::Array{Set{Int}, 1}, post::Array{Int, 1}, E::SparseMatrixCSC)
   # vertex with highest order
   v = post[end]
   c = 0
@@ -563,7 +563,7 @@ function determine_parent_cliques!(snd_par::Array{Int64, 1}, snd_child::Array{Se
 end
 
 " Traverse the clique tree in descending topological order and split the clique sets into supernodes and separators."
-function split_cliques!(snd::Array{Set{Int64}, 1}, sep::Array{Set{Int64}, 1}, snd_par::Array{Int64,1}, snd_post::Array{Int64}, num_cliques::Int64)
+function split_cliques!(snd::Array{Set{Int}, 1}, sep::Array{Set{Int}, 1}, snd_par::Array{Int,1}, snd_post::Array{Int}, num_cliques::Int)
 
   # travese in topological decending order through the clique tree and split the clique in snd and sep
   for j = 1:1:(num_cliques - 1)
@@ -601,7 +601,7 @@ function clique_tree_from_graph!(t::SuperNodeTree)
   # recompute a postorder for the supernodes
   t.snd_post = post_order(t.snd_par, t.snd_child, t.num)
 
-  t.sep = [Set{Int64}() for i = 1:length(t.snd)]
+  t.sep = [Set{Int}() for i = 1:length(t.snd)]
   # split clique sets back into seperators and supernodes
   split_cliques!(t.snd, t.sep, t.snd_par, t.snd_post, t.num)
   t.strategy.clique_tree_recomputed = true
@@ -638,18 +638,18 @@ end
 
 
 "Compute the amount of fill-in created by merging two cliques with the respective supernode and separator dimensions."
-function fill_in(dim_clique_snd::Int64, dim_clique_sep::Int64, dim_par_snd::Int64, dim_par_sep::Int64)
+function fill_in(dim_clique_snd::Int, dim_clique_sep::Int, dim_par_snd::Int, dim_par_sep::Int)
   dim_par = dim_par_snd + dim_par_sep
   dim_clique = dim_clique_snd + dim_clique_sep
-  return ((dim_par - dim_clique_sep) * (dim_clique - dim_clique_sep))::Int64
+  return ((dim_par - dim_clique_sep) * (dim_clique - dim_clique_sep))::Int
 end
 
-max_snd_size(dim_clique_snd::Int64, dim_par_snd::Int64) = max(dim_clique_snd, dim_par_snd)
+max_snd_size(dim_clique_snd::Int, dim_par_snd::Int) = max(dim_clique_snd, dim_par_snd)
 clique_dim(t, c_ind) = length(t.snd[c_ind]), length(t.sep[c_ind])
 
 
 "Store information about the merge of the two merge candidates `cand`."
-function log_merge!(t::SuperNodeTree, do_merge::Bool, cand::Array{Int64, 1})
+function log_merge!(t::SuperNodeTree, do_merge::Bool, cand::Array{Int, 1})
   t.merge_log.clique_pairs = vcat(t.merge_log.clique_pairs, cand')
   push!(t.merge_log.decisions, do_merge)
   do_merge && (t.merge_log.num += 1)

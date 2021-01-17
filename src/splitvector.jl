@@ -1,6 +1,6 @@
 using Base: @propagate_inbounds
 
-const SplitView{T} = SubArray{T, 1, Vector{T}, Tuple{UnitRange{Int64}}, true}
+const SplitView{T} = SubArray{T, 1, Vector{T}, Tuple{UnitRange{Int}}, true}
 
 struct SplitVector{T <: AbstractFloat} <: AbstractVector{T}
 

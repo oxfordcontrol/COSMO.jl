@@ -112,7 +112,7 @@ function empty_model!(model::COSMO.Model{T}) where {T <: AbstractFloat}
 end
 
 
-function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat}
+function _warm_start!(z::Vector{T}, z0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat}
 		ind == nothing && (ind = 1:length(z))
 		length(ind) != length(z0) && throw(DimensionMismatch("Dimension of warm starting vector doesn't match the length of index range ind."))
 		z[ind] = z0
@@ -123,9 +123,9 @@ end
 
 Provides the `COSMO.Model` with warm starting values for the primal variable `x`. `ind` can be used to warm start certain components of `x`.
 """
-warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.x, x0, ind)
+warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.x, x0, ind)
 
-warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int64) where {T} = (model.vars.x[ind] = x0)
+warm_start_primal!(model::COSMO.Model{T}, x0::T, ind::Int) where {T} = (model.vars.x[ind] = x0)
 
 # if the full vector for x is provided, we can automatically warm start s = b - A*x as well
 function warm_start_primal!(model::COSMO.Model{T}, x0::Vector{T}) where {T <: AbstractFloat}
@@ -152,9 +152,9 @@ end
 
 Provides the `COSMO.Model` with warm starting values for the primal slack variable `s`. `ind` can be used to warm start certain components of `s`.
 """
-warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.s.data, s0, ind)
+warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.s.data, s0, ind)
 warm_start_slack!(model::COSMO.Model{T}, s0::Vector{T}) where {T} = warm_start_slack!(model, s0, nothing)
-warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int64) where {T} = (model.vars.s.data[ind] = s0)
+warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int) where {T} = (model.vars.s.data[ind] = s0)
 
 # Notice that the sign of the dual variable y is inverted here, since internally the dual variable μ = -y is used
 """
@@ -162,9 +162,9 @@ warm_start_slack!(model::COSMO.Model{T}, s0::T, ind::Int64) where {T} = (model.v
 
 Provides the `COSMO.Model` with warm starting values for the dual variable `y`. `ind` can be used to warm start certain components of `y`.
 """
-warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int64}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.μ, -y0, ind)
+warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}, ind::Union{UnitRange{Int}, Nothing}) where {T <: AbstractFloat} = _warm_start!(model.vars.μ, -y0, ind)
 warm_start_dual!(model::COSMO.Model{T}, y0::Vector{T}) where {T} = warm_start_dual!(model, y0, nothing)
-warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int64) where {T} = (model.vars.μ[ind] = -y0)
+warm_start_dual!(model::COSMO.Model{T}, y0::T, ind::Int) where {T} = (model.vars.μ[ind] = -y0)
 
 """
 	warm_start!(model, x0, y0)
@@ -224,8 +224,8 @@ function set!(model::COSMO.Model{T},
 	type_checks(convex_sets)
 
 	# convert inputs and copy them
-	P_c = convert_copy(P, SparseMatrixCSC{T, Int64})
-	A_c = convert_copy(A, SparseMatrixCSC{T, Int64})
+	P_c = convert_copy(P, SparseMatrixCSC{T, Int})
+	A_c = convert_copy(A, SparseMatrixCSC{T, Int})
 	q_c = convert_copy(q, Vector{T})
 	b_c = convert_copy(b, Vector{T})
 
@@ -257,7 +257,7 @@ function set!(model::COSMO.Model{Tf},
 	Acolptr::Vector{Ti},
 	Anzval::Vector{Tf},
 	b::Vector{Tf},
-	cone::Dict, l::Union{Nothing, Vector{Tf}}, u::Union{Nothing, Vector{Tf}}, m::Int64, n::Int64, settings::COSMO.Settings{Tf} = COSMO.Settings{Tf}()) where {Tf <: AbstractFloat, Ti <: Integer}
+	cone::Dict, l::Union{Nothing, Vector{Tf}}, u::Union{Nothing, Vector{Tf}}, m::Int, n::Int, settings::COSMO.Settings{Tf} = COSMO.Settings{Tf}()) where {Tf <: AbstractFloat, Ti <: Integer}
 
 	# construct the sparse matrices
 	if Ti == Int32
@@ -267,8 +267,8 @@ function set!(model::COSMO.Model{Tf},
 		Acolptr = juliafy_integers(Acolptr)
 	end
 
-	P = SparseMatrixCSC{Tf, Int64}(n, n, Pcolptr, Prowval, Pnzval)
-	A = SparseMatrixCSC{Tf, Int64}(m, n, Acolptr, Arowval, Anzval)
+	P = SparseMatrixCSC{Tf, Int}(n, n, Pcolptr, Prowval, Pnzval)
+	A = SparseMatrixCSC{Tf, Int}(m, n, Acolptr, Arowval, Anzval)
 
 	check_dimensions(P, q, A, b)
 
@@ -299,7 +299,7 @@ function set!(model::COSMO.Model{Tf},
 	Acolptr::Vector{Ti},
 	Anzval::Vector{Tf},
 	b::Vector{Tf},
-	cone::Dict, l::Union{Nothing, Vector{Tf}}, u::Union{Nothing, Vector{Tf}}, m::Int64, n::Int64, settings_dict::Dict) where {Tf <: AbstractFloat, Ti <: Integer}
+	cone::Dict, l::Union{Nothing, Vector{Tf}}, u::Union{Nothing, Vector{Tf}}, m::Int, n::Int, settings_dict::Dict) where {Tf <: AbstractFloat, Ti <: Integer}
 
 	settings = COSMO.Settings(settings_dict)
 	COSMO.set!(model, Prowval, Pcolptr, Pnzval, q, Arowval, Acolptr, Anzval, b, cone, l, u, m, n, settings)
@@ -310,7 +310,7 @@ function juliafy_integers(arr::Vector{Int32})
 	# 1-based indexing
 	@. arr += 1
 	# convert to 64bit
-	return Base.convert.(Int64, arr)
+	return Base.convert.(Int, arr)
 end
 
 # given the cone-dict in scs format create an array of COSMO.AbstractConvexSet(s)
@@ -390,7 +390,7 @@ type_checks(convex_set::Union{PsdCone{BigFloat}, PsdConeTriangle{BigFloat}}) = t
 
 
 
-function check_A_dim(A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, n::Int64)
+function check_A_dim(A::Union{AbstractVector{<:Real},AbstractMatrix{<:Real}}, n::Int)
 	size(A, 2) != n && throw(DimensionMismatch("The dimensions of a matrix A (m x $(size(A, 2))) in one of the constraints is inconsistent with the dimension of P ($(n))."))
 end
 
@@ -472,7 +472,7 @@ function sort_sets(C::AbstractConvexSet)
 end
 
 # transform A*x + b in {0}, to A*x + s == b, s in {0}
-function process_constraint!(p::COSMO.ProblemData{T}, row_num::Int64, A::Union{AbstractVector{T}, AbstractMatrix{T}}, b::AbstractVector{T}, C::AbstractConvexSet{T}, n::Int64) where {T <: AbstractFloat}
+function process_constraint!(p::COSMO.ProblemData{T}, row_num::Int, A::Union{AbstractVector{T}, AbstractMatrix{T}}, b::AbstractVector{T}, C::AbstractConvexSet{T}, n::Int) where {T <: AbstractFloat}
 	check_A_dim(A, n)
 	s = row_num
 	e = row_num + C.dim - 1

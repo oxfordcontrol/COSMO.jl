@@ -36,8 +36,8 @@ abstract type AbstractGraphBasedMerge <: AbstractMergeStrategy end
 A struct to analyse the clique merges. Introduced for debugging purposes.
 """
 mutable struct MergeLog
-	num::Int64 # number of merges
-	clique_pairs::Array{Int64, 2} # ordered pair merges
+	num::Int # number of merges
+	clique_pairs::Array{Int, 2} # ordered pair merges
 	decisions::Array{Bool, 1} # at what step was merged
 	function MergeLog()
 		new(0, zeros(0, 2), Array{Bool}(undef, 0))
@@ -58,15 +58,15 @@ After cliques have been merged, a valid clique tree will be recomputed from the
 consolidated clique graph.
 """
 mutable struct SuperNodeTree
-	snd::Union{Array{Set{Int64}, 1}, Array{Array{Int64, 1}, 1}} #vertices of supernodes stored in one array (also called residuals)
-	snd_par::Array{Int64,1}  # parent of supernode k is supernode j=snd_par[k]
-	snd_post::Array{Int64,1} # post order of supernodal elimination tree
-	snd_child::Array{Set{Int64},1}
-	post::Array{Int64} # post ordering of the vertices in elim tree σ(j) = v
-	par::Array{Int64}
-	sep::Union{Array{Set{Int64},1}, Array{Array{Int64, 1}, 1}} #vertices of clique seperators
-	nBlk::Array{Int64,1} #sizes of submatrizes defined by each clique, sorted by post-ordering, e.g. size of clique with order 3 => nBlk[3]
-	num::Int64 # number of supernodes / cliques in tree
+	snd::Union{Array{Set{Int}, 1}, Array{Array{Int, 1}, 1}} #vertices of supernodes stored in one array (also called residuals)
+	snd_par::Array{Int,1}  # parent of supernode k is supernode j=snd_par[k]
+	snd_post::Array{Int,1} # post order of supernodal elimination tree
+	snd_child::Array{Set{Int},1}
+	post::Array{Int} # post ordering of the vertices in elim tree σ(j) = v
+	par::Array{Int}
+	sep::Union{Array{Set{Int},1}, Array{Array{Int, 1}, 1}} #vertices of clique seperators
+	nBlk::Array{Int,1} #sizes of submatrizes defined by each clique, sorted by post-ordering, e.g. size of clique with order 3 => nBlk[3]
+	num::Int # number of supernodes / cliques in tree
 	merge_log::MergeLog
 	strategy::AbstractMergeStrategy
 	function SuperNodeTree(L::SparseMatrixCSC,  merge_strategy::AbstractMergeStrategy)
@@ -87,10 +87,10 @@ mutable struct SuperNodeTree
 		# the supernodes then represent the full clique
 		# after the clique merging a new clique tree will be computed before psd completion is performed
 	 	if typeof(merge_strategy) <: AbstractGraphBasedMerge
-			sep = [Set{Int64}() for i = 1:length(snd)]
+			sep = [Set{Int}() for i = 1:length(snd)]
 			add_separators!(L, snd, sep, snd_par, post)
 			@. snd_par = -1
-			snd_child = [Set{Int64}() for i = 1:length(snd)]
+			snd_child = [Set{Int}() for i = 1:length(snd)]
 			new(snd, snd_par, snd_post, snd_child, post, par, sep, [0], length(snd_post), MergeLog(), merge_strategy)
 	 	# If the merge strategy is tree based keep the supernodes and separators in to different locations
 		else
@@ -101,17 +101,17 @@ mutable struct SuperNodeTree
 		end
 	end
 
-	function COSMO.SuperNodeTree(cliques::Array{Set{Int64},1}, N::Int64)
-	    snd_child = [Set{Int64}() for i = 1:N]
-	    snd_par = -1 * ones(Int64, length(cliques))
-	    sep = [Set{Int64}() for i = 1:length(cliques)]
-	    snd_post = zeros(Int64, length(cliques))
+	function COSMO.SuperNodeTree(cliques::Array{Set{Int},1}, N::Int)
+	    snd_child = [Set{Int}() for i = 1:N]
+	    snd_par = -1 * ones(Int, length(cliques))
+	    sep = [Set{Int}() for i = 1:length(cliques)]
+	    snd_post = zeros(Int, length(cliques))
 	    new(cliques, snd_par, snd_post, snd_child, collect(1:N), [0], sep, [1], length(cliques), COSMO.MergeLog(), COSMO.CliqueGraphMerge())
 	end
 
 
 	# FIXME: only for debugging purposes
-	function SuperNodeTree(snd, par, snd_post, sep, merge_strategy; post::Array{Int64, 1} = [1])
+	function SuperNodeTree(snd, par, snd_post, sep, merge_strategy; post::Array{Int, 1} = [1])
 		child = child_from_par(par)
   	new(snd, par, snd_post, child, post, [1], sep, [1], length(snd), MergeLog(), merge_strategy)
 	end
@@ -126,8 +126,8 @@ end
 # FUNCTION DEFINITIONS
 # -------------------------------------
 # given v=σ^-1(i) it returns i=σ(v)
-function invert_order(sigma::Array{Int64,1})
-	sigma_inv = zeros(Int64, length(sigma))
+function invert_order(sigma::Array{Int,1})
+	sigma_inv = zeros(Int, length(sigma))
 	for iii=1:length(sigma)
 		sigma_inv[sigma[iii]] = iii
 	end
@@ -138,8 +138,8 @@ end
 # elimination tree algorithm from H.Liu - A Compact Row Storage Scheme for Cholesky Factors Using Elimination Trees
 # function etree_liu(g)
 # 	N = length(g.adjacency_list)
-# 	par = zeros(Int64,N)
-# 	ancestor = zeros(Int64,N)
+# 	par = zeros(Int,N)
+# 	ancestor = zeros(Int,N)
 
 # 	elemSequence = g.reverse_ordering[collect(1:N)]
 # 	for iii in elemSequence
@@ -165,7 +165,7 @@ end
 # simplified version of my own elimination tree algorithm with simplified data structure (fastest)
 function etree(L)
 	N = size(L, 1)
-	par = zeros(Int64, N)
+	par = zeros(Int, N)
 	# loop over Vertices of graph
 	for i=1:N
 		par_ = find_parent_direct(L, i)
@@ -177,11 +177,11 @@ end
 # perform a depth-first-search to determine the post order of the tree defined by parent and children vectors
 # FIXME: This can be made a lot faster for the case that merges happened, i.e. Nc != length(par)
 
-function post_order(par::Array{Int64,1}, child::Union{Array{Array{Int64, 1}, 1}, Array{Set{Int64}, 1}}, Nc::Int64)
+function post_order(par::Array{Int,1}, child::Union{Array{Array{Int, 1}, 1}, Array{Set{Int}, 1}}, Nc::Int)
 
-	order = (Nc + 1) * ones(Int64, length(par))
+	order = (Nc + 1) * ones(Int, length(par))
 	root = findall(x ->x == 0, par)[1]
-	stack = Array{Int64}(undef, 0)
+	stack = Array{Int}(undef, 0)
 	iii = Nc
 	push!(stack, root)
 	while !isempty(stack)
@@ -197,12 +197,12 @@ function post_order(par::Array{Int64,1}, child::Union{Array{Array{Int64, 1}, 1},
 	Nc != length(par) && resize!(post, Nc)
 	return post
 end
-post_order(par::Array{Int64,1}, child::Union{Array{Array{Int64, 1}, 1}, Array{Set{Int64},1}}) = post_order(par, child, length(par))
+post_order(par::Array{Int,1}, child::Union{Array{Array{Int, 1}, 1}, Array{Set{Int},1}}) = post_order(par, child, length(par))
 
 
-function child_from_par(par::Array{Int64,1})
+function child_from_par(par::Array{Int,1})
 
-	child = [Set{Int64}() for i = 1:length(par)]
+	child = [Set{Int}() for i = 1:length(par)]
 	for i = 1:length(par)
 		par_ = par[i]
 		par_ != 0 && push!(child[par_], i)
@@ -215,34 +215,34 @@ end
 # ------------------------------------------
 
 function num_cliques(sntree::SuperNodeTree)
-	return sntree.num::Int64
+	return sntree.num::Int
 end
 
 function get_post_order(sntree::SuperNodeTree)
 	return sntree.snd_post
 end
 
-function get_post_order(sntree::SuperNodeTree, i::Int64)
+function get_post_order(sntree::SuperNodeTree, i::Int)
 	return sntree.snd_post[i]
 end
 # Using the post order ensures that no empty arrays from the clique merging are returned
-function get_snd(sntree::SuperNodeTree, ind::Int64)
+function get_snd(sntree::SuperNodeTree, ind::Int)
 		return sntree.snd[sntree.snd_post[ind]]
 end
 
-function get_sep(sntree::SuperNodeTree, ind::Int64)
+function get_sep(sntree::SuperNodeTree, ind::Int)
 		return sntree.sep[sntree.snd_post[ind]]
 end
 
-function get_clique_par(sntree::SuperNodeTree, clique_ind::Int64)
+function get_clique_par(sntree::SuperNodeTree, clique_ind::Int)
 		return sntree.snd_par[sntree.snd_post[clique_ind]]
 end
 # the block sizes are stored in post order, e.g. if clique 4 (stored in pos 4) has order 2, then nBlk[2] represents the cardinality of clique 4
-function get_nBlk(sntree::SuperNodeTree, ind::Int64)
-		return sntree.nBlk[ind]::Int64
+function get_nBlk(sntree::SuperNodeTree, ind::Int)
+		return sntree.nBlk[ind]::Int
 end
 
-function get_overlap(sntree::SuperNodeTree, ind::Int64)
+function get_overlap(sntree::SuperNodeTree, ind::Int)
 		return length(sntree.sep[sntree.snd_post[ind]])
 end
 
@@ -254,21 +254,21 @@ function get_decomposed_dim(sntree::SuperNodeTree, C::DecomposableCones{<: Real}
 		dim += vec_dim(get_nBlk(sntree, iii), C)
 		overlaps += vec_dim(get_overlap(sntree, iii), C)
 	end
-	return dim::Int64, overlaps::Int64
+	return dim::Int, overlaps::Int
 end
 
 "Given the side dimension of a PSD cone return the number of stored entries."
-vec_dim(side_dim::Int64, C::PsdCone{<:Real}) = Base.power_by_squaring(side_dim, 2)
-vec_dim(side_dim::Int64, C::PsdConeTriangle{<:Real}) = div(side_dim * (side_dim + 1), 2)
+vec_dim(side_dim::Int, C::PsdCone{<:Real}) = Base.power_by_squaring(side_dim, 2)
+vec_dim(side_dim::Int, C::PsdConeTriangle{<:Real}) = div(side_dim * (side_dim + 1), 2)
 
 " Return clique with post order `ind` (prevents returning empty arrays due to clique merging)"
-get_clique(sntree::SuperNodeTree, ind::Int64) = get_clique(sntree, ind, sntree.strategy)
-function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractTreeBasedMerge)
+get_clique(sntree::SuperNodeTree, ind::Int) = get_clique(sntree, ind, sntree.strategy)
+function get_clique(sntree::SuperNodeTree, ind::Int, strategy::AbstractTreeBasedMerge)
 	c = sntree.snd_post[ind]
 	return union(sntree.snd[c], sntree.sep[c])
 end
 
-function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractGraphBasedMerge)
+function get_clique(sntree::SuperNodeTree, ind::Int, strategy::AbstractGraphBasedMerge)
 	# if a clique tree has been recomputed, call the method for AbstractTreeBasedMerge types
 	if strategy.clique_tree_recomputed
 		return get_clique(sntree, ind, COSMO.NoMerge())
@@ -278,7 +278,7 @@ function get_clique(sntree::SuperNodeTree, ind::Int64, strategy::AbstractGraphBa
 	end
 end
 
-function get_clique_by_ind(sntree::SuperNodeTree, ind::Int64)
+function get_clique_by_ind(sntree::SuperNodeTree, ind::Int)
 	return union(sntree.snd[ind], sntree.sep[ind])
 end
 
@@ -347,9 +347,9 @@ function print_clique_sizes(ws)
     t = sp.sntree
     Nc = length(t.snd_post)
     # block sizes
-    sizes = zeros(Int64, Nc)
+    sizes = zeros(Int, Nc)
     # occurences of block size
-    occ = zeros(Int64, Nc)
+    occ = zeros(Int, Nc)
     for jjj = 1:Nc
       c = t.snd_post[jjj]
       dim = length(t.snd[c]) + length(t.sep[c])
@@ -381,17 +381,17 @@ end
 
 
 
-function check_degree_condition(v::Int64, w::Int64, degrees::Array{Int64,1})
+function check_degree_condition(v::Int, w::Int, degrees::Array{Int,1})
 	return degrees[v] > degrees[w] - 1
 end
 
 
 # Algorithm from A. Poten and C. Sun: Compact Clique Tree Data Structures in Sparse Matrix Factorizations (1989)
-function pothen_sun(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{Int64,1})
+function pothen_sun(par::Array{Int,1}, post::Array{Int,1}, degrees::Array{Int,1})
 	N = length(par)
-	sn_ind = -1 * ones(Int64, N) # if snInd[v] < 0 then v is a rep vertex, otherwise v ∈ supernode[snInd[v]]
-	supernode_par = -1 * ones(Int64, N)
-	children = 	[Array{Int64}(undef, 0) for i = 1:length(par)]
+	sn_ind = -1 * ones(Int, N) # if snInd[v] < 0 then v is a rep vertex, otherwise v ∈ supernode[snInd[v]]
+	supernode_par = -1 * ones(Int, N)
+	children = 	[Array{Int}(undef, 0) for i = 1:length(par)]
 
 	root_ind = findfirst(x -> x == 0, par)
 	# go through parents of vertices in post_order
@@ -452,7 +452,7 @@ function pothen_sun(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{In
 	# vertices that are the parent of representative vertices
 	repr_par = supernode_par[reprv]
 	# take into account that all non-representative arrays are removed from the parent structure
-	sn_par = zeros(Int64, length(reprv))
+	sn_par = zeros(Int, length(reprv))
 
 	for (iii, rp) in enumerate(repr_par)
 		ind = findfirst(x -> x == rp, reprv)
@@ -463,21 +463,21 @@ function pothen_sun(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{In
 	return sn_par, sn_ind
 end
 
-function initialise_sets(N::Int64, strategy::AbstractGraphBasedMerge)
-	return [Set{Int64}() for i = 1:N]
+function initialise_sets(N::Int, strategy::AbstractGraphBasedMerge)
+	return [Set{Int}() for i = 1:N]
 end
 
-function initialise_sets(N::Int64, strategy::AbstractMergeStrategy)
-	return [Int64[] for i = 1:N]
+function initialise_sets(N::Int, strategy::AbstractMergeStrategy)
+	return [Int[] for i = 1:N]
 end
 
-function find_supernodes(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Array{Int64,1}, strategy::AbstractMergeStrategy)
+function find_supernodes(par::Array{Int,1}, post::Array{Int,1}, degrees::Array{Int,1}, strategy::AbstractMergeStrategy)
 	supernode_par, snInd = pothen_sun(par, post, degrees)
 	# number of vertices
 	N = length(par)
 	# number of representative vertices == number of supernodes
 	Nrep = length(supernode_par)
-	# snode = [Set{Int64}() for i = 1:N]
+	# snode = [Set{Int}() for i = 1:N]
 	snode = initialise_sets(N, strategy)
 	for iii = 1:N
 		f = snInd[iii]
@@ -492,7 +492,7 @@ function find_supernodes(par::Array{Int64,1}, post::Array{Int64,1}, degrees::Arr
 
 end
 
-function find_separators(L, snodes::Union{Array{Set{Int64}, 1}, Array{Array{Int64, 1},1}}, supernode_par::Array{Int64,1}, post::Array{Int64,1}, strategy::AbstractMergeStrategy)
+function find_separators(L, snodes::Union{Array{Set{Int}, 1}, Array{Array{Int, 1},1}}, supernode_par::Array{Int,1}, post::Array{Int,1}, strategy::AbstractMergeStrategy)
 	postInv = invert_order(post)
 
 	Nc = length(supernode_par)
@@ -512,7 +512,7 @@ function find_separators(L, snodes::Union{Array{Set{Int64}, 1}, Array{Array{Int6
 
 end
 
-function add_separators!(L::SparseMatrixCSC, snodes::Array{Set{Int64},1}, separators::Array{Set{Int64}, 1}, supernode_par::Array{Int64,1}, post::Array{Int64,1})
+function add_separators!(L::SparseMatrixCSC, snodes::Array{Set{Int},1}, separators::Array{Set{Int}, 1}, supernode_par::Array{Int,1}, post::Array{Int,1})
 	postInv = invert_order(post)
 
 	Nc = length(supernode_par)
@@ -542,10 +542,10 @@ Takes a SuperNodeTree and reorders the vertices in each supernode (and separator
 The reordering is needed to achieve equal column structure for the psd completion of the dual variable `Y`. This also modifies `ordering` which maps the vertices in the `sntree` back to the actual location in the not reordered data, i.e.
 the primal constraint variable `S` and dual variables `Y`.
 """
-function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int64, 1})
+function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int, 1})
 
 	# determine permutation vector p and permute the vertices in each snd
-	p = zeros(Int64,length(t.post))
+	p = zeros(Int,length(t.post))
 	snd = t.snd
 	sep = t.sep
 
@@ -578,7 +578,7 @@ function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int64, 1})
 end
 
 
-function find_higher_order_neighbors(L::SparseMatrixCSC, v::Int64)
+function find_higher_order_neighbors(L::SparseMatrixCSC, v::Int)
 	v == size(L, 1) && return 0
 	col_ptr = L.colptr
 	row_val = L.rowval
@@ -586,7 +586,7 @@ function find_higher_order_neighbors(L::SparseMatrixCSC, v::Int64)
 end
 
 
-function find_parent_direct(L::SparseMatrixCSC, v::Int64)
+function find_parent_direct(L::SparseMatrixCSC, v::Int)
 	v == size(L, 1) && return 0
 	col_ptr = L.colptr
 	row_val = L.rowval
@@ -598,7 +598,7 @@ end
 # findall the cardinality of adj+(v) for all v in V
 function higher_degrees(L::SparseMatrixCSC)
 	N = size(L, 1)
-	degrees = zeros(Int64, N)
+	degrees = zeros(Int, N)
 	col_ptr = L.colptr
 	row_val = L.rowval
 
@@ -634,13 +634,13 @@ function connect_graph!(L::SparseMatrixCSC)
 end
 
 """
-	find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
+	find_graph!(ci, rows::Array{Int, 1}, N::Int, C::AbstractConvexSet)
 
 Given the indices of non-zero rows in `rows`:
 - Compute the sparsity pattern and find a chordal extension using `QDLDL` with AMD ordering `F.perm`.
 - If unconnected, connect the graph represented by the cholesky factor `L`
 """
-function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
+function find_graph!(ci, rows::Array{Int, 1}, N::Int, C::AbstractConvexSet)
 	row_val, col_val = COSMO.row_ind_to_matrix_indices(rows, N, C)
 	F = QDLDL.qdldl(sparse(row_val, col_val, ones(length(row_val)), N, N), logical = true)#, perm = collect(1:N))
 	nz_ind_map = get_nz_ind_map(rows, N)
@@ -651,7 +651,7 @@ function find_graph!(ci, rows::Array{Int64, 1}, N::Int64, C::AbstractConvexSet)
 end
 
 " A sparse vector that maps the index of svec(i, j) = k to the actual index of where that entry is stored in `A.rowval`."
-function get_nz_ind_map(rows::Array{Int64, 1}, N::Int64)
+function get_nz_ind_map(rows::Array{Int, 1}, N::Int)
 	d = div(N * (N+1), 2)
 	nzind = rows
 	nzval = collect(1:length(rows))
@@ -661,9 +661,9 @@ end
 
 # given an array [rows] that represent the nonzero entries of a vectorized NxN matrix,
 # return the rows and columns of the nonzero entries of the original matrix
-function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::PsdCone{Float64})
-	row_val = zeros(Int64, length(rows))
-	col_val = zeros(Int64, length(rows))
+function row_ind_to_matrix_indices(rows::Array{Int,1}, N::Int, ::PsdCone{Float64})
+	row_val = zeros(Int, length(rows))
+	col_val = zeros(Int, length(rows))
 	for (ind, r) in enumerate(rows)
 		_rem = mod(r, N)
 		fl = fld(r, N)
@@ -680,10 +680,10 @@ end
 
 # given an array [rows] that represent the nonzero entries of the vectorized upper triangular part of a NxN matrix,
 # return the rows and columns of the nonzero entries of the original matrix
-function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::COSMO.PsdConeTriangle{Float64})
+function row_ind_to_matrix_indices(rows::Array{Int,1}, N::Int, ::COSMO.PsdConeTriangle{Float64})
 	#  allocate conservative here since we don't know how many diagonal entries are contained in row
-	row_val = zeros(Int64, 2 * length(rows) + N)
-	col_val = zeros(Int64, 2 * length(rows) + N)
+	row_val = zeros(Int, 2 * length(rows) + N)
+	col_val = zeros(Int, 2 * length(rows) + N)
 	ind = 1
 	_step = 1
 	for (iii, r) in enumerate(rows)
@@ -703,7 +703,7 @@ function row_ind_to_matrix_indices(rows::Array{Int64,1}, N::Int64, ::COSMO.PsdCo
 end
 
 # Given a linear index find the col of the corresponding upper triangular matrix
-function svec_get_col(x::Int64)
+function svec_get_col(x::Int)
 	c = (sqrt(8 * x + 1) - 1) / 2
 	if c % 1 != 0
 		return Int((floor(c) + 1))
@@ -713,16 +713,16 @@ function svec_get_col(x::Int64)
 end
 
 # Given a linear index find the row of the corresponding upper triangular matrix
-function svec_get_row(x::Int64)
+function svec_get_row(x::Int)
 	c = get_col(x) - 1
 	k = (c + 1) * c / 2
-	return (x - k)::Int64
+	return (x - k)::Int
 end
 
 # Given a linear index find the row and column of the corresponding upper triangular matrix
-function svec_to_mat(ind::Int64)
+function svec_to_mat(ind::Int)
 	c = svec_get_col(ind)
 	k = (c - 1) * c / 2
 	r = Int(ind - k)
-	return r::Int64, c::Int64
+	return r::Int, c::Int
 end

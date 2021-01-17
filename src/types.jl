@@ -76,7 +76,7 @@ x | Vector{T}| Primal variable
 y | Vector{T}| Dual variable
 s | Vector{T}| (Primal) set variable
 obj_val | T | Objective value
-iter | Int64 | Number of iterations
+iter | Int | Number of iterations
 status | Symbol | Solution status
 info | COSMO.ResultInfo | Struct with more information
 times | COSMO.ResultTimes | Struct with several measured times
@@ -86,7 +86,7 @@ struct Result{T <: AbstractFloat}
     y::Vector{T}
     s::Vector{T}
     obj_val::T
-    iter::Int64
+    iter::Int
     status::Symbol
     info::ResultInfo
     times::ResultTimes
@@ -172,14 +172,14 @@ ProblemData(args...) = ProblemData{DefaultFloat}(args...)
 
 mutable struct SparsityPattern
   sntree::SuperNodeTree
-  ordering::Array{Int64}
-  reverse_ordering::Array{Int64}
-  row_range::UnitRange{Int64} # the starting row of the psd cone in the original problem
-  cone_ind::Int64 # this is the ind of the original psd cone in ws.p.C that is decomposed
-  nz_ind_map::SparseVector{Int64, Int64} # maps a matrix entry k = svec(i, j) to the location of the entry in the sparse data structure
+  ordering::Array{Int}
+  reverse_ordering::Array{Int}
+  row_range::UnitRange{Int} # the starting row of the psd cone in the original problem
+  cone_ind::Int # this is the ind of the original psd cone in ws.p.C that is decomposed
+  nz_ind_map::SparseVector{Int, Int} # maps a matrix entry k = svec(i, j) to the location of the entry in the sparse data structure
 
   # constructor for sparsity pattern
-  function SparsityPattern(L::SparseMatrixCSC, N::Int64, ordering::Array{Int64, 1}, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}, row_range::UnitRange{Int64}, cone_ind::Int64, nz_ind_map::SparseVector{Int64, Int64})
+  function SparsityPattern(L::SparseMatrixCSC, N::Int, ordering::Array{Int, 1}, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}, row_range::UnitRange{Int}, cone_ind::Int, nz_ind_map::SparseVector{Int, Int})
 
     merge_strategy = merge_strategy()
     sntree = SuperNodeTree(L, merge_strategy)
@@ -208,7 +208,7 @@ mutable struct SparsityPattern
   end
 
   # For debugging
-  function SparsityPattern(sntree::SuperNodeTree, ordering::Array{Int64}, reverse_ordering::Array{Int64}, row_range::UnitRange{Int64}, cone_ind::Int64)
+  function SparsityPattern(sntree::SuperNodeTree, ordering::Array{Int}, reverse_ordering::Array{Int}, row_range::UnitRange{Int}, cone_ind::Int)
     return new(sntree, ordering, reverse_ordering, row_range, cone_ind)
   end
 end
@@ -218,17 +218,17 @@ end
 # -------------------------------------
 mutable struct ChordalInfo{T <: AbstractFloat}
   decompose::Bool # an internal flag to check if problem has been decomposed
-  originalM::Int64
-  originalN::Int64
+  originalM::Int
+  originalN::Int
   originalC::CompositeConvexSet{T}
   H::SparseMatrixCSC{T}
   sp_arr::Array{COSMO.SparsityPattern}
-  psd_cones_ind::Array{Int64} # stores the position of decomposable psd cones in the composite convex set
-  num_psd_cones::Int64 # number of psd cones of original problem
-  num_decomposable::Int64 #number of decomposable cones
-  num_decom_psd_cones::Int64 #total number of psd cones after decomposition
+  psd_cones_ind::Array{Int} # stores the position of decomposable psd cones in the composite convex set
+  num_psd_cones::Int # number of psd cones of original problem
+  num_decomposable::Int #number of decomposable cones
+  num_decom_psd_cones::Int #total number of psd cones after decomposition
   L::SparseMatrixCSC{T} #pre allocate memory for QDLDL
-  cone_map::Dict{Int64, Int64} # map every cone in the decomposed problem to the equivalent or undecomposed cone in the original problem
+  cone_map::Dict{Int, Int} # map every cone in the decomposed problem to the equivalent or undecomposed cone in the original problem
 
   function ChordalInfo{T}(problem::COSMO.ProblemData{T}, settings::COSMO.Settings) where {T <: AbstractFloat}
     originalM = problem.model_size[1]
@@ -237,9 +237,9 @@ mutable struct ChordalInfo{T <: AbstractFloat}
     num_psd_cones = length(findall(x -> typeof(x) <: Union{PsdConeTriangle{T}, PsdCone{T}} , problem.C.sets))
     # allocate sparsity pattern for each cone
     sp_arr = Array{COSMO.SparsityPattern}(undef, num_psd_cones)
-    cone_map = Dict{Int64, Int64}()
+    cone_map = Dict{Int, Int}()
 
-    return new(settings.decompose, originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int64[], num_psd_cones, 0, 0, spzeros(1, 1), cone_map)
+    return new(settings.decompose, originalM, originalN, originalC, spzeros(1, 1), sp_arr, Int[], num_psd_cones, 0, 0, spzeros(1, 1), cone_map)
   end
 
 	function ChordalInfo{T}() where{T}
@@ -274,7 +274,7 @@ struct UtilityVariables{T}
   vec_n::Vector{T}
   vec_n2::Vector{T}
 
-  function UtilityVariables{T}(m::Int64, n::Int64) where {T <: AbstractFloat}
+  function UtilityVariables{T}(m::Int, n::Int) where {T <: AbstractFloat}
     new(zeros(T, m), zeros(T, n), zeros(T, n))
   end
 end
@@ -321,7 +321,7 @@ mutable struct Workspace{T}
 	states::States
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
-	row_ranges::Array{UnitRange{Int64}, 1} # store a set_ind -> row_range map
+	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()

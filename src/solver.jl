@@ -1,4 +1,4 @@
-const LinsolveSubarray{T} = SubArray{T, 1, Vector{T},Tuple{UnitRange{Int64}},true}
+const LinsolveSubarray{T} = SubArray{T, 1, Vector{T},Tuple{UnitRange{Int}},true}
 
 
 function admm_step!(x::Vector{T},
@@ -15,8 +15,8 @@ function admm_step!(x::Vector{T},
 	ρ::Vector{T},
 	α::T,
 	σ::T,
-	m::Int64,
-	n::Int64,
+	m::Int,
+	n::Int,
 	set::CompositeConvexSet{T}) where {T <: AbstractFloat}
 	# linear solve
 	# Create right hand side for linear system
@@ -230,7 +230,7 @@ function free_memory!(ws)
 	free_memory!(ws.kkt_solver)
 end
 
-function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int64, n::Int64 ) where {T <: AbstractFloat}
+function allocate_loop_variables!(ws::COSMO.Model{T}, m::Int, n::Int ) where {T <: AbstractFloat}
 
 	if length(ws.δx) != n || length(ws.ls) != m + n
 		ws.δx = zeros(T, n)
