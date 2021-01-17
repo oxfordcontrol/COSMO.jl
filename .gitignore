@@ -5,3 +5,4 @@
 *scratch*.jl
 *.sublime*
 /docs/build
+Manifest.toml
