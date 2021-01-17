@@ -61,10 +61,10 @@ function col_norms!(v::Array{Tf, 1},
 end
 
 function col_norms!(v::Array{Tf, 1},
-	A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where{Tf <: AbstractFloat, Ti <: Integer}
+	A::SparseMatrixCSC{Tf,Ti}; reset::Bool = true) where {Tf <: AbstractFloat, Ti <: Integer}
 
 	if reset
-		fill!(v,0.)
+		fill!(v, 0)
 	end
 
 	@inbounds for i = eachindex(v)
