@@ -9,8 +9,9 @@ if !@isdefined(UnitTestFloats)
 end
 
 for T in UnitTestFloats
+  local rng
   if precision(T) >= precision(Float64)
-
+    
     rng = Random.MersenneTwister(555)
     nn = 1
 
