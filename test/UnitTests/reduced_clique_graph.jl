@@ -82,7 +82,7 @@ permissible_ref[[7, 11, 16, 17, 18]] .= true
     COSMO.kruskal!(t.strategy.edges, t.num)
     COSMO.determine_parent_cliques!(t.snd_par, t.snd_child, t.snd, t.post, t.strategy.edges)
     t.snd_post = COSMO.post_order(t.snd_par, t.snd_child, t.num)
-    t.sep = [Set{Int64}() for i=1:length(t.snd)]
+    t.sep = [Set{Int}() for i=1:length(t.snd)]
     COSMO.split_cliques!(t.snd, t.sep, t.snd_par, t.snd_post, t.num)
 
     @test check_clique_tree(t.snd, t.sep, t.snd_par, t.snd_child)
