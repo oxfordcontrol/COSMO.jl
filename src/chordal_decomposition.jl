@@ -48,9 +48,9 @@ function find_sparsity_patterns!(ws::COSMO.Workspace)
   end
 end
 
-analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::AbstractConvexSet, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) = sp_ind
+analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int, 1}, sets::Vector{AbstractConvexSet}, C::AbstractConvexSet, k::Int, psd_row_range::UnitRange{Int}, sp_ind::Int, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) = sp_ind
 
-function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::DecomposableCones{T}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: Real}
+function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int, 1}, sets::Vector{AbstractConvexSet}, C::DecomposableCones{T}, k::Int, psd_row_range::UnitRange{Int}, sp_ind::Int, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: Real}
   if length(csp) < C.dim
     return _analyse_sparsity_pattern(ci, csp, sets, C, k, psd_row_range, sp_ind, merge_strategy)
   else
@@ -59,7 +59,7 @@ function analyse_sparsity_pattern!(ci::ChordalInfo, csp::Array{Int64, 1}, sets::
  end
 end
 
-function _analyse_sparsity_pattern(ci::ChordalInfo{T}, csp::Array{Int64, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{T}, PsdConeTriangle{T}}, k::Int64, psd_row_range::UnitRange{Int64}, sp_ind::Int64, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: AbstractFloat}
+function _analyse_sparsity_pattern(ci::ChordalInfo{T}, csp::Array{Int, 1}, sets::Vector{AbstractConvexSet}, C::Union{PsdCone{T}, PsdConeTriangle{T}}, k::Int, psd_row_range::UnitRange{Int}, sp_ind::Int, merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}) where {T <: AbstractFloat}
   ordering, nz_ind_map = find_graph!(ci, csp, C.sqrt_dim, C)
   sp = COSMO.SparsityPattern(ci.L, C.sqrt_dim, ordering, merge_strategy, psd_row_range, k, nz_ind_map)
   # if after analysis of SparsityPattern & clique merging only one clique remains, don't bother decomposing
@@ -74,10 +74,10 @@ function _analyse_sparsity_pattern(ci::ChordalInfo{T}, csp::Array{Int64, 1}, set
   end
 end
 
-DenseEquivalent(C::COSMO.PsdCone{T}, dim::Int64) where {T <: AbstractFloat} = COSMO.DensePsdCone{T}(dim)
-DenseEquivalent(C::COSMO.PsdConeTriangle{T}, dim::Int64) where {T <: AbstractFloat} = COSMO.DensePsdConeTriangle{T}(dim)
+DenseEquivalent(C::COSMO.PsdCone{T}, dim::Int) where {T <: AbstractFloat} = COSMO.DensePsdCone{T}(dim)
+DenseEquivalent(C::COSMO.PsdConeTriangle{T}, dim::Int) where {T <: AbstractFloat} = COSMO.DensePsdConeTriangle{T}(dim)
 
-function nz_rows(a::SparseMatrixCSC{T}, ind::UnitRange{Int64}, DROP_ZEROS_FLAG::Bool) where {T <: AbstractFloat}
+function nz_rows(a::SparseMatrixCSC{T}, ind::UnitRange{Int}, DROP_ZEROS_FLAG::Bool) where {T <: AbstractFloat}
   DROP_ZEROS_FLAG && dropzeros!(a)
   active = falses(length(ind))
   for r in a.rowval
@@ -96,14 +96,14 @@ function number_of_overlaps_in_rows(A::SparseMatrixCSC{T}) where {T <: AbstractF
 end
 
 
-function find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int64}, C::DecomposableCones{T}) where {T <: AbstractFloat}
+function find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int}, C::DecomposableCones{T}) where {T <: AbstractFloat}
   AInd = nz_rows(A, ind, false)
   # commonZeros = AInd[find(x->x==0,b[AInd])]
   bInd = findall(x -> x != 0, view(b, ind))
   commonNZeros = union(AInd, bInd)
   return commonNZeros
 end
-find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int64}, C::AbstractConvexSet{T}) where {T <: AbstractFloat} = Int64[]
+find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int}, C::AbstractConvexSet{T}) where {T <: AbstractFloat} = Int[]
 
 
 """
@@ -157,7 +157,7 @@ function fill_dual_variables!(ws::COSMO.Workspace{T}, vars::COSMO.Variables{T}) 
   return nothing
 end
 
-function add_sub_blocks!(s::SplitVector{T}, s_decomp::SplitVector{T}, μ::AbstractVector{T}, μ_decomp::AbstractVector{T}, ci::ChordalInfo{T}, C::CompositeConvexSet{T}, C0::CompositeConvexSet{T}, cone_map::Dict{Int64, Int64}) where {T <: AbstractFloat}
+function add_sub_blocks!(s::SplitVector{T}, s_decomp::SplitVector{T}, μ::AbstractVector{T}, μ_decomp::AbstractVector{T}, ci::ChordalInfo{T}, C::CompositeConvexSet{T}, C0::CompositeConvexSet{T}, cone_map::Dict{Int, Int}) where {T <: AbstractFloat}
   sp_arr = ci.sp_arr
   row_start = 1 # the row pointer in the decomposed problem
   row_ranges = get_set_indices(C0.sets) # the row ranges of the same cone (or "parent" cone) in the original problem
@@ -170,14 +170,14 @@ function add_sub_blocks!(s::SplitVector{T}, s_decomp::SplitVector{T}, μ::Abstra
   return nothing
 end
 
-function add_blocks!(s::SplitVector{T}, μ::AbstractVector{T}, row_start::Int64, row_range::UnitRange{Int64}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector{T}, μ_decomp::AbstractVector{T}, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
+function add_blocks!(s::SplitVector{T}, μ::AbstractVector{T}, row_start::Int, row_range::UnitRange{Int}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector{T}, μ_decomp::AbstractVector{T}, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 
   @. s.data[row_range] = s_decomp.data[row_start:row_start + C.dim - 1]
   @. μ[row_range] = μ_decomp[row_start:row_start + C.dim - 1]
   return row_start + C.dim
 end
 
-function add_blocks!(s::SplitVector{T}, μ::AbstractVector{T}, row_start::Int64, row_range::UnitRange{Int64}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector{T}, μ_decomp::AbstractVector{T}, C::DecomposableCones{T}) where {T <: AbstractFloat}
+function add_blocks!(s::SplitVector{T}, μ::AbstractVector{T}, row_start::Int, row_range::UnitRange{Int}, sp_arr::Array{SparsityPattern, 1}, s_decomp::SplitVector{T}, μ_decomp::AbstractVector{T}, C::DecomposableCones{T}) where {T <: AbstractFloat}
   # load the appropriate sparsity_pattern
   sp = sp_arr[C.tree_ind]
   sntree = sp.sntree
@@ -217,9 +217,9 @@ function psd_completion!(ws::COSMO.Workspace)
   return nothing
 end
 
-complete!(μ::AbstractVector{T}, ::AbstractConvexSet{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) where {T <: AbstractFloat} = sp_ind
+complete!(μ::AbstractVector{T}, ::AbstractConvexSet{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int, rows::UnitRange{Int}) where {T <: AbstractFloat} = sp_ind
 
-function complete!(μ::AbstractVector{T}, C::PsdCone{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) where {T <: AbstractFloat}
+function complete!(μ::AbstractVector{T}, C::PsdCone{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int, rows::UnitRange{Int}) where {T <: AbstractFloat}
   sp = sp_arr[sp_ind]
 
   μ_view = view(μ, rows)
@@ -234,7 +234,7 @@ function complete!(μ::AbstractVector{T}, C::PsdCone{T}, sp_arr::Array{SparsityP
   return sp_ind + 1
 end
 
-function complete!(μ::AbstractVector{T}, C::PsdConeTriangle{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int64, rows::UnitRange{Int64}) where {T <: AbstractFloat}
+function complete!(μ::AbstractVector{T}, C::PsdConeTriangle{T}, sp_arr::Array{SparsityPattern}, sp_ind::Int, rows::UnitRange{Int}) where {T <: AbstractFloat}
   sp = sp_arr[sp_ind]
 
   μ_view = view(μ, rows)
@@ -250,7 +250,7 @@ end
 
 # positive semidefinite completion (from Vandenberghe - Chordal Graphs..., p. 362)
 # input: A - positive definite completable matrix
-function psd_complete!(A::AbstractMatrix{T}, N::Int64, sntree::SuperNodeTree, p::Array{Int64}) where {T <: AbstractFloat}
+function psd_complete!(A::AbstractMatrix{T}, N::Int, sntree::SuperNodeTree, p::Array{Int}) where {T <: AbstractFloat}
 
   # if a clique graph based merge strategy was used for this sparsity pattern, recompute a valid clique tree
   #recompute_clique_tree(sntree.strategy) && clique_tree_from_graph!(sntree, sntree.strategy)

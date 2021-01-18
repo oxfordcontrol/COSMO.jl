@@ -1,5 +1,5 @@
 """
-    compute_reduced_clique_graph!(sep::Array{Set{Int64}, 1}, snd::Array{Set{Int64}, 1})
+    compute_reduced_clique_graph!(sep::Array{Set{Int}, 1}, snd::Array{Set{Int}, 1})
 
 Compute the reduced clique graph (union of all clique trees) given an initial clique tree defined by its supernodes `snd` and separator `sep` sets.
 
@@ -13,14 +13,14 @@ computes the reduced clique graph in the following way:
     |  Store the index of the separator which is the intersection C1 ∩ C2 in `iter`
    end
 """
-function compute_reduced_clique_graph!(sep::Array{Set{Int64}, 1}, snd::Array{Set{Int64}, 1})
+function compute_reduced_clique_graph!(sep::Array{Set{Int}, 1}, snd::Array{Set{Int}, 1})
     # loop over separators by decreasing cardinality
     sort!(sep, by = x -> length(x), rev = true)
 
-    # edges = Array{Tuple{Int64, Int64}, 1}()    # a list of edges in the reduced clique graph, higher clique index first
-    rows = Int64[]
-    cols = Int64[]
-    # inter = Array{Int64, 1}()                  # the index of the separator which corresponds to the intersection of the two cliques
+    # edges = Array{Tuple{Int, Int}, 1}()    # a list of edges in the reduced clique graph, higher clique index first
+    rows = Int[]
+    cols = Int[]
+    # inter = Array{Int, 1}()                  # the index of the separator which corresponds to the intersection of the two cliques
 
     for (k, separator) in enumerate(sep)
         # find cliques that contain the separator
@@ -46,17 +46,17 @@ function compute_reduced_clique_graph!(sep::Array{Set{Int64}, 1}, snd::Array{Set
 end
 
 "Check whether the `pair` of cliques are in different `components`."
-function is_unconnected(pair::Tuple{Int64, Int64}, components::Array{Set{Int64}, 1})
+function is_unconnected(pair::Tuple{Int, Int}, components::Array{Set{Int}, 1})
     component_ind = findfirst(x -> pair[1] ∈ x, components)
     return pair[2] ∉ components[component_ind]
 end
 
 "Find the separator graph H given a separator and the relevant index-subset of cliques."
-function separator_graph(clique_ind::Array{Int64,1}, separator::Set{Int64}, snd::Array{Set{Int64}, 1})
+function separator_graph(clique_ind::Array{Int,1}, separator::Set{Int}, snd::Array{Set{Int}, 1})
 
     # make the separator graph using a hash table
     # key: clique_ind --> edges to other clique indices
-    H = Dict{Int64, Array{Int64, 1}}()
+    H = Dict{Int, Array{Int, 1}}()
 
     for pair in subsets(clique_ind, Val{2}())
         ca = pair[1]
@@ -77,18 +77,18 @@ function separator_graph(clique_ind::Array{Int64,1}, separator::Set{Int64}, snd:
     end
     # add unconnected cliques
     for v in clique_ind
-        !haskey(H, v) && (H[v] = Int64[])
+        !haskey(H, v) && (H[v] = Int[])
     end
     return H
 end
 
 "Find connected components in undirected separator graph represented by `H`."
-function find_components(H::Dict{Int64, Array{Int64, 1}}, clique_ind::Array{Int64,1})
-    visited = Dict{Int64, Bool}(v => false for v in clique_ind)
-    components = Array{Set{Int64}, 1}()
+function find_components(H::Dict{Int, Array{Int, 1}}, clique_ind::Array{Int,1})
+    visited = Dict{Int, Bool}(v => false for v in clique_ind)
+    components = Array{Set{Int}, 1}()
     for v in clique_ind
         if visited[v] == false
-            component = Set{Int64}()
+            component = Set{Int}()
             push!(components, DFS_hashtable!(component, v, visited, H))
         end
     end
@@ -96,7 +96,7 @@ function find_components(H::Dict{Int64, Array{Int64, 1}}, clique_ind::Array{Int6
 end
 
 "Depth first search on a hashtable `H`."
-function DFS_hashtable!(component::Set{Int64}, v::Int64, visited::Dict{Int64, Bool}, H::Dict{Int64, Array{Int64, 1}})
+function DFS_hashtable!(component::Set{Int}, v::Int, visited::Dict{Int, Bool}, H::Dict{Int, Array{Int, 1}})
     visited[v] = true
     push!(component, v)
     for n in H[v]
@@ -109,7 +109,7 @@ end
 
 
 "Check if s ∩ s2 == s3."
-function inter_equal(s::Set{Int64}, s2::Set{Int64}, s3::Set{Int64})
+function inter_equal(s::Set{Int}, s2::Set{Int}, s3::Set{Int})
     dim = 0
     len_s3 = length(s3)
     if length(s) < length(s2)
@@ -131,8 +131,8 @@ end
 
 
 "Given a list of edges, return an adjacency hash-table `table` with nodes from 1 to `num_vertices`."
-function compute_adjacency_table(edges::SparseMatrixCSC{Float64, Int64}, num_vertices::Int64)
-    table = Dict(i => Set{Int64}() for i = 1:num_vertices)
+function compute_adjacency_table(edges::SparseMatrixCSC{Float64, Int}, num_vertices::Int)
+    table = Dict(i => Set{Int}() for i = 1:num_vertices)
     r = edges.rowval
     c = edges.colptr
      for col = 1:num_vertices
@@ -146,7 +146,7 @@ function compute_adjacency_table(edges::SparseMatrixCSC{Float64, Int64}, num_ver
 end
 
 "Check whether `edge` is permissible for a merge. An edge is permissible if for every common neighbor N, C_1 ∩ N == C_2 ∩ N or if no common neighbors exist."
-function ispermissible(edge::Tuple{Int64, Int64}, adjacency_table::Dict{Int64, Set{Int64}}, snd::Array{Set{Int64}, 1})
+function ispermissible(edge::Tuple{Integer, Integer}, adjacency_table::Dict{Int, Set{Int}}, snd::Array{Set{Int}, 1})
     c_1 = edge[1]
     c_2 = edge[2]
     common_neighbors = intersect(adjacency_table[c_1], adjacency_table[c_2])

@@ -11,10 +11,11 @@ end
 
 for T in UnitTestFloats
   # COSMO currently doesn't support PSD constraints with BigFloat precision
+  local rng
   if precision(T) >= precision(Float64) && T != BigFloat
 
     nn = 1
-    rng = Random.MersenneTwister(1313)
+    local rng = Random.MersenneTwister(1313)
 
     sum_detected = 0
 

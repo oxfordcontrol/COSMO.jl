@@ -13,7 +13,7 @@ end
 
 
 "Scale active constraints by `RHO_EQ_OVER_RHO_INEQ` and set loose constraints to `RHO_MIN`."
-function apply_constraint_rho_scaling!(ρvec::AbstractVector{T}, row_ranges::Array{UnitRange{Int64}, 1}, sets::Vector{AbstractConvexSet}, RHO_MIN::T, RHO_EQ_OVER_RHO_INEQ::T) where {T <: AbstractFloat}
+function apply_constraint_rho_scaling!(ρvec::AbstractVector{T}, row_ranges::Array{UnitRange{Int}, 1}, sets::Vector{AbstractConvexSet}, RHO_MIN::T, RHO_EQ_OVER_RHO_INEQ::T) where {T <: AbstractFloat}
 	for (k, C) in enumerate(sets)
 		if C isa ZeroSet
 			for row in row_ranges[k]
@@ -35,7 +35,7 @@ function apply_constraint_rho_scaling!(ρvec::AbstractVector{T}, row_ranges::Arr
 	return nothing
 end
 
-function _rho_scale_box_bounds!(ρvec::AbstractVector{T}, constr_type::Vector{Int}, row_offset::Int64, RHO_MIN::T, RHO_EQ_OVER_RHO_INEQ::T) where {T <: AbstractFloat}
+function _rho_scale_box_bounds!(ρvec::AbstractVector{T}, constr_type::Vector{Int}, row_offset::Int, RHO_MIN::T, RHO_EQ_OVER_RHO_INEQ::T) where {T <: AbstractFloat}
 	@inbounds for j = eachindex(constr_type)
 		# loose inequality constraint
 		if constr_type[j] == -1

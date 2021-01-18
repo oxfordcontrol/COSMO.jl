@@ -27,7 +27,7 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	nothing
 end
 
-function print_iteration(ws::COSMO.Workspace, iter::Int64, cost::T, r_prim::T, r_dual::T) where {T <: AbstractFloat}
+function print_iteration(ws::COSMO.Workspace, iter::Int, cost::T, r_prim::T, r_dual::T) where {T <: AbstractFloat}
 	settings = ws.settings
 	if mod(iter, 1) == 0 || iter == 1 || iter == 2 || iter == settings.max_iter
 		if mod(iter, settings.check_termination) == 0 || iter == 1
@@ -49,7 +49,7 @@ function stringify(merge_strategy::Union{Type{<: AbstractMergeStrategy}, Options
 	end
 end
 
-function print_result(status::Symbol, iter::Int64, cost::T, rt::Float64) where {T <: AbstractFloat}
+function print_result(status::Symbol, iter::Int, cost::T, rt::Float64) where {T <: AbstractFloat}
 	print("\n" * "-"^66 * "\n>>> Results\nStatus: ")
 	if status == :Solved
 		result_color = :green

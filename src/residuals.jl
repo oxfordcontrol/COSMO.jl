@@ -112,7 +112,7 @@ function has_converged(ws::COSMO.Workspace{T}, r_prim::T, r_dual::T) where {T <:
 end
 
 # cost = cinv *( 1/2 x' * P * x + q' x)
-function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::SparseMatrixCSC{T, Int64}, q::AbstractVector{T}, cinv::T = one(T)) where {T <: AbstractFloat}
+function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::SparseMatrixCSC{T, Int}, q::AbstractVector{T}, cinv::T = one(T)) where {T <: AbstractFloat}
 	# P x
 	mul!(temp, P, x)
 	return cinv * (T(0.5) * dot(temp, x) + dot(q, x))

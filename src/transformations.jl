@@ -6,7 +6,7 @@ function find_decomposition_matrix!(ws)
 
   # allocate H and new decomposed cones
   n = COSMO.find_H_col_dimension(ws.p.C.sets, ws.ci.sp_arr)
-  H_I = zeros(Int64, n)
+  H_I = zeros(Int, n)
 
 
   # find number of decomposed and total sets and allocate structure for new compositve convex set
@@ -45,7 +45,7 @@ end
 
 
 
-function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64, C::COSMO.AbstractConvexSet, entry::Int64, row::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
+function decompose!(H_I::Vector{Int}, C_new, set_ind::Int, C::COSMO.AbstractConvexSet, entry::Int, row::Int, sp_arr::Array{SparsityPattern}, sp_ind::Int)
   for i = 1:C.dim
     H_I[entry] = row + i - 1
     entry += 1
@@ -56,10 +56,10 @@ function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64, C::COSMO.Abstract
 end
 
 "For a PSD cone `C` of dimension `nBlk`, return the number of entries/rows in vectorized form."
-get_blk_rows(nBlk::Int64, C::COSMO.PsdCone{T}) where {T} = Base.power_by_squaring(nBlk, 2)
-get_blk_rows(nBlk::Int64, C::COSMO.PsdConeTriangle{T}) where {T} = div((nBlk + 1) * nBlk, 2)
+get_blk_rows(nBlk::Int, C::COSMO.PsdCone{T}) where {T} = Base.power_by_squaring(nBlk, 2)
+get_blk_rows(nBlk::Int, C::COSMO.PsdConeTriangle{T}) where {T} = div((nBlk + 1) * nBlk, 2)
 
-function decompose!(H_I::Vector{Int64}, C_new, set_ind::Int64,  C::DecomposableCones{ <: Real}, entry::Int64, row_start::Int64, sp_arr::Array{SparsityPattern}, sp_ind::Int64)
+function decompose!(H_I::Vector{Int}, C_new, set_ind::Int,  C::DecomposableCones{ <: Real}, entry::Int, row_start::Int, sp_arr::Array{SparsityPattern}, sp_ind::Int)
   sparsity_pattern = sp_arr[sp_ind]
   sntree = sparsity_pattern.sntree
   # original matrix size
@@ -84,7 +84,7 @@ end
 
 
 # fills the corresponding entries of H for clique c
-function add_subblock_map!(H_I::Vector{Int64}, clique_vertices::Array{Int64}, original_size::Int64, entry::Int64, row_start::Int64, ::PsdCone{<: Real})
+function add_subblock_map!(H_I::Vector{Int}, clique_vertices::Array{Int}, original_size::Int, entry::Int, row_start::Int, ::PsdCone{<: Real})
   for vj in clique_vertices
     for vi in clique_vertices
       row = mat_to_vec_ind(vi, vj, original_size)
@@ -92,10 +92,10 @@ function add_subblock_map!(H_I::Vector{Int64}, clique_vertices::Array{Int64}, or
       entry += 1
     end
   end
-  return entry::Int64
+  return entry::Int
 end
 
-function add_subblock_map!(H_I::Vector{Int64}, clique_vertices::Array{Int64}, original_size::Int64, entry::Int64,  row_start::Int64, ::PsdConeTriangle{<: Real})
+function add_subblock_map!(H_I::Vector{Int}, clique_vertices::Array{Int}, original_size::Int, entry::Int,  row_start::Int, ::PsdConeTriangle{<: Real})
   for vj in clique_vertices
     for vi in clique_vertices
       if vi <= vj
@@ -105,7 +105,7 @@ function add_subblock_map!(H_I::Vector{Int64}, clique_vertices::Array{Int64}, or
       end
     end
   end
-  return entry::Int64
+  return entry::Int
 end
 
 
@@ -116,7 +116,7 @@ function find_H_col_dimension(sets, sp_arr)
     dim, overlaps, sp_arr_ind = decomposed_dim(C, sp_arr, sp_arr_ind)
     sum_cols += dim
   end
-  return sum_cols::Int64
+  return sum_cols::Int
 end
 
 
@@ -167,12 +167,12 @@ function augment_clique_based!(ws::COSMO.Workspace{T}) where {T}
 
   # allocate memory for Aa_I, Aa_J, Aa_V, b_I
   nz = nnz(A)
-  Aa_I = zeros(Int64, nz + 2 * num_overlapping_entries)
+  Aa_I = zeros(Int, nz + 2 * num_overlapping_entries)
   Aa_J = extra_columns(nz + 2 * num_overlapping_entries, nz + 1, ws.p.model_size[2] + 1)
   Aa_V =  alternating_sequence(nz + 2 * num_overlapping_entries, nz + 1)
   findnz!(Aa_I, Aa_J, Aa_V, A)
   bs = sparse(b)
-  b_I = zeros(Int64, length(bs.nzval))
+  b_I = zeros(Int, length(bs.nzval))
   b_V = bs.nzval
 
 
@@ -200,21 +200,21 @@ function augment_clique_based!(ws::COSMO.Workspace{T}) where {T}
 end
 
 "Given the row, column, and nzval vectors and dimensions, assemble the sparse matrix `Aa` of the decomposed problem in a slightly more memory efficient way."
-function allocate_sparse_matrix(Aa_I::Array{Int64, 1}, Aa_J::Array{Int64, 1}, Aa_V::Array{Float64, 1}, mA::Int64, nA::Int64)
-  csrrowptr = zeros(Int64, mA + 1)
-  csrcolval = zeros(Int64, length(Aa_I))
+function allocate_sparse_matrix(Aa_I::Array{Int, 1}, Aa_J::Array{Int, 1}, Aa_V::Array{Float64, 1}, mA::Int, nA::Int)
+  csrrowptr = zeros(Int, mA + 1)
+  csrcolval = zeros(Int, length(Aa_I))
   csrnzval = zeros(Float64, length(Aa_I))
-  klasttouch = zeros(Int64, nA + 1)
-  csccolptr = zeros(Int64, nA + 1)
+  klasttouch = zeros(Int, nA + 1)
+  csccolptr = zeros(Int, nA + 1)
   # sort_col_wise!(Aa_I, Aa_V, A.colptr, size(A, 2))
-  #Aa = SparseMatrixCSC{Float64, Int64}(mA, nA, Aa_J, Aa_I, Aa_V)
+  #Aa = SparseMatrixCSC{Float64, Int}(mA, nA, Aa_J, Aa_I, Aa_V)
   Aa = SparseArrays.sparse!(Aa_I, Aa_J, Aa_V, mA, nA, +, klasttouch, csrrowptr, csrcolval, csrnzval, csccolptr, Aa_I, Aa_V )
 end
 
 
 
 "Return the dimension of the problem after a clique tree based decomposition, given the sparsity patterns in `sp_arr`."
-function find_A_dimension(n_original::Int64, sets, sp_arr)
+function find_A_dimension(n_original::Int, sets, sp_arr)
   num_cols = n_original
   num_overlapping_entries = 0
   num_rows = 0
@@ -224,13 +224,13 @@ function find_A_dimension(n_original::Int64, sets, sp_arr)
     num_rows += dim
     num_overlapping_entries += overlaps
   end
-  return num_rows::Int64, (num_cols + num_overlapping_entries)::Int64, num_overlapping_entries
+  return num_rows::Int, (num_cols + num_overlapping_entries)::Int, num_overlapping_entries
 end
 
 
 # This method handles all non-decomposable sets C. For these non-decomposable sets you just have to shift the row indices of all entries by an offset
-function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{COSMO.AbstractConvexSet{Float64}, 1}, row_ptr::Int64, A0::SparseMatrixCSC, b0::SparseVector, row_range::UnitRange{Int64}, overlap_ptr::Int64, set_ind::Int64, sp_ind::Int64,
-  sp_arr::Array{SparsityPattern, 1}, C::AbstractConvexSet, k::Int64, cone_map::Dict{Int64, Int64})
+function add_entries!(A_I::Array{Int, 1}, b_I::Array{Int, 1}, C_new::Array{COSMO.AbstractConvexSet{Float64}, 1}, row_ptr::Int, A0::SparseMatrixCSC, b0::SparseVector, row_range::UnitRange{Int}, overlap_ptr::Int, set_ind::Int, sp_ind::Int,
+  sp_arr::Array{SparsityPattern, 1}, C::AbstractConvexSet, k::Int, cone_map::Dict{Int, Int})
 
   m, n = size(A0)
 
@@ -264,8 +264,8 @@ function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{C
 end
 
 # This method handles decomposable cones, e.g. PsdConeTriangle. The row vectors A_I and b_I have to be edited in such a way that entries of one clique are appear continously
-function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{COSMO.AbstractConvexSet{Float64}, 1}, row_ptr::Int64, A0::SparseMatrixCSC, b0::SparseVector, row_range::UnitRange{Int64}, overlap_ptr::Int64, set_ind::Int64, sp_ind::Int64,
-  sp_arr::Array{SparsityPattern, 1},  C::PsdConeTriangle{Float64}, k::Int64,  cone_map::Dict{Int64, Int64})
+function add_entries!(A_I::Array{Int, 1}, b_I::Array{Int, 1}, C_new::Array{COSMO.AbstractConvexSet{Float64}, 1}, row_ptr::Int, A0::SparseMatrixCSC, b0::SparseVector, row_range::UnitRange{Int}, overlap_ptr::Int, set_ind::Int, sp_ind::Int,
+  sp_arr::Array{SparsityPattern, 1},  C::PsdConeTriangle{Float64}, k::Int,  cone_map::Dict{Int, Int})
 
   sp = sp_arr[sp_ind] # The SparsityPattern correspondig to this cone C
   sntree = sp.sntree # The Supernodal Elimination Tree that stores information about the cliques
@@ -281,7 +281,7 @@ function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{C
 
     # get supernodes and seperators and undo the reordering
     sep = map(v -> ordering[v], get_sep(sntree, iii))
-    isa(sep, Array{Any, 1}) && (sep = Int64[])
+    isa(sep, Array{Any, 1}) && (sep = Int[])
     snd = map(v -> ordering[v], get_snd(sntree, iii))
     # compute sorted block indices (i, j, flag) for this clique with an information flag whether an entry (i, j) is an overlap
     block_indices = COSMO.get_block_indices(snd, sep, N_v)
@@ -289,7 +289,7 @@ function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{C
     # If we encounter an overlap with a parent clique we have to be able to find the location of the overlapping entry
     # Therefore load and reorder the parent clique
     if iii == num_cliques(sntree)
-      par_clique = Int64[]
+      par_clique = Int[]
       par_rows = 0:0
     else
       par_ind = COSMO.get_clique_par(sntree, iii)
@@ -316,7 +316,7 @@ function add_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, C_new::Array{C
 end
 
 " Loop over all entries (i, j) in the clique and either set the correct row in `A_I` and `b_I` if (i, j) is not an overlap or add an overlap column with (-1 and +1) in the correct positions."
-function add_clique_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, A_rowval::Array{Int64}, b_nzind::Array{Int64, 1}, block_indices::Array{Tuple{Int64, Int64, Int64},1},  par_clique::Array{Int64, 1}, par_rows::UnitRange{Int64}, col::Int64,  C_sqrt_dim::Int64, row_ptr::Int64, overlap_ptr::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64}, row_range_b::UnitRange{Int64})
+function add_clique_entries!(A_I::Array{Int, 1}, b_I::Array{Int, 1}, A_rowval::Array{Int}, b_nzind::Array{Int, 1}, block_indices::Array{Tuple{Int, Int, Int},1},  par_clique::Array{Int, 1}, par_rows::UnitRange{Int}, col::Int,  C_sqrt_dim::Int, row_ptr::Int, overlap_ptr::Int, row_range::UnitRange{Int}, row_range_col::UnitRange{Int}, row_range_b::UnitRange{Int})
   counter = 0
   for block_idx in block_indices
     new_row_val = row_ptr + counter
@@ -344,7 +344,7 @@ function add_clique_entries!(A_I::Array{Int64, 1}, b_I::Array{Int64, 1}, A_rowva
 end
 
 " Given the nominal entry position `k = svec(i, j)` find and modify with `new_row_val` the actual location of that entry in the global row vector `rowval`."
-function modify_clique_rows!(v::Array{Int64, 1}, k::Int64, rowval::Array{Int64, 1}, C_sqrt_dim::Int64, new_row_val::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64})
+function modify_clique_rows!(v::Array{Int, 1}, k::Int, rowval::Array{Int, 1}, C_sqrt_dim::Int, new_row_val::Int, row_range::UnitRange{Int}, row_range_col::UnitRange{Int})
   row_0 = COSMO.get_row_index(k, rowval, C_sqrt_dim, row_range, row_range_col)
   # row_0 happens when (i, j) references an edge that was added by merging cliques, the corresponding value will be zero
   # and can be disregarded
@@ -355,7 +355,7 @@ function modify_clique_rows!(v::Array{Int64, 1}, k::Int64, rowval::Array{Int64, 
 end
 
 "Given the svec index `k` and an offset `row_range_col.start`, return the location of the (i, j)th entry in the row vector `rowval`."
-function get_row_index(k::Int64, rowval::Array{Int64, 1}, sqrt_dim::Int64, row_range::UnitRange{Int64}, row_range_col::UnitRange{Int64})
+function get_row_index(k::Int, rowval::Array{Int, 1}, sqrt_dim::Int, row_range::UnitRange{Int}, row_range_col::UnitRange{Int})
   row_range_col == 0:0 && return 0
   k_shift = row_range.start + k - 1
 
@@ -379,25 +379,25 @@ end
 # -----------------------------------------
 
 " Find the index of k=svec(i, j) in the parent clique `par_clique`."
-function parent_block_indices(par_clique::Array{Int64, 1}, i::Int64, j::Int64)
+function parent_block_indices(par_clique::Array{Int, 1}, i::Int, j::Int)
   ir = searchsortedfirst(par_clique, i)
   jr = searchsortedfirst(par_clique, j)
   return COSMO.mat_to_svec_ind(ir, jr)
 end
 
 """
-    get_block_indices(snd::Array{Int64}, sep::Array{Int64})
+    get_block_indices(snd::Array{Int}, sep::Array{Int})
 
 For a clique consisting of supernodes `snd` and seperators `sep`, compute all the indices (i, j) of the corresponding matrix block
 in the format (i, j, flag) where flag is equal to 0 if entry (i, j) corresponds to an overlap of the clique and 1 otherwise.
 
 `Nv` is the number of vertices in the graph that we are trying to decompose.
 """
-function get_block_indices(snd::Array{Int64}, sep::Array{Int64}, Nv::Int64)
+function get_block_indices(snd::Array{Int}, sep::Array{Int}, Nv::Int)
   N = length(sep) + length(snd)
   d = div(N * (N + 1), 2)
 
-  block_indices = Array{Tuple{Int64, Int64, Int64}, 1}(undef, d)
+  block_indices = Array{Tuple{Int, Int, Int}, 1}(undef, d)
   ind = 1
 
   for j in sep, i in sep
@@ -426,18 +426,18 @@ function get_block_indices(snd::Array{Int64}, sep::Array{Int64}, Nv::Int64)
 end
 
 "For a cone `C` determine the sum of vector-dimensions of its cliques after decomposition (`dim`) and the total number of overlaps between them (`overlaps`)."
-decomposed_dim(C::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64) = (C.dim, 0, sp_arr_ind)
-function decomposed_dim(C::DecomposableCones{ <: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int64)
+decomposed_dim(C::AbstractConvexSet, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int) = (C.dim, 0, sp_arr_ind)
+function decomposed_dim(C::DecomposableCones{ <: Real}, sp_arr::Array{SparsityPattern}, sp_arr_ind::Int)
   sntree = sp_arr[sp_arr_ind].sntree
   dim, overlaps = get_decomposed_dim(sntree, C)
-  return dim::Int64, overlaps::Int64, (sp_arr_ind + 1)::Int64
+  return dim::Int, overlaps::Int, (sp_arr_ind + 1)::Int
 end
 
 "Return the row ranges of each clique after the decomposition of `C` shifted by `row_start`."
-function clique_rows_map(row_start::Int64, sntree::SuperNodeTree, C::DecomposableCones{<:Real})
+function clique_rows_map(row_start::Int, sntree::SuperNodeTree, C::DecomposableCones{<:Real})
   Nc = num_cliques(sntree)
-  rows = Array{UnitRange{Int64}}(undef,  Nc)
-  ind = zeros(Int64, Nc)
+  rows = Array{UnitRange{Int}}(undef,  Nc)
+  ind = zeros(Int, Nc)
   for iii = Nc:-1:1
     num_rows = COSMO.get_blk_rows(COSMO.get_nBlk(sntree, iii), C)
     rows[iii] = row_start:row_start+num_rows-1
@@ -448,7 +448,7 @@ function clique_rows_map(row_start::Int64, sntree::SuperNodeTree, C::Decomposabl
 end
 
 
-function get_rows(b::SparseVector, row_range::UnitRange{Int64})
+function get_rows(b::SparseVector, row_range::UnitRange{Int})
   rows = b.nzind
   if length(rows) > 0
 
@@ -469,7 +469,7 @@ function get_rows(b::SparseVector, row_range::UnitRange{Int64})
 
 end
 
-function get_rows(A::SparseMatrixCSC, col::Int64, row_range::UnitRange{Int64})
+function get_rows(A::SparseMatrixCSC, col::Int, row_range::UnitRange{Int})
   colrange = A.colptr[col]:(A.colptr[col + 1]-1)
 
   # if the column has entries
@@ -497,7 +497,7 @@ function get_rows(A::SparseMatrixCSC, col::Int64, row_range::UnitRange{Int64})
 end
 
 "Returns the appropriate amount of memory for `A.nzval`, including, starting from `n_start`, the (+1 -1) entries for the overlaps."
-function alternating_sequence(total_length::Int64, n_start::Int64)
+function alternating_sequence(total_length::Int, n_start::Int)
   v = ones(Float64, total_length)
   for i=n_start + 1:2:length(v)
     v[i] = -1
@@ -506,8 +506,8 @@ function alternating_sequence(total_length::Int64, n_start::Int64)
 end
 
 "Returns the appropriate amount of memory for the columns of the augmented problem matrix `A`, including, starting from `n_start`, the columns for the (+1 -1) entries for the overlaps."
-function extra_columns(total_length::Int64, n_start::Int64, start_val::Int64)
-  v = zeros(Int64, total_length)
+function extra_columns(total_length::Int, n_start::Int, start_val::Int)
+  v = zeros(Int, total_length)
   for i = n_start:2:length(v)-1
     v[i] = start_val
     v[i + 1] = start_val
@@ -516,9 +516,9 @@ function extra_columns(total_length::Int64, n_start::Int64, start_val::Int64)
   return v
 end
 
-function augmented_col_ptr(colptr::Array{Int64}, num_overlapping_entries::Int64)
+function augmented_col_ptr(colptr::Array{Int}, num_overlapping_entries::Int)
   l = length(colptr)
-  v = zeros(Int64, l + num_overlapping_entries)
+  v = zeros(Int, l + num_overlapping_entries)
   col = colptr[end] + 2
   for i = l+1:length(v)
     v[i] = col
@@ -550,7 +550,7 @@ function add_nz_entries!(J::Vector{Ti}, V::Vector{Tv}, S::SparseMatrixCSC{Tv,Ti}
 end
 
 "Given the row vector and colptr of a sparse matrix, sort the  entries within `rowvals` and `nzvals` withing the first `n0` columns."
-function sort_col_wise!(rowval::Array{Int64, 1}, nzval::Array{Float64, 1}, colptr::Array{Int64, 1}, n0::Int64)
+function sort_col_wise!(rowval::Array{Int, 1}, nzval::Array{Float64, 1}, colptr::Array{Int, 1}, n0::Int)
   for col = 1:n0
     r = colptr[col]:colptr[col + 1]-1
     row_view = view(rowval, r)
@@ -565,7 +565,7 @@ function sort_col_wise!(rowval::Array{Int64, 1}, nzval::Array{Float64, 1}, colpt
 end
 
 
-function vec_to_mat_ind(ind::Int64, n::Int64)
+function vec_to_mat_ind(ind::Int, n::Int)
   ind > n^2 && error("Index ind out of range.")
   ind == 1 && (return 1, 1)
 
@@ -582,13 +582,13 @@ function vec_to_mat_ind(ind::Int64, n::Int64)
 end
 
 "Convert the matrix indices `(i, j)` of `A ∈ R^{m x n}` into the corresponding linear index of `v = vec(A)`."
-function mat_to_vec_ind(i::Int64, j::Int64, m::Int64)
+function mat_to_vec_ind(i::Int, j::Int, m::Int)
   (i > m || i <= 0 || j <= 0) && throw(BoundsError("Indices outside matrix bounds."))
   return (j - 1) * m + i
 end
 
 "Convert the matrix indices `(i, j)` of `A ∈ R^{m x n}` into the corresponding linear index of `v = svec(A, ::UpperTriangle)`."
-function mat_to_svec_ind(i::Int64, j::Int64)
+function mat_to_svec_ind(i::Int, j::Int)
   if i <= j
     return div((j - 1) * j, 2) + i
   else
@@ -596,10 +596,10 @@ function mat_to_svec_ind(i::Int64, j::Int64)
   end
 end
 
-vectorized_ind(i::Int64, j::Int64, m::Int64, C::PsdCone{T}) where {T} = mat_to_vec_ind(i, j, m)
-vectorized_ind(i::Int64, j::Int64, m::Int64, C::PsdConeTriangle{T}) where {T} = mat_to_svec_ind(i, j)
+vectorized_ind(i::Int, j::Int, m::Int, C::PsdCone{T}) where {T} = mat_to_vec_ind(i, j, m)
+vectorized_ind(i::Int, j::Int, m::Int, C::PsdConeTriangle{T}) where {T} = mat_to_svec_ind(i, j)
 
-function svec_to_mat_ind(k::Int64)
+function svec_to_mat_ind(k::Int)
   j = isqrt(2 * k)
   i = k - div((j - 1) * j, 2)
   return i, j

@@ -234,9 +234,9 @@ struct PsdCone{T} <: AbstractConvexCone{T}
 	dim::Int
 	sqrt_dim::Int
   work::PsdBlasWorkspace{T}
-  tree_ind::Int64  # tree number that this cone belongs to
-  clique_ind::Int64
-	function PsdCone{T}(dim::Int, tree_ind::Int64, clique_ind::Int64) where{T}
+  tree_ind::Int  # tree number that this cone belongs to
+  clique_ind::Int
+	function PsdCone{T}(dim::Int, tree_ind::Int, clique_ind::Int) where{T}
 		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
 		iroot = isqrt(dim)
 		iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
@@ -244,7 +244,7 @@ struct PsdCone{T} <: AbstractConvexCone{T}
 	end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
-PsdCone{T}(dim::Int64) where{T} = PsdCone{T}(dim, 0, 0)
+PsdCone{T}(dim::Int) where{T} = PsdCone{T}(dim, 0, 0)
 
 
 struct DensePsdCone{T} <: AbstractConvexCone{T}
@@ -324,10 +324,10 @@ mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     sqrt_dim::Int # side length of matrix
     X::Array{T,2}
     work::PsdBlasWorkspace{T}
-    tree_ind::Int64 # tree number that this cone belongs to
-    clique_ind::Int64
+    tree_ind::Int # tree number that this cone belongs to
+    clique_ind::Int
 
-    function PsdConeTriangle{T}(dim::Int, tree_ind::Int64, clique_ind::Int64) where{T}
+    function PsdConeTriangle{T}(dim::Int, tree_ind::Int, clique_ind::Int) where{T}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
         side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
         new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension), tree_ind, clique_ind)
@@ -335,7 +335,7 @@ mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
     end
 end
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
-PsdConeTriangle{T}(dim::Int64) where{T} = PsdConeTriangle{T}(dim, 0, 0)
+PsdConeTriangle{T}(dim::Int) where{T} = PsdConeTriangle{T}(dim, 0, 0)
 
 DecomposableCones{T} = Union{PsdCone{T}, PsdConeTriangle{T}}
 
@@ -426,7 +426,7 @@ Creates the exponential cone ``\\mathcal{K}_{exp} = \\{(x, y, z) \\mid y \\geq 0
 struct ExponentialCone{T} <: AbstractConvexCone{T}
   dim::Int
   v0::Vector{T}
-  MAX_ITER::Int64
+  MAX_ITER::Int
   EXP_TOL::T
 
   function ExponentialCone{T}(dim = 3, MAX_ITERS = 100, EXP_TOL = 1e-8) where{T}
@@ -548,17 +548,17 @@ end
 
 
 """
-    PowerCone(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8)
+    PowerCone(alpha::Float64, MAX_ITERS::Int = 20, POW_TOL = 1e-8)
 
 Creates the 3-d power cone ``\\mathcal{K}_{pow} = \\{(x, y, z) \\mid x^\\alpha y^{(1-\\alpha)} \\geq  \\|z\\|, x \\geq 0, y \\geq 0 \\}`` with ``0 < \\alpha < 1``
 """
 struct PowerCone{T} <: AbstractConvexCone{T}
   dim::Int
   α::T
-  MAX_ITER::Int64
+  MAX_ITER::Int
   POW_TOL::T
 
-  function PowerCone{T}(alpha::Real, MAX_ITERS::Int64 = 20, POW_TOL::Real = 1e-8) where{T <: AbstractFloat}
+  function PowerCone{T}(alpha::Real, MAX_ITERS::Int = 20, POW_TOL::Real = 1e-8) where{T <: AbstractFloat}
     (alpha <= 0 || alpha >= one(T)) && throw(DomainError("The exponent α of the power cone has to be in (0, 1)."))
     new(3, alpha, MAX_ITERS, POW_TOL)
   end
@@ -672,7 +672,7 @@ end
 
 
 """
-    DualExponentialCone(MAX_ITERS::Int64 = 100, EXP_TOL = 1e-8)
+    DualExponentialCone(MAX_ITERS::Int = 100, EXP_TOL = 1e-8)
 
 Creates the dual exponential cone ``\\mathcal{K}^*_{exp} = \\{(x, y, z) \\mid x < 0,  -xe^{y/x} \\leq e^1 z \\} \\cup \\{ (0,y,z) \\mid   y \\geq 0, z \\geq 0 \\}``
 """
@@ -681,14 +681,14 @@ struct DualExponentialCone{T} <: AbstractConvexCone{T}
   v0::Vector{T}
   primal_cone::ExponentialCone{T}
 
-  function DualExponentialCone{T}(dim::Int64 = 3, MAX_ITERS::Int64 = 100, EXP_TOL = 1e-8) where{T}
+  function DualExponentialCone{T}(dim::Int = 3, MAX_ITERS::Int = 100, EXP_TOL = 1e-8) where{T}
     new(3, zeros(T, 3), ExponentialCone{T}(dim, MAX_ITERS, EXP_TOL))
   end
 end
 DualExponentialCone(args...) = DualExponentialCone{DefaultFloat}(args...)
 
 """
-    DualPowerCone(alpha::Float64, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8)
+    DualPowerCone(alpha::Float64, MAX_ITERS::Int = 20, POW_TOL = 1e-8)
 
 Creates the 3-d dual power cone ``\\mathcal{K}^*_{pow} = \\{(u, v, w) \\mid \\left( \\frac{u}{\\alpha}\\right)^\\alpha \\left( \\frac{v}{1-\\alpha}\\right)^{(1-\\alpha)} \\geq  \\|w\\|, u \\geq 0, v \\geq 0 \\}`` with ``0 < \\alpha < 1``
 """
@@ -697,7 +697,7 @@ struct DualPowerCone{T} <: AbstractConvexCone{T}
   v0::Vector{T}
   primal_cone::PowerCone{T}
 
-  function DualPowerCone{T}(alpha::Real, MAX_ITERS::Int64 = 20, POW_TOL = 1e-8) where{T}
+  function DualPowerCone{T}(alpha::Real, MAX_ITERS::Int = 20, POW_TOL = 1e-8) where{T}
     (alpha <= 0 || alpha >= 1) && throw(DomainError, "The exponent α of the dual power cone has to be in (0, 1).")
     new(3, zeros(T,3), PowerCone{T}(alpha, MAX_ITERS, POW_TOL))
   end
@@ -913,7 +913,7 @@ end
 # computes the row indices of A,b for each convex set
 function get_set_indices(sets::Array{COSMO.AbstractConvexSet, 1})
 	sidx = 0
-	indices = Array{UnitRange{Int64}, 1}(undef, length(sets))
+	indices = Array{UnitRange{Int}, 1}(undef, length(sets))
 	for i = eachindex(sets)
 		indices[i] = (sidx + 1) : (sidx + sets[i].dim)
 		sidx += sets[i].dim

@@ -195,7 +195,7 @@ function assign_constraint_row_ranges!(rowranges::Dict{Int, UnitRange{Int}}, idx
     LOCs = MOI.get(src, MOI.ListOfConstraints())
     sort!(LOCs, by=x-> sort_sets(x[2]))
     for (F, S) in LOCs
-        # Returns Array of constraint indexes that match F,S, each constraint index is just a type-safe wrapper for Int64
+        # Returns Array of constraint indexes that match F,S, each constraint index is just a type-safe wrapper for Int
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         for ci_src in cis_src
             set = MOI.get(src, MOI.ConstraintSet(), ci_src)
@@ -577,7 +577,7 @@ function merge_sets(C::Array{COSMO.AbstractConvexSet{T}}) where {T <: AbstractFl
 end
 
 
-function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet, 1}, set_ind::Int64, set_type::DataType) where {T <: AbstractFloat}
+function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int, 1}, C::Array{<: COSMO.AbstractConvexSet, 1}, set_ind::Int, set_type::DataType) where {T <: AbstractFloat}
         if length(ind) > 1
             combined_dim = sum(x -> x.dim, C[ind])
         else
@@ -587,7 +587,7 @@ function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Arra
         return set_ind + 1
 end
 
-function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int64, 1}, C::Array{<: COSMO.AbstractConvexSet{T}, 1}, set_ind::Int64) where {T <: AbstractFloat}
+function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int, 1}, C::Array{<: COSMO.AbstractConvexSet{T}, 1}, set_ind::Int) where {T <: AbstractFloat}
         if length(ind) > 1
             combined_dim = sum(x -> x.dim, C[ind])
             l = zeros(T, combined_dim)

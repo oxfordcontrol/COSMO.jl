@@ -17,7 +17,7 @@ struct PardisoDirectKKTSolver{Tv, Ti} <: AbstractPardisoKKTSolver
     work::Vector{Tv}  #working memory for Pardiso
 
     function PardisoDirectKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho;
-        iparm::Dict{Int64, Int64} = Dict{Int64, Int64}(), msg_level_on::Bool = false) where {Tv, Ti}
+        iparm::Dict{Int, Int} = Dict{Int, Int}(), msg_level_on::Bool = false) where {Tv, Ti}
 
         m, n, K, ps, work = _pardiso_common_init(P, A, sigma, rho, PardisoSolver, iparm, msg_level_on)
 
@@ -41,7 +41,7 @@ struct PardisoIndirectKKTSolver{Tv, Ti} <: AbstractPardisoKKTSolver
     work::Vector{Tv}  #working memory for Pardiso
 
     function PardisoIndirectKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho;
-        iparm::Dict{Int64, Int64} = Dict{Int64, Int64}(), msg_level_on::Bool = false) where {Tv, Ti}
+        iparm::Dict{Int, Int} = Dict{Int, Int}(), msg_level_on::Bool = false) where {Tv, Ti}
 
         m, n, K, ps, work = _pardiso_common_init(P, A, sigma, rho, PardisoSolver, iparm, msg_level_on)
 
@@ -68,7 +68,7 @@ struct MKLPardisoKKTSolver{Tv, Ti} <: AbstractPardisoKKTSolver
     work::Vector{Tv}  #working memory for Pardiso
 
     function MKLPardisoKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma, rho;
-        iparm::Dict{Int64, Int64} = Dict{Int64, Int64}(), msg_level_on::Bool = false, num_threads::Int64 = 1) where {Tv, Ti}
+        iparm::Dict{Int, Int} = Dict{Int, Int}(), msg_level_on::Bool = false, num_threads::Int = 1) where {Tv, Ti}
 
         m, n, K, ps, work = _pardiso_common_init(P, A, sigma, rho, MKLPardisoSolver, iparm, msg_level_on)
 
@@ -86,7 +86,7 @@ end
 #-------------------
 #Pardiso common utils
 
-function _pardiso_common_init(P, A, sigma, rho, Solver::Type, iparm::Dict{Int64, Int64}, msg_level_on::Bool)
+function _pardiso_common_init(P, A, sigma, rho, Solver::Type, iparm::Dict{Int, Int}, msg_level_on::Bool)
 
     #allow Pardiso solvers do this first
 

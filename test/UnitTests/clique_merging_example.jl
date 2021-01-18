@@ -5,15 +5,15 @@ using COSMO, SparseArrays, LinearAlgebra, Test
 function get_example_tree(strategy)
 
   # define example tree with known merge order
-  snd1 = Set([15; 16; 17]); sep1 = Set{Int64}();
-  snd2 = Set([5; 9]); sep2 = Set([15; 16]);
-  snd3 = Set([3; 4]); sep3 = Set([5; 15]);
+  snd1 = Set([15, 16, 17]); sep1 = Set{Int}();
+  snd2 = Set([5, 9]); sep2 = Set([15; 16]);
+  snd3 = Set([3, 4]); sep3 = Set([5; 15]);
   snd4 = Set([1]); sep4 = Set([3]);
   snd5 = Set([2]); sep5 = Set([3; 4]);
   snd6 = Set([6]); sep6 = Set([9; 16]);
-  snd7 = Set([7; 8]); sep7 = Set([9; 15]);
-  snd8 = Set([12; 13; 14]); sep8 = Set([16; 17]);
-  snd9 = Set([10; 11]); sep9 = Set([13; 14; 17]);
+  snd7 = Set([7, 8]); sep7 = Set([9; 15]);
+  snd8 = Set([12, 13, 14]); sep8 = Set([16; 17]);
+  snd9 = Set([10, 11]); sep9 = Set([13; 14; 17]);
 
   supernodes = [snd1, snd2, snd3, snd4, snd5, snd6, snd7, snd8, snd9]
   seperators = [sep1, sep2, sep3, sep4, sep5, sep6, sep7, sep8, sep9]

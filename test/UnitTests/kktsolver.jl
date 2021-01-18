@@ -189,10 +189,10 @@ end
              # known number of nonzero entries in upper and lower triangle of KKT matrix K
              Kcolnz_upper_sol = [1; 1; 3; 4; 2]
              Kcolnz_lower_sol = [3; 4; 2; 1; 1]
-             Kcolnz_upper = zeros(Int64, m + n)
+             Kcolnz_upper = zeros(Int, m + n)
              COSMO._count_upper_triangle!(Kcolnz_upper, P, A, n)
              @test Kcolnz_upper == Kcolnz_upper_sol
-             Kcolnz_lower = zeros(Int64, m + n)
+             Kcolnz_lower = zeros(Int, m + n)
              COSMO._count_lower_triangle!(Kcolnz_lower, P, A, n)
              @test Kcolnz_lower == Kcolnz_lower_sol
 
