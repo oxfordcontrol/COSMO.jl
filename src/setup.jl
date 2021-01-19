@@ -54,7 +54,11 @@ function setup!(ws::COSMO.Workspace)
 	end
 
 	# instantiate accelerator
-	_make_accelerator!(ws)
+	if !ws.states.KKT_FACTORED
+		_make_accelerator!(ws)
+	else
+		CA.restart!(ws.accelerator)
+	end
 end
 
 function allocate_set_memory!(ws::COSMO.Workspace)
