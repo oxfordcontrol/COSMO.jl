@@ -113,7 +113,11 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	ws.times.factor_update_time = 0.
 	ws.times.proj_time  = 0. #reset projection time
 	ws.times.setup_time = @elapsed COSMO.setup!(ws);
-
+	if settings.verbose_timing
+		ws.times.update_time = 0.
+		ws.times.accelerate_time = 0.
+	end
+	
 	# instantiate variables
 	status = :Undetermined
 	cost = T(Inf)
@@ -152,9 +156,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n) # μ_k kept in sync with s_k, w already updated to w_{k+1}
 			@. ws.δy.data = ws.vars.μ
 		end
-		# if iter < 100
-		# @show(num_iter, ws.vars.w)
-		# end
+
 		# ADMM steps
 		@. ws.vars.w_prev = ws.vars.w
 		ws.times.proj_time += admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 

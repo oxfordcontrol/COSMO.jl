@@ -48,7 +48,7 @@ function setup!(ws::COSMO.Workspace)
 		_make_accelerator!(ws)
 	else
 		CA.restart!(ws.accelerator)
-		ws.accelerator.activated = false
+		ws.accelerator_active = false
 	end
 
 

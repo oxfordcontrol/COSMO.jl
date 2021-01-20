@@ -21,32 +21,32 @@ struct AccuracyActivation <: AbstractActivationReason
 end
 
 # dispatch on the activation reason
-function check_activation!(aa::CA.AbstractAccelerator, activation_reason::ImmediateActivation, num_iter::Int64)
-    if !is_active(aa) && num_iter >= 2
-        activate!(aa)
+function check_activation!(ws::Workspace, activation_reason::ImmediateActivation, num_iter::Int64)
+    if !ws.accelerator_active && num_iter >= 2
+        ws.accelerator_active = true
     end
 end
 
-function check_activation!(aa::CA.AbstractAccelerator, activation_reason::IterActivation, num_iter::Int64) 
-    if !is_active(aa) && num_iter >= activation_reason.start_iter
-        activate!(aa)
+function check_activation!(ws::Workspace, activation_reason::IterActivation, num_iter::Int64) 
+    if !ws.accelerator_active && num_iter >= activation_reason.start_iter
+        ws.accelerator_active = true
     end
 end
-check_activation!(aa::CA.AndersonAccelerator, activation_reason::AccuracyActivation, num_iter::Int64) = nothing
+check_activation!(ws::Workspace, activation_reason::AccuracyActivation, num_iter::Int64) = nothing
 
 
-function check_activation!(aa::CA.AbstractAccelerator, activation_reason::AccuracyActivation, r_prim::T, r_dual::T, max_norm_prim::T, max_norm_dual::T) where {T <: AbstractFloat}
-    if !is_active(aa.activated)
+function check_activation!(ws::Workspace, activation_reason::AccuracyActivation, r_prim::T, r_dual::T, max_norm_prim::T, max_norm_dual::T) where {T <: AbstractFloat}
+    if !ws.accelerator_active
         ϵ_prim_act = activation_reason.start_accuracy + activation_reason.start_accuracy * max_norm_prim
         ϵ_dual_act = activation_reason.start_accuracy + activation_reason.start_accuracy * max_norm_dual
         
         if r_prim < ϵ_prim_act  && r_dual < ϵ_dual_act
-            activate!(aa)
+            ws.accelerator_active = true
         end 
     end
 end
 
-check_activation!(aa::CA.AbstractAccelerator, activation_reason::Union{IterActivation, ImmediateActivation}, r_prim::T, r_dual::T, max_norm_prim::T, max_norm_dual::T) where {T <: AbstractFloat}= nothing
+check_activation!(ws::Workspace, activation_reason::Union{IterActivation, ImmediateActivation}, r_prim::T, r_dual::T, max_norm_prim::T, max_norm_dual::T) where {T <: AbstractFloat}= nothing
 
 
 """
@@ -57,12 +57,20 @@ A function that the accelerator can use before the nominal ADMM operator step.
 In the case of an Anderson Accelerator this is used to calculate an accelerated candidate vector, that overwrites the current iterate.
 """
 function acceleration_pre!(accelerator::CA.AbstractAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
-	COSMO.check_activation!(accelerator, ws.activation_reason, num_iter)
-	if is_active(accelerator)
-		CA.update!(accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
-		# overwrite w here
-		CA.accelerate!(ws.vars.w, ws.vars.w_prev, accelerator, num_iter)
-
+	COSMO.check_activation!(ws, ws.activation_reason, num_iter)
+	if ws.accelerator_active
+		if ws.settings.verbose_timing
+			time_start = time()  
+			CA.update!(accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
+			ws.times.update_time += time() - time_start
+			time_start = time()  		
+			CA.accelerate!(ws.vars.w, ws.vars.w_prev, accelerator, num_iter)
+			ws.times.accelerate_time += time() - time_start
+		else
+			CA.update!(accelerator, ws.vars.w, ws.vars.w_prev, num_iter)
+			# overwrite w here
+			CA.accelerate!(ws.vars.w, ws.vars.w_prev, accelerator, num_iter)
+		end
 	end 
 end
 acceleration_pre!(accelerator::CA.EmptyAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat} = nothing
@@ -75,13 +83,13 @@ A function that the accelerator can use after the nominal ADMM operator step.
 
 In the case of an Anderson Accelerator this is used to check the quality of the accelerated candidate vector and take measures if the vector is of bad quality.
 """
-function acceleration_post!(accelerator::CA.AbstractAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
-	if CA.was_successful(accelerator)
-		if ws.accelerator_safeguarding && CA.is_active(accelerator)
-			
+function acceleration_post!(accelerator::CA.AndersonAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
+
+	if ws.accelerator_active && CA.was_successful(accelerator)
+		if ws.accelerator_safeguarding
 			# norm(w_prev - w, 2) 
 			# use accelerator.f here to get f = (x - g) as w_prev has been overwritten before this function call
-			nrm_f = compute_non_accelerated_res_norm(accelerator.f)
+			nrm_f = norm(accelerator.f, 2)
 			nrm_tol = nrm_f * ws.safeguarding_tol
 			
 			# compute residual norm of accelerated point
@@ -94,10 +102,9 @@ function acceleration_post!(accelerator::CA.AbstractAccelerator, ws::Workspace{T
 				# don't use accelerated candidate point. Reset w = g_last
 				reset_accelerated_vector!(ws.vars.w, ws.vars.w_prev, accelerator)	
 				m, n = ws.p.model_size 
-				admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 			
+				ws.times.proj_time += admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 			
 				admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
 				admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
-
             else
                 CA.log!(accelerator, num_iter, :acc_guarded_accepted)
 			end
@@ -107,11 +114,8 @@ function acceleration_post!(accelerator::CA.AbstractAccelerator, ws::Workspace{T
 	end
 end
 
-acceleration_post!(accelerator::CA.EmptyAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat} = nothing
+acceleration_post!(accelerator::CA.AbstractAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat} = nothing
 
-function compute_non_accelerated_res_norm(f::AbstractVector{T}) where {T <: AbstractFloat}
-	return norm(f, 2)
-end
 
 "Computes the nonexpansive operator residual norm, i.e. f(w_prev) = || w_prev - w ||_2."
 function compute_accelerated_res_norm!(f::AbstractVector{T}, w::AbstractVector{T}, w_prev::AbstractVector{T}) where {T <: AbstractFloat}

@@ -102,7 +102,7 @@ function has_converged(ws::COSMO.Workspace{T}, r_prim::T, r_dual::T) where {T <:
 	ϵ_dual = settings.eps_abs + settings.eps_rel * max_norm_dual
 
 	# check activation of accelerator
-	COSMO.check_activation!(ws.accelerator, ws.activation_reason, r_prim, r_dual, max_norm_prim, max_norm_dual)
+	COSMO.check_activation!(ws, ws.activation_reason, r_prim, r_dual, max_norm_prim, max_norm_dual)
 
 	# if an optimal objective value was specified for the problem check if current solution is within specified accuracy
 	obj_true_FLAG = true

@@ -18,6 +18,8 @@ factor\\_update\\_time | Sum of times used to refactor the system of linear equa
 iter_time | Time spent in iteration loop
 proj_time | Time spent in projection functions
 post_time | Time used for post processing
+update_time | Time spent in the update! function of the accelerator
+accelerate_time | Time spent in the accelerate! function of the accelerator
 
 By default COSMO only measures `solver_time`, `setup_time` and `proj_time`. To measure the other times set `verbose_timing = true`.
 """
@@ -31,9 +33,11 @@ mutable struct ResultTimes{T <: AbstractFloat}
 	iter_time::T
 	proj_time::T
 	post_time::T
+	update_time::T
+	accelerate_time::T
 end
 
-ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
+ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
 ResultTimes(T::Type = DefaultFloat) = ResultTimes{T}()
 
 function Base.show(io::IO, obj::ResultTimes)
@@ -47,7 +51,9 @@ function Base.show(io::IO, obj::ResultTimes)
     "Graph time:\t$(round.(obj.graph_time, digits = 4))s ($(round.(obj.graph_time * 1000, digits = 2))ms)\n",
     "Initial Factor time:\t$(round.(obj.init_factor_time, digits = 4))s ($(round.(obj.init_factor_time * 1000, digits = 2))ms)\n",
     "Factor update time:\t$(round.(obj.factor_update_time, digits = 4))s ($(round.(obj.factor_update_time * 1000, digits = 2))ms)\n",
-    "Post time:\t$(round.(obj.post_time, digits = 4))s ($(round.(obj.post_time * 1000, digits = 2))ms)\n")
+    "Post time:\t$(round.(obj.post_time, digits = 4))s ($(round.(obj.post_time * 1000, digits = 2))ms)\n",
+    "Accelerator - update time:\t$(round.(obj.update_time, digits = 4))s ($(round.(obj.update_time * 1000, digits = 2))ms)\n",
+    "Accelerator - accelerate time:\t$(round.(obj.accelerate_time, digits = 4))s ($(round.(obj.accelerate_time * 1000, digits = 2))ms)\n")
   end
 end
 
@@ -362,6 +368,7 @@ mutable struct Workspace{T}
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
 	accelerator::AbstractAccelerator
 	accelerator_safeguarding::Bool # a flag that indicates whether the accelerator operates in safeguarded mode
+	accelerator_active::Bool
 	safeguarding_tol::T
 	activation_reason::AbstractActivationReason
 	#constructor
@@ -378,7 +385,7 @@ mutable struct Workspace{T}
 		sol = zeros(T, 1)
 		x_tl = view(sol, 1:1)
 		ν = view(sol, 1:1)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator(), true, T(2), ImmediateActivation())
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator(), true, false, T(2), ImmediateActivation())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
