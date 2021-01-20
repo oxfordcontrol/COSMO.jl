@@ -22,7 +22,7 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	end
 	println("Settings: ϵ_abs = $(@sprintf("%.1e", settings.eps_abs)), ϵ_rel = $(@sprintf("%.1e", settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.1e", settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.1e", settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(@sprintf("%.3g", settings.rho)), σ = $(@sprintf("%.3g", settings.sigma)), α = $(@sprintf("%.3g", settings.alpha)),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scaling_status)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter,\n" *	 " "^10 * "KKT system solver: $(print_lin_sys(settings.kkt_solver.ObjectType))")
 
-	print_accelerator(ws.accelerator, ws.accelerator_safeguarding, ws.safeguarding_tol, tab = 10)
+	print_accelerator(ws.accelerator, ws.settings.safeguard, ws.settings.safeguard_tol, tab = 10)
 	
 
 	println("Setup Time: $(round.(ws.times.setup_time*1000; digits=2))ms\n")
@@ -70,7 +70,7 @@ function print_lin_sys(s::Type{<:AbstractKKTSolver})
 end
 
 "Print information about the accelerator at the start."
-function print_accelerator(s::CA.AndersonAccelerator{T, BT, ME, RE}, safeguarded::Bool, safeguarding_tol; tab::Int64) where {T, BT, ME, RE}
+function print_accelerator(s::CA.AndersonAccelerator{T, BT, ME, RE}, safeguard::Bool, safeguard_tol; tab::Int64) where {T, BT, ME, RE}
 		me = ME == CA.RestartedMemory ? "RestartedMemory" : "RollingMemory"
 		if BT == CA.Type1
 			bt = "Type1"
@@ -80,7 +80,7 @@ function print_accelerator(s::CA.AndersonAccelerator{T, BT, ME, RE}, safeguarded
 			bt = "Type2{QRDecomp}"	
 		end
 
-		println("Acc:" * " "^(tab - 4)  * "Anderson $(bt),\n" * " "^tab * "Memory size = $(s.mem), $(me),	\n" * " "^tab * "Safeguarded: $(safeguarded), tol: $(safeguarding_tol)")
+		println("Acc:" * " "^(tab - 4)  * "Anderson $(bt),\n" * " "^tab * "Memory size = $(s.mem), $(me),	\n" * " "^tab * "Safeguarded: $(safeguard), tol: $(safeguard_tol)")
 end
 
 

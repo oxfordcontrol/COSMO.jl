@@ -53,8 +53,8 @@ compact_transformation | Choose how a decomposed problem is transformed | true
 time_limit | Set solver time limit in s | 0 (deactivated)
 accelerator | Acceleration scheme | `AndersonAccelerator{Type2}`
 accelerator_activation | Accelerator activation | `ImmediateActivation`
-safeguarding | Accelerator safeguarding | true
-safeguarding_tol | Safeguarding tolerance | 2.0
+safeguard | Accelerator safeguarding | true
+safeguard_tol | Safeguarding tolerance | 2.0
 
 """
 mutable struct Settings{T <: AbstractFloat}
@@ -92,8 +92,8 @@ mutable struct Settings{T <: AbstractFloat}
 	merge_strategy::Union{Type{<: AbstractMergeStrategy}, OptionsFactory{<: AbstractMergeStrategy}}
 	compact_transformation::Bool
 	accelerator::Union{Type{<: AbstractAccelerator}, OptionsFactory{<: AbstractAccelerator}}
-	safeguarding::Bool
-	safeguarding_tol::T
+	safeguard::Bool
+	safeguard_tol::T
 	#constructor
 	function Settings{T}(;
 		rho::Real=T(0.1),
@@ -130,8 +130,8 @@ mutable struct Settings{T <: AbstractFloat}
 		merge_strategy = CliqueGraphMerge,
 		compact_transformation::Bool = true,
 		accelerator = with_options(AndersonAccelerator{T, Type2{QRDecomp}, RestartedMemory, NoRegularizer}, mem = 10),
-		safeguarding::Bool = true, 
-		safeguarding_tol::T = T(2)
+		safeguard::Bool = true, 
+		safeguard_tol::T = T(2)
 		) where {T <: AbstractFloat}
 		if !isa(kkt_solver, OptionsFactory)
 			kkt_solver = with_options(kkt_solver)
@@ -145,7 +145,7 @@ mutable struct Settings{T <: AbstractFloat}
 			accelerator = with_options(accelerator)
 		end
 		
-		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, safeguarding, safeguarding_tol)
+		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, safeguard, safeguard_tol)
 	end
 end
 

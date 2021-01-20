@@ -11,8 +11,6 @@ function _make_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
   # if the user passed in a custom AbstractAccelerator, e.g. with different value for memory, don't change it
 	m, n = ws.p.model_size
 	ws.accelerator = ws.settings.accelerator(m + n)
-	ws.accelerator_safeguarding = ws.settings.safeguarding
-	ws.safeguarding_tol = ws.settings.safeguarding_tol
 end
 
 

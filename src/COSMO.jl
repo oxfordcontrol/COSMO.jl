@@ -2,9 +2,9 @@ __precompile__()
 module COSMO
 
 using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools
-# using Reexport
-using COSMOAccelerators
 
+using Reexport
+@reexport using COSMOAccelerators
 
 export assemble!, warm_start!, empty_model!, update!
 
