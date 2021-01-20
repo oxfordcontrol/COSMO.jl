@@ -70,10 +70,19 @@ function print_lin_sys(s::Type{<:AbstractKKTSolver})
 end
 
 "Print information about the accelerator at the start."
-function print_accelerator(s::AndersonAccelerator, safeguarded::Bool, safeguarding_tol; tab::Int64)
-		M = get_memory(s)
-		Ty = get_type(s)
-		println("Acc:" * " "^(tab - 4)  * "Anderson $(Ty),\n" * " "^tab * "Memory size = $(s.mem), $(M),	\n" * " "^tab * "Safeguarded: $(safeguarded), tol: $(safeguarding_tol)")
+function print_accelerator(s::CA.AndersonAccelerator{T, BT, ME, RE}, safeguarded::Bool, safeguarding_tol; tab::Int64) where {T, BT, ME, RE}
+		me = ME == CA.RestartedMemory ? "RestartedMemory" : "RollingMemory"
+		if BT == CA.Type1
+			bt = "Type1"
+		elseif BT == CA.Type2{NormalEquations}
+			bt = "Type2{NormalEquations}"
+		elseif BT == CA.Type2{QRDecomp}
+			bt = "Type2{QRDecomp}"	
+		end
+
+		println("Acc:" * " "^(tab - 4)  * "Anderson $(bt),\n" * " "^tab * "Memory size = $(s.mem), $(me),	\n" * " "^tab * "Safeguarded: $(safeguarded), tol: $(safeguarding_tol)")
 end
-print_accelerator(s::AbstractAccelerator, safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "Unknown Accelerator")
-print_accelerator(s::EmptyAccelerator,  safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "no acceleration")
+
+
+print_accelerator(s::CA.AbstractAccelerator, safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "Unknown Accelerator")
+print_accelerator(s::CA.EmptyAccelerator,  safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "no acceleration")

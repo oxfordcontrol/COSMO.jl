@@ -152,7 +152,9 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n) # μ_k kept in sync with s_k, w already updated to w_{k+1}
 			@. ws.δy.data = ws.vars.μ
 		end
-			
+		# if iter < 100
+		# @show(num_iter, ws.vars.w)
+		# end
 		# ADMM steps
 		@. ws.vars.w_prev = ws.vars.w
 		ws.times.proj_time += admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 
@@ -278,7 +280,9 @@ function apply_rho_adaptation_rules!(ρvec::Vector{T}, rho_updates::Vector{T}, s
 		was_adapted = adapt_rho_vec!(ws)
 		# changing the rho changes the ADMM operator, so restart accelerator
 		if was_adapted
-			restart!(ws.accelerator, iter, :rho_adapted)
+			CA.restart!(ws.accelerator)
+			CA.log!(ws.accelerator, iter, :rho_adapted)
+			
 			# adapt w[n+1:end]
 			@. ws.vars.w[n+1:end] = one(T) / ρvec * ws.vars.μ + ws.vars.s.data
 		end
@@ -311,7 +315,6 @@ function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64
 	if mod(iter, settings.check_termination) == 0 || iter == 1
 		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
 		r_prim, r_dual = calculate_residuals!(ws)
-		
 		# update cost
 		cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 		if abs(cost) > 1e20

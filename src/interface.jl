@@ -104,7 +104,7 @@ function empty_model!(model::COSMO.Model{T}) where {T <: AbstractFloat}
 	model.ρ = zero(T)
 	model.ρvec = T[]
 	model.kkt_solver = nothing
-	model.accelerator = EmptyAccelerator{T}()
+	model.accelerator = CA.EmptyAccelerator()
 	model.states = States()
 	model.rho_updates = T[]
 	model.rho_update_due = false

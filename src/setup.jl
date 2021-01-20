@@ -43,6 +43,15 @@ function setup!(ws::COSMO.Workspace)
 		set_rho_vec!(ws)
 	end
 
+	# instantiate accelerator
+	if !ws.states.KKT_FACTORED
+		_make_accelerator!(ws)
+	else
+		CA.restart!(ws.accelerator)
+		ws.accelerator.activated = false
+	end
+
+
 	# create a KKT solver object populated with our data
 	if !ws.states.KKT_FACTORED
 		if ws.settings.verbose_timing
@@ -53,12 +62,7 @@ function setup!(ws::COSMO.Workspace)
 		ws.states.KKT_FACTORED = true
 	end
 
-	# instantiate accelerator
-	if !ws.states.KKT_FACTORED
-		_make_accelerator!(ws)
-	else
-		CA.restart!(ws.accelerator)
-	end
+
 end
 
 function allocate_set_memory!(ws::COSMO.Workspace)

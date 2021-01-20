@@ -64,7 +64,7 @@ for T in UnitTestFloats
 
 
     model = COSMO.Model{T}()
-    assemble!(model, P, q, constraints)
+    assemble!(model, P, q, constraints, settings = COSMO.Settings{T}(eps_abs = T(1e-4), eps_rel = T(1e-4)))
 
     res = COSMO.optimize!(model)
 

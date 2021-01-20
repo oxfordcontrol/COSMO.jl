@@ -29,13 +29,13 @@ for T in UnitTestFloats
             b1 = zeros(T, 3)
 
             # y == 1 and z == exp(5) = 148.4131591025766
-            A2 = SparseMatrixCSC{T, Int64}([0 1. 0; 0 0 1])
+            A2 = SparseMatrixCSC{T, Int}([0 1. 0; 0 0 1])
             b2 = [-one(T); -exp(T(5))]
             cs1 = COSMO.Constraint(A1, b1, COSMO.ExponentialCone)
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(eps_abs = T(1e-3), eps_rel = T(1e-3)))
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(eps_abs = T(1e-5), eps_rel = T(1e-5)))
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
@@ -70,7 +70,7 @@ for T in UnitTestFloats
                 cs3 = COSMO.Constraint(A3, b3, COSMO.ZeroSet)
 
                 model = COSMO.Model{T}()
-                assemble!(model, P, q, [cs1; cs2; cs3])
+                assemble!(model, P, q, [cs1; cs2; cs3], settings = COSMO.Settings{T}(verbose = false, accelerator = COSMO.COSMOAccelerators.EmptyAccelerator))
 
                 res = COSMO.optimize!(model)
                 @test res.status == :Primal_infeasible
@@ -143,7 +143,7 @@ for T in UnitTestFloats
             cs1 = COSMO.Constraint(A1, b1, COSMO.DualExponentialCone)
 
             # y == 1 and z == exp(5)
-            A2 = SparseMatrixCSC{T, Int64}([1. 0 0; 0 0 1])
+            A2 = SparseMatrixCSC{T, Int}([1. 0 0; 0 0 1])
             b2 = [one(T); -exp(T(5))]
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
@@ -173,7 +173,7 @@ for T in UnitTestFloats
                 cs1 = COSMO.Constraint(A1, b1, COSMO.DualExponentialCone)
 
                 #  u == 1 and b == 2
-                A2 = SparseMatrixCSC{T, Int64}([1. 0 0; 0 1 0])
+                A2 = SparseMatrixCSC{T, Int}([1. 0 0; 0 1 0])
                 b2 = T[-1.; -2]
                 cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 

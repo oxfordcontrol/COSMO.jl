@@ -101,8 +101,8 @@ mutable struct Settings{T <: AbstractFloat}
 		alpha::Real=T(1.6),
 		eps_abs::Real=T(1e-5),
 		eps_rel::Real=T(1e-5),
-		eps_prim_inf::Real=T(1e-5),
-		eps_dual_inf::Real=T(1e-5),
+		eps_prim_inf::Real=T(1e-4),
+		eps_dual_inf::Real=T(1e-4),
 		max_iter::Integer=5000,
 		verbose::Bool=false,
 		kkt_solver=QdldlKKTSolver,
@@ -129,7 +129,7 @@ mutable struct Settings{T <: AbstractFloat}
 		obj_true_tol::Real = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
 		compact_transformation::Bool = true,
-		accelerator = with_options(AndersonAccelerator{T, NoRegularizer, Type2{QRDecomp}, RestartedMemory}, mem = 10),
+		accelerator = with_options(AndersonAccelerator{T, Type2{QRDecomp}, RestartedMemory, NoRegularizer}, mem = 10),
 		safeguarding::Bool = true, 
 		safeguarding_tol::T = T(2)
 		) where {T <: AbstractFloat}
@@ -144,7 +144,7 @@ mutable struct Settings{T <: AbstractFloat}
 		if !isa(accelerator, OptionsFactory)
 			accelerator = with_options(accelerator)
 		end
-
+		
 		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, safeguarding, safeguarding_tol)
 	end
 end

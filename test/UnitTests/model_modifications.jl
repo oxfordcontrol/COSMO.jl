@@ -50,7 +50,7 @@ T = Float64
     A = spdiagm(0 => ones(2))
     b = [-2.; -3.]
     model = COSMO.Model();
-    assemble!(model, P, q, COSMO.Constraint(A, b, COSMO.Nonnegatives), settings = COSMO.Settings(verbose_timing = true));
+    assemble!(model, P, q, COSMO.Constraint(A, b, COSMO.Nonnegatives), settings = COSMO.Settings(verbose_timing = true, check_termination = 20, ));
     res = COSMO.optimize!(model);
 
     # update b to give: x_1 >= 0, x_2 >= -1. --> x*=[0, -1]
@@ -69,7 +69,7 @@ T = Float64
     @test model.states.KKT_FACTORED == false
     @test model.states.IS_SCALED == false
 
-    assemble!(model, P, q, COSMO.Constraint(A, b, COSMO.Nonnegatives), settings = COSMO.Settings(verbose_timing = true));
+    assemble!(model, P, q, COSMO.Constraint(A, b, COSMO.Nonnegatives), settings = COSMO.Settings(verbose_timing = true, check_termination = 20));
     @test model.states.IS_ASSEMBLED
     res3 = COSMO.optimize!(model);
     @test abs(res.obj_val - res3.obj_val) < 1e-3

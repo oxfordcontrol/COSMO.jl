@@ -378,7 +378,7 @@ mutable struct Workspace{T}
 		sol = zeros(T, 1)
 		x_tl = view(sol, 1:1)
 		ν = view(sol, 1:1)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator{T}(), true, T(2), ImmediateActivation())
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator(), true, T(2), ImmediateActivation())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
