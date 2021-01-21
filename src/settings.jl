@@ -94,6 +94,7 @@ mutable struct Settings{T <: AbstractFloat}
 	accelerator::Union{Type{<: AbstractAccelerator}, OptionsFactory{<: AbstractAccelerator}}
 	safeguard::Bool
 	safeguard_tol::T
+
 	#constructor
 	function Settings{T}(;
 		rho::Real=T(0.1),
@@ -145,6 +146,7 @@ mutable struct Settings{T <: AbstractFloat}
 			accelerator = with_options(accelerator)
 		end
 		
+
 		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, safeguard, safeguard_tol)
 	end
 end

@@ -16,8 +16,8 @@ using COSMO, SparseArrays, LinearAlgebra, Test
     
     # acceleration delayed by certain number of iterations
     delayed_iter = 30
-    accelerator = with_options(AndersonAccelerator{Float64, NoRegularizer, Type2, RollingMemory}, mem = 5, safeguarded = false, activation_reason = IterActivation(delayed_iter))
-    settings = COSMO.Settings(eps_abs = 1e-5, eps_rel = 1e-5, accelerator = accelerator);
+    accelerator = with_options(AndersonAccelerator{Float64, Type2, RollingMemory, NoRegularizer}, mem = 5)
+    settings = COSMO.Settings(eps_abs = 1e-5, eps_rel = 1e-5, accelerator = accelerator, safeguard = false, activation_reason = IterActivation(delayed_iter));
     model = COSMO.Model();
     assemble!(model, P, q, constraint1, settings = settings);
     res = COSMO.optimize!(model);

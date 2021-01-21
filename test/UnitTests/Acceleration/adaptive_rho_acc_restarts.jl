@@ -14,11 +14,11 @@ using COSMO, SparseArrays, LinearAlgebra, Test
     ba = [u; -l]
     constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives);
 
-    accelerator = with_options(AndersonAccelerator{Float64, NoRegularizer, Type2, RollingMemory}, mem = 5, safeguarded = false, activation_reason = ImmediateActivation())
-    settings = COSMO.Settings(adaptive_rho_interval = 23, rho = 1e-4, eps_abs = 1e-5, eps_rel = 1e-5, accelerator = accelerator);
+    accelerator = with_options(AndersonAccelerator{Float64, Type2{NormalEquations}, RollingMemory, NoRegularizer}, mem = 5, activate_logging = true)
+    settings = COSMO.Settings(adaptive_rho_interval = 23, rho = 1e-4, accelerator = accelerator, safeguard = false);
     model = COSMO.Model();
     assemble!(model, P, q, constraint1, settings = settings);
     res = COSMO.optimize!(model);
     
-    @test length(filter(x -> x[2] == :rho_adapted, model.accelerator.restart_iter)) == num_rho_adaptions(model)
+    @test length(filter(x -> x[2] == :rho_adapted, model.accelerator.acceleration_status)) == num_rho_adaptions(model)
 end
