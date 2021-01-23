@@ -39,4 +39,27 @@ anderson_types = [
             @test res.status == :Solved
         end
     end
+
+
+    @testset "Types" begin
+        q = [1; 1.];
+        P = sparse([4. 1; 1 2]);
+        A = [1. 1; 1 0; 0 1];
+        l = [1.; 0; 0];
+        u = [1; 0.7; 0.7];
+
+        Aa = [-A; A]
+        ba = [u; -l]
+        constraint1 = COSMO.Constraint(Aa, ba, COSMO.Nonnegatives);
+
+        for at in anderson_types
+            settings = COSMO.Settings(accelerator = at);
+            model = COSMO.Model();
+            assemble!(model, P, q, constraint1, settings = settings);
+            res = COSMO.optimize!(model);
+            @test res.status == :Solved
+        end
+    end
+
+    
 end
