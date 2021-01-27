@@ -58,6 +58,7 @@ makedocs(
         "Getting Started" =>  "getting_started.md",
         "JuMP Interface" => "jump.md",
         "Linear System Solver" => "lin_solver.md",
+        "Acceleration" => "acceleration.md",
         "Custom Cone Constraint" => "./literate/build/custom_cone.md",
         "Chordal Decomposition" => "decomposition.md",
         "Model Updates" => "./literate/build/portfolio_model_updates.md",

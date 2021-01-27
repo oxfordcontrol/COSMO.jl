@@ -12,6 +12,7 @@ with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data 
 
 * __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs, semidefinite programs and problems involving exponential and power cones
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
+* __Safeguarded acceleration__: robust and faster convergence to higher precision using [COSMOAccelerators](https://github.com/oxfordcontrol/COSMOAccelerators.jl)
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP / Convex.jl support__: We provide an interface to MathOptInterface (MOI), which allows you to describe your problem in [JuMP](https://github.com/JuliaOpt/JuMP.jl) and [Convex.jl](https://github.com/JuliaOpt/Convex.jl).
 * __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints into multiple smaller PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to solving the original problem.
