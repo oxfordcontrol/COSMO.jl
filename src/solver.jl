@@ -41,16 +41,7 @@ function admm_x!(s::SplitVector{T},
 	ρ::Vector{T},	
 	σ::T,
 	m::Int,
-	n::Int,
-	set::CompositeConvexSet{T}) where {T <: AbstractFloat}
-
-	# 1) Projection step of w
-	@. x = w[1:n]
-	@. s = w[n+1:end]
-	# Project onto cone
-	p_time = @elapsed project!(s, set)
-	# we recover μ from s and w
-	@. μ = ρ * (w[n+1:end] - s)
+	n::Int) where {T <: AbstractFloat}
 
 	# 2) linear solve
 	# Create right hand side for linear system
@@ -152,7 +143,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	
 		acceleration_pre!(ws.accelerator, ws, num_iter)
 		
-		if !was_successful(ws.accelerator) && iter >= settings.check_infeasibility
+		if update_suggested(ws.infeasibility_check_due, ws.accelerator)
 			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n) # μ_k kept in sync with s_k, w already updated to w_{k+1}
 			@. ws.δy.data = ws.vars.μ
 		end
@@ -163,7 +154,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		apply_rho_adaptation_rules!(ws.ρvec, ws.rho_updates, settings, iter, iter_start, ws.times, ws, n)
 		admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
 		admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
-		
+
 		acceleration_post!(ws.accelerator, ws, num_iter)
 
 		# convergence / infeasibility / timelimit checks
@@ -276,7 +267,7 @@ function apply_rho_adaptation_rules!(ρvec::Vector{T}, rho_updates::Vector{T}, s
 
 	# adapt rho at the next possible iteration
 	# when an accelerator is used this will take place at the next non-accelerated iteration
-	if rho_update_suggested(ws.rho_update_due, ws.accelerator)
+	if update_suggested(ws.rho_update_due, ws.accelerator)
 		ws.rho_update_due = false
 		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ρvec, n)
 		was_adapted = adapt_rho_vec!(ws)
@@ -292,10 +283,10 @@ function apply_rho_adaptation_rules!(ρvec::Vector{T}, rho_updates::Vector{T}, s
 	end
 end
 
-rho_update_suggested(rho_update_due::Bool, aa::AbstractAccelerator) = rho_update_due
+update_suggested(update_due::Bool, aa::AbstractAccelerator) = update_due
 
-function rho_update_suggested(rho_update_due::Bool, aa::AndersonAccelerator)
- 		if rho_update_due && !was_successful(aa)
+function update_suggested(update_due::Bool, aa::AndersonAccelerator)
+ 		if update_due && !was_successful(aa)
 		return true
 	else
 		return false
@@ -332,30 +323,32 @@ function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64
 	end
 
 	# computing δy requires one extra projection if acceleration is used, therefore update only
-	# during times when acceleration wasn't used
-	if !was_successful(ws.accelerator) && iter > settings.check_infeasibility
-		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
-		@. ws.δy.data -= ws.vars.μ
-	end
-	# check infeasibility conditions every {settings.checkInfeasibility} steps
+	# during times when acceleration wasn't used, i.e. set the ws.infeasibility_check_due flag
+	# and δy, δx will be computed and used for the check at the next non-accelerated iteration 
 	if mod(iter, settings.check_infeasibility) == 0
+		ws.infeasibility_check_due = true
+	else
+		if update_suggested(ws.infeasibility_check_due, ws.accelerator)
+			ws.infeasibility_check_due = false
+			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
+			@. ws.δy.data -= ws.vars.μ
 
-		# compute δx for infeasibility detection
-		@. ws.δx = ws.vars.w[1:n] - ws.vars.w_prev[1:n]
+			# compute δx for infeasibility detection
+			@. ws.δx = ws.vars.w[1:n] - ws.vars.w_prev[1:n]
 
-		if is_primal_infeasible!(ws.δy, ws)
-			status = :Primal_infeasible
-			cost = Inf
-			return cost, status, r_prim, r_dual
-		end
+			if is_primal_infeasible!(ws.δy, ws)
+				status = :Primal_infeasible
+				cost = Inf
+				return cost, status, r_prim, r_dual
+			end
 
-		if is_dual_infeasible!(ws.δx, ws)
-			status = :Dual_infeasible
-			cost = -Inf
-			return cost, status, r_prim, r_dual
+			if is_dual_infeasible!(ws.δx, ws)
+				status = :Dual_infeasible
+				cost = -Inf
+				return cost, status, r_prim, r_dual
+			end
 		end
 	end
-
 
 	if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
 		status = :Time_limit_reached

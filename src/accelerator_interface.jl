@@ -84,7 +84,6 @@ A function that the accelerator can use after the nominal ADMM operator step.
 In the case of an Anderson Accelerator this is used to check the quality of the accelerated candidate vector and take measures if the vector is of bad quality.
 """
 function acceleration_post!(accelerator::CA.AndersonAccelerator, ws::Workspace{T}, num_iter::Int64) where {T <: AbstractFloat}
-
 	if ws.accelerator_active && CA.was_successful(accelerator)
 		if ws.settings.safeguard
 			# norm(w_prev - w, 2) 
