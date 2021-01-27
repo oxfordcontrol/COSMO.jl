@@ -364,6 +364,7 @@ mutable struct Workspace{T}
 	states::States
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
 	rho_update_due::Bool # a flag that indicates that at the next possible iteration ρ should be updated
+	infeasibility_check_due::Bool # a flag that indicates that at the next possible iteration we should check for infeasibility
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
 	accelerator::AbstractAccelerator
@@ -383,7 +384,7 @@ mutable struct Workspace{T}
 		sol = zeros(T, 1)
 		x_tl = view(sol, 1:1)
 		ν = view(sol, 1:1)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, ResultTimes(), [0:0], EmptyAccelerator(), false, ImmediateActivation())
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, false, ResultTimes(), [0:0], EmptyAccelerator(), false, ImmediateActivation())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
