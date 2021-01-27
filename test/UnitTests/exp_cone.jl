@@ -35,7 +35,7 @@ for T in UnitTestFloats
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(eps_abs = T(1e-5), eps_rel = T(1e-5)))
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(eps_abs = T(1e-4), eps_rel = T(1e-4)))
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
@@ -70,7 +70,7 @@ for T in UnitTestFloats
                 cs3 = COSMO.Constraint(A3, b3, COSMO.ZeroSet)
 
                 model = COSMO.Model{T}()
-                assemble!(model, P, q, [cs1; cs2; cs3], settings = COSMO.Settings{T}(verbose = false, accelerator = COSMO.COSMOAccelerators.EmptyAccelerator))
+                assemble!(model, P, q, [cs1; cs2; cs3])
 
                 res = COSMO.optimize!(model)
                 @test res.status == :Primal_infeasible
@@ -125,7 +125,7 @@ for T in UnitTestFloats
         end
     end
 
-    @testset "Dual Exponential cone problems" begin
+    @testset "Dual Exponential cone problems (T = $(T))" begin
         if precision(T) >= precision(Float64)
         @testset "Feasible" begin
 
@@ -148,7 +148,7 @@ for T in UnitTestFloats
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(max_iter = 5000))
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}())
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
@@ -160,12 +160,12 @@ for T in UnitTestFloats
             @testset "Primal Infeasible" begin
 
                 # solve the following dual exponential cone problem
-                # max  u + v + w
+                # min  u + v + w
                 # s.t. -u * exp(v / u) <= exp(1) * w
                 #      u == 1, v == 2
 
                 P = spzeros(T, 3, 3)
-                q = -ones(T, 3)
+                q = ones(T, 3)
 
                 # -u * exp( v / u) <= exp(1) * w
                 A1 = spdiagm(0 => ones(T, 3))
@@ -178,7 +178,7 @@ for T in UnitTestFloats
                 cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
                 model = COSMO.Model{T}()
-                assemble!(model, P, q, [cs1; cs2])
+                assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}())
 
                 res = COSMO.optimize!(model)
                 @test res.status == :Primal_infeasible
