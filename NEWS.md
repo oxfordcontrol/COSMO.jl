@@ -1,3 +1,15 @@
+## Version 0.7.9 (02. February 2021)
+This is intended as the last release containing all changes before the accelerated version of the solver is merged.
+- `a8f2724` Merge pull request #129 from oxfordcontrol/mg/fix_slow_moi_merging
+- `527c5d2` Increase max_iter and decrease eps_prim_inf
+- `b4ea038` Change Int64 --> Int in clique graph test
+- `0744299` [#124] Covering more cases in CI
+- `69d8e4f` Export CGIndirectKKTSolver and MINRESIndirectKKTSolver
+- `1ef8ca7` Update Documenter version
+- `7e1e0b0` Exclude `solve_farkas_interval_upper` from MOI unittests
+- `19f43ec` 👷 Switch CI to Github actions
+
+
 ## Version 0.7.8 (21. November 2020)
 - `f0070a1` Bump DataStructures.jl to support v0.18 (#119)
 - `fd5b2b5` Add doc for model updates
