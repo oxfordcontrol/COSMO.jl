@@ -62,7 +62,7 @@ We consider the problem of finding the closest correlation matrix `X` to a given
                   &  X \succeq 0.
 \end{array}
 ```
-Notice how `JuMP` is used to describe the problem. COSMO is chosen as the backend solver using JuMP's `with_optimizer()` function.
+Notice how `JuMP` is used to describe the problem. COSMO is chosen as the backend solver using JuMP's `optimizer_with_attributes()` function.
 ```julia
 using COSMO, JuMP, LinearAlgebra, SparseArrays, Test, Random
 rng = Random.MersenneTwister(12345);
@@ -75,7 +75,7 @@ c = vec(C);
 # define problem in JuMP
 q = -vec(C);
 r = 0.5 * vec(C)' * vec(C);
-m = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true, eps_abs = 1e-4));
+m = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "verbose" => true, "eps_abs" => 1e-4));
 @variable(m, X[1:n, 1:n], PSD);
 x = vec(X);
 @objective(m, Min, 0.5 * x' * x  + q' * x + r)

@@ -6,6 +6,15 @@ function _make_kkt_solver!(ws::COSMO.Workspace)
 						ws.ρvec)
 end
 
+
+function _make_accelerator!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
+  # if the user passed in a custom AbstractAccelerator, e.g. with different value for memory, don't change it
+	m, n = ws.p.model_size
+	ws.accelerator = ws.settings.accelerator(m + n)
+end
+
+
+
 function setup!(ws::COSMO.Workspace)
 
   	allocate_set_memory!(ws)
@@ -32,6 +41,15 @@ function setup!(ws::COSMO.Workspace)
 		set_rho_vec!(ws)
 	end
 
+	# instantiate accelerator
+	if !ws.states.KKT_FACTORED
+		_make_accelerator!(ws)
+	else
+		CA.restart!(ws.accelerator)
+		ws.accelerator_active = false
+	end
+
+
 	# create a KKT solver object populated with our data
 	if !ws.states.KKT_FACTORED
 		if ws.settings.verbose_timing
@@ -41,6 +59,8 @@ function setup!(ws::COSMO.Workspace)
 		end
 		ws.states.KKT_FACTORED = true
 	end
+
+
 end
 
 function allocate_set_memory!(ws::COSMO.Workspace)

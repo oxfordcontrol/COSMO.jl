@@ -1,3 +1,4 @@
+*.ipynb
 *.mem
 .DS_Store*
 *.cov
@@ -6,3 +7,4 @@
 *.sublime*
 /docs/build
 Manifest.toml
+/docs/src/examples/*.md

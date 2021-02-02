@@ -13,7 +13,7 @@ end
 
 
 # find all example source files
-exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "sum_of_squares.jl"; "lovasz.jl"; "svm_dual.jl"; "max_k_cut.jl"];
+exclude_files = ["chordal_decomposition.jl"; "chordal_decomposition_generate_data.jl"; "maxEigenvalue.jl"; "sum_of_squares.jl"; "lovasz.jl"; "svm_dual.jl"; "svm_dual_simple"; "max_k_cut.jl"];
 example_path = joinpath(@__DIR__, "../examples/")
 build_path =  joinpath(@__DIR__, "src", "examples/")
 files = readdir(example_path)
@@ -58,6 +58,7 @@ makedocs(
         "Getting Started" =>  "getting_started.md",
         "JuMP Interface" => "jump.md",
         "Linear System Solver" => "lin_solver.md",
+        "Acceleration" => "acceleration.md",
         "Custom Cone Constraint" => "./literate/build/custom_cone.md",
         "Chordal Decomposition" => "decomposition.md",
         "Model Updates" => "./literate/build/portfolio_model_updates.md",
@@ -72,5 +73,5 @@ makedocs(
     ]
 )
 
-deploydocs(
-    repo = "github.com/oxfordcontrol/COSMO.jl.git")
+# deploydocs(
+#     repo = "github.com/oxfordcontrol/COSMO.jl.git")

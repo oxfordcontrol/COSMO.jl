@@ -25,7 +25,7 @@ abstract type AbstractTreeBasedMerge <: AbstractMergeStrategy end
 """
     AbstractGraphBasedMerge
 
-An abstract supertype for merge strategies that work with the clique (intersection) graph.
+An abstract supertype for merge strategies that work with the reduced clique graph.
 """
 abstract type AbstractGraphBasedMerge <: AbstractMergeStrategy end
 

@@ -2,7 +2,11 @@ __precompile__()
 module COSMO
 
 using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools
+using Reexport
+using COSMOAccelerators
 
+using Reexport
+@reexport using COSMOAccelerators
 
 export assemble!, warm_start!, empty_model!, update!
 
@@ -27,11 +31,14 @@ end
 
 include("./algebra.jl")
 include("./projections.jl")
+#include("./acceleration.jl")
 include("./trees.jl")
 include("./clique_graph.jl")
 include("./clique_merging.jl")
 include("./settings.jl")
 include("./types.jl")
+include("./accelerator_interface.jl")
+
 include("./constraint.jl")
 include("./parameters.jl")
 include("./residuals.jl")
@@ -45,7 +52,7 @@ include("./solver.jl")
 include("./interface.jl")
 include("./MOIWrapper.jl")
 
-include("precompile.jl")
-_precompile_()
+# include("precompile.jl")
+# _precompile_()
 
 end #end module

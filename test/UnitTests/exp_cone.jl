@@ -29,17 +29,17 @@ for T in UnitTestFloats
             b1 = zeros(T, 3)
 
             # y == 1 and z == exp(5) = 148.4131591025766
-            A2 = SparseMatrixCSC{T, Int64}([0 1. 0; 0 0 1])
+            A2 = SparseMatrixCSC{T, Int}([0 1. 0; 0 0 1])
             b2 = [-one(T); -exp(T(5))]
             cs1 = COSMO.Constraint(A1, b1, COSMO.ExponentialCone)
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2])
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(eps_abs = T(1e-4), eps_rel = T(1e-4)))
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
-            @test isapprox(res.obj_val, -5, atol=1e-3)
+            @test isapprox(res.obj_val, T(-5), atol=1e-2)
         end
 
         # Run infeasibility tests only if precision(T) is high enough
@@ -125,7 +125,7 @@ for T in UnitTestFloats
         end
     end
 
-    @testset "Dual Exponential cone problems" begin
+    @testset "Dual Exponential cone problems (T = $(T))" begin
         if precision(T) >= precision(Float64)
         @testset "Feasible" begin
 
@@ -143,12 +143,12 @@ for T in UnitTestFloats
             cs1 = COSMO.Constraint(A1, b1, COSMO.DualExponentialCone)
 
             # y == 1 and z == exp(5)
-            A2 = SparseMatrixCSC{T, Int64}([1. 0 0; 0 0 1])
+            A2 = SparseMatrixCSC{T, Int}([1. 0 0; 0 0 1])
             b2 = [one(T); -exp(T(5))]
             cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
             model = COSMO.Model{T}()
-            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}(max_iter = 5000))
+            assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}())
 
             res = COSMO.optimize!(model)
             @test res.status == :Solved
@@ -160,12 +160,12 @@ for T in UnitTestFloats
             @testset "Primal Infeasible" begin
 
                 # solve the following dual exponential cone problem
-                # max  u + v + w
+                # min  u + v + w
                 # s.t. -u * exp(v / u) <= exp(1) * w
                 #      u == 1, v == 2
 
                 P = spzeros(T, 3, 3)
-                q = -ones(T, 3)
+                q = ones(T, 3)
 
                 # -u * exp( v / u) <= exp(1) * w
                 A1 = spdiagm(0 => ones(T, 3))
@@ -173,12 +173,12 @@ for T in UnitTestFloats
                 cs1 = COSMO.Constraint(A1, b1, COSMO.DualExponentialCone)
 
                 #  u == 1 and b == 2
-                A2 = SparseMatrixCSC{T, Int64}([1. 0 0; 0 1 0])
+                A2 = SparseMatrixCSC{T, Int}([1. 0 0; 0 1 0])
                 b2 = T[-1.; -2]
                 cs2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet)
 
                 model = COSMO.Model{T}()
-                assemble!(model, P, q, [cs1; cs2])
+                assemble!(model, P, q, [cs1; cs2], settings = COSMO.Settings{T}())
 
                 res = COSMO.optimize!(model)
                 @test res.status == :Primal_infeasible

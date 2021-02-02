@@ -101,6 +101,9 @@ function has_converged(ws::COSMO.Workspace{T}, r_prim::T, r_dual::T) where {T <:
 	ϵ_prim = settings.eps_abs + settings.eps_rel * max_norm_prim
 	ϵ_dual = settings.eps_abs + settings.eps_rel * max_norm_dual
 
+	# check activation of accelerator
+	COSMO.check_activation!(ws, ws.activation_reason, r_prim, r_dual, max_norm_prim, max_norm_dual)
+
 	# if an optimal objective value was specified for the problem check if current solution is within specified accuracy
 	obj_true_FLAG = true
 	if !isnan(settings.obj_true)
@@ -117,3 +120,5 @@ function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::Spars
 	mul!(temp, P, x)
 	return cinv * (T(0.5) * dot(temp, x) + dot(q, x))
 end
+
+

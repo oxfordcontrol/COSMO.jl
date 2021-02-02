@@ -6,7 +6,7 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	settings = ws.settings
 	settings.scaling > 0 ? scaling_status = "on" : scaling_status = "off"
 
-	println("-"^66 * "\n" * " "^10 * "COSMO v0.7.9 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2020\n" * "-"^66 * "\n")
+	println("-"^66 * "\n" * " "^10 * "COSMO v0.7.9 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2021\n" * "-"^66 * "\n")
 
 	println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero, ws.p.A)) nnz),\n          matrix size to factor: $(n + m)x$(n + m),\n          Floating-point precision: $(T)")
 	for (iii, set) in enumerate(sort(ws.p.C.sets, by = x -> -x.dim))
@@ -21,6 +21,9 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		println("Decomp:   Num of original PSD cones: $(ws.ci.num_psd_cones)\n" * " "^10*"Num decomposable PSD cones: $(ws.ci.num_decomposable)\n" * " "^10*"Num PSD cones after decomposition: $(ws.ci.num_decom_psd_cones)\n" * " "^10*"Merge Strategy: $(stringify(ws.settings.merge_strategy))")
 	end
 	println("Settings: ϵ_abs = $(@sprintf("%.1e", settings.eps_abs)), ϵ_rel = $(@sprintf("%.1e", settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.1e", settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.1e", settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(@sprintf("%.3g", settings.rho)), σ = $(@sprintf("%.3g", settings.sigma)), α = $(@sprintf("%.3g", settings.alpha)),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scaling_status)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter,\n" *	 " "^10 * "KKT system solver: $(print_lin_sys(settings.kkt_solver.ObjectType))")
+
+	print_accelerator(ws.accelerator, ws.settings.safeguard, ws.settings.safeguard_tol, tab = 10)
+	
 
 	println("Setup Time: $(round.(ws.times.setup_time*1000; digits=2))ms\n")
 	println("Iter:\tObjective:\tPrimal Res:\tDual Res:\tRho:")
@@ -49,7 +52,7 @@ function stringify(merge_strategy::Union{Type{<: AbstractMergeStrategy}, Options
 	end
 end
 
-function print_result(status::Symbol, iter::Int, cost::T, rt::Float64) where {T <: AbstractFloat}
+function print_result(status::Symbol, iter::Int, safeguarding_iter::Int, cost::T, rt::Float64, safeguard::Bool) where {T <: AbstractFloat}
 	print("\n" * "-"^66 * "\n>>> Results\nStatus: ")
 	if status == :Solved
 		result_color = :green
@@ -57,7 +60,14 @@ function print_result(status::Symbol, iter::Int, cost::T, rt::Float64) where {T 
 		result_color = :red
 	end
 	printstyled("$(status)\n", color = result_color)
-	println("Iterations: $(iter)\nOptimal objective: $(@sprintf("%.4g", cost))\nRuntime: $(round.(rt; digits = 3))s ($(round.(rt * 1000; digits = 2))ms)\n")
+	print("Iterations: $(iter)")
+	if safeguard && safeguarding_iter > 0
+		println(" (incl. $(safeguarding_iter) safeguarding iter)")
+	else
+		print("\n")
+	end
+
+	println("Optimal objective: $(@sprintf("%.4g", cost))\nRuntime: $(round.(rt; digits = 3))s ($(round.(rt * 1000; digits = 2))ms)\n")
 	nothing
 end
 
@@ -65,3 +75,21 @@ function print_lin_sys(s::Type{<:AbstractKKTSolver})
 	lin_sys_dict = Dict("QdldlKKTSolver" => "QDLDL", "CholmodKKTSolver" => "CHOLMOD", "PardisoDirectKKTSolver" => "Pardiso (direct)", "PardisoIndirectKKTSolver" => "Pardiso (indirect)",  "MKLPardisoKKTSolver" => "MKL Pardiso")
 	return get(lin_sys_dict, string(s), string(s))
 end
+
+"Print information about the accelerator at the start."
+function print_accelerator(s::CA.AndersonAccelerator{T, BT, ME, RE}, safeguard::Bool, safeguard_tol; tab::Int64) where {T, BT, ME, RE}
+		me = ME == CA.RestartedMemory ? "RestartedMemory" : "RollingMemory"
+		if BT == CA.Type1
+			bt = "Type1"
+		elseif BT == CA.Type2{NormalEquations}
+			bt = "Type2{NormalEquations}"
+		elseif BT == CA.Type2{QRDecomp}
+			bt = "Type2{QRDecomp}"	
+		end
+
+		println("Acc:" * " "^(tab - 4)  * "Anderson $(bt),\n" * " "^tab * "Memory size = $(s.mem), $(me),	\n" * " "^tab * "Safeguarded: $(safeguard), tol: $(safeguard_tol)")
+end
+
+
+print_accelerator(s::CA.AbstractAccelerator, safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "Unknown Accelerator")
+print_accelerator(s::CA.EmptyAccelerator,  safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "no acceleration")

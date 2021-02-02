@@ -1,3 +1,4 @@
+export num_rho_adaptions
 # set initial values of rhoVec
 function set_rho_vec!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	m = ws.p.model_size[1]
@@ -64,9 +65,12 @@ function adapt_rho_vec!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# only update rho if significantly different than current rho
 	if (new_rho > settings.adaptive_rho_tolerance * ws.ρ) || (new_rho < (one(T) ./ settings.adaptive_rho_tolerance) * ws.ρ)
 		update_rho_vec!(new_rho, ws)
+		return true
+	else
+		return false
 	end
-	return nothing
 end
+
 
 function update_rho_vec!(new_rho::T, ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
@@ -86,3 +90,7 @@ function update_rho_vec!(new_rho::T, ws::COSMO.Workspace{T}) where {T <: Abstrac
 
 	return nothing
 end
+
+"Return the number of rho adaptions so far."
+num_rho_adaptions(rho_updates::Vector{T}) where {T <: AbstractFloat} = length(rho_updates) - 1
+num_rho_adaptions(model::COSMO.Model{T}) where {T <: AbstractFloat} = num_rho_adaptions(model.rho_updates) 

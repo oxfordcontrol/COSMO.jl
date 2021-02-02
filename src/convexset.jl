@@ -429,7 +429,7 @@ struct ExponentialCone{T} <: AbstractConvexCone{T}
   MAX_ITER::Int
   EXP_TOL::T
 
-  function ExponentialCone{T}(dim = 3, MAX_ITERS = 100, EXP_TOL = 1e-8) where{T}
+  function ExponentialCone{T}(dim = 3, MAX_ITERS = 100, EXP_TOL = T(1e-8)) where{T}
     new(3, zeros(T, 3), MAX_ITERS, EXP_TOL)
   end
 end
@@ -681,7 +681,7 @@ struct DualExponentialCone{T} <: AbstractConvexCone{T}
   v0::Vector{T}
   primal_cone::ExponentialCone{T}
 
-  function DualExponentialCone{T}(dim::Int = 3, MAX_ITERS::Int = 100, EXP_TOL = 1e-8) where{T}
+  function DualExponentialCone{T}(dim::Int = 3, MAX_ITERS::Int = 100, EXP_TOL = T(1e-8)) where{T}
     new(3, zeros(T, 3), ExponentialCone{T}(dim, MAX_ITERS, EXP_TOL))
   end
 end
@@ -697,7 +697,7 @@ struct DualPowerCone{T} <: AbstractConvexCone{T}
   v0::Vector{T}
   primal_cone::PowerCone{T}
 
-  function DualPowerCone{T}(alpha::Real, MAX_ITERS::Int = 20, POW_TOL = 1e-8) where{T}
+  function DualPowerCone{T}(alpha::Real, MAX_ITERS::Int = 20, POW_TOL = T(1e-8)) where{T}
     (alpha <= 0 || alpha >= 1) && throw(DomainError, "The exponent α of the dual power cone has to be in (0, 1).")
     new(3, zeros(T,3), PowerCone{T}(alpha, MAX_ITERS, POW_TOL))
   end

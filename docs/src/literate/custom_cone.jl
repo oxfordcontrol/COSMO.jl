@@ -109,7 +109,7 @@ MOI.supports_constraint(optimizer::COSMO.Optimizer, ::Type{<:Union{MOI.VectorOfV
 
 
 # We should now be able to model the LP from above in `JuMP` and solve it internally using our `Nonpositives` cone and projection function.
-model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+model = JuMP.Model(COSMO.Optimizer);
 @variable(model, x[1:3]);
 @objective(model, Max, x[1] + x[2] + x[3]);
 @constraint(model, A1 * x[1:2] .+ b1 in NonPos(2));

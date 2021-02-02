@@ -351,7 +351,6 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
                         "solve_zero_one_with_bounds_3",
                        # Can not set the # of threads
                         "number_threads",
-                        # further investigation needed
                         "solve_farkas_interval_upper"
                          ])
     end

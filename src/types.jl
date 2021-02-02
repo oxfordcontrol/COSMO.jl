@@ -18,6 +18,8 @@ factor\\_update\\_time | Sum of times used to refactor the system of linear equa
 iter_time | Time spent in iteration loop
 proj_time | Time spent in projection functions
 post_time | Time used for post processing
+update_time | Time spent in the update! function of the accelerator
+accelerate_time | Time spent in the accelerate! function of the accelerator
 
 By default COSMO only measures `solver_time`, `setup_time` and `proj_time`. To measure the other times set `verbose_timing = true`.
 """
@@ -31,9 +33,11 @@ mutable struct ResultTimes{T <: AbstractFloat}
 	iter_time::T
 	proj_time::T
 	post_time::T
+	update_time::T
+	accelerate_time::T
 end
 
-ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
+ResultTimes{T}() where{T} = ResultTimes{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
 ResultTimes(T::Type = DefaultFloat) = ResultTimes{T}()
 
 function Base.show(io::IO, obj::ResultTimes)
@@ -47,7 +51,9 @@ function Base.show(io::IO, obj::ResultTimes)
     "Graph time:\t$(round.(obj.graph_time, digits = 4))s ($(round.(obj.graph_time * 1000, digits = 2))ms)\n",
     "Initial Factor time:\t$(round.(obj.init_factor_time, digits = 4))s ($(round.(obj.init_factor_time * 1000, digits = 2))ms)\n",
     "Factor update time:\t$(round.(obj.factor_update_time, digits = 4))s ($(round.(obj.factor_update_time * 1000, digits = 2))ms)\n",
-    "Post time:\t$(round.(obj.post_time, digits = 4))s ($(round.(obj.post_time * 1000, digits = 2))ms)\n")
+    "Post time:\t$(round.(obj.post_time, digits = 4))s ($(round.(obj.post_time * 1000, digits = 2))ms)\n",
+    "Accelerator - update time:\t$(round.(obj.update_time, digits = 4))s ($(round.(obj.update_time * 1000, digits = 2))ms)\n",
+    "Accelerator - accelerate time:\t$(round.(obj.accelerate_time, digits = 4))s ($(round.(obj.accelerate_time * 1000, digits = 2))ms)\n")
   end
 end
 
@@ -76,7 +82,8 @@ x | Vector{T}| Primal variable
 y | Vector{T}| Dual variable
 s | Vector{T}| (Primal) set variable
 obj_val | T | Objective value
-iter | Int | Number of iterations
+iter | Int | Total number of ADMM iterations (incl. safeguarding_iter)
+safeguarding_iter | Int | Number of iterations due to safeguarding of accelerator
 status | Symbol | Solution status
 info | COSMO.ResultInfo | Struct with more information
 times | COSMO.ResultTimes | Struct with several measured times
@@ -87,6 +94,7 @@ struct Result{T <: AbstractFloat}
     s::Vector{T}
     obj_val::T
     iter::Int
+    safeguarding_iter::Int
     status::Symbol
     info::ResultInfo
     times::ResultTimes
@@ -95,8 +103,8 @@ struct Result{T <: AbstractFloat}
       return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, :Unsolved, ResultInfo{T}(0.,0., T[]), ResultTimes{T}())
     end
 
-    function Result{T}(x, y, s, obj_val, iter, status, info, times) where {T <: AbstractFloat}
-      return new(x, y, s, obj_val, iter, status, info, times)
+    function Result{T}(x, y, s, obj_val, iter, safeguarding_iter, status, info, times) where {T <: AbstractFloat}
+      return new(x, y, s, obj_val, iter, safeguarding_iter, status, info, times)
     end
 
 end
@@ -109,7 +117,7 @@ function Base.show(io::IO, obj::Result)
 		result_color = :red
 	end
 	printstyled("$(obj.status)\n", color = result_color)
-	println("Iterations: $(obj.iter)\nOptimal Objective: $(@sprintf("%.4g", obj.obj_val))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
+	println("Iterations: $(obj.iter) (incl. $(obj.safeguarding_iter) safeguarding iterations)\nOptimal Objective: $(@sprintf("%.4g", obj.obj_val))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
 	!isnan(obj.times.iter_time) && print("Avg Iter Time: $(round.((obj.times.iter_time / obj.iter) * 1000, digits = 2))ms")
 end
 
@@ -254,20 +262,55 @@ end
 # -------------------------------------
 
 struct Variables{T}
-	x::Vector{T}
+	w::Vector{T}
+	w_prev::Vector{T}
+	x::SubArray{T}
 	s::SplitVector{T}
 	μ::Vector{T}
 
 	function Variables{T}(m::Int, n::Int, C::AbstractConvexSet{T}) where {T <: AbstractFloat}
 		m == C.dim || throw(DimensionMismatch("set dimension is not m"))
-		x = zeros(T, n)
+		w = zeros(T, n + m)
+		w_prev = zeros(T, n + m)
+		x = view(w_prev, 1:n) #x is a view onto w_prev, to keep it in sync with s and μ 
 		s = SplitVector(zeros(T, m), C)
 		μ = zeros(T, m)
-		new(x, s, μ)
+		new(w, w_prev, x, s, μ)
 	end
 end
 
 Variables(args...) = Variables{DefaultFloat}(args...)
+
+mutable struct IterateHistory
+	x_data::AbstractMatrix
+	s_data::AbstractMatrix
+	y_data::AbstractMatrix
+	v_data::AbstractMatrix
+	r_prim_data::AbstractVector
+	r_dual_data::AbstractVector
+	eta_data::AbstractArray
+	alpha_data::AbstractArray
+	cond_data::AbstractVector
+	aa_fail_data::AbstractVector
+
+	function IterateHistory(m, n, mem)
+		new(zeros(n, 0), zeros(m, 0), zeros(m, 0), zeros(m + n, 0), Float64[], Float64[], zeros(mem, 0), zeros(mem + 1, 0), Float64[], Int64[])
+	end
+end
+
+function update_iterate_history!(history::IterateHistory, x, s, y, v, r_prim, r_dual, eta::Vector{Float64}, cond::Float64)
+	history.x_data = hcat(history.x_data, x)
+	history.s_data = hcat(history.s_data, s)
+	history.y_data = hcat(history.y_data, y)
+	history.v_data = hcat(history.v_data, v)
+	history.cond_data = push!(history.cond_data, cond)
+	push!(history.r_prim_data, r_prim)
+	push!(history.r_dual_data, r_dual)
+
+	# alphas = compute_alphas(eta)
+	# history.alpha_data = hcat(history.alpha_data, alphas)
+	# history.eta_data = hcat(history.eta_data, eta)
+end
 
 struct UtilityVariables{T}
   vec_m::Vector{T}
@@ -315,13 +358,21 @@ mutable struct Workspace{T}
 	s_tl::Vector{T}
 	ls::Vector{T}
 	sol::Vector{T}
+	x_tl::SubArray{T}
+	ν::SubArray{T}
 	ρ::T
 	ρvec::Vector{T}
 	kkt_solver::Union{AbstractKKTSolver,Nothing}
 	states::States
 	rho_updates::Vector{T} #keep track of the rho updates and the number of refactorisations
+	rho_update_due::Bool # a flag that indicates that at the next possible iteration ρ should be updated
+	infeasibility_check_due::Bool # a flag that indicates that at the next possible iteration we should check for infeasibility
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
+	safeguarding_iter::Int # count extra ADMM iterations due to bad quality accelerated steps
+	accelerator::AbstractAccelerator
+	accelerator_active::Bool
+	activation_reason::AbstractActivationReason
 	#constructor
 	function Workspace{T}() where {T <: AbstractFloat}
 		p = ProblemData{T}()
@@ -329,12 +380,14 @@ mutable struct Workspace{T}
 		vars = Variables{T}(1, 1, p.C)
     	uvars = UtilityVariables{T}(1, 1)
 		ci = ChordalInfo{T}()
-		δx = zeros(0)
+		δx = zeros(T, 0)
 		δy = SplitVector(zeros(T, 1), p.C)
-		s_tl = zeros(0)
-		ls = zeros(0)
-		sol = zeros(0)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, zero(T), T[], nothing, States(), T[], ResultTimes(), [0:0])
+		s_tl = zeros(T,0)
+		ls = zeros(T, 0)
+		sol = zeros(T, 1)
+		x_tl = view(sol, 1:1)
+		ν = view(sol, 1:1)
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, false, ResultTimes(), [0:0], 0, EmptyAccelerator(), false, ImmediateActivation())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)

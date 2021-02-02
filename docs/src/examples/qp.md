@@ -36,7 +36,7 @@ nothing #hide
 Next, we define the settings object, the model and then assemble everything:
 
 ```@example qp
-settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-4);
+settings = COSMO.Settings(verbose=true);
 model = COSMO.Model();
 assemble!(model, P, q, constraint1, settings = settings);
 res = COSMO.optimize!(model);

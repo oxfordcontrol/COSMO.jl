@@ -142,12 +142,12 @@ Y2_sol4 = matrixify(res4.y[13:22])
   @test abs(res1.obj_val - res2.obj_val) < 1e-4
   @test abs(res1.obj_val - res3.obj_val) < 1e-4
   @test abs(res2.obj_val - res4.obj_val) < 1e-4
-  @test norm(S1_sol1 - S1_sol2, Inf) < 1e-8
-  @test norm(S1_sol2 - S1_sol3, Inf) < 1e-8
-  @test norm(S1_sol3 - S1_sol4, Inf) < 1e-8
-  @test norm(S2_sol1 - S2_sol2, Inf) < 1e-8
-  @test norm(S2_sol2 - S2_sol3, Inf) < 1e-8
-  @test norm(S2_sol3 - S2_sol4, Inf) < 1e-8
+  @test norm(S1_sol1 - S1_sol2, Inf) < 1e-5
+  @test norm(S1_sol2 - S1_sol3, Inf) < 1e-5
+  @test norm(S1_sol3 - S1_sol4, Inf) < 1e-5
+  @test norm(S2_sol1 - S2_sol2, Inf) < 1e-5
+  @test norm(S2_sol2 - S2_sol3, Inf) < 1e-5
+  @test norm(S2_sol3 - S2_sol4, Inf) < 1e-5
 
 end
 

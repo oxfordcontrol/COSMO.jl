@@ -40,8 +40,12 @@ Likewise, `CGIndirectKKTSolver` and `MINRESIndirectKKTSolver` are also parameter
 
 This also works if you want to use this configuration with JuMP:
 
-
 ```julia
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, kkt_solver = with_options(PardisoDirectKKTSolver, msg_level_on = true));
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "kkt_solver" => with_options(PardisoDirectKKTSolver, msg_level_on = true));
 
+```
+Or alternatively:
+```julia
+model = JuMP.Model(COSMO.Optimizer);
+set_optimizer_attribute(model, "kkt_solver", with_options(PardisoDirectKKTSolver, msg_level_on = true));
 ```
