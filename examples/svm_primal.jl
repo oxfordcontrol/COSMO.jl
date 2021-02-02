@@ -59,7 +59,7 @@ m, n = size(X)
 using JuMP, COSMO
 #-
 λ = 1.0; # hyperparameter
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true));
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "verbose" => true));
 
 
 @variable(model, w[1:n]);

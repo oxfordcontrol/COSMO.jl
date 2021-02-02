@@ -124,7 +124,7 @@ n_theta = size(X, 2)
 n = n_data
 μ  = 1.
 
-m = Model(COSMO.Optimizer)
+m = JuMP.Model(COSMO.Optimizer)
 @variable(m, v)
 @variable(m, θ[1:n_theta])
 @variable(m, e[1:n])

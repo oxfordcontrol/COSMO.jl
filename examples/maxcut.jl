@@ -49,7 +49,7 @@ L = diagm(0 => W * ones(n)) - W;
 # Notice that the solution $Y^*$ can be viewed as a correlation matrix. Let's solve the problem using COSMO and JuMP.
 
 #-
-model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+model = JuMP.Model(COSMO.Optimizer);
 @variable(model, Y[1:n, 1:n], PSD);
 @objective(model, Max, 1 / 4 * dot(L, Y));
 @constraint(model, [i = 1:n], Y[i, i] == 1.);
@@ -70,7 +70,7 @@ obj_val = JuMP.objective_value(model)
 # As you can see, the matrix $S$ is constrained to have zeros in places specified by the graph (Laplacian). Therefore, COSMO can try to decompose this SDP (see solver output) and speed up its algorithm:
 
 #-
-model_dual = JuMP.Model(with_optimizer(COSMO.Optimizer, complete_dual = true));
+model_dual = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "complete_dual" => true));
 @variable(model_dual, γ[1:n]);
 @objective(model_dual, Min,  sum(γ));
 @constraint(model_dual, lmi, Symmetric(-1/4 * L + diagm(γ)) in JuMP.PSDCone());

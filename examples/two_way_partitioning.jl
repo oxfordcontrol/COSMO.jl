@@ -29,7 +29,7 @@ W = Symmetric(W)
 
 #-
 
-model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+model = JuMP.Model(COSMO.Optimizer);
 @variable(model, ν[1:n]);
 @objective(model, Max, -ones(n)' * ν )
 @constraint(model, Symmetric(W + diagm(ν) )  in JuMP.PSDCone());

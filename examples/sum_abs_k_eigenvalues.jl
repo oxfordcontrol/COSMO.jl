@@ -20,7 +20,7 @@ A = Symmetric(A, :U)
 # We are interested in minimizing the sum of absolute values of the `k=3` largest eigenvalues. Let's formulate the problem in `JuMP` with `COSMO` as the backend solver:
 
 k = 3
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true));
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "verbose" => true));
 @variable(model, Y[1:n, 1:n], PSD);
 @variable(model, W[1:n, 1:n], PSD);
 

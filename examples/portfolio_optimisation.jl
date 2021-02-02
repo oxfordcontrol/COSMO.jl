@@ -34,7 +34,7 @@ x0 = zeros(n);
 # Before considering other effects, let's create the model in JuMP and solve it using COSMO:
 #-
 
-model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+model = JuMP.Model(COSMO.Optimizer);
 @variable(model, x[1:n]);
 @variable(model, y[1:k]);
 @objective(model, Min,  x' * D * x + y' * y - 1/γ * μ' * x);
@@ -62,7 +62,7 @@ expected_risk_basic = sqrt(dot(y_opt, y_opt))
 # $$
 
 Mt = [D.^0.5; F']
-model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+model = JuMP.Model(COSMO.Optimizer);
 @variable(model, x[1:n]);
 @objective(model, Min, - μ' * x);
 @constraint(model,  [γ; Mt * x] in SecondOrderCone()); # ||M'x|| <= γ
@@ -83,7 +83,7 @@ expected_return = dot(μ, x_opt)
 gammas = [ 0.001, 0.01, 0.1,  0.5,  1., 3., 10, 100, 1000]
 risks = zeros(length(gammas))
 returns = zeros(length(gammas))
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose = false));
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "verbose" => false));
 @variable(model, x[1:n]);
 @variable(model, y[1:k]);
 @objective(model, Min,  x' * D * x + y' * y - 1/γ * μ' * x);
@@ -122,7 +122,7 @@ Plots.plot(risks, returns, xlabel = "Standard deviation (risk)", ylabel = "Expec
 a = 1e-3
 b = 1e-1
 γ = 1.0;
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, eps_abs = 1e-5, eps_rel = 1e-5));
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "eps_abs" => 1e-5, "eps_rel" => 1e-5));
 @variable(model, x[1:n]);
 @variable(model, y[1:k]);
 @variable(model, t[1:n]);

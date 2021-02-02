@@ -44,7 +44,7 @@ graphplot(E, names = 1:n,  x = getindex.(coordinates, 1), y = getindex.(coordina
 
 # Let's solve the SDP with COSMO and JuMP:
 #-
-model = JuMP.Model(with_optimizer(COSMO.Optimizer));
+model = JuMP.Model(COSMO.Optimizer);
 
 @variable(model, X[1:n, 1:n], PSD)
 x = vec(X)
