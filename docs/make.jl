@@ -73,5 +73,5 @@ makedocs(
     ]
 )
 
-# deploydocs(
-#     repo = "github.com/oxfordcontrol/COSMO.jl.git")
+deploydocs(
+    repo = "github.com/oxfordcontrol/COSMO.jl.git")
