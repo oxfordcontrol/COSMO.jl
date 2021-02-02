@@ -87,7 +87,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
 
     @testset "SolverAttributes" begin
         @test MOI.get(bridged, MOI.SolverName()) == "COSMO";
-        @test MOI.get(bridged, MOI.SolveTime()) > 0.;
+        @test MOI.get(bridged, MOI.SolveTime()) >= 0.;
         # @test typeof(MOI.get(bridged, MOI.RawSolver())) <: COSMO.Workspace
         @test MOI.get(bridged, MOI.ResultCount()) == 1
         @test MOI.get(bridged, MOI.NumberOfVariables()) == 6
