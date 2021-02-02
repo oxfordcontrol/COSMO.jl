@@ -14,7 +14,8 @@ The problem is given by:
                   &  X \succeq 0.
 \end{array}
 ```
-Notice that we use `JuMP` to model the problem. `COSMO` is chosen as the backend solver using `JuMP`'s `with_optimizer()` function.
+Notice that we use `JuMP` to model the problem. `COSMO` is chosen as the backend solver. And COSMO-specific settings are passed using
+the `optimizer_with_attributes()` function.
 
 ```@example closest_correlation_matrix
 using COSMO, JuMP, LinearAlgebra, SparseArrays, Test, Random
@@ -34,7 +35,7 @@ Define problem in `JuMP`:
 ```@example closest_correlation_matrix
 q = -vec(C);
 r = 0.5 * vec(C)' * vec(C);
-m = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true, eps_abs = 1e-4));
+m = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "verbose" => true));
 @variable(m, X[1:n, 1:n], PSD);
 x = vec(X);
 @objective(m, Min, 0.5 * x' * x  + q' * x + r);
