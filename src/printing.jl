@@ -52,7 +52,7 @@ function stringify(merge_strategy::Union{Type{<: AbstractMergeStrategy}, Options
 	end
 end
 
-function print_result(status::Symbol, iter::Int, cost::T, rt::Float64) where {T <: AbstractFloat}
+function print_result(status::Symbol, iter::Int, safeguarding_iter::Int, cost::T, rt::Float64, safeguard::Bool) where {T <: AbstractFloat}
 	print("\n" * "-"^66 * "\n>>> Results\nStatus: ")
 	if status == :Solved
 		result_color = :green
@@ -60,7 +60,14 @@ function print_result(status::Symbol, iter::Int, cost::T, rt::Float64) where {T 
 		result_color = :red
 	end
 	printstyled("$(status)\n", color = result_color)
-	println("Iterations: $(iter)\nOptimal objective: $(@sprintf("%.4g", cost))\nRuntime: $(round.(rt; digits = 3))s ($(round.(rt * 1000; digits = 2))ms)\n")
+	print("Iterations: $(iter)")
+	if safeguard && safeguarding_iter > 0
+		println(" (incl. $(safeguarding_iter) safeguarding iter)")
+	else
+		print("\n")
+	end
+
+	println("Optimal objective: $(@sprintf("%.4g", cost))\nRuntime: $(round.(rt; digits = 3))s ($(round.(rt * 1000; digits = 2))ms)\n")
 	nothing
 end
 

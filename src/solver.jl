@@ -114,8 +114,8 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	cost = T(Inf)
 	r_prim = T(Inf)
 	r_dual = T(Inf)
-	num_iter = 0
-
+	iter = 0
+	ws.safeguarding_iter = 0
 	# print information about settings to the screen
 	settings.verbose && print_header(ws)
 	time_limit_start = time()
@@ -138,10 +138,10 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	COSMO.admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, settings.sigma, m, n)
 	COSMO.admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);
 
-	for iter = 1:settings.max_iter
-		num_iter += 1
-	
-		acceleration_pre!(ws.accelerator, ws, num_iter)
+	while iter + ws.safeguarding_iter < settings.max_iter
+		iter += 1
+
+		acceleration_pre!(ws.accelerator, ws, iter)
 		
 		if update_suggested(ws.infeasibility_check_due, ws.accelerator)
 			recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n) # μ_k kept in sync with s_k, w already updated to w_{k+1}
@@ -155,10 +155,10 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec,settings.sigma, m, n)
 		admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
 
-		acceleration_post!(ws.accelerator, ws, num_iter)
+		acceleration_post!(ws.accelerator, ws, iter)
 
 		# convergence / infeasibility / timelimit checks
-		cost, status, r_prim, r_dual = check_termination!(ws, settings, num_iter, cost, status, r_prim, r_dual, time_limit_start, n)
+		cost, status, r_prim, r_dual = check_termination!(ws, settings, iter, cost, status, r_prim, r_dual, time_limit_start, n)
 		if status != :Undetermined
 			break
 		end
@@ -171,7 +171,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	settings.verbose_timing && (ws.times.post_time = time())
 
 	# calculate primal and dual residuals
-	if num_iter == settings.max_iter
+	if iter + ws.safeguarding_iter == settings.max_iter
 		r_prim, r_dual = calculate_residuals!(ws)
 		status = :Max_iter_reached
 	end
@@ -194,13 +194,13 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	settings.verbose_timing && (ws.times.post_time = time() - ws.times.post_time)
 
 	# print solution to screen
-	settings.verbose && print_result(status, num_iter, cost, ws.times.solver_time)
+	total_iter = ws.safeguarding_iter + iter
+	settings.verbose && print_result(status, total_iter, ws.safeguarding_iter, cost, ws.times.solver_time, ws.settings.safeguard)
 
 	# create result object
 	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
 	free_memory!(ws)
-
-	return Result{T}(ws.vars.x, y, ws.vars.s.data, cost, num_iter, status, res_info, ws.times);
+	return Result{T}(ws.vars.x, y, ws.vars.s.data, cost, total_iter, ws.safeguarding_iter, status, res_info, ws.times);
 
 end
 

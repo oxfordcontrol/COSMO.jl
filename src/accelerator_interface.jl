@@ -77,7 +77,7 @@ acceleration_pre!(accelerator::CA.EmptyAccelerator, ws::Workspace{T}, num_iter::
 
 
 """
-	acceleration_post!(accelerator, ws, num_iter)
+	acceleration_post!(accelerator, ws, num_iter, safeguarding_iter)
 
 A function that the accelerator can use after the nominal ADMM operator step. 
 
@@ -104,6 +104,7 @@ function acceleration_post!(accelerator::CA.AndersonAccelerator, ws::Workspace{T
 				ws.times.proj_time += admm_z!(ws.vars.s, ws.vars.w, ws.p.C, n) 			
 				admm_x!(ws.vars.s, ws.ν, ws.s_tl, ws.ls, ws.sol, ws.vars.w, ws.kkt_solver, ws.p.q, ws.p.b, ws.ρvec, ws.settings.sigma, m, n)
 				admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, ws.settings.alpha, m, n);
+				ws.safeguarding_iter += 1
             else
                 CA.log!(accelerator, num_iter, :acc_guarded_accepted)
 			end

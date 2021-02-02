@@ -51,7 +51,7 @@ complete_dual | Activate to complete the dual variable after decomposition | fal
 merge_strategy | Choose a strategy for clique merging | `CliqueGraphMerge`
 compact_transformation | Choose how a decomposed problem is transformed | true
 time_limit | Set solver time limit in s | 0 (deactivated)
-accelerator | Acceleration scheme | `AndersonAccelerator{Type2}`
+accelerator | Acceleration scheme | `AndersonAccelerator{T, Type2{QRDecomp}, RestartedMemory, NoRegularizer}`
 accelerator_activation | Accelerator activation | `ImmediateActivation`
 safeguard | Accelerator safeguarding | true
 safeguard_tol | Safeguarding tolerance | 2.0

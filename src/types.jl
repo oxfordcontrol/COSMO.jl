@@ -82,7 +82,8 @@ x | Vector{T}| Primal variable
 y | Vector{T}| Dual variable
 s | Vector{T}| (Primal) set variable
 obj_val | T | Objective value
-iter | Int | Number of iterations
+iter | Int | Total number of ADMM iterations (incl. safeguarding_iter)
+safeguarding_iter | Int | Number of iterations due to safeguarding of accelerator
 status | Symbol | Solution status
 info | COSMO.ResultInfo | Struct with more information
 times | COSMO.ResultTimes | Struct with several measured times
@@ -93,6 +94,7 @@ struct Result{T <: AbstractFloat}
     s::Vector{T}
     obj_val::T
     iter::Int
+    safeguarding_iter::Int
     status::Symbol
     info::ResultInfo
     times::ResultTimes
@@ -101,8 +103,8 @@ struct Result{T <: AbstractFloat}
       return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, :Unsolved, ResultInfo{T}(0.,0., T[]), ResultTimes{T}())
     end
 
-    function Result{T}(x, y, s, obj_val, iter, status, info, times) where {T <: AbstractFloat}
-      return new(x, y, s, obj_val, iter, status, info, times)
+    function Result{T}(x, y, s, obj_val, iter, safeguarding_iter, status, info, times) where {T <: AbstractFloat}
+      return new(x, y, s, obj_val, iter, safeguarding_iter, status, info, times)
     end
 
 end
@@ -115,7 +117,7 @@ function Base.show(io::IO, obj::Result)
 		result_color = :red
 	end
 	printstyled("$(obj.status)\n", color = result_color)
-	println("Iterations: $(obj.iter)\nOptimal Objective: $(@sprintf("%.4g", obj.obj_val))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
+	println("Iterations: $(obj.iter) (incl. $(obj.safeguarding_iter) safeguarding iterations)\nOptimal Objective: $(@sprintf("%.4g", obj.obj_val))\nRuntime: $(round.(obj.times.solver_time * 1000, digits = 2))ms\nSetup Time: $(round.(obj.times.setup_time * 1000, digits = 2))ms\n")
 	!isnan(obj.times.iter_time) && print("Avg Iter Time: $(round.((obj.times.iter_time / obj.iter) * 1000, digits = 2))ms")
 end
 
@@ -367,6 +369,7 @@ mutable struct Workspace{T}
 	infeasibility_check_due::Bool # a flag that indicates that at the next possible iteration we should check for infeasibility
 	times::ResultTimes{Float64} #always 64 bit regardless of data type
 	row_ranges::Array{UnitRange{Int}, 1} # store a set_ind -> row_range map
+	safeguarding_iter::Int # count extra ADMM iterations due to bad quality accelerated steps
 	accelerator::AbstractAccelerator
 	accelerator_active::Bool
 	activation_reason::AbstractActivationReason
@@ -384,7 +387,7 @@ mutable struct Workspace{T}
 		sol = zeros(T, 1)
 		x_tl = view(sol, 1:1)
 		ν = view(sol, 1:1)
-		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, false, ResultTimes(), [0:0], EmptyAccelerator(), false, ImmediateActivation())
+		return new(p, Settings{T}(), sm, ci, vars,  uvars, δx, δy, s_tl, ls, sol, x_tl, ν, zero(T), T[], nothing, States(), T[], false, false, ResultTimes(), [0:0], 0, EmptyAccelerator(), false, ImmediateActivation())
 	end
 end
 Workspace(args...) = Workspace{DefaultFloat}(args...)
