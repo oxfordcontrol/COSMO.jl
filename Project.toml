@@ -1,7 +1,7 @@
 name = "COSMO"
 uuid = "1e616198-aa4e-51ec-90a2-23f7fbd31d8d"
 authors = ["Michael <michael@garstka.org>"]
-version = "0.7.8"
+version = "0.7.9"
 
 [deps]
 AMD = "14f7f29c-3bd6-536c-9a0b-7339e30b5a3e"
