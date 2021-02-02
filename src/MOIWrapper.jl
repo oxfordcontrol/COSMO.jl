@@ -21,17 +21,16 @@ const Interval = MOI.Interval{<: AbstractFloat}
 const LessThan = MOI.LessThan{<: AbstractFloat}
 const GreaterThan = MOI.GreaterThan{<: AbstractFloat}
 const EqualTo = MOI.EqualTo{<: AbstractFloat}
-const IntervalConvertible = Union{LessThan, GreaterThan, EqualTo, Interval}
-
+const IntervalConvertible = Union{LessThan, GreaterThan, Interval}
 
 const Zeros = MOI.Zeros
 const SOC = MOI.SecondOrderCone
 const PSDT = MOI.PositiveSemidefiniteConeTriangle
 const PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
 const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
-const AggregatedSets = Union{Zeros, MOI.Nonnegatives}
+const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.LessThan, MOI.GreaterThan}
 aggregate_equivalent(::Type{<: MOI.Zeros}) = COSMO.ZeroSet
-aggregate_equivalent(::Type{<: MOI.Nonnegatives}) = COSMO.Nonnegatives
+aggregate_equivalent(::Type{<: Union{MOI.LessThan, MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
 
 #export sortSets, assign_constraint_row_ranges!, processconstraints, constraint_rows, processobjective, processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 export Optimizer
@@ -475,11 +474,6 @@ end
 ##############################
 
 
-# do not process the AggregatedSets and Intervall constraints individually
-function processSet!(b::Vector{T}, rows::Union{Int, UnitRange{Int}}, cs, s::Union{AggregatedSets, MOI.Interval{T}}) where {T <: AbstractFloat}
-    nothing
-end
-
 process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, S::Type{<: MOI.AbstractSet}) where {T <: AbstractFloat} = false
 
 function process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, S::Type{<: AggregatedSets}) where {T <: AbstractFloat}
@@ -503,6 +497,22 @@ function process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, s::Typ
     nothing
 end
 
+
+function processSet!(b::Vector{T}, row::Int, cs, s::LessThan) where {T <: AbstractFloat}
+    b[row] += s.upper
+    # push!(cs, COSMO.Nonnegatives{T}(1))
+    nothing
+end
+function processSet!(b::Vector{T}, row::Int, cs, s::GreaterThan) where {T <: AbstractFloat}
+    b[row] -= s.lower
+    # push!(cs, COSMO.Nonnegatives{T}(1))
+    nothing
+end
+
+# do not process the AggregatedSets and Intervall constraints individually
+function processSet!(b::Vector{T}, rows::Union{Int, UnitRange{Int}}, cs, s::Union{AggregatedSets, MOI.Interval{T}}) where {T <: AbstractFloat}
+    nothing
+end
 
 function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::SOC) where {T <: AbstractFloat}
     push!(cs, COSMO.SecondOrderCone{T}(length(rows)))
@@ -785,5 +795,5 @@ end
 
 
 ## Supported Constraints
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<: Interval}) = true
+MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<: IntervalConvertible}) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
