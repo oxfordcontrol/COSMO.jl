@@ -21,17 +21,16 @@ const Interval = MOI.Interval{<: AbstractFloat}
 const LessThan = MOI.LessThan{<: AbstractFloat}
 const GreaterThan = MOI.GreaterThan{<: AbstractFloat}
 const EqualTo = MOI.EqualTo{<: AbstractFloat}
-const IntervalConvertible = Union{LessThan, GreaterThan, EqualTo, Interval}
-
+const IntervalConvertible = Union{LessThan, GreaterThan, Interval}
 
 const Zeros = MOI.Zeros
-#Nonnegatives = MOI.Nonnegatives
-const Nonpositives = MOI.Nonpositives
 const SOC = MOI.SecondOrderCone
-#const PSDS = MOI.PositiveSemidefiniteConeSquare
 const PSDT = MOI.PositiveSemidefiniteConeTriangle
 const PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
-const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, Nonpositives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
+const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
+const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.LessThan, MOI.GreaterThan}
+aggregate_equivalent(::Type{<: MOI.Zeros}) = COSMO.ZeroSet
+aggregate_equivalent(::Type{<: Union{MOI.LessThan, MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
 
 #export sortSets, assign_constraint_row_ranges!, processconstraints, constraint_rows, processobjective, processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
 export Optimizer
@@ -137,8 +136,8 @@ function MOI.copy_to(dest::Optimizer, src::MOI.ModelLike; copy_names = false)
     copy_names && error("Copying names is not supported.")
     MOI.empty!(dest)
     idxmap = MOIU.IndexMap(dest, src)
-    assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
-    processconstraints!(dest, src, idxmap, dest.rowranges)
+    LOCs = assign_constraint_row_ranges!(dest.rowranges, idxmap, src)
+    processconstraints!(dest, src, idxmap, LOCs, dest.rowranges)
     pre_allocate_variables!(dest.inner)
 
     dest.is_empty = false
@@ -184,7 +183,7 @@ end
 
 # This is important for set merging
 sort_sets(s::Union{Type{<: MOI.EqualTo}, Type{<: MOI.Zeros}}) = 1
-sort_sets(s::Union{Type{ <: LessThan}, Type{ <: GreaterThan}, Type{ <: MOI.Nonnegatives}, Type{ <: MOI.Nonpositives}}) = 2
+sort_sets(s::Union{Type{ <: MOI.LessThan}, Type{ <: MOI.GreaterThan}, Type{ <: MOI.Nonnegatives}, Type{ <: MOI.Nonpositives}}) = 2
 sort_sets(s::Type{MOI.Interval}) = 3
 sort_sets(s::Type{<: MOI.AbstractSet}) = 4
 
@@ -193,9 +192,9 @@ sort_sets(s::Type{<: MOI.AbstractSet}) = 4
 function assign_constraint_row_ranges!(rowranges::Dict{Int, UnitRange{Int}}, idxmap::MOIU.IndexMap, src::MOI.ModelLike)
     startrow = 1
     LOCs = MOI.get(src, MOI.ListOfConstraints())
-    sort!(LOCs, by=x-> sort_sets(x[2]))
+    sort!(LOCs, by = x -> sort_sets(x[2]))
     for (F, S) in LOCs
-        # Returns Array of constraint indexes that match F,S, each constraint index is just a type-safe wrapper for Int
+        # Returns Array of constraint indices that match F,S, each constraint index is just a type-safe wrapper for Int
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         for ci_src in cis_src
             set = MOI.get(src, MOI.ConstraintSet(), ci_src)
@@ -205,6 +204,7 @@ function assign_constraint_row_ranges!(rowranges::Dict{Int, UnitRange{Int}}, idx
             startrow = endrow + 1
         end
     end
+    return LOCs
 end
 
 function constraint_rows(rowranges::Dict{Int, UnitRange{Int}}, ci::CI{<:Any, <:MOI.AbstractScalarSet})
@@ -347,28 +347,25 @@ get_var_index(t::MOI.VectorAffineTerm) = get_var_index(t.scalar_term)
 coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
-function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}}) where {T <: AbstractFloat}
+function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike, idxmap, LOCs, rowranges::Dict{Int, UnitRange{Int}}) where {T <: AbstractFloat}
 
-    m = mapreduce(length, +, values(rowranges), init=0)
+    m = mapreduce(length, +, values(rowranges), init = 0)
 
     b = zeros(T, m)
     constant = zeros(T, m)
     I = Int[]
     J = Int[]
     V = T[]
-    COSMOconvexSets = Array{COSMO.AbstractConvexSet{T}}(undef, 0)
+    convex_sets = Array{COSMO.AbstractConvexSet{T}}(undef, 0)
     set_constant = zeros(T, m)
     # loop over constraints and modify A, l, u and constants
-    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
-        processconstraints!((I, J, V), b, COSMOconvexSets, constant, set_constant, src, idxmap, rowranges, F, S)
+    for (F, S) in LOCs
+        processconstraints!((I, J, V), b, convex_sets, constant, set_constant, src, idxmap, rowranges, F, S)
     end
     optimizer.set_constant = set_constant
     # subtract constant from right hand side
     n = MOI.get(src, MOI.NumberOfVariables())
     A = sparse(I, J, V, m, n)
-
-    # in a second step: merge some of the sets
-    convex_sets = COSMO.merge_sets(COSMOconvexSets)
 
     # store constraint matrices in inner model
     model = optimizer.inner
@@ -384,11 +381,14 @@ function processconstraints!(triplets::SparseTriplets{T}, b::Vector{T}, COSMOcon
         src::MOI.ModelLike, idxmap, rowranges::Dict{Int, UnitRange{Int}},
         F::Type{<:MOI.AbstractFunction}, S::Type{<:MOI.AbstractSet}) where {T <: AbstractFloat}
     cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
-    # loop over all constraints of same (F,S)
+    aggregate_dim = 0
+    
+    # loop over all constraints of same (F, S)
     for ci in cis_src
         s = MOI.get(src, MOI.ConstraintSet(), ci)
         f = MOI.get(src, MOI.ConstraintFunction(), ci)
         rows = constraint_rows(rowranges, idxmap[ci])
+        aggregate_dim += length(rows)
         processConstant!(b, rows, f, s)
         constant[rows] = b[rows]
         if typeof(s) <: MOI.AbstractScalarSet && !(typeof(s) <: MOI.Interval)
@@ -397,6 +397,9 @@ function processconstraints!(triplets::SparseTriplets{T}, b::Vector{T}, COSMOcon
         processConstraint!(triplets, f, rows, idxmap, s)
         processSet!(b, rows, COSMOconvexSets, s)
     end
+
+    process_aggregate_set!(b, COSMOconvexSets, aggregate_dim, cis_src, src, S)
+
     nothing
 end
 
@@ -470,42 +473,44 @@ end
 # PROCESS SETS
 ##############################
 
-# process the following sets Union{LessThan, GreaterThan, EqualTo}
+
+process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, S::Type{<: MOI.AbstractSet}) where {T <: AbstractFloat} = false
+
+function process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, S::Type{<: AggregatedSets}) where {T <: AbstractFloat}
+   if length(cs) > 0 && cs[end] isa aggregate_equivalent(S){T}
+        prev_dim = cs[end].dim    
+        cs[end] = aggregate_equivalent(S){T}(dim + prev_dim)
+   else
+        push!(cs, aggregate_equivalent(S){T}(dim))
+   end
+end
+
+function process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, s::Type{MOI.Interval{T}}) where {T <: AbstractFloat}
+    l = zeros(T, length(cis_src))
+    u = zeros(T, length(cis_src))
+   for (k, ci) in enumerate(cis_src)
+        s = MOI.get(src, MOI.ConstraintSet(), ci)
+        l[k] = s.lower
+        u[k] = s.upper
+    end
+    push!(cs, COSMO.Box{T}(l, u))
+    nothing
+end
+
+
 function processSet!(b::Vector{T}, row::Int, cs, s::LessThan) where {T <: AbstractFloat}
     b[row] += s.upper
-    push!(cs, COSMO.Nonnegatives{T}(1))
+    # push!(cs, COSMO.Nonnegatives{T}(1))
     nothing
 end
 function processSet!(b::Vector{T}, row::Int, cs, s::GreaterThan) where {T <: AbstractFloat}
     b[row] -= s.lower
-    push!(cs, COSMO.Nonnegatives{T}(1))
-    nothing
-end
-function processSet!(b::Vector{T}, row::Int, cs, s::EqualTo) where {T <: AbstractFloat}
-    b[row] += s.value
-    push!(cs, COSMO.ZeroSet{T}(1))
+    # push!(cs, COSMO.Nonnegatives{T}(1))
     nothing
 end
 
-function processSet!(b::Vector{T}, row::Int, cs, s::MOI.Interval) where {T <: AbstractFloat}
-    push!(cs, COSMO.Box{T}([s.lower], [s.upper]))
-    nothing
-end
-
-# process the following sets Zeros
-function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::Zeros) where {T <: AbstractFloat}
-    push!(cs, COSMO.ZeroSet{T}(length(rows)))
-    nothing
-end
-
-# process the following sets Union{Zeros, Nonnegatives, Nonpositives}
-function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.Nonnegatives) where {T <: AbstractFloat}
-    push!(cs, COSMO.Nonnegatives{T}(length(rows)))
-    nothing
-end
-
-function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.Nonpositives) where {T <: AbstractFloat}
-    push!(cs, COSMO.Nonnegatives{T}(length(rows)))
+# do not process the AggregatedSets and Intervall constraints individually
+function processSet!(b::Vector{T}, rows::Union{Int, UnitRange{Int}}, cs, s::Union{AggregatedSets, MOI.Interval{T}}) where {T <: AbstractFloat}
     nothing
 end
 
@@ -544,67 +549,6 @@ function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.DualPowerCon
     nothing
 end
 
-
-# to reduce function calls combine, individual ZeroSets, Nonnegatives and Box constraints
-# This assumes that C is ordered by set type
-function merge_sets(C::Array{COSMO.AbstractConvexSet{T}}) where {T <: AbstractFloat}
-
-    z_ind = findall(set -> typeof(set) <: COSMO.ZeroSet, C)
-    nn_ind = findall(set -> typeof(set) <: COSMO.Nonnegatives, C)
-    box_ind = findall(set -> typeof(set) <: COSMO.Box, C)
-    other_ind = findall( x-> !in(x, union(z_ind, nn_ind, box_ind)), collect(1:1:length(C)))
-
-    # if none of these sets are present, do nothing
-    length(other_ind) == length(C) && return C
-
-    length(z_ind) > 0 ? (num_z = 1) : (num_z = 0)
-    length(nn_ind) > 0 ? (num_nn = 1) : (num_nn = 0)
-    length(box_ind) > 0 ? (num_box = 1) : (num_box = 0)
-
-
-    num_merged_sets = length(other_ind) + num_z + num_nn + num_box
-    merged_sets = Array{COSMO.AbstractConvexSet{T}}(undef, num_merged_sets)
-    set_ind = 1
-    length(z_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, z_ind, C, set_ind, COSMO.ZeroSet{T}))
-    length(nn_ind) > 0 && (set_ind = COSMO.merge_set!(merged_sets, nn_ind, C, set_ind, COSMO.Nonnegatives{T}))
-    length(box_ind) > 0 && (set_ind = COSMO.merge_box!(merged_sets, box_ind, C, set_ind))
-
-    for other in other_ind
-        merged_sets[set_ind] = C[other]
-        set_ind += 1
-    end
-    return merged_sets
-end
-
-
-function merge_set!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int, 1}, C::Array{<: COSMO.AbstractConvexSet, 1}, set_ind::Int, set_type::DataType) where {T <: AbstractFloat}
-        if length(ind) > 1
-            combined_dim = sum(x -> x.dim, C[ind])
-        else
-            combined_dim = C[ind[1]].dim
-        end
-        merged_sets[set_ind] = set_type(combined_dim)
-        return set_ind + 1
-end
-
-function merge_box!(merged_sets::Array{COSMO.AbstractConvexSet{T}, 1}, ind::Array{Int, 1}, C::Array{<: COSMO.AbstractConvexSet{T}, 1}, set_ind::Int) where {T <: AbstractFloat}
-        if length(ind) > 1
-            combined_dim = sum(x -> x.dim, C[ind])
-            l = zeros(T, combined_dim)
-            u = zeros(T, combined_dim)
-            row = 1
-            for box in C[ind]
-                l[row:row + box.dim - 1] = box.l
-                u[row:row + box.dim - 1] = box.u
-                row += box.dim
-            end
-            merged_sets[set_ind] = COSMO.Box{T}(l, u)
-        else
-            merged_sets[set_ind] = C[ind[1]]
-        end
-
-        return set_ind + 1
-end
 
 
 
@@ -832,11 +776,24 @@ function MOI.get(optimizer::Optimizer, ::MOI.TimeLimitSec)
     return MOI.get(optimizer, MOI.RawParameter("time_limit"))
 end
 
+"""
+    ADMMIterations()
+The number of ADMM iterations completed during the solve.
+"""
+struct ADMMIterations <: MOI.AbstractModelAttribute
+end
+
+MOI.is_set_by_optimize(::ADMMIterations) = true
+
+function MOI.get(optimizer::Optimizer, ::ADMMIterations)
+    return optimizer.results.iter
+end
+
 ##############################
 # SUPPORT OBJECTIVE AND SET FUNCTIONS
 ##############################
 
 
 ## Supported Constraints
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<:IntervalConvertible}) = true
+MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<: IntervalConvertible}) = true
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
