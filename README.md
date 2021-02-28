@@ -1,6 +1,6 @@
 
 <div style="display: flex; justify-content: flex-end" margin=0px>
-    <img src="https://github.com/migarstka/COSMO_assets/blob/master/star_badge_2.png" align="right" width=6%>
+    <img src="https://github.com/migarstka/COSMO_assets/blob/master/star_badge_3.png" align="right" width=6%>
 </div>
 <h1 align="center" margin=0px>
   <img src="https://github.com/migarstka/COSMO_assets/blob/master/cosmo_rocket_with_convex_set.png" width=70%>
