@@ -156,7 +156,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		admm_w!(ws.vars.s, ws.x_tl, ws.s_tl, ws.vars.w, settings.alpha, m, n);	
 
 		acceleration_post!(ws.accelerator, ws, iter)
-
+		# @show(ws.vars.w)
 		# convergence / infeasibility / timelimit checks
 		cost, status, r_prim, r_dual = check_termination!(ws, settings, iter, cost, status, r_prim, r_dual, time_limit_start, n)
 		if status != :Undetermined
