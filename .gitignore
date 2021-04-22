@@ -7,4 +7,5 @@
 *.sublime*
 /docs/build
 Manifest.toml
+/docs/Manifest.toml
 /docs/src/examples/*.md
