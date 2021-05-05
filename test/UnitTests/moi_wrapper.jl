@@ -191,16 +191,14 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
     end
 
     @testset "Small edge cases" begin
-
-    
         cache = MOIU.UniversalFallback(MOIU.Model{Float64}());
         optimizer =  COSMO.Optimizer(max_iter = 2, verbose = false);
         cached = MOIU.CachingOptimizer(cache, optimizer)
         bridged = MOIB.full_bridge_optimizer(cached, Float64)
         
         x = MOI.add_variables(bridged, 1);
-        objectiveFunction = MOI.ScalarAffineFunction{Float64}([MOI.ScalarAffineTerm(-1.0, x[1])] , 0);
-        MOI.set(bridged, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(), objectiveFunction);
+        objf = MOI.ScalarAffineFunction{Float64}([MOI.ScalarAffineTerm(-1.0, x[1])] , 0);
+        MOI.set(bridged, MOI.ObjectiveFunction{typeof(objf)}(), objf);
         MOI.add_constraint(bridged, MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.([1.0], x[1:1]), 0.0), MOI.GreaterThan{Float64}(10.));
 
         MOI.optimize!(bridged);

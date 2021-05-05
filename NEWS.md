@@ -1,3 +1,14 @@
+## Version 0.8.0 (02. February 2021)
+This is a fairly big release as we wrap the ADMM algorithm into a safeguarded Anderson Acceleration method. The accelerators are provided by [COSMOAccelerators.jl](https://github.com/oxfordcontrol/COSMOAccelerators.jl). This should improve the convergence to higher accuracy solution. 
+
+We change the default settings to reflect this. The default accuracies `eps_abs` and `eps_rel` are set to `1e-5`, we now check convergence every `25` iterations, and increased `max_iter` to `5000`. Acceleration can be switched off by using: `COSMO.Settings(accelerator = EmptyAccelerator)`.  When the algorithm is safeguarded (`safeguard = true`), extra ADMM-iteration called `safeguarding_iter` might occur which are also reported to the user. The returned number of iterations in the result object always refers to the total number of ADMM-iterations, which includes the `safeguarding_iter`s. Refer to the docs for more configuration options.
+
+- `fb51a41` Add Compat entry for Reexport
+- `2624a50` Bump version: 0.7.9 → 0.8.0
+- `58cc506` Update examples/ to newest JuMP API
+- `ab67ddc` Fix bug in ResulType constructor
+- `5ac07e9` Merge branch 'mg/accelerated_algorithm'
+
 ## Version 0.7.9 (02. February 2021)
 This is intended as the last release containing all changes before the accelerated version of the solver is merged.
 - `a8f2724` Merge pull request #129 from oxfordcontrol/mg/fix_slow_moi_merging

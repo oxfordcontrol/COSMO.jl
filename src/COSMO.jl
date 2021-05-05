@@ -50,7 +50,7 @@ include("./printing.jl")
 include("./setup.jl")
 include("./solver.jl")
 include("./interface.jl")
-include("./MOIWrapper.jl")
+include("./MOI_wrapper.jl")
 
 # include("precompile.jl")
 # _precompile_()
