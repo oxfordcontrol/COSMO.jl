@@ -130,7 +130,7 @@ mutable struct Settings{T <: AbstractFloat}
 		obj_true_tol::Real = T(1e-3),
 		merge_strategy = CliqueGraphMerge,
 		compact_transformation::Bool = true,
-		accelerator = with_options(AndersonAccelerator{T, Type2{QRDecomp}, RestartedMemory, NoRegularizer}, mem = 10),
+		accelerator = with_options(AndersonAccelerator{T, Type2{QRDecomp}, RestartedMemory, NoRegularizer}, mem = 15),
 		safeguard::Bool = true, 
 		safeguard_tol::T = T(2)
 		) where {T <: AbstractFloat}
