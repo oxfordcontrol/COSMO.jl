@@ -40,8 +40,8 @@ Consider the following 2x2 semidefinite program with decision variable `X`:
 ```
 with problem data `A`, `b` and `C`:
 ```math
-A = \begin{bmatrix} 1 & 0 \\ 5 & 2\end{bmatrix},
-C = \begin{bmatrix} 1 & 2 \\ 0 & 2\end{bmatrix},
+A = \begin{bmatrix} 1 & 5 \\ 5 & 2\end{bmatrix},
+C = \begin{bmatrix} 1 & 2 \\ 2 & 2\end{bmatrix},
 b = 4.
 ```
 where `tr` denotes the trace of a matrix.
@@ -49,8 +49,8 @@ We can solve this problem either using COSMO's interface:
 ```julia
 using COSMO, LinearAlgebra
 
-C =  [1. 2; 0 2]
-A = [1. 0; 5 2]
+C =  [1. 2; 2 2]
+A = [1. 5; 5 2]
 b = 4.0;
 
 model = COSMO.Model();
@@ -78,9 +78,9 @@ or we can describe the problem using `JuMP` and use COSMO as the backend solver:
 ```julia
 using COSMO, JuMP, LinearAlgebra
 
-C =  [1 2; 0 2]
-A = [1 0; 5 2]
-b = 4;
+C =  [1. 2; 2 2]
+A = [1. 5; 5 2]
+b = 4.0;
 
 m = Model(with_optimizer(COSMO.Optimizer));
 @variable(m, X[1:2, 1:2], PSD)
