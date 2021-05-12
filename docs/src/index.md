@@ -51,7 +51,7 @@ using COSMO, LinearAlgebra
 
 C =  [1. 2; 0 2]
 A = [1. 0; 5 2]
-b = 4;
+b = 4.0;
 
 model = COSMO.Model();
 
