@@ -183,7 +183,7 @@ for (syevr, elty) in
     end #@eval
 end #for
 
-function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
+function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T <: Union{Float32,Float64}}
 
     #computes the upper triangular part of the projection of X onto the PSD cone
 
@@ -203,7 +203,7 @@ function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
 		rank_k_update!(X, ws)
 end
 
-function _project!(X::AbstractMatrix{BigFloat}, ws::PsdBlasWorkspace{BigFloat})
+function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
   w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
   D = LinearAlgebra.Diagonal(max.(w,0))
   X .= Z'D'Z
