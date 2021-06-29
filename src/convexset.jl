@@ -205,8 +205,7 @@ end
 
 function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
   w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
-  D = LinearAlgebra.Diagonal(max.(w,0))
-  X .= Z'D'Z
+  X .= Z'LinearAlgebra.Diagonal(max.(w,0))*Z
 end
 
 function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where {T}
