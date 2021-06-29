@@ -1,7 +1,7 @@
 __precompile__()
 module COSMO
 
-using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools
+using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools, GenericLinearAlgebra
 using Reexport
 using COSMOAccelerators
 

@@ -203,6 +203,12 @@ function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
 		rank_k_update!(X, ws)
 end
 
+function _project!(X::AbstractMatrix{BigFloat}, ws::PsdBlasWorkspace{BigFloat})
+  w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
+  D = LinearAlgebra.Diagonal(max.(w,0))
+  X .= Z'D'Z
+end
+
 function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where {T}
   n = size(X, 1)
   @. X = zero(T)
