@@ -205,6 +205,7 @@ end
 
 function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
   w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
+  #X .= MutableArithmetics.mul!(Z,LinearAlgebra.Diagonal(max.(w,0)),Z') " does not work. 
   X .= Z*LinearAlgebra.Diagonal(max.(w,0))*Z'
 end
 
@@ -279,9 +280,11 @@ function project!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}
         symmetrize_upper!(X)
         _project!(X, cone.work)
 
-        #fill in the lower triangular part
-        for j=1:n, i=1:(j-1)
-            X[j,i] = X[i,j]
+        #fill in the lower triangular part, only needed when calling BLAS. 
+        if T <: Union{Float32,Float64}
+          for j=1:n, i=1:(j-1)
+              X[j,i] = X[i,j]
+          end
         end
     end
     return nothing
