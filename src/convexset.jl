@@ -205,8 +205,19 @@ end
 
 function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
   w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
-  #X .= MutableArithmetics.mul!(Z,LinearAlgebra.Diagonal(max.(w,0)),Z') " does not work. 
-  X .= Z*LinearAlgebra.Diagonal(max.(w,0))*Z'
+
+  # The follwoing lines performe the operation : X = Z*LinearAlgebra.Diagonal(max.(w,0))*Z' 
+  # using MutableArithmetics. 
+  X .= T(0)
+  buffer = zero(X)
+  for i in eachindex(w)
+    w[i] <= 0 && continue
+    z = view(Z, :, i)
+    MA.mutable_operate_to!(buffer, *, z, z')
+    for I in eachindex(X)
+      X[I] = MA.add_mul!(X[I], w[i], buffer[I])
+    end
+  end
 end
 
 function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where {T}

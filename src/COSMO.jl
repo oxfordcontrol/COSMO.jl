@@ -1,7 +1,7 @@
 __precompile__()
 module COSMO
 
-using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools, GenericLinearAlgebra
+using SparseArrays, LinearAlgebra, SuiteSparse, QDLDL, Pkg, DataStructures, Requires, Printf, IterTools, GenericLinearAlgebra, MutableArithmetics
 using Reexport
 using COSMOAccelerators
 
@@ -12,6 +12,7 @@ export assemble!, warm_start!, empty_model!, update!
 
 const DefaultFloat = Float64
 const DefaultInt   = LinearAlgebra.BlasInt
+const MA = MutableArithmetics
 
 
 include("./kktsolver.jl")
