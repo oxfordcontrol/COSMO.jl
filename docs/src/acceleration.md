@@ -6,7 +6,7 @@ By default, the solver uses the accelerator type `AndersonAccelerator{T, Type2{Q
 
 In addition, the method is safeguarded (`safeguard = true`), i.e. the residual-norm of the accelerated point can not deviate too much from the current point. Otherwise, the point is discarded and the ADMM algorithm performs a normal step instead.
 
-The acceleration method can be altered as usual via the solver settings and the `accelerator` keyword. To deactive acceleration pass an `EmptyAccelerator`:
+The acceleration method can be altered as usual via the solver settings and the `accelerator` keyword. To deactivate acceleration pass an `EmptyAccelerator`:
 ```julia
 settings = COSMO.Settings(accelerator = EmptyAccelerator)
 ```
