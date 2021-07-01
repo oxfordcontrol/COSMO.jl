@@ -206,14 +206,16 @@ end
 function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
   w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
   # The follwoing lines uses MutableArithmetics to perform the operation : X .= Z*LinearAlgebra.Diagonal(max.(w,0))*Z'
-  X .= T(0)
+  X = zero(X)
   buffer = zero(X)
   for i in eachindex(w)
-    w[i] <= 0 && continue
+    w[i] <= T(0) && continue
     z = view(Z, :, i)
     MA.mutable_operate_to!(buffer, *, z, z')
-    for I in eachindex(X)
-      X[I] = MA.add_mul!(X[I], w[i], buffer[I])
+    for j in eachindex(X)
+      #The following line should be : X[j] = MA.add_mul!(X[j], w[i], buffer[j])
+      # However it does not work for BigFLoats yet, so i keep the allocating working line : 
+      X[j] += w[i]*buffer[j]
     end
   end
 end
