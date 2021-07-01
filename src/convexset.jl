@@ -205,9 +205,7 @@ end
 
 function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
   w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
-
-  # The follwoing lines performe the operation : X = Z*LinearAlgebra.Diagonal(max.(w,0))*Z' 
-  # using MutableArithmetics. 
+  # The follwoing lines uses MutableArithmetics to perform the operation : X .= Z*LinearAlgebra.Diagonal(max.(w,0))*Z'
   X .= T(0)
   buffer = zero(X)
   for i in eachindex(w)
