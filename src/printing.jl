@@ -10,8 +10,13 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero, ws.p.A)) nnz),\n          matrix size to factor: $(n + m)x$(n + m),\n          Floating-point precision: $(T)")
 	for (iii, set) in enumerate(sort(ws.p.C.sets, by = x -> -x.dim))
-		set_name = split(string(typeof(set).name), ".")[end]
-		iii == 1 ? println("Sets:"*" "^5*"$(set_name) of dim: $(set.dim)") : println(" "^10*"$(set_name) of dim: $(set.dim)")
+		if iii == 1
+			print("Sets:"*" "^5)
+			print_set(set)
+		else
+			print(" "^10)
+			print_set(set)
+		end
 		if iii == 5
 			println(" "^10*"... and $(length(ws.p.C.sets)-5) more")
 			break
@@ -93,3 +98,14 @@ end
 
 print_accelerator(s::CA.AbstractAccelerator, safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "Unknown Accelerator")
 print_accelerator(s::CA.EmptyAccelerator,  safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "no acceleration")
+
+function print_set(set::COSMO.AbstractConvexSet)
+	set_name = split(string(typeof(set).name), ".")[end]
+	println("$(set_name) of dim: $(set.dim)")
+end
+
+function print_set(set::Union{PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T <: AbstractFloat}
+	set_name = split(string(typeof(set).name), ".")[end]
+	N = set.sqrt_dim
+	println("$(set_name) of dim: $(set.dim) ($(N)x$(N))")
+end
