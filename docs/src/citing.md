@@ -2,34 +2,30 @@
 
 If you find COSMO useful in your project, we kindly request that you cite the following paper:
 ```
-@InProceedings{garstka_2019,
-  author        = {Michael Garstka and Mark Cannon and Paul Goulart},
-  title         = {{COSMO}: A conic operator splitting method for large convex problems},
-  booktitle     = {European Control Conference},
-  year          = {2019},
-  location      = {Naples, Italy},
-  doi            = {10.23919/ECC.2019.8796161},
-  eprint        = {1901.10887},
-  url           = {https://arxiv.org/abs/1901.10887},
-  archiveprefix = {arXiv},
-  keywords      = {Mathematics - Optimization and Control},
-  primaryclass  = {math.OC},
+@Article{Garstka_2021,
+  author  = {Michael Garstka and Mark Cannon and Paul Goulart},
+  journal = {Journal of Optimization Theory and Applications},
+  title   = {{COSMO}: A Conic Operator Splitting Method for Convex Conic Problems},
+  year    = {2021},
+  doi     = {10.1007/s10957-021-01896-x},
+  url     = {https://doi.org/10.1007/s10957-021-01896-x},
 }
 ```
-A preprint can be downloaded [here](https://arxiv.org/abs/1901.10887).
+The article is available under Open Access [here](https://link.springer.com/article/10.1007/s10957-021-01896-x).
 
 The following paper describes the algorithm used for our clique graph based merging strategy:
 ```
-@Article{garstka_2019b,
-  author        = {Garstka, Michael and Cannon, Mark and Goulart, Paul},
-  journal       = {ArXiv e-prints},
-  title         = {A clique graph based merging strategy for decomposable {SDPs}},
-  year          = {2019},
-  archiveprefix = {arXiv},
-  eprint        = {1911.05615},
-  keywords      = {Mathematics - Optimization and Control},
-  primaryclass  = {math.OC},
-  url           = {https://arxiv.org/abs/1911.05615},
+@InProceedings{Garstka_2020,
+  author  = {Michael Garstka and Mark Cannon and Paul Goulart},
+  title   = {A clique graph based merging strategy for decomposable {SDPs}},
+  year    = {2020},
+  note    = {21th IFAC World Congress},
+  number  = {2},
+  pages   = {7355-7361},
+  volume  = {53},
+  doi     = {10.1016/j.ifacol.2020.12.1255},
+  issn    = {2405-8963},
+  journal = {IFAC-PapersOnLine},
 }
 
 ```

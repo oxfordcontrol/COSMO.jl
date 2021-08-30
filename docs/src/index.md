@@ -94,9 +94,9 @@ obj_value = JuMP.objective_value(m)
 ```
 
 ## Related talks
-- A video of my presentation at JuMP-dev is available here: [COSMO.jl at JuMP-dev](https://www.youtube.com/watch?v=H4Q0ZXDqB70)
-- A presentation on chordal decomposition and clique merging is available here: [Chordal decomposition and clique merging](https://vimeo.com/439962112)
-
+- A video of my first presentation of COSMO at JuMP-dev (Santiago) is available here: [COSMO.jl at JuMP-dev](https://www.youtube.com/watch?v=H4Q0ZXDqB70)
+- A more detailed presentation on chordal decomposition and clique merging is available here: [Chordal decomposition and clique merging](https://vimeo.com/439962112)
+- I gave an overview on recent features of COSMO such as acceleration methods at JuliaCon 2021: [What's new in COSMO?](https://www.youtube.com/watch?v=O50kKay3Ie8)
 
 ## Credits
 
