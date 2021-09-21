@@ -652,9 +652,9 @@ function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
         return MOI.FEASIBLE_POINT
     elseif status == :Max_iter_reached || status == :Time_limit_reached
         settings = optimizer.inner.settings
-        if is_primal_feasible(optimizer, settings)
+        if is_primal_feasible(optimizer.results.info, settings)
             return MOI.FEASIBLE_POINT
-        elseif is_primal_nearly_feasible(optimizer, settings)
+        elseif is_primal_nearly_feasible(optimizer.results.info, settings)
             return MOI.NEARLY_FEASIBLE_POINT
         else
             return MOI.INFEASIBLE_POINT
@@ -681,9 +681,9 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
         return MOI.FEASIBLE_POINT
     elseif status == :Max_iter_reached || status == :Time_limit_reached
         settings = optimizer.inner.settings
-        if is_dual_feasible(optimizer, settings)
+        if is_dual_feasible(optimizer.results.info, settings)
             return MOI.FEASIBLE_POINT
-        elseif is_dual_nearly_feasible(optimizer, settings)
+        elseif is_dual_nearly_feasible(optimizer.results.info, settings)
             return MOI.NEARLY_FEASIBLE_POINT
         else
             return MOI.INFEASIBLE_POINT
