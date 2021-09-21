@@ -130,12 +130,13 @@ function has_converged(ws::COSMO.Workspace{T}, r::ResultInfo) where {T <: Abstra
 
 	# if an optimal objective value was specified for the problem check if current solution is within specified accuracy
 	obj_true_FLAG = true
-	if !isnan(ws.settings.obj_true)
+	settings = ws.settings
+	if !isnan(settings.obj_true)
 		current_cost = calculate_cost!(ws.utility_vars.n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 		obj_true_FLAG = abs(settings.obj_true - current_cost) <= settings.obj_true_tol
 	end
 
-	return is_primal_feasible(r, ws.settings) && is_dual_feasible(r, ws.settings) && obj_true_FLAG
+	return is_primal_feasible(r, settings) && is_dual_feasible(r, settings) && obj_true_FLAG
 end
 
 # cost = cinv *( 1/2 x' * P * x + q' x)

@@ -64,8 +64,8 @@ Object that contains further information about the primal residual, the dual res
 """
 struct ResultInfo{T <: AbstractFloat}
 	r_prim::T
-	max_norm_prim::T
 	r_dual::T
+	max_norm_prim::T
 	max_norm_dual::T
 	rho_updates::Vector{T}
 end

@@ -112,7 +112,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# instantiate variables
 	status = :Undetermined
 	cost = T(Inf)
-	res_info = ResultInfo(T(Inf), T(Inf), T(Inf), T(Inf), ws.rho_updates)
+	res_info = ResultInfo(T(Inf), T(Inf), zero(T), zero(T), ws.rho_updates)
 	iter = 0
 	ws.safeguarding_iter = 0
 	# print information about settings to the screen
@@ -349,6 +349,7 @@ function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64
 	end
 
 	if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
+		res_info = calculate_result_info!(ws)
 		status = :Time_limit_reached
 	end
 	return cost, status, res_info

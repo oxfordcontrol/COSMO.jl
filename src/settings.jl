@@ -104,7 +104,7 @@ mutable struct Settings{T <: AbstractFloat}
 		alpha::Real=T(1.6),
 		eps_abs::Real=T(1e-5),
 		eps_rel::Real=T(1e-5),
-        nearly_ratio::Real=T(100),
+		nearly_ratio::Real=T(100),
 		eps_prim_inf::Real=T(1e-4),
 		eps_dual_inf::Real=T(1e-4),
 		max_iter::Integer=5000,
