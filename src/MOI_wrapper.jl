@@ -700,6 +700,7 @@ end
 struct RawResult <: MOI.AbstractModelAttribute end
 MOI.is_set_by_optimize(::RawResult) = true
 MOI.get(optimizer::Optimizer, ::RawResult) = optimizer.results
+MOIU.map_indices(::Function, r::COSMO.Result) = r
 
 
 _unshift(optimizer::Optimizer, offset, value, s) = value
