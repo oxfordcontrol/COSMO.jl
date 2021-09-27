@@ -650,8 +650,15 @@ function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
         return MOI.INFEASIBLE_POINT
     elseif status == :Solved
         return MOI.FEASIBLE_POINT
-    elseif status == :Max_iter_reached
-        return MOI.NEARLY_FEASIBLE_POINT
+    elseif status == :Max_iter_reached || status == :Time_limit_reached
+        settings = optimizer.inner.settings
+        if is_primal_feasible(optimizer.results.info, settings)
+            return MOI.FEASIBLE_POINT
+        elseif is_primal_nearly_feasible(optimizer.results.info, settings)
+            return MOI.NEARLY_FEASIBLE_POINT
+        else
+            return MOI.INFEASIBLE_POINT
+        end
     elseif status == :Dual_infeasible
         return MOI.INFEASIBILITY_CERTIFICATE
     else
@@ -672,8 +679,15 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
         return MOI.INFEASIBILITY_CERTIFICATE
     elseif status == :Solved
         return MOI.FEASIBLE_POINT
-    elseif status == :Max_iter_reached
-        return MOI.NEARLY_FEASIBLE_POINT
+    elseif status == :Max_iter_reached || status == :Time_limit_reached
+        settings = optimizer.inner.settings
+        if is_dual_feasible(optimizer.results.info, settings)
+            return MOI.FEASIBLE_POINT
+        elseif is_dual_nearly_feasible(optimizer.results.info, settings)
+            return MOI.NEARLY_FEASIBLE_POINT
+        else
+            return MOI.INFEASIBLE_POINT
+        end
     else
         return MOI.NO_SOLUTION
     end
@@ -683,7 +697,10 @@ function MOI.get(optimizer::Optimizer, ::MOI.RawStatusString)
     return String(optimizer.results.status)
 end
 
-
+struct RawResult <: MOI.AbstractModelAttribute end
+MOI.is_set_by_optimize(::RawResult) = true
+MOI.get(optimizer::Optimizer, ::RawResult) = optimizer.results
+MOIU.map_indices(::Function, r::COSMO.Result) = r
 
 
 _unshift(optimizer::Optimizer, offset, value, s) = value

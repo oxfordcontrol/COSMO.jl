@@ -50,7 +50,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
     b1 = 11.0;
     b2 = 19.0;
 
-    
+
     cache = MOIU.UniversalFallback(MOIU.Model{Float64}());
     optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
     cached = MOIU.CachingOptimizer(cache, optimizer)
@@ -109,7 +109,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
         cached = MOIU.CachingOptimizer(cache, optimizer)
         bridged = MOIB.full_bridge_optimizer(cached, Float64)
-        
+
         x = MOI.add_variables(bridged, 6);
         objectiveFunction = MOI.ScalarAffineFunction(MOI.ScalarAffineTerm.(C_t, x[1:6]), 0.0);
         MOI.set(bridged, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}(), objectiveFunction);
@@ -132,8 +132,8 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         MOI.set(bridged, MOI.ConstraintDualStart(), con3, y_c3)
         MOI.set(bridged, MOI.ConstraintPrimalStart(), con3, s_c3)
         MOI.optimize!(bridged);
-        
-        optimizer = get_inner_optimizer(bridged) 
+
+        optimizer = get_inner_optimizer(bridged)
         # @test isapprox(optimizer.inner.vars.μ[3:end], internal_scaled_μ[3:end], atol = 1e-3)
         # @test isapprox(optimizer.inner.vars.s.data[3:end], internal_scaled_s[3:end], atol = 1e-4)
 
@@ -195,7 +195,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         optimizer =  COSMO.Optimizer(max_iter = 2, verbose = false);
         cached = MOIU.CachingOptimizer(cache, optimizer)
         bridged = MOIB.full_bridge_optimizer(cached, Float64)
-        
+
         x = MOI.add_variables(bridged, 1);
         objf = MOI.ScalarAffineFunction{Float64}([MOI.ScalarAffineTerm(-1.0, x[1])] , 0);
         MOI.set(bridged, MOI.ObjectiveFunction{typeof(objf)}(), objf);
@@ -203,8 +203,9 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
 
         MOI.optimize!(bridged);
         @test MOI.get(bridged, MOI.TerminationStatus()) == MOI.ITERATION_LIMIT
-        @test MOI.get(bridged, MOI.PrimalStatus()) == MOI.NEARLY_FEASIBLE_POINT
-        @test MOI.get(bridged, MOI.DualStatus()) == MOI.NEARLY_FEASIBLE_POINT
+        @test MOI.get(bridged, MOI.PrimalStatus()) == MOI.INFEASIBLE_POINT
+        @test MOI.get(bridged, MOI.DualStatus()) == MOI.FEASIBLE_POINT
+        @test MOI.get(bridged, COSMO.RawResult()).info.rho_updates == [0.1]
 
     end
     @testset "Set merging" begin
@@ -223,7 +224,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         x_true = [-2.; 0]
 
 
-    
+
         cache = MOIU.UniversalFallback(MOIU.Model{Float64}());
         optimizer =  COSMO.Optimizer(verbose = false);
         cached = MOIU.CachingOptimizer(cache, optimizer)
@@ -273,8 +274,8 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         optimizer =  COSMO.Optimizer{Float64}();
         cached = MOIU.CachingOptimizer(cache, optimizer)
         bridged = MOIB.full_bridge_optimizer(cached, Float64)
-     
-     
+
+
 
          x = MOI.add_variable(bridged)
          y = MOI.add_variable(bridged)

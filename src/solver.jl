@@ -112,8 +112,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	# instantiate variables
 	status = :Undetermined
 	cost = T(Inf)
-	r_prim = T(Inf)
-	r_dual = T(Inf)
+	res_info = ResultInfo(T(Inf), T(Inf), zero(T), zero(T), ws.rho_updates)
 	iter = 0
 	ws.safeguarding_iter = 0
 	# print information about settings to the screen
@@ -158,7 +157,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 		acceleration_post!(ws.accelerator, ws, iter)
 		# @show(ws.vars.w)
 		# convergence / infeasibility / timelimit checks
-		cost, status, r_prim, r_dual = check_termination!(ws, settings, iter, cost, status, r_prim, r_dual, time_limit_start, n)
+		cost, status, res_info = check_termination!(ws, settings, iter, cost, status, res_info, time_limit_start, n)
 		if status != :Undetermined
 			break
 		end
@@ -172,7 +171,7 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 
 	# calculate primal and dual residuals
 	if iter + ws.safeguarding_iter == settings.max_iter
-		r_prim, r_dual = calculate_residuals!(ws)
+		res_info = calculate_result_info!(ws)
 		status = :Max_iter_reached
 	end
 
@@ -198,7 +197,6 @@ function optimize!(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	settings.verbose && print_result(status, total_iter, ws.safeguarding_iter, cost, ws.times.solver_time, ws.settings.safeguard)
 
 	# create result object
-	res_info = ResultInfo(r_prim, r_dual, ws.rho_updates)
 	free_memory!(ws)
 	return Result{T}(ws.vars.x, y, ws.vars.s.data, cost, total_iter, ws.safeguarding_iter, status, res_info, ws.times);
 
@@ -302,23 +300,23 @@ Checks the algorithms termination conditions at intervals specified in the `sett
 - infeasibility conditions satisfied --> :Primal_infeasible / :Dual_infeasible
 - time limit constraint reached --> :Time_limit_reached
 """
-function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64, cost::T, status::Symbol, r_prim::T, r_dual::T, time_limit_start::Float64, n::Int64) where {T <: AbstractFloat}
+function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64, cost::T, status::Symbol, res_info::ResultInfo{T}, time_limit_start::Float64, n::Int64) where {T <: AbstractFloat}
 
 	# check convergence with residuals every {settings.checkIteration} steps
 	if mod(iter, settings.check_termination) == 0 || iter == 1
 		recover_μ!(ws.vars.μ, ws.vars.w_prev, ws.vars.s, ws.ρvec, n)
-		r_prim, r_dual = calculate_residuals!(ws)
+		res_info = calculate_result_info!(ws)
 		# update cost
 		cost = calculate_cost!(ws.utility_vars.vec_n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 		if abs(cost) > 1e20
 			status = :Unsolved
-			return cost, status, r_prim, r_dual
+			return cost, status, res_info
 		end
 		# print iteration steps
-		settings.verbose && print_iteration(ws, iter, cost, r_prim, r_dual)
-		if has_converged(ws, r_prim, r_dual)
+		settings.verbose && print_iteration(ws, iter, cost, res_info.r_prim, res_info.r_dual)
+		if has_converged(ws, res_info)
 			status = :Solved
-			return cost, status, r_prim, r_dual	
+			return cost, status, res_info
 		end
 	end
 
@@ -339,19 +337,20 @@ function check_termination!(ws::Workspace{T}, settings::Settings{T}, iter::Int64
 			if is_primal_infeasible!(ws.δy, ws)
 				status = :Primal_infeasible
 				cost = Inf
-				return cost, status, r_prim, r_dual
+				return cost, status, res_info
 			end
 
 			if is_dual_infeasible!(ws.δx, ws)
 				status = :Dual_infeasible
 				cost = -Inf
-				return cost, status, r_prim, r_dual
+				return cost, status, res_info
 			end
 		end
 	end
 
 	if settings.time_limit !=0 &&  (time() - time_limit_start) > settings.time_limit
+		res_info = calculate_result_info!(ws)
 		status = :Time_limit_reached
 	end
-	return cost, status, r_prim, r_dual
+	return cost, status, res_info
 end

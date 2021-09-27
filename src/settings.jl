@@ -35,6 +35,7 @@ sigma | ADMM sigma step | 1e-6
 alpha | Relaxation parameter | 1.6
 eps_abs | Absolute residual tolerance | 1e-5
 eps_rel | Relative residual tolerance | 1e-5
+nearly_ratio | Residual tolerance ratio between `MOI.NEARLY_FEASIBLE_POINT` and ``MOI.FEASIBLE_POINT`` | 100
 eps\\_prim\\_inf | Primal infeasibility tolerance | 1e-5
 eps\\_dual\\_inf | Dual infeasibility tolerance | 1e-5
 max_iter | Maximum number of iterations | 5000
@@ -63,6 +64,7 @@ mutable struct Settings{T <: AbstractFloat}
 	alpha::T
 	eps_abs::T
 	eps_rel::T
+	nearly_ratio::T
 	eps_prim_inf::T
 	eps_dual_inf::T
 	max_iter::Int
@@ -102,6 +104,7 @@ mutable struct Settings{T <: AbstractFloat}
 		alpha::Real=T(1.6),
 		eps_abs::Real=T(1e-5),
 		eps_rel::Real=T(1e-5),
+		nearly_ratio::Real=T(100),
 		eps_prim_inf::Real=T(1e-4),
 		eps_dual_inf::Real=T(1e-4),
 		max_iter::Integer=5000,
@@ -147,7 +150,7 @@ mutable struct Settings{T <: AbstractFloat}
 		end
 		
 
-		new(rho, sigma, alpha, eps_abs, eps_rel, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, safeguard, safeguard_tol)
+		new(rho, sigma, alpha, eps_abs, eps_rel, nearly_ratio, eps_prim_inf, eps_dual_inf, max_iter, verbose, kkt_solver, check_termination, check_infeasibility, scaling, MIN_SCALING, MAX_SCALING, adaptive_rho, adaptive_rho_interval, adaptive_rho_tolerance, adaptive_rho_fraction, adaptive_rho_max_adaptions, verbose_timing, RHO_MIN, RHO_MAX, RHO_TOL, RHO_EQ_OVER_RHO_INEQ, COSMO_INFTY, decompose, complete_dual, time_limit, obj_true, obj_true_tol, merge_strategy, compact_transformation, accelerator, safeguard, safeguard_tol)
 	end
 end
 

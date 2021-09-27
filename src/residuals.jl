@@ -95,23 +95,48 @@ function max_res_component_norm(ws::COSMO.Workspace, IGNORESCALING_FLAG::Bool = 
 	return max_norm_prim, max_norm_dual
 end
 
-function has_converged(ws::COSMO.Workspace{T}, r_prim::T, r_dual::T) where {T <: AbstractFloat}
-	max_norm_prim, max_norm_dual = max_res_component_norm(ws)
-	settings = ws.settings
-	ϵ_prim = settings.eps_abs + settings.eps_rel * max_norm_prim
-	ϵ_dual = settings.eps_abs + settings.eps_rel * max_norm_dual
+function isapprox_feasible(residual, max_norm, eps_abs, eps_rel)
+	ϵ = eps_abs + eps_rel * max_norm
+	return residual < ϵ
+end
 
+function isapprox_primal_feasible(r::ResultInfo, eps_abs, eps_rel)
+    return isapprox_feasible(r.r_prim, r.max_norm_prim, eps_abs, eps_rel)
+end
+
+function isapprox_dual_feasible(r::ResultInfo, eps_abs, eps_rel)
+    return isapprox_feasible(r.r_dual, r.max_norm_dual, eps_abs, eps_rel)
+end
+
+function is_primal_feasible(r::ResultInfo, settings::Settings)
+	return isapprox_primal_feasible(r, settings.eps_abs, settings.eps_rel)
+end
+
+function is_dual_feasible(r::ResultInfo, settings::Settings)
+	return isapprox_dual_feasible(r, settings.eps_abs, settings.eps_rel)
+end
+
+function is_primal_nearly_feasible(r::ResultInfo, settings::Settings)
+	return isapprox_primal_feasible(r, settings.nearly_ratio * settings.eps_abs, settings.nearly_ratio * settings.eps_rel)
+end
+
+function is_dual_nearly_feasible(r::ResultInfo, settings::Settings)
+	return isapprox_dual_feasible(r, settings.nearly_ratio * settings.eps_abs, settings.nearly_ratio * settings.eps_rel)
+end
+
+function has_converged(ws::COSMO.Workspace{T}, r::ResultInfo) where {T <: AbstractFloat}
 	# check activation of accelerator
-	COSMO.check_activation!(ws, ws.activation_reason, r_prim, r_dual, max_norm_prim, max_norm_dual)
+	COSMO.check_activation!(ws, ws.activation_reason, r)
 
 	# if an optimal objective value was specified for the problem check if current solution is within specified accuracy
 	obj_true_FLAG = true
+	settings = ws.settings
 	if !isnan(settings.obj_true)
 		current_cost = calculate_cost!(ws.utility_vars.n, ws.vars.x, ws.p.P, ws.p.q, ws.sm.cinv[])
 		obj_true_FLAG = abs(settings.obj_true - current_cost) <= settings.obj_true_tol
 	end
 
-	return (r_prim < ϵ_prim  && r_dual < ϵ_dual && obj_true_FLAG)
+	return is_primal_feasible(r, settings) && is_dual_feasible(r, settings) && obj_true_FLAG
 end
 
 # cost = cinv *( 1/2 x' * P * x + q' x)
@@ -121,4 +146,8 @@ function calculate_cost!(temp::AbstractVector{T}, x::AbstractVector{T}, P::Spars
 	return cinv * (T(0.5) * dot(temp, x) + dot(q, x))
 end
 
-
+function calculate_result_info!(ws::COSMO.Workspace)
+    r_prim, r_dual = calculate_residuals!(ws)
+    max_norm_prim, max_norm_dual = max_res_component_norm(ws)
+    return ResultInfo(r_prim, r_dual, max_norm_prim, max_norm_dual, ws.rho_updates)
+end

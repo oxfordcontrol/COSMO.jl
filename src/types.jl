@@ -65,6 +65,8 @@ Object that contains further information about the primal residual, the dual res
 struct ResultInfo{T <: AbstractFloat}
 	r_prim::T
 	r_dual::T
+	max_norm_prim::T
+	max_norm_dual::T
 	rho_updates::Vector{T}
 end
 
@@ -100,7 +102,7 @@ struct Result{T <: AbstractFloat}
     times::ResultTimes
 
     function Result{T}() where {T <: AbstractFloat}
-      return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, 0, :Unsolved, ResultInfo{T}(0.,0., T[]), ResultTimes{T}())
+      return new(zeros(T, 1), zeros(T, 1), zeros(T, 1), zero(T), 0, 0, :Unsolved, ResultInfo{T}(0., 0., 0., 0., T[]), ResultTimes{T}())
     end
 
     function Result{T}(x, y, s, obj_val, iter, safeguarding_iter, status, info, times) where {T <: AbstractFloat}

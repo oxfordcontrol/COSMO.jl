@@ -35,18 +35,17 @@ end
 check_activation!(ws::Workspace, activation_reason::AccuracyActivation, num_iter::Int64) = nothing
 
 
-function check_activation!(ws::Workspace, activation_reason::AccuracyActivation, r_prim::T, r_dual::T, max_norm_prim::T, max_norm_dual::T) where {T <: AbstractFloat}
+function check_activation!(ws::Workspace, activation_reason::AccuracyActivation, r::ResultInfo) where {T <: AbstractFloat}
     if !ws.accelerator_active
-        ϵ_prim_act = activation_reason.start_accuracy + activation_reason.start_accuracy * max_norm_prim
-        ϵ_dual_act = activation_reason.start_accuracy + activation_reason.start_accuracy * max_norm_dual
+        tol = activation_reason.start_accuracy
         
-        if r_prim < ϵ_prim_act  && r_dual < ϵ_dual_act
+        if isapprox_primal_feasible(r, tol, tol) && isapprox_dual_feasible(r, tol, tol)
             ws.accelerator_active = true
         end 
     end
 end
 
-check_activation!(ws::Workspace, activation_reason::Union{IterActivation, ImmediateActivation}, r_prim::T, r_dual::T, max_norm_prim::T, max_norm_dual::T) where {T <: AbstractFloat}= nothing
+check_activation!(ws::Workspace, activation_reason::Union{IterActivation, ImmediateActivation}, r::ResultInfo) where {T <: AbstractFloat}= nothing
 
 
 """
