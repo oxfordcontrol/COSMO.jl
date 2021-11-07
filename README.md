@@ -64,7 +64,7 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
   year    = {2021},
   publisher = {Springer},
   doi     = {10.1007/s10957-021-01896-x},
-  url     = {https://doi.org/10.1007/s10957-021-01896-x},
+  url     = {https://doi.org/10.1007/s10957-021-01896-x}
 }
 ```
 The article is available under Open Access [here](https://link.springer.com/article/10.1007/s10957-021-01896-x).
