@@ -72,21 +72,20 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.16ms
+Setup Time: 0.14ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-6.1146e+02	1.7072e+01	5.9998e-01	1.0000e-01
-25	 2.3958e+01	2.9812e-01	1.1245e-09	1.0000e-01
-50	 2.5146e+01	2.0059e-01	2.9777e-08	1.0000e-01
-75	 2.5430e+01	1.3731e-01	4.6961e-11	1.0000e-01
-100	 2.5624e+01	4.9763e-10	1.4916e-09	1.1291e+01
+25	 2.3958e+01	2.9812e-01	1.1256e-09	1.0000e-01
+50	 2.5539e+01	1.3731e-01	4.4474e-02	5.6059e-01
+75	 2.5624e+01	1.6164e-10	7.7716e-16	5.6059e-01
 
 ------------------------------------------------------------------
 &gt;&gt;&gt; Results
 Status: Solved
-Iterations: 133 (incl. 33 safeguarding iter)
+Iterations: 90 (incl. 15 safeguarding iter)
 Optimal objective: 25.62
-Runtime: 0.083s (83.46ms)</pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output">-25.623709241014396</pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-julia">function brute_force_optimisation(W, n)
+Runtime: 0.004s (3.83ms)</pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output">-25.623709243605845</pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-julia">function brute_force_optimisation(W, n)
    opt_obj = Inf
    opt_x = Inf * ones(n)
 
@@ -100,4 +99,4 @@ Runtime: 0.083s (83.46ms)</pre><p>Looking at the solver output you can see how t
    end
    return opt_obj, opt_x
 end
-opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><pre class="documenter-example-output">(-25.623709242765823, [-1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0])</pre><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 7 November 2021 15:48">Sunday 7 November 2021</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><pre class="documenter-example-output">(-25.623709242765823, [-1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0])</pre><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 7 November 2021 15:50">Sunday 7 November 2021</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

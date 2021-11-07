@@ -45,14 +45,14 @@ Setup Time: 0.09ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-2.0835e-01	1.2796e+00	2.3510e-01	1.0000e-01
-25	 1.8800e+00	5.4990e-16	6.2804e-16	1.0000e-01
+25	 1.8800e+00	4.7135e-16	6.2804e-16	1.0000e-01
 
 ------------------------------------------------------------------
 &gt;&gt;&gt; Results
 Status: Solved
 Iterations: 30 (incl. 5 safeguarding iter)
 Optimal objective: 1.88
-Runtime: 0.001s (0.68ms)</pre><p>Alternatively, we can also use two-sided constraints with <code>COSMO.Box</code>:</p><pre><code class="language-julia">constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u));
+Runtime: 0.001s (0.73ms)</pre><p>Alternatively, we can also use two-sided constraints with <code>COSMO.Box</code>:</p><pre><code class="language-julia">constraint1 = COSMO.Constraint(A, zeros(3), COSMO.Box(l, u));
 
 model = COSMO.Model();
 assemble!(model, P, q, constraint1, settings = settings);
@@ -78,22 +78,22 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 5, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 12.22ms
+Setup Time: 16.38ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-7.8808e-03	1.0079e+00	2.0033e+02	1.0000e-01
-25	 1.8800e+00	5.5586e-17	6.2804e-16	1.0000e-01
+25	 1.8800e+00	1.5712e-16	1.2561e-15	1.0000e-01
 
 ------------------------------------------------------------------
 &gt;&gt;&gt; Results
 Status: Solved
 Iterations: 25
 Optimal objective: 1.88
-Runtime: 0.091s (90.63ms)</pre><p>Let&#39;s check that the solution is correct:</p><pre><code class="language-julia">@testset &quot;QP Problem&quot; begin
+Runtime: 0.106s (106.33ms)</pre><p>Let&#39;s check that the solution is correct:</p><pre><code class="language-julia">@testset &quot;QP Problem&quot; begin
   @test norm(res.x[1:2] - [0.3; 0.7], Inf) &lt; 1e-3
   @test norm(res_box.x[1:2] - [0.3; 0.7], Inf) &lt; 1e-3
   @test abs(res.obj_val - 1.88) &lt; 1e-3
   @test abs(res_box.obj_val - 1.88) &lt; 1e-3
 end
 nothing</code></pre><pre class="documenter-example-output">Test Summary: | Pass  Total
-QP Problem    |    4      4</pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../portfolio_optimisation/">« Portfolio Optimisation</a><a class="docs-footer-nextpage" href="../sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 7 November 2021 15:48">Sunday 7 November 2021</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+QP Problem    |    4      4</pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../portfolio_optimisation/">« Portfolio Optimisation</a><a class="docs-footer-nextpage" href="../sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 7 November 2021 15:50">Sunday 7 November 2021</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
