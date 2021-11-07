@@ -58,7 +58,11 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
   author  = {Michael Garstka and Mark Cannon and Paul Goulart},
   journal = {Journal of Optimization Theory and Applications},
   title   = {{COSMO}: A Conic Operator Splitting Method for Convex Conic Problems},
+  volume = {190},
+  number = {3},
+  pages ={779--810},
   year    = {2021},
+  publisher = {Springer},
   doi     = {10.1007/s10957-021-01896-x},
   url     = {https://doi.org/10.1007/s10957-021-01896-x},
 }
