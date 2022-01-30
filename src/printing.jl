@@ -100,12 +100,13 @@ print_accelerator(s::CA.AbstractAccelerator, safeguarded::Bool, safeguarding_tol
 print_accelerator(s::CA.EmptyAccelerator,  safeguarded::Bool, safeguarding_tol; tab::Int64) = println("Acc:" * " "^(tab - 4) * "no acceleration")
 
 function print_set(set::COSMO.AbstractConvexSet)
-	set_name = split(string(typeof(set).name), ".")[end]
+
+	set_name = split(string(typeof(set).name), ".")[end][1:end-1]
 	println("$(set_name) of dim: $(set.dim)")
 end
 
 function print_set(set::Union{PsdCone{T}, DensePsdCone{T}, PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T <: AbstractFloat}
-	set_name = split(string(typeof(set).name), ".")[end]
+	set_name = split(string(typeof(set).name), ".")[end][1:end-1]
 	N = set.sqrt_dim
 	println("$(set_name) of dim: $(set.dim) ($(N)x$(N))")
 end
