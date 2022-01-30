@@ -24,7 +24,6 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
     @testset "Basic properties" begin
         optimizer =  COSMO.Optimizer(check_termination = 1, verbose = false);
         @test sprint(show, optimizer) == string("Empty COSMO - Optimizer")
-        @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.SingleVariable}())
         @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.ScalarAffineFunction{Float64}}())
         @test MOI.supports(optimizer, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}())
         @test MOI.supports(optimizer, MOI.ObjectiveSense())
@@ -74,7 +73,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
     MOI.optimize!(bridged);
     @test sprint(show, optimizer) != nothing
 
-    t_cold = MOI.get(bridged, MOI.SolveTime())
+    t_cold = MOI.get(bridged, MOI.SolveTimeSec())
     iter_cold = MOI.get(bridged, COSMO.ADMMIterations())
     x_sol = MOI.get(bridged, MOI.VariablePrimal(), x)
     y_c1 = MOI.get(bridged, MOI.ConstraintDual(), con1)
@@ -87,7 +86,8 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
 
     @testset "SolverAttributes" begin
         @test MOI.get(bridged, MOI.SolverName()) == "COSMO";
-        @test MOI.get(bridged, MOI.SolveTime()) >= 0.;
+        @test MOI.get(bridged, MOI.SolverVersion()) == "v" * string(COSMO.version());
+        @test MOI.get(bridged, MOI.SolveTimeSec()) >= 0.;
         # @test typeof(MOI.get(bridged, MOI.RawSolver())) <: COSMO.Workspace
         @test MOI.get(bridged, MOI.ResultCount()) == 1
         @test MOI.get(bridged, MOI.NumberOfVariables()) == 6
@@ -157,7 +157,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
 
 
         x = MOI.add_variables(bridged, 2);
-        objectiveFunction = MOI.ScalarQuadraticFunction{Float64}([MOI.ScalarAffineTerm(1.0, x[1]); MOI.ScalarAffineTerm(1.0, x[2])], [MOI.ScalarQuadraticTerm(4.0, x[1], x[1]); MOI.ScalarQuadraticTerm(1.0, x[1], x[2]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])] , 0);
+        objectiveFunction = MOI.ScalarQuadraticFunction{Float64}( [MOI.ScalarQuadraticTerm(4.0, x[1], x[1]); MOI.ScalarQuadraticTerm(1.0, x[1], x[2]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])], [MOI.ScalarAffineTerm(1.0, x[1]); MOI.ScalarAffineTerm(1.0, x[2])], 0);
         MOI.set(bridged, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(), objectiveFunction);
         MOI.set(bridged, MOI.ObjectiveSense(), MOI.MIN_SENSE);
         A = [MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x[1])),MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(1.0, x[2])),MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(1.0, x[1])),MOI.VectorAffineTerm(3, MOI.ScalarAffineTerm(1.0, x[2]))];
@@ -231,7 +231,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         bridged = MOIB.full_bridge_optimizer(cached, Float64)
 
         x = MOI.add_variables(bridged, 2);
-        objectiveFunction = MOI.ScalarQuadraticFunction{Float64}([], [MOI.ScalarQuadraticTerm(0.02, x[1], x[1]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])], r);
+        objectiveFunction = MOI.ScalarQuadraticFunction{Float64}([MOI.ScalarQuadraticTerm(0.02, x[1], x[1]); MOI.ScalarQuadraticTerm(2.0, x[2], x[2])], [], r);
         MOI.set(bridged, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{Float64}}(), objectiveFunction);
         MOI.set(bridged, MOI.ObjectiveSense(), MOI.MIN_SENSE);
 
@@ -309,7 +309,7 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
         MOI.set(bridged, MOI.Silent(), true)
 
          x = MOI.add_variables(bridged, 2);
-         objectiveFunction = MOI.ScalarQuadraticFunction{T}([MOI.ScalarAffineTerm(T(1.0), x[1]); MOI.ScalarAffineTerm(T(1.0), x[2])], [MOI.ScalarQuadraticTerm(T(4.0), x[1], x[1]); MOI.ScalarQuadraticTerm(T(1.0), x[1], x[2]); MOI.ScalarQuadraticTerm(T(2.0), x[2], x[2])] , zero(T));
+         objectiveFunction = MOI.ScalarQuadraticFunction{T}( [MOI.ScalarQuadraticTerm(T(4.0), x[1], x[1]); MOI.ScalarQuadraticTerm(T(1.0), x[1], x[2]); MOI.ScalarQuadraticTerm(T(2.0), x[2], x[2])], [MOI.ScalarAffineTerm(T(1.0), x[1]); MOI.ScalarAffineTerm(T(1.0), x[2])], zero(T));
          MOI.set(bridged, MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}(), objectiveFunction);
          MOI.set(bridged, MOI.ObjectiveSense(), MOI.MIN_SENSE);
          A = [MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(T(1.0), x[1])),MOI.VectorAffineTerm(1, MOI.ScalarAffineTerm(T(1.0), x[2])),MOI.VectorAffineTerm(2, MOI.ScalarAffineTerm(T(1.0), x[1])),MOI.VectorAffineTerm(3, MOI.ScalarAffineTerm(T(1.0), x[2]))];
@@ -334,11 +334,11 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
     cache = MOIU.UniversalFallback(MOIU.Model{Float64}())
     cached = MOIU.CachingOptimizer(cache, optimizer)
     bridged = MOIB.full_bridge_optimizer(cached, Float64)
-    config = MOIT.TestConfig(atol = 1e-3, rtol = 1e-3, duals = false)
+    config = MOI.DeprecatedTest.Config(atol = 1e-3, rtol = 1e-3, duals = false)
 
 
     @testset "Unit" begin
-        MOIT.unittest(bridged, config,
+        MOI.DeprecatedTest.unittest(bridged, config,
                         [# Quadratic constraints are not supported
                         "solve_qcp_edge_cases",
                        # ArgumentError: The number of constraints in SCSModel must be greater than 0
@@ -355,21 +355,21 @@ get_inner_optimizer(bridged) = bridged.model.optimizer
     end
 
     @testset "Continuous Linear" begin
-        MOIT.contlineartest(bridged, config, [
+        MOI.DeprecatedTest.contlineartest(bridged, config, [
             "linear8a", # It expects `ResultCount` to be 0 as we disable `duals`.
             ])
     end
 
     @testset "Continuous Quadratic" begin
 
-        MOIT.contquadratictest(bridged, config, [ "socp",
+        MOI.DeprecatedTest.contquadratictest(bridged, config, [ "socp",
                                                  "ncqcp"])
     end
 
 
     exclude_conic_test_sets = ["rootdet", "logdet"]
     @testset "Continuous Conic" begin
-        MOIT.contconictest(bridged, config, exclude_conic_test_sets)
+        MOI.DeprecatedTest.contconictest(bridged, config, exclude_conic_test_sets)
     end
 
  end

@@ -6,7 +6,7 @@
 using COSMO, LinearAlgebra, SparseArrays, Test
 
 ## define new cone type
-struct Nonpositives{T} <: COSMO.AbstractConvexSet{T}
+struct Nonpositives{T} <: COSMO.AbstractConvexCone{T}
     dim::Int64
 end
 #-
