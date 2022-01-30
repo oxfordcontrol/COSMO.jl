@@ -469,7 +469,7 @@ for i = 1:n
   @constraint(m, s2[i] == 1)
 end
 JuMP.optimize!(m)</code></pre><pre class="documenter-example-output">------------------------------------------------------------------
-          COSMO v0.8.1 - A Quadratic Objective Conic Solver
+          COSMO v0.8.2 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2021
 ------------------------------------------------------------------
@@ -495,7 +495,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 11.78ms
+Setup Time: 12.12ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-1.2883e+03	2.5314e+01	1.7951e+00	1.0000e-01
@@ -508,7 +508,7 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 75
 Optimal objective: 51.93
-Runtime: 0.91s (909.79ms)</pre><pre><code class="language-julia">theta = value.(θ)</code></pre><pre class="documenter-example-output">28-element Array{Float64,1}:
+Runtime: 0.769s (768.78ms)</pre><pre><code class="language-julia">theta = value.(θ)</code></pre><pre class="documenter-example-output">28-element Array{Float64,1}:
   2.6744947982209335
   1.7749165582702127
   2.9342880366612514
@@ -1009,7 +1009,7 @@ for i = 1:n
 end</code></pre><p>It remains to add a second order cone constraint for the regularisation term: <span>$\|\theta \|_2 \leq v$</span></p><pre><code class="language-julia">push!(constraint_list, COSMO.Constraint(Matrix(1.0I, n_theta + 1, n_theta + 1), zeros(n_theta + 1), COSMO.SecondOrderCone, nn, 1:n_theta+1));</code></pre><p>We can now create, assemble, and solve our <code>COSMO.Model</code>:</p><pre><code class="language-julia">model = COSMO.Model()
 assemble!(model, P, q, constraint_list, settings = COSMO.Settings(verbose=true))
 res = COSMO.optimize!(model);</code></pre><pre class="documenter-example-output">------------------------------------------------------------------
-          COSMO v0.8.1 - A Quadratic Objective Conic Solver
+          COSMO v0.8.2 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2021
 ------------------------------------------------------------------
@@ -1035,7 +1035,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 2.28ms
+Setup Time: 1.67ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-1.2883e+03	2.5314e+01	1.7951e+00	1.0000e-01
@@ -1048,6 +1048,6 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 75
 Optimal objective: 51.93
-Runtime: 0.147s (146.51ms)</pre><p>Let us double check that we get the same <span>$\theta$</span> as in the previous section:</p><pre><code class="language-">using Test
+Runtime: 0.177s (176.62ms)</pre><p>Let us double check that we get the same <span>$\theta$</span> as in the previous section:</p><pre><code class="language-">using Test
 theta_cosmo = res.x[2:2+n_theta-1]
-@test norm(theta_cosmo - theta) &lt; 1e-10</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../closest_correlation_matrix/">« Closest Correlation Matrix</a><a class="docs-footer-nextpage" href="../lovasz_petersen/">Lovász Theta Function »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 January 2022 18:08">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+@test norm(theta_cosmo - theta) &lt; 1e-10</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../closest_correlation_matrix/">« Closest Correlation Matrix</a><a class="docs-footer-nextpage" href="../lovasz_petersen/">Lovász Theta Function »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 January 2022 18:28">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

@@ -215,7 +215,7 @@ L = diagm(0 =&gt; W * ones(n)) - W;</code></pre><p>Given the Laplacian matrix <s
 @objective(model, Max, 1 / 4 * dot(L, Y));
 @constraint(model, [i = 1:n], Y[i, i] == 1.);
 JuMP.optimize!(model)</code></pre><pre class="documenter-example-output">------------------------------------------------------------------
-          COSMO v0.8.1 - A Quadratic Objective Conic Solver
+          COSMO v0.8.2 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2021
 ------------------------------------------------------------------
@@ -237,7 +237,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.11ms
+Setup Time: 0.1ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-5.2357e+02	3.6239e+01	1.9188e+00	1.0000e-01
@@ -253,7 +253,7 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 175 (incl. 25 safeguarding iter)
 Optimal objective: -24
-Runtime: 0.128s (127.93ms)</pre><pre><code class="language-julia">Yopt = JuMP.value.(Y);
+Runtime: 0.114s (113.75ms)</pre><pre><code class="language-julia">Yopt = JuMP.value.(Y);
 obj_val = JuMP.objective_value(model)</code></pre><pre class="documenter-example-output">23.99999999407469</pre><h2 id="Solving-the-dual-SDP"><a class="docs-heading-anchor" href="#Solving-the-dual-SDP">Solving the dual SDP</a><a id="Solving-the-dual-SDP-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-the-dual-SDP" title="Permalink"></a></h2><p>Notice that the decision matrix <span>$Y$</span> is generally dense (as correctly classified in the solver output above). Therefore, we won&#39;t be able to utilize COSMO&#39;s chordal decomposition features. However, assuming strong duality, it turns out that we can also solve the dual problem, which is given by:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp;  \sum_i \gamma_i \\
 \text{subject to} &amp; \text{diag}(\gamma) - \frac{1}{4} L = S \\
                   &amp; S \in \mathbf{S}_{+}^n.
@@ -281,4 +281,4 @@ y</code></pre><pre class="documenter-example-output">4-element Array{Float64,1}:
   1.0
   1.0
   1.0
- -1.0</pre><p>For larger graphs this rounding step could be repeated several times to improve the rounding. As expected <span>$S = \{1, 2, 3\}$</span> and <span>$\bar{S}=\{ 4\}$</span>.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Goemans and Williamson - Improved Approximation Algorithms for Maximum Cut and Satisfiability Problems Using Semidefinite Programs (1995)</p><p>[2] Post-processing code steps 2 and 3 from this <a href="https://github.com/jump-dev/JuMP.jl/blob/master/examples/max_cut_sdp.jl">JuMP example</a></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lp/">« Linear Program</a><a class="docs-footer-nextpage" href="../portfolio_optimisation/">Portfolio Optimisation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 January 2022 18:08">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ -1.0</pre><p>For larger graphs this rounding step could be repeated several times to improve the rounding. As expected <span>$S = \{1, 2, 3\}$</span> and <span>$\bar{S}=\{ 4\}$</span>.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Goemans and Williamson - Improved Approximation Algorithms for Maximum Cut and Satisfiability Problems Using Semidefinite Programs (1995)</p><p>[2] Post-processing code steps 2 and 3 from this <a href="https://github.com/jump-dev/JuMP.jl/blob/master/examples/max_cut_sdp.jl">JuMP example</a></p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lp/">« Linear Program</a><a class="docs-footer-nextpage" href="../portfolio_optimisation/">Portfolio Optimisation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 January 2022 18:28">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

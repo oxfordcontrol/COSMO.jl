@@ -512,7 +512,7 @@ for j = 1:n
   end
 end
 status = JuMP.optimize!(model)</code></pre><pre class="documenter-example-output">------------------------------------------------------------------
-          COSMO v0.8.1 - A Quadratic Objective Conic Solver
+          COSMO v0.8.2 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2021
 ------------------------------------------------------------------
@@ -534,7 +534,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.62ms
+Setup Time: 0.57ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-1.2711e+03	2.1055e+01	1.0052e+00	1.0000e-01
@@ -545,4 +545,4 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 25
 Optimal objective: -4
-Runtime: 0.27s (270.33ms)</pre><p>The optimal objective is given by:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output">4.0000000073544975</pre><p>Which is the correct known value for the Petersen Graph.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../logistic_regression/">« Logistic Regression</a><a class="docs-footer-nextpage" href="../lp/">Linear Program »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 January 2022 18:08">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Runtime: 0.273s (273.0ms)</pre><p>The optimal objective is given by:</p><pre><code class="language-julia">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output">4.0000000073544975</pre><p>Which is the correct known value for the Petersen Graph.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../logistic_regression/">« Logistic Regression</a><a class="docs-footer-nextpage" href="../lp/">Linear Program »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 30 January 2022 18:28">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
