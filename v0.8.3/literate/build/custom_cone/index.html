@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Custom Cone Constraint · COSMO.jl</title><script async src="https://www.googletagmanager.com/gtag/js?id=UA-134239283-1"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-134239283-1', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../../../assets/warner.js"></script><link rel="canonical" href="https://oxfordcontrol.github.io/COSMO.jl/stable/literate/build/custom_cone/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../../assets/documenter.js"></script><script src="../../../siteinfo.js"></script><script src="../../../../versions.js"></script><script src="../../../../copy.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../../assets/themeswap.js"></script><link href="../../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../../assets/github_buttons.js"></script><link href="../../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../../"><img src="../../../assets/logo.png" alt="COSMO.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../../">COSMO.jl</a></span></div><form class="docs-search" action="../../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../../">Home</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../../jump/">JuMP Interface</a></li><li><a class="tocitem" href="../../../lin_solver/">Linear System Solver</a></li><li><a class="tocitem" href="../../../acceleration/">Acceleration</a></li><li class="is-active"><a class="tocitem" href>Custom Cone Constraint</a><ul class="internal"><li><a class="tocitem" href="#Cone-definition-and-projection-function"><span>Cone definition and projection function</span></a></li><li><a class="tocitem" href="#Support-infeasibility-detection"><span>Support infeasibility detection</span></a></li><li><a class="tocitem" href="#Using-new-cone-with-JuMP"><span>Using new cone with JuMP</span></a></li><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li><li><a class="tocitem" href="../../../decomposition/">Chordal Decomposition</a></li><li><a class="tocitem" href="../portfolio_model_updates/">Model Updates</a></li><li><a class="tocitem" href="../arbitrary_precision/">Arbitrary Precision</a></li><li><a class="tocitem" href="../../../performance/">Performance Tips</a></li></ul></li><li><a class="tocitem" href="../../../method/">Method</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../../examples/closest_correlation_matrix/">Closest Correlation Matrix</a></li><li><a class="tocitem" href="../../../examples/logistic_regression/">Logistic Regression</a></li><li><a class="tocitem" href="../../../examples/lovasz_petersen/">Lovász Theta Function</a></li><li><a class="tocitem" href="../../../examples/lp/">Linear Program</a></li><li><a class="tocitem" href="../../../examples/maxcut/">Maximum Cut Problem</a></li><li><a class="tocitem" href="../../../examples/portfolio_optimisation/">Portfolio Optimisation</a></li><li><a class="tocitem" href="../../../examples/qp/">Quadratic Program</a></li><li><a class="tocitem" href="../../../examples/sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ</a></li><li><a class="tocitem" href="../../../examples/svm_primal/">Support Vector Machine</a></li><li><a class="tocitem" href="../../../examples/two_way_partitioning/">Relaxed Two-Way Partitioning Problem</a></li></ul></li><li><a class="tocitem" href="../../../citing/">Citing COSMO</a></li><li><a class="tocitem" href="../../../contributing/">Contributing</a></li><li><a class="tocitem" href="../../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Custom Cone Constraint</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Custom Cone Constraint</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/docs/src/literate/custom_cone.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Custom-Cone-Constraint"><a class="docs-heading-anchor" href="#Custom-Cone-Constraint">Custom Cone Constraint</a><a id="Custom-Cone-Constraint-1"></a><a class="docs-heading-anchor-permalink" href="#Custom-Cone-Constraint" title="Permalink"></a></h1><p>This example demonstrate how the user can extend <code>COSMO</code> with his own custom convex cones and use them in constraints. To make things easy, we will implement the simple cone of <strong>Nonpositives</strong>, i.e. <span>$\mathbb{R}_{-}^n = \{x \in   \mathbb{R}^n \mid x_i \leq 0\}$</span>.</p><h2 id="Cone-definition-and-projection-function"><a class="docs-heading-anchor" href="#Cone-definition-and-projection-function">Cone definition and projection function</a><a id="Cone-definition-and-projection-function-1"></a><a class="docs-heading-anchor-permalink" href="#Cone-definition-and-projection-function" title="Permalink"></a></h2><p>We start by creating a concrete subtype of our cone interface-type: <code>COSMO.AbstractConvexCone{T}</code>, where <code>T</code> is a parameter for the floating-point precision. The only field that is strictly required for our cone definition is <code>dim</code>, which is used by the solver to store information about the cone dimension. However, you can also use the object to store other information, or allocate the workspace necessary for the projection step.</p><pre><code class="language-julia hljs">using COSMO, LinearAlgebra, SparseArrays, Test
+
+# define new cone type
+struct Nonpositives{T} &lt;: COSMO.AbstractConvexCone{T}
+    dim::Int64
+end</code></pre><p>Next, we define a projection method for <code>Nonpositives{T}</code> that takes a vector <code>x</code> and projects it onto our custom cone. For the cone of nonpositive vectors the projection simply sets all positive elements of <code>x</code> to zero:</p><pre><code class="language-julia hljs">function COSMO.project!(x::AbstractVector{T}, C::Nonpositives{T}) where {T &lt;: AbstractFloat}
+    x .= min.(x, zero(T))
+end</code></pre><p>This is all that is required to get a basic constraint working. Let&#39;s test our new cone/constraint by solving the following LP:</p><p class="math-container">\[\begin{array}{ll} \text{maximize} &amp; x_1 + x_2 + x_3\\
+\text{subject to} &amp;  x_1 \leq 3 \\
+                  &amp;  x_2 \leq 2 \\
+                  &amp;  x_1 + x_3 =  5
+\end{array}\]</p><p>We define our decision vector <span>$x = (x_1, x_2, x_3)$</span> and setup the problem:</p><pre><code class="language-julia hljs">n = 3
+P = spzeros(n, n)
+q = -ones(n)
+
+# A1 * x + b1 &lt;= 0
+A1 = diagm(0 =&gt; ones(2))
+b1 = [-3.; -2.]
+c1 = COSMO.Constraint(A1, b1, Nonpositives, n, 1:2); #here we use our new cone
+
+# x_1 + x_3 == 5
+A2 = [1. 0 1.]
+b2 = [-5.]
+c2 = COSMO.Constraint(A2, b2, COSMO.ZeroSet);
+
+# assemple and solve
+model = COSMO.Model();
+assemble!(model, P, q, [c1; c2]);
+res = COSMO.optimize!(model);</code></pre><pre><code class="language-julia hljs">res.x</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Array{Float64,1}:
+ 2.999990000199988
+ 2.000000000116415
+ 2.0000099998433143</code></pre><pre><code class="language-julia hljs">obj_val = -dot(q, res.x)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">7.000000000159718</code></pre><p>The problem was solved using constraints involving our new cone and yields the expected result. Next, we want to add the ability to detect infeasible problems.</p><h2 id="Support-infeasibility-detection"><a class="docs-heading-anchor" href="#Support-infeasibility-detection">Support infeasibility detection</a><a id="Support-infeasibility-detection-1"></a><a class="docs-heading-anchor-permalink" href="#Support-infeasibility-detection" title="Permalink"></a></h2><p>If no further information about the new cone is provided, the infeasibility detection is disabled. However, by defining the two additional methods <code>in_dual</code> and <code>in_pol_recc</code> we can support infeasibility detection. More information on how infeasible problems are detected in <code>COSMO</code> can be found here [1]. We will have to add the ability for the solver to check whether a vector is in the <a href="https://en.wikipedia.org/wiki/Dual_cone_and_polar_cone">dual cone</a> <span>$\mathcal{K}^*$</span> of our new cone <span>$\mathcal{K}$</span> and whether a vector is in the recession cone of the <a href="https://en.wikipedia.org/wiki/Dual_cone_and_polar_cone">polar cone</a> <span>${\mathcal{K}^\circ}^\infty$</span> of our cone. The first function is used to check for primal infeasibility, while the second function  is used to check for dual infeasibility. Luckily, for the Nonpositives-cone this is straightforward:</p><p class="math-container">\[{\mathbb{R}_{-}^n}^* = \mathbb{R}_{-}^n, \quad {{\mathbb{R}_{-}^n}^\circ}^\infty = \mathbb{R}_{+}^n.\]</p><pre><code class="language-julia hljs">function COSMO.in_dual(x::AbstractVector{T}, C::Nonpositives{T}, tol::T) where {T &lt;: AbstractFloat}
+	return !any( x-&gt; (x &gt; -tol), x)
+end
+
+function COSMO.in_pol_recc(x::AbstractVector{T}, C::Nonpositives{T}, tol::T) where {T &lt;: AbstractFloat}
+	return !any( x-&gt; (x &lt; tol), x)
+end</code></pre><p>Notice that for numerical reasons, we give the check-functions a bit of slack using the tolerance parameter <code>tol</code>. To test the infeasibility detection, we will attempt to use our new cone to solve the clearly dual infeasible problem:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp; x\\
+\text{subject to} &amp;  x\leq 3
+\end{array}\]</p><pre><code class="language-julia hljs">n = 1
+P = spzeros(n, n)
+q = [1.]
+
+#  x &lt;= 3 &lt;=&gt; x - 3 in Nonpositives
+Ai = [1.]
+bi = [-3.]
+ci = COSMO.Constraint(Ai, bi, Nonpositives);
+
+model = COSMO.Model();
+assemble!(model, P, q, [ci]);
+res = COSMO.optimize!(model);</code></pre><pre><code class="language-julia hljs">@test res.status == :Dual_infeasible</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Test Passed</code></pre><p>which is what we would expect.</p><h2 id="Using-new-cone-with-JuMP"><a class="docs-heading-anchor" href="#Using-new-cone-with-JuMP">Using new cone with JuMP</a><a id="Using-new-cone-with-JuMP-1"></a><a class="docs-heading-anchor-permalink" href="#Using-new-cone-with-JuMP" title="Permalink"></a></h2><p>The nice composibility of Julia-code allows us to use our new cone definition even when the problem is modelled with <code>JuMP</code>. For this to work, we define a concrete subtype of <code>MOI.AbstractSet</code>, that JuMP can use to build a constraint.</p><pre><code class="language-julia hljs">using MathOptInterface, JuMP
+import Base.copy
+const MOI = MathOptInterface
+
+struct NonPos &lt;: MOI.AbstractVectorSet
+	dimension::Int
+end
+Base.copy(set::NonPos) = set #this is needed for MOI</code></pre><p>Next, we tell <code>COSMO</code> that whenever <code>JuMP</code> wants to solve a problem with a <code>NonPos</code>-cone it should translate it into a <code>Nonpositives</code> constraint and we also tell <code>MOI</code> that we now support constraints of this new mysterious cone <code>NonPos</code>.</p><pre><code class="language-julia hljs">function COSMO.processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::NonPos) where {T &lt;: AbstractFloat}
+    push!(cs, Nonpositives{T}(length(rows)))
+    nothing
+end
+#tell MOI, that COSMO supports constraints with this new cone
+MOI.supports_constraint(optimizer::COSMO.Optimizer, ::Type{&lt;:Union{MOI.VectorOfVariables, MOI.VectorAffineFunction{Float64}}}, ::Type{NonPos}) = true</code></pre><p>We should now be able to model the LP from above in <code>JuMP</code> and solve it internally using our <code>Nonpositives</code> cone and projection function.</p><pre><code class="language-julia hljs">model = JuMP.Model(COSMO.Optimizer);
+@variable(model, x[1:3]);
+@objective(model, Max, x[1] + x[2] + x[3]);
+@constraint(model, A1 * x[1:2] .+ b1 in NonPos(2));
+@constraint(model, x[1] + x[3] == 5);
+JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">------------------------------------------------------------------
+          COSMO v0.8.3 - A Quadratic Objective Conic Solver
+                         Michael Garstka
+                University of Oxford, 2017 - 2021
+------------------------------------------------------------------
+
+Problem:  x ∈ R^{3},
+          constraints: A ∈ R^{3x3} (4 nnz),
+          matrix size to factor: 6x6,
+          Floating-point precision: Float64
+Sets:     Nonpositive of dim: 2
+          ZeroSe of dim: 1
+Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
+          ϵ_prim_inf = 1.0e-04, ϵ_dual_inf = 1.0e-04,
+          ρ = 0.1, σ = 1e-06, α = 1.6,
+          max_iter = 5000,
+          scaling iter = 10 (on),
+          check termination every 25 iter,
+          check infeasibility every 40 iter,
+          KKT system solver: QDLDL
+Acc:      Anderson Type2{QRDecomp},
+          Memory size = 6, RestartedMemory,
+          Safeguarded: true, tol: 2.0
+Setup Time: 0.11ms
+
+Iter:	Objective:	Primal Res:	Dual Res:	Rho:
+1	-2.7216e+01	1.7200e+01	6.0000e-01	1.0000e-01
+25	-7.0000e+00	1.1641e-10	1.1102e-16	1.0000e-01
+
+------------------------------------------------------------------
+&gt;&gt;&gt; Results
+Status: Solved
+Iterations: 26 (incl. 1 safeguarding iter)
+Optimal objective: -7
+Runtime: 0.023s (22.68ms)</code></pre><pre><code class="language-julia hljs">x_opt = JuMP.value.(x)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Array{Float64,1}:
+ 2.999990000199988
+ 2.000000000116415
+ 2.0000099998433143</code></pre><p>You can see in the solver output that indeed a set <code>Nonpositives</code> of <code>dim: 2</code> was used.</p><p>The discussed cone of Nonpositives is of course trivial, but the ability to define new cones and constraints for <code>COSMO</code> can be very powerful to model complex problems.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Garstka et al. - COSMO: A conic operator splitting method for convex conic problems (2020)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../../acceleration/">« Acceleration</a><a class="docs-footer-nextpage" href="../../../decomposition/">Chordal Decomposition »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Sunday 30 January 2022 20:14">Sunday 30 January 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
