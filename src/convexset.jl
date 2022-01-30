@@ -183,7 +183,7 @@ for (syevr, elty) in
     end #@eval
 end #for
 
-function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
+function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T <: Union{Float32,Float64}}
 
     #computes the upper triangular part of the projection of X onto the PSD cone
 
@@ -201,6 +201,23 @@ function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
 	 	_syevr!(X, ws)
 		# compute upper triangle of: X .= Z*Diagonal(max.(w, 0.0))*Z'
 		rank_k_update!(X, ws)
+end
+
+function _project!(X::AbstractMatrix{T}, ws::PsdBlasWorkspace{T}) where {T}
+  w,Z = GenericLinearAlgebra.eigen(GenericLinearAlgebra.Hermitian(X))
+  # The follwoing lines uses MutableArithmetics to perform the operation : X .= Z*LinearAlgebra.Diagonal(max.(w,0))*Z'
+  X = zero(X)
+  buffer = zero(X)
+  for i in eachindex(w)
+    w[i] <= T(0) && continue
+    z = view(Z, :, i)
+    MA.mutable_operate_to!(buffer, *, z, z')
+    for j in eachindex(X)
+      #The following line should be : X[j] = MA.add_mul!(X[j], w[i], buffer[j])
+      # However it does not work for BigFLoats yet, so i keep the allocating working line : 
+      X[j] += w[i]*buffer[j]
+    end
+  end
 end
 
 function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where {T}
@@ -274,9 +291,11 @@ function project!(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}
         symmetrize_upper!(X)
         _project!(X, cone.work)
 
-        #fill in the lower triangular part
-        for j=1:n, i=1:(j-1)
-            X[j,i] = X[i,j]
+        #fill in the lower triangular part, only needed when calling BLAS. 
+        if T <: Union{Float32,Float64}
+          for j=1:n, i=1:(j-1)
+              X[j,i] = X[i,j]
+          end
         end
     end
     return nothing
