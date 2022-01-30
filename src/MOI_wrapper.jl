@@ -11,7 +11,6 @@ const VI = MOI.VariableIndex
 
 const SparseTriplets{Tv} = Tuple{Vector{<:Integer}, Vector{<:Integer}, Vector{Tv}}
 
-const SingleVariable = MOI.SingleVariable
 const Affine = MOI.ScalarAffineFunction{<: AbstractFloat}
 const Quadratic = MOI.ScalarQuadraticFunction{<: AbstractFloat}
 const VectorOfVariables = MOI.VectorOfVariables
@@ -32,8 +31,6 @@ const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.LessThan, MOI.GreaterT
 aggregate_equivalent(::Type{<: MOI.Zeros}) = COSMO.ZeroSet
 aggregate_equivalent(::Type{<: Union{MOI.LessThan, MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
 
-#export sortSets, assign_constraint_row_ranges!, processconstraints, constraint_rows, processobjective, processlinearterms!, symmetrize!, processconstraints!, constant, processconstant!, processlinearpart!, processconstraintset!
-export Optimizer
 
 ##############################
 # MAIN INTERFACE OBJECTS AND FUNCTIONS
@@ -70,16 +67,16 @@ end
 Optimizer(args...; kwargs...) = Optimizer{DefaultFloat}(args...; kwargs...)
 
 function printIdxmap(idxmap::MOIU.IndexMap)
-    println(">>Variable Map with $(length(idxmap.varmap)) entries:")
-    dkeys = collect(keys(idxmap.varmap))
-    dvalues = collect(values(idxmap.varmap))
+    println(">>Variable Map with $(length(idxmap.var_map)) entries:")
+    dkeys = collect(keys(idxmap.var_map))
+    dvalues = collect(values(idxmap.var_map))
     for i=1:length(dkeys)
         println("i=$(i): $(dkeys[i].value) => $(dvalues[i].value)")
     end
 
-     println(">>Constraint Map with $(length(idxmap.conmap)) entries:")
-    dkeys = collect(keys(idxmap.conmap))
-    dvalues = collect(values(idxmap.conmap))
+     println(">>Constraint Map with $(length(idxmap.con_map)) entries:")
+    dkeys = collect(keys(idxmap.con_map))
+    dvalues = collect(values(idxmap.con_map))
     for i=1:length(dkeys)
         println("i=$(i): $(dkeys[i].value) => $(dvalues[i].value)")
     end
@@ -167,10 +164,10 @@ function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
     end
     # map model constraint indices to solver constraint indices. For now this is important since solver expects following
     # order: {0}-variables, R+-variables, SOCP cones, psd cones
-    # LOCs = MOI.get(src, MOI.ListOfConstraints())
+    # LOCs = MOI.get(src, MOI.ListOfConstraintTypesPresent())
     # sort!(LOCs, by=x-> sort_sets(x[2]))
     i = 0
-    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+    for (F, S) in MOI.get(src, MOI.ListOfConstraintTypesPresent())
         MOI.supports_constraint(dest, F, S) || throw(MOI.UnsupportedConstraint{F, S})
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         for ci in cis_src
@@ -191,7 +188,7 @@ sort_sets(s::Type{<: MOI.AbstractSet}) = 4
 # returns a Dictionary that maps a constraint index to a range
 function assign_constraint_row_ranges!(rowranges::Dict{Int, UnitRange{Int}}, idxmap::MOIU.IndexMap, src::MOI.ModelLike)
     startrow = 1
-    LOCs = MOI.get(src, MOI.ListOfConstraints())
+    LOCs = MOI.get(src, MOI.ListOfConstraintTypesPresent())
     sort!(LOCs, by = x -> sort_sets(x[2]))
     for (F, S) in LOCs
         # Returns Array of constraint indices that match F,S, each constraint index is just a type-safe wrapper for Int
@@ -216,7 +213,7 @@ constraint_rows(rowranges::Dict{Int, UnitRange{Int}}, ci::CI{<:Any, <:MOI.Abstra
 
 # this is handled explicitly in `copy_to` before the objective function is processed
 MOI.supports(::Optimizer, ::MOI.ObjectiveSense) = true
-MOIU.load(optimizer::Optimizer, ::MOI.ObjectiveSense, sense) = nothing
+# MOIU.load(optimizer::Optimizer, ::MOI.ObjectiveSense, sense) = nothing
 
 function allocate_cost_variables!(optimizer::Optimizer)
     m, n = size(optimizer.inner.p.A)
@@ -225,51 +222,51 @@ function allocate_cost_variables!(optimizer::Optimizer)
     return nothing
 end
 
-MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:Union{MOI.SingleVariable, Affine, Quadratic}}) = true
-function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.SingleVariable) where {T <: AbstractFloat}
+MOI.supports(::Optimizer, ::MOI.ObjectiveFunction{<:Union{Affine, Quadratic}}) = true
+# function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.VariableIndex) where {T <: AbstractFloat}
+#     idxmap = dest.idxmap
+#     n = MOI.get(dest, MOI.NumberOfVariables())
+#     dest.inner.p.q = zeros(T, n)
+#     dest.inner.p.q[idxmap[f.variable].value] = one(T)
+#     dest.inner.p.P = spzeros(T, n, n)
+#     dest.objconstant = zero(T)
+#     dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
+#     return nothing
+# end
+
+function process_objective!(dest::Optimizer{T}, f::MOI.ScalarAffineFunction{T}) where {T <: AbstractFloat}
     idxmap = dest.idxmap
     n = MOI.get(dest, MOI.NumberOfVariables())
-    dest.inner.p.q = zeros(T, n)
-    dest.inner.p.q[idxmap[f.variable].value] = one(T)
-    dest.inner.p.P = spzeros(T, n, n)
-    dest.objconstant = zero(T)
-    dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
-    return nothing
-end
-
-function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.ScalarAffineFunction{T}) where {T <: AbstractFloat}
-    idxmap = dest.idxmap
-    n = MOI.get(dest, MOI.NumberOfVariables())
     dest.inner.p.P = spzeros(T, n, n)
 
     dest.inner.p.q = zeros(T, n)
-    processlinearterms!(dest.inner.p.q, f.terms)# idxmap)
+    processlinearterms!(dest.inner.p.q, f.terms, idxmap)
 
     dest.objconstant = f.constant
     dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
     return nothing
 end
 
-function MOIU.load(dest::Optimizer{T}, ::MOI.ObjectiveFunction, f::MOI.ScalarQuadraticFunction{T}) where {T <: AbstractFloat}
+function process_objective!(dest::Optimizer{T}, f::MOI.ScalarQuadraticFunction{T}) where {T <: AbstractFloat}
     idxmap = dest.idxmap
     n = MOI.get(dest, MOI.NumberOfVariables())
 
-    I = [Int(idxmap[term.variable_index_1].value) for term in f.quadratic_terms]
-    J = [Int(idxmap[term.variable_index_2].value) for term in f.quadratic_terms]
+    I = [Int(idxmap[term.variable_1].value) for term in f.quadratic_terms]
+    J = [Int(idxmap[term.variable_2].value) for term in f.quadratic_terms]
     V = [term.coefficient for term in f.quadratic_terms]
     symmetrize!(I, J, V)
     dest.inner.p.P = sparse(I, J, V, n, n)
 
     dest.inner.p.q = zeros(T, n)
-    processlinearterms!(dest.inner.p.q, f.affine_terms)#, idxmap)
+    processlinearterms!(dest.inner.p.q, f.affine_terms, idxmap)
     dest.objconstant = f.constant
 
     dest.objconstant = apply_sense!(dest.sense, dest.inner.p.P, dest.inner.p.q, dest.objconstant)
     return nothing
 end
 
-function MOIU.load(dest::Optimizer, ::MOI.ObjectiveFunction, f)
-    throw(MOI.UnsupportedAttribute(MOI.ObjectiveFunction{typeof(f)}()))
+function process_objective!(dest::Optimizer, f)
+    throw(MOI.UnsupportedAttribute(f))
 end
 
 function apply_sense!(sense::MOI.OptimizationSense, P::AbstractMatrix{T}, q::AbstractVector{T}, c::T) where {T <: AbstractFloat}
@@ -281,11 +278,11 @@ function apply_sense!(sense::MOI.OptimizationSense, P::AbstractMatrix{T}, q::Abs
     return c
 end
 
-function processlinearterms!(q, terms::Vector{<:MOI.ScalarAffineTerm}, idxmapfun::Function = identity)
+function processlinearterms!(q, terms::Vector{<:MOI.ScalarAffineTerm}, idxmap::MOIU.IndexMap)
     for term in terms
-        var = term.variable_index
+        var = term.variable
         coeff = term.coefficient
-        q[var.value] += coeff
+        q[idxmap[var].value] += coeff
     end
 end
 
@@ -340,9 +337,9 @@ nom_rows(rows, s::Type{MOI.PositiveSemidefiniteConeTriangle}) = 1:length(rows)
 nom_rows(rows, s::Type{<:MOI.AbstractSet}) = rows
 
 output_index(t::MOI.VectorAffineTerm) = t.output_index
-variable_index_value(t::MOI.ScalarAffineTerm) = t.variable_index.value
+variable_index_value(t::MOI.ScalarAffineTerm) = t.variable.value
 variable_index_value(t::MOI.VectorAffineTerm) = variable_index_value(t.scalar_term)
-get_var_index(t::MOI.ScalarAffineTerm) = t.variable_index
+get_var_index(t::MOI.ScalarAffineTerm) = t.variable
 get_var_index(t::MOI.VectorAffineTerm) = get_var_index(t.scalar_term)
 coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
@@ -406,11 +403,11 @@ end
 ##############################
 # PROCESS FUNCTIONS
 ##############################
-constant(f::MOI.SingleVariable) = 0
+constant(f::MOI.VariableIndex) = 0
 constant(f::MOI.ScalarAffineFunction) = f.constant
 
 
-# process constant for functions Union{Affine, SingleVariable}
+# process constant for functions Union{Affine, VariableIndex}
 function processConstant!(b::AbstractVector{T}, row::Int, f::Affine, s) where {T <: AbstractFloat}
     b[row] = scalecoef(row, constant(f), false, s)
     nothing
@@ -433,7 +430,7 @@ function processConstraint!(triplets::SparseTriplets{T}, f::MOI.ScalarAffineFunc
     (I, J, V) = triplets
     for term in f.terms
         push!(I, row)
-        push!(J, idxmap[term.variable_index].value)
+        push!(J, idxmap[term.variable].value)
         push!(V, scalecoef(row, term.coefficient, true, s))
     end
 end
@@ -519,10 +516,6 @@ function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::SOC) where {T <:
     nothing
 end
 
-# function processSet!(b::Vector, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeSquare)
-#     push!(cs, COSMO.PsdCone{Float64}(length(rows)))
-#     nothing
-# end
 
 function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle) where {T <: AbstractFloat}
     push!(cs, COSMO.PsdConeTriangle{T}(length(rows)))
@@ -552,34 +545,53 @@ end
 
 
 
-function pass_attributes!(dest::Optimizer{T}, src::MOI.ModelLike, idxmap::MOIU.IndexMap, pass_attr::Function=MOI.set) where {T <: AbstractFloat}
+function pass_attributes!(dest::Optimizer{T}, src::MOI.ModelLike, idxmap::MOIU.IndexMap) where {T <: AbstractFloat}
+    
 
-
-    # Copy model attributes, e.g. ObjectiveFunction
-    attrs = MOI.get(src, MOI.ListOfModelAttributesSet())
-    attrs = filter(attr -> !(attr isa MOI.Name), attrs)
-
-    MOIU._pass_attributes(dest, src, idxmap, attrs, tuple(), tuple(), tuple(), MOIU.load)
-
-    # Copy variable attributes, e.g. VariablePrimalStart
-    var_attr = MOI.get(src, MOI.ListOfVariableAttributesSet())
-    # We don't support MOI.VariableNames at this point
-    var_attr = filter(attr -> !(attr isa MOI.VariableName), var_attr)
-    if !isempty(var_attr)
-        vis_src = MOI.get(src, MOI.ListOfVariableIndices())
-        vis_dest = map(vi -> idxmap[vi], vis_src)
-        MOIU._pass_attributes(dest, src, idxmap, var_attr, (VI,), (vis_src,), (vis_dest,), MOIU.load)
+    model_attributes = MOI.get(src, MOI.ListOfModelAttributesSet())
+    for attr in model_attributes
+        if attr != MOI.ObjectiveSense() && attr != MOI.ObjectiveFunction{MOI.ScalarAffineFunction{T}}() && attr != MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}() 
+            throw(MOI.UnsupportedAttribute(attr))
+        end
     end
 
-    # Copy constraint attributes, e.g. ConstraintPrimalStart
-    for (F, S) in MOI.get(src, MOI.ListOfConstraints())
+    # copy objective function
+    F = MOI.get(src, MOI.ObjectiveFunctionType())
+    obj = MOI.get(src, MOI.ObjectiveFunction{F}())
+    process_objective!(dest, obj) 
+    
+    # copy variable attributes, e.g. VariablePrimalStart
+    has_primal_start = false
+    var_attr = MOI.get(src, MOI.ListOfVariableAttributesSet())
+    # We don't support MOI.VariableNames at this point
+    for attr in var_attr
+        if attr isa MOI.VariablePrimalStart
+            has_primal_start = true
+        end
+    end
+    if has_primal_start
+        vis_src = MOI.get(src, MOI.ListOfVariableIndices())
+        for vi in vis_src 
+            value = MOI.get(src, MOI.VariablePrimalStart(), vi)
+            process_warm_start!(dest, MOI.VariablePrimalStart(), idxmap[vi], value)
+        end
+    end
+
+    # Copy constraint attributes, e.g. ConstraintPrimalStart, ConstraintDualStart
+    for (F, S) in MOI.get(src, MOI.ListOfConstraintTypesPresent())
+        
         cis_src = MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
-        attrs = MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
-        # we don't support MOI.ConstraintName at this point
-        attrs = filter(attr -> !(attr isa MOI.ConstraintName), attrs)
-        if !isempty(attrs)
-            cis_dest = map(ci -> idxmap[ci], cis_src)
-            MOIU._pass_attributes(dest, src, idxmap, attrs, (CI{F, S},), (cis_src,), (cis_dest,), MOIU.load)
+        for attr in MOI.get(src, MOI.ListOfConstraintAttributesSet{F, S}())
+            if attr == MOI.ConstraintName()
+                # skip
+            elseif attr == MOI.ConstraintPrimalStart() || attr == MOI.ConstraintDualStart()
+                for ci in cis_src
+                    value = MOI.get(src, attr, ci)
+                    process_warm_start!(dest, attr, ci, value)
+                end
+            else
+                throw(MOI.UnsupportedAttribute(attr))
+            end
         end
     end
     return nothing
@@ -612,8 +624,9 @@ function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
     end
 end
 
-MOI.get(optimizer::Optimizer, a::MOI.SolveTime) = optimizer.results.times.solver_time
+MOI.get(optimizer::Optimizer, a::MOI.SolveTimeSec) = optimizer.results.times.solver_time
 MOI.get(optimizer::Optimizer, a::MOI.SolverName) = "COSMO"
+MOI.get(optimizer::Optimizer, a::MOI.SolverVersion) = "v" * string(COSMO.version())
 
 # Get Termination Status
 function MOI.get(optimizer::Optimizer, a::MOI.TerminationStatus)
@@ -641,7 +654,7 @@ end
 
 # Get Primal Status
 function MOI.get(optimizer::Optimizer, a::MOI.PrimalStatus)
-    if !(1 <= a.N <= MOI.get(optimizer, MOI.ResultCount()))
+    if !(1 <= a.result_index <= MOI.get(optimizer, MOI.ResultCount()))
         return MOI.NO_SOLUTION
     end
 
@@ -668,7 +681,7 @@ end
 
 # Get Dual Status
 function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
-    if !(1 <= a.N <= MOI.get(optimizer, MOI.ResultCount()))
+    if !(1 <= a.result_index <= MOI.get(optimizer, MOI.ResultCount()))
         return MOI.NO_SOLUTION
     end
 
@@ -732,14 +745,14 @@ end
 
 ## Warm starting:
 MOI.supports(::Optimizer, a::MOI.VariablePrimalStart, ::Type{MOI.VariableIndex}) = true
-function MOIU.load(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Real)
+function process_warm_start!(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Real)
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     COSMO.warm_start_primal!(optimizer.inner, value, vi.value)
 end
-MOIU.load(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Nothing) = nothing
+process_warm_start!(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, value::Nothing) = nothing
 
 MOI.supports(::Optimizer, a::MOI.ConstraintPrimalStart, ::Type{<:MOI.ConstraintIndex}) = true
-function MOIU.load(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+function process_warm_start!(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
     (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     rows = constraint_rows(optimizer.rowranges, ci)
@@ -750,7 +763,7 @@ function MOIU.load(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:
 end
 
 MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{<:MOI.ConstraintIndex}) = true
-function MOIU.load(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
+function process_warm_start!(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
     (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     rows = constraint_rows(optimizer.rowranges, ci)
@@ -761,16 +774,16 @@ function MOIU.load(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MO
 end
 
 
- MOI.supports(::Optimizer, ::MOI.RawParameter) = true
-function MOI.set(optimizer::Optimizer, p::MOI.RawParameter, value)
+ MOI.supports(::Optimizer, ::MOI.RawOptimizerAttribute) = true
+function MOI.set(optimizer::Optimizer, p::MOI.RawOptimizerAttribute, value)
     setfield!(optimizer.inner.settings, Symbol(p.name), value)
 end
 
-function MOI.get(optimizer::Optimizer, p::MOI.RawParameter)
+function MOI.get(optimizer::Optimizer, p::MOI.RawOptimizerAttribute)
     if in(Symbol(p.name), fieldnames(typeof(optimizer.inner.settings)))
         return getfield(optimizer.inner.settings, Symbol(p.name))
     end
-    error("RawParameter with name $(p.name) is not set.")
+    error("RawOptimizerAttribute with name $(p.name) is not set.")
 end
 
 
@@ -783,14 +796,14 @@ MOI.get(optimizer::Optimizer, ::MOI.Silent) = !optimizer.inner.settings.verbose
 
 MOI.supports(::Optimizer, ::MOI.TimeLimitSec) = true
 function MOI.set(optimizer::Optimizer{T}, ::MOI.TimeLimitSec, value::Real) where {T <: AbstractFloat}
-    MOI.set(optimizer, MOI.RawParameter("time_limit"), T(value))
+    MOI.set(optimizer, MOI.RawOptimizerAttribute("time_limit"), T(value))
 end
 
 function MOI.set(optimizer::Optimizer{T}, attr::MOI.TimeLimitSec, ::Nothing) where {T <: AbstractFloat}
-    MOI.set(optimizer, MOI.RawParameter("time_limit"), zero(T))
+    MOI.set(optimizer, MOI.RawOptimizerAttribute("time_limit"), zero(T))
 end
 function MOI.get(optimizer::Optimizer, ::MOI.TimeLimitSec)
-    return MOI.get(optimizer, MOI.RawParameter("time_limit"))
+    return MOI.get(optimizer, MOI.RawOptimizerAttribute("time_limit"))
 end
 
 """
