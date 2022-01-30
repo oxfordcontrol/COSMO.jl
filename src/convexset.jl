@@ -718,7 +718,7 @@ function project!(v::AbstractVector{T}, cone::DualCones{T}) where{T <: AbstractF
 end
 
 # Union for all types where the user has to provide extra information to create the cone
-ArgumentCones = Union{PowerCone, DualPowerCone}
+const ArgumentCones = Union{PowerCone, DualPowerCone}
 
 
 # ----------------------------------------------------
