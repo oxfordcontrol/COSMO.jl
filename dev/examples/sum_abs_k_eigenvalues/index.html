@@ -32,7 +32,7 @@ model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, &quot;verbose&quot
 @constraint(model, Symmetric(I - Y) in PSDCone());
 @constraint(model, Symmetric(I - W) in PSDCone());
 status = JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">------------------------------------------------------------------
-          COSMO v0.8.3 - A Quadratic Objective Conic Solver
+          COSMO v0.8.4 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2021
 ------------------------------------------------------------------
@@ -58,21 +58,21 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.23ms
+Setup Time: 0.27ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-6.3802e+04	1.7856e+02	6.3659e+00	1.0000e-01
 25	-2.5676e+00	7.4811e-01	2.1078e-02	1.0000e-01
-50	-1.3063e+02	2.9687e-01	5.2501e-01	4.3425e+00
-75	-8.0222e+01	5.6658e-02	1.2404e-01	4.3425e+00
-100	-7.9281e+01	6.7205e-13	3.6704e-14	2.6155e-01
+50	-1.1207e+02	3.0650e-01	3.6162e-01	3.6289e+00
+75	-7.8346e+01	9.0660e-02	1.8706e-01	3.6289e+00
+100	-7.9281e+01	6.4837e-13	3.5527e-14	2.0139e-01
 
 ------------------------------------------------------------------
 &gt;&gt;&gt; Results
 Status: Solved
-Iterations: 115 (incl. 15 safeguarding iter)
+Iterations: 120 (incl. 20 safeguarding iter)
 Optimal objective: -79.28
-Runtime: 0.03s (29.96ms)</code></pre><pre><code class="language-julia hljs">opt_objective = JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">79.28110570565507</code></pre><p>Now, we can check the solution by computing the sum of the absolute value of the 3-largest eigenvalues:</p><pre><code class="language-julia hljs">k_λ_abs = sum(sort(abs.(eigen(A).values), rev = true)[1:k])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">79.28110570563709</code></pre><h3 id="Solve-the-dual"><a class="docs-heading-anchor" href="#Solve-the-dual">Solve the dual</a><a id="Solve-the-dual-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-the-dual" title="Permalink"></a></h3><p>Alternatively, we can solve the dual problem:</p><pre><code class="language-julia hljs">model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true));
+Runtime: 0.031s (30.86ms)</code></pre><pre><code class="language-julia hljs">opt_objective = JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">79.28110570565138</code></pre><p>Now, we can check the solution by computing the sum of the absolute value of the 3-largest eigenvalues:</p><pre><code class="language-julia hljs">k_λ_abs = sum(sort(abs.(eigen(A).values), rev = true)[1:k])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">79.2811057056371</code></pre><h3 id="Solve-the-dual"><a class="docs-heading-anchor" href="#Solve-the-dual">Solve the dual</a><a id="Solve-the-dual-1"></a><a class="docs-heading-anchor-permalink" href="#Solve-the-dual" title="Permalink"></a></h3><p>Alternatively, we can solve the dual problem:</p><pre><code class="language-julia hljs">model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true));
 @variable(model, V[1:n, 1:n], PSD);
 @variable(model, U[1:n, 1:n], PSD);
 @variable(model, z);
@@ -85,7 +85,7 @@ status = JuMP.optimize!(model)</code></pre><pre class="documenter-example-output
 │   caller = ip:0x0
 └ @ Core :-1
 ------------------------------------------------------------------
-          COSMO v0.8.3 - A Quadratic Objective Conic Solver
+          COSMO v0.8.4 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2021
 ------------------------------------------------------------------
@@ -109,7 +109,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.23ms
+Setup Time: 54.35ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-3.1509e+02	2.7426e+01	8.3187e+00	1.0000e-01
@@ -120,9 +120,9 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 25
 Optimal objective: 79.28
-Runtime: 0.007s (6.52ms)</code></pre><pre><code class="language-julia hljs">opt_objective = JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">79.28110569379852</code></pre><p>This gives the same result.</p><h2 id="Problem-with-A-as-variable"><a class="docs-heading-anchor" href="#Problem-with-A-as-variable">Problem with A as variable</a><a id="Problem-with-A-as-variable-1"></a><a class="docs-heading-anchor-permalink" href="#Problem-with-A-as-variable" title="Permalink"></a></h2><p>Above problems are mostly helpful for illustrative purpose. It is obviously easier to find the sum of the k-largest eigenvalues by simply computing the eigenvalues of <span>$A$</span>. However, above results become useful if finding <span>$A$</span> itself is part of the problem. For example, assume we want to find a valid matrix <span>$A$</span> under the constraints: <span>$C\, \text{vec}(A) = b$</span> with the minimum sum of absolute values of the k-largest eigenvalues. We can then solve the equivalent problem:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp;  kz + Tr(U) + Tr(V)     \\
+Runtime: 0.06s (60.48ms)</code></pre><pre><code class="language-julia hljs">opt_objective = JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">79.2811056937985</code></pre><p>This gives the same result.</p><h2 id="Problem-with-A-as-variable"><a class="docs-heading-anchor" href="#Problem-with-A-as-variable">Problem with A as variable</a><a id="Problem-with-A-as-variable-1"></a><a class="docs-heading-anchor-permalink" href="#Problem-with-A-as-variable" title="Permalink"></a></h2><p>Above problems are mostly helpful for illustrative purpose. It is obviously easier to find the sum of the k-largest eigenvalues by simply computing the eigenvalues of <span>$A$</span>. However, above results become useful if finding <span>$A$</span> itself is part of the problem. For example, assume we want to find a valid matrix <span>$A$</span> under the constraints: <span>$C\, \text{vec}(A) = b$</span> with the minimum sum of absolute values of the k-largest eigenvalues. We can then solve the equivalent problem:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp;  kz + Tr(U) + Tr(V)     \\
  \text{subject to} &amp;   C \text{vec}(A) = b \\
                    &amp; zI + V - A \succeq 0            \\
                    &amp;    zI + U + A \succeq 0             \\
                    &amp;   U, V \succeq 0.
-\end{array}\]</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Alizadeh - Interior point methods in semidefinite programming with applications to combinatorial optimization (1995)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../qp/">« Quadratic Program</a><a class="docs-footer-nextpage" href="../svm_primal/">Support Vector Machine »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Saturday 19 February 2022 22:14">Saturday 19 February 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+\end{array}\]</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Alizadeh - Interior point methods in semidefinite programming with applications to combinatorial optimization (1995)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../qp/">« Quadratic Program</a><a class="docs-footer-nextpage" href="../svm_primal/">Support Vector Machine »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.12 on <span class="colophon-date" title="Saturday 19 February 2022 22:31">Saturday 19 February 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
