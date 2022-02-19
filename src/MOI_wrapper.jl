@@ -3,7 +3,6 @@
 # certain utility function are taken from the SCS  MathOptInterface:
 # https://github.com/JuliaOpt/SCS.jl
 using MathOptInterface
-
 const MOI = MathOptInterface
 const MOIU = MOI.Utilities
 const CI = MOI.ConstraintIndex
@@ -345,9 +344,13 @@ coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
 function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike, idxmap, LOCs, rowranges::Dict{Int, UnitRange{Int}}) where {T <: AbstractFloat}
-
-    m = mapreduce(length, +, values(rowranges), init = 0)
-
+    
+    if length(LOCs) > 0
+        m = mapreduce(length, +, values(rowranges), init = 0)
+    else
+        # handle case of a problem without constraints
+        m = 0
+    end
     b = zeros(T, m)
     constant = zeros(T, m)
     I = Int[]
@@ -355,9 +358,14 @@ function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike, idxmap
     V = T[]
     convex_sets = Array{COSMO.AbstractConvexSet{T}}(undef, 0)
     set_constant = zeros(T, m)
-    # loop over constraints and modify A, l, u and constants
-    for (F, S) in LOCs
-        processconstraints!((I, J, V), b, convex_sets, constant, set_constant, src, idxmap, rowranges, F, S)
+    
+    if m > 0
+        # loop over constraints and modify A, l, u and constants
+        for (F, S) in LOCs
+            processconstraints!((I, J, V), b, convex_sets, constant, set_constant, src, idxmap, rowranges, F, S)
+        end
+    else
+        convex_sets = [COSMO.ZeroSet{T}(0)] #fall back if no constraints present
     end
     optimizer.set_constant = set_constant
     # subtract constant from right hand side
@@ -624,9 +632,27 @@ function MOI.get(optimizer::Optimizer, a::MOI.ObjectiveValue)
     end
 end
 
-MOI.get(optimizer::Optimizer, a::MOI.SolveTimeSec) = optimizer.results.times.solver_time
-MOI.get(optimizer::Optimizer, a::MOI.SolverName) = "COSMO"
-MOI.get(optimizer::Optimizer, a::MOI.SolverVersion) = "v" * string(COSMO.version())
+
+MOI.get(optimizer::Optimizer, ::MOI.SolverName) = "COSMO"
+MOI.get(optimizer::Optimizer, ::MOI.SolverVersion) = "v" * string(COSMO.version())
+MOI.get(optimizer::Optimizer, ::MOI.NumberOfThreads) = Threads.nthreads()
+
+function MOI.get(optimizer::Optimizer, ::MOI.RawStatusString)
+   if optimizer.hasresults 
+        return string(optimizer.results.status)
+   else
+        return ""
+   end
+end
+
+function MOI.get(optimizer::Optimizer, a::MOI.SolveTimeSec) 
+    if optimizer.hasresults
+        return optimizer.results.times.solver_time
+    else
+        return NaN
+    end
+end
+
 
 # Get Termination Status
 function MOI.get(optimizer::Optimizer, a::MOI.TerminationStatus)
