@@ -25,7 +25,7 @@ function __init__()
 end
 
 function version()
-    v"0.8.4"
+    v"0.8.5"
 end
 
 
