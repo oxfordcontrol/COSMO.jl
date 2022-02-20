@@ -81,8 +81,7 @@ using COSMO, JuMP, LinearAlgebra
 C =  [1. 2; 2 2]
 A = [1. 5; 5 2]
 b = 4.0;
-
-m = Model(with_optimizer(COSMO.Optimizer));
+m = JuMP.Model(COSMO.Optimizer);
 @variable(m, X[1:2, 1:2], PSD)
 @objective(m, Min, tr(C * X));
 @constraint(m, tr(A * X) == b);
