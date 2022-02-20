@@ -194,25 +194,22 @@ mutable struct SparsityPattern
     merge_strategy = merge_strategy()
     sntree = SuperNodeTree(L, merge_strategy)
 
-    # clique merging
-    sntree.num > 1 && merge_cliques!(sntree)
-
+    # clique merging only if more than one clique present
+    if sntree.num > 1
+		merge_cliques!(sntree)
+	elseif merge_strategy <: AbstractGraphBasedMerge
+		# if no merging attempt happens for a clique graph, we still have to convert the snd and sep back to Array{Array{Int}, 1}
+		# for consistency
+		sntree.snd = sort.(collect.(sntree.snd))
+		sntree.sep = sort.(collect.(sntree.sep))
+	end
     # reorder vertices in supernodes to have consecutive order
     # necessary for equal column structure for psd completion
     reorder_snd_consecutively!(sntree, ordering)
 
-    # undo the reordering and sort
-    # for iii = 1:sntree.num
-    #   sep = get_sep(sntree, iii)
-    #   snd = get_snd(sntree, iii)
-    #   map!(v -> ordering[v], sep)
-    #   map!(v -> ordering[v], snd)
-    #   sort!(sep)
-    #   sort!(snd)
-    # end
 
     # for each clique determine the number of entries of the block represented by that clique
-    calculate_block_dimensions!(sntree)#, merge_strategy)
+    calculate_block_dimensions!(sntree)
 
     return new(sntree, ordering, invperm(ordering), row_range, cone_ind, nz_ind_map)
   end

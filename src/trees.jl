@@ -558,20 +558,11 @@ function reorder_snd_consecutively!(t::SuperNodeTree, ordering::Array{Int, 1})
 	  k += l
 	end
 
-
-  # permute the separators as well
-  p_inv = invperm(p)
-  for sp in t.sep
-    sp[:] = map(x -> p_inv[x], sp)
-  end
-
-	# # permute the degrees, supernodal parent structure and supernodal post order
-
-	# snd_post_inv = invperm(t.snd_post)
-	# root_ind = findfirst(x -> x == 0, t.snd_par)
-	# t.snd_par[root_ind] = root_ind
-	# t.snd_par = sndpost_inv[t.snd_par[t.snd_post]]
-	# t.snd_post = collect(1:1:t.num)
+	# permute the separators as well
+	p_inv = invperm(p)
+	for sp in t.sep
+		sp[:] = map(x -> p_inv[x], sp)
+	end
 
 	permute!(ordering, p)
 	return nothing
