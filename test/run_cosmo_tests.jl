@@ -12,13 +12,13 @@ UnitTestFloats = [Float32; Float64; BigFloat]
 
   include("./UnitTests/sets.jl")
   include("./UnitTests/nuclear_norm_minimization.jl")
-  include("./UnitTests/psd_completion.jl")
-  include("./UnitTests/psd_completion_and_merging.jl")
-  include("./UnitTests/clique_merging_example.jl")
-  include("./UnitTests/reduced_clique_graph.jl")
-  include("./UnitTests/chordal_decomposition_triangle.jl")
-  include("./UnitTests/InfeasibilityTests/runTests.jl")
-  include("./UnitTests/Acceleration/run_acceleration_tests.jl")
+  include("./UnitTests/DecompositionTests/psd_completion.jl")
+  include("./UnitTests/DecompositionTests/psd_completion_and_merging.jl")
+  include("./UnitTests/DecompositionTests/clique_merging_example.jl")
+  include("./UnitTests/DecompositionTests/reduced_clique_graph.jl")
+  include("./UnitTests/DecompositionTests/chordal_decomposition_triangle.jl")
+  include("./UnitTests/InfeasibilityTests/runtests.jl")
+  include("./UnitTests/AccelerationTests/run_acceleration_tests.jl")
   # floating-point precision type agnostic unit tests
   # N.B.: Some infeasibility tests rely on sufficient precision (at least Float64 in some cases)
   # SDPs are currently only supported with Float32/Float64
