@@ -732,10 +732,6 @@ function MOI.get(optimizer::Optimizer, a::MOI.DualStatus)
     end
 end
 
-function MOI.get(optimizer::Optimizer, ::MOI.RawStatusString)
-    return String(optimizer.results.status)
-end
-
 struct RawResult <: MOI.AbstractModelAttribute end
 MOI.is_set_by_optimize(::RawResult) = true
 MOI.get(optimizer::Optimizer, ::RawResult) = optimizer.results
