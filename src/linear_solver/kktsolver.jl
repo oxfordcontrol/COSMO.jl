@@ -308,6 +308,7 @@ end
 
 function update_rho!(s::QdldlKKTSolver{Tv, Ti}, rho::Union{Tv, AbstractVector{Tv}}) where {Tv <: AbstractFloat, Ti <: Integer}
     QDLDL.update_diagonal!(s.ldlfact, (s.n+1):(s.n+s.m), (-one(Ti) ./ rho))
+    refactor!(s.ldlfact)
 end
 
 # -------------------------------------
