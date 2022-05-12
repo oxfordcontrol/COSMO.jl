@@ -595,7 +595,7 @@ function pass_attributes!(dest::Optimizer{T}, src::MOI.ModelLike, idxmap::MOIU.I
             elseif attr == MOI.ConstraintPrimalStart() || attr == MOI.ConstraintDualStart()
                 for ci in cis_src
                     value = MOI.get(src, attr, ci)
-                    process_warm_start!(dest, attr, ci, value)
+                    process_warm_start!(dest, attr, idxmap[ci], value)
                 end
             else
                 throw(MOI.UnsupportedAttribute(attr))
