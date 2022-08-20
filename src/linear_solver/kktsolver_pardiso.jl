@@ -1,6 +1,6 @@
 using .Pardiso: Pardiso, set_solver!, pardisoinit, set_phase!, set_iparm!, set_msglvl!, get_iparm, pardiso, PardisoSolver, MKLPardisoSolver, get_nprocs, set_nprocs!, set_matrixtype!, set_perm!
 using AMD
-export PardisoDirectKKTSolver, PardisoIndirectKKTSolver, MKLPardisoSolver
+export PardisoDirectKKTSolver, PardisoIndirectKKTSolver, MKLPardisoKKTSolver
 
 abstract type AbstractPardisoKKTSolver <: AbstractKKTSolver end
 

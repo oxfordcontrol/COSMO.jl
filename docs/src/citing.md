@@ -31,6 +31,18 @@ The following paper describes the algorithm used for our clique graph based merg
   issn    = {2405-8963},
   journal = {IFAC-PapersOnLine},
 }
-
 ```
 A preprint can be downloaded [here](https://arxiv.org/abs/1911.05615).
+
+The acceleration strategy is described in this paper:
+```
+@InProceedings{Garstka_2022,
+  title={Safeguarded Anderson acceleration for parametric nonexpansive operators},
+  author={Garstka, Michael and Cannon, Mark and Goulart, Paul},
+  booktitle={2022 European Control Conference (ECC)},
+  pages={435--440},
+  year={2022},
+  organization={IEEE}
+}
+```
+A preprint can be downloaded [here](https://arxiv.org/pdf/2208.02847).

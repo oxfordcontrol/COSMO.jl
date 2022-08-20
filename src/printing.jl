@@ -25,7 +25,7 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	if ws.ci.decompose && ws.ci.num_decomposable > 0
 		println("Decomp:   Num of original PSD cones: $(ws.ci.num_psd_cones)\n" * " "^10*"Num decomposable PSD cones: $(ws.ci.num_decomposable)\n" * " "^10*"Num PSD cones after decomposition: $(ws.ci.num_decom_psd_cones)\n" * " "^10*"Merge Strategy: $(stringify(ws.settings.merge_strategy))")
 	end
-	println("Settings: ϵ_abs = $(@sprintf("%.1e", settings.eps_abs)), ϵ_rel = $(@sprintf("%.1e", settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.1e", settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.1e", settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(@sprintf("%.3g", settings.rho)), σ = $(@sprintf("%.3g", settings.sigma)), α = $(@sprintf("%.3g", settings.alpha)),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scaling_status)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter,\n" *	 " "^10 * "KKT system solver: $(print_lin_sys(settings.kkt_solver.ObjectType))")
+	println("Settings: ϵ_abs = $(@sprintf("%.1e", settings.eps_abs)), ϵ_rel = $(@sprintf("%.1e", settings.eps_rel)),\n" * " "^10 * "ϵ_prim_inf = $(@sprintf("%.1e", settings.eps_prim_inf)), ϵ_dual_inf = $(@sprintf("%.1e", settings.eps_dual_inf)),\n" * " "^10 * "ρ = $(@sprintf("%.3g", settings.rho)), σ = $(@sprintf("%.3g", settings.sigma)), α = $(@sprintf("%.3g", settings.alpha)),\n" * " "^10 * "max_iter = $(settings.max_iter),\n" * " "^10 * "scaling iter = $(settings.scaling) ($(scaling_status)),\n" * " "^10 * "check termination every $(settings.check_termination) iter,\n" * " "^10 * "check infeasibility every $(settings.check_infeasibility) iter,\n" *	 " "^10 * "KKT system solver: $(print_lin_sys(settings.kkt_solver))")
 
 	print_accelerator(ws.accelerator, ws.settings.safeguard, ws.settings.safeguard_tol, tab = 10)
 	
@@ -75,7 +75,7 @@ function print_result(status::Symbol, iter::Int, safeguarding_iter::Int, cost::T
 	println("Optimal objective: $(@sprintf("%.4g", cost))\nRuntime: $(round.(rt; digits = 3))s ($(round.(rt * 1000; digits = 2))ms)\n")
 	nothing
 end
-
+print_lin_sys(s::OptionsFactory) = print_lin_sys(s.ObjectType)
 function print_lin_sys(s::Type{<:AbstractKKTSolver})
 	lin_sys_dict = Dict("QdldlKKTSolver" => "QDLDL", "CholmodKKTSolver" => "CHOLMOD", "PardisoDirectKKTSolver" => "Pardiso (direct)", "PardisoIndirectKKTSolver" => "Pardiso (indirect)",  "MKLPardisoKKTSolver" => "MKL Pardiso")
 	return get(lin_sys_dict, string(s), string(s))
