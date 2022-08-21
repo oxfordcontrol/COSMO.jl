@@ -33,7 +33,7 @@ model = COSMO.Model();
 assemble!(model, P, q, [c1; c2]);
 res = COSMO.optimize!(model);</code></pre><pre><code class="language-julia hljs">res.x</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Array{Float64,1}:
  2.999990000199988
- 2.0000000001164153
+ 2.000000000116415
  2.0000099998433143</code></pre><pre><code class="language-julia hljs">obj_val = -dot(q, res.x)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">7.000000000159718</code></pre><p>The problem was solved using constraints involving our new cone and yields the expected result. Next, we want to add the ability to detect infeasible problems.</p><h2 id="Support-infeasibility-detection"><a class="docs-heading-anchor" href="#Support-infeasibility-detection">Support infeasibility detection</a><a id="Support-infeasibility-detection-1"></a><a class="docs-heading-anchor-permalink" href="#Support-infeasibility-detection" title="Permalink"></a></h2><p>If no further information about the new cone is provided, the infeasibility detection is disabled. However, by defining the two additional methods <code>in_dual</code> and <code>in_pol_recc</code> we can support infeasibility detection. More information on how infeasible problems are detected in <code>COSMO</code> can be found here [1]. We will have to add the ability for the solver to check whether a vector is in the <a href="https://en.wikipedia.org/wiki/Dual_cone_and_polar_cone">dual cone</a> <span>$\mathcal{K}^*$</span> of our new cone <span>$\mathcal{K}$</span> and whether a vector is in the recession cone of the <a href="https://en.wikipedia.org/wiki/Dual_cone_and_polar_cone">polar cone</a> <span>${\mathcal{K}^\circ}^\infty$</span> of our cone. The first function is used to check for primal infeasibility, while the second function  is used to check for dual infeasibility. Luckily, for the Nonpositives-cone this is straightforward:</p><p class="math-container">\[{\mathbb{R}_{-}^n}^* = \mathbb{R}_{-}^n, \quad {{\mathbb{R}_{-}^n}^\circ}^\infty = \mathbb{R}_{+}^n.\]</p><pre><code class="language-julia hljs">function COSMO.in_dual(x::AbstractVector{T}, C::Nonpositives{T}, tol::T) where {T &lt;: AbstractFloat}
 	return !any( x-&gt; (x &gt; -tol), x)
 end
@@ -71,7 +71,7 @@ MOI.supports_constraint(optimizer::COSMO.Optimizer, ::Type{&lt;:Union{MOI.Vector
 @constraint(model, A1 * x[1:2] .+ b1 in NonPos(2));
 @constraint(model, x[1] + x[3] == 5);
 JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">------------------------------------------------------------------
-          COSMO v0.8.5 - A Quadratic Objective Conic Solver
+          COSMO v0.8.6 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2022
 ------------------------------------------------------------------
@@ -93,18 +93,18 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 6, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.14ms
+Setup Time: 0.12ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-2.7216e+01	1.7200e+01	6.0000e-01	1.0000e-01
-25	-7.0000e+00	1.1642e-10	1.1102e-16	1.0000e-01
+25	-7.0000e+00	1.1641e-10	1.1102e-16	1.0000e-01
 
 ------------------------------------------------------------------
 &gt;&gt;&gt; Results
 Status: Solved
-Iterations: 27 (incl. 2 safeguarding iter)
+Iterations: 26 (incl. 1 safeguarding iter)
 Optimal objective: -7
-Runtime: 0.018s (18.09ms)</code></pre><pre><code class="language-julia hljs">x_opt = JuMP.value.(x)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Array{Float64,1}:
+Runtime: 0.022s (22.06ms)</code></pre><pre><code class="language-julia hljs">x_opt = JuMP.value.(x)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Array{Float64,1}:
  2.999990000199988
- 2.0000000001164153
- 2.0000099998433143</code></pre><p>You can see in the solver output that indeed a set <code>Nonpositives</code> of <code>dim: 2</code> was used.</p><p>The discussed cone of Nonpositives is of course trivial, but the ability to define new cones and constraints for <code>COSMO</code> can be very powerful to model complex problems.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Garstka et al. - COSMO: A conic operator splitting method for convex conic problems (2020)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../../acceleration/">« Acceleration</a><a class="docs-footer-nextpage" href="../../../decomposition/">Chordal Decomposition »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Sunday 21 August 2022 07:35">Sunday 21 August 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ 2.000000000116415
+ 2.0000099998433143</code></pre><p>You can see in the solver output that indeed a set <code>Nonpositives</code> of <code>dim: 2</code> was used.</p><p>The discussed cone of Nonpositives is of course trivial, but the ability to define new cones and constraints for <code>COSMO</code> can be very powerful to model complex problems.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Garstka et al. - COSMO: A conic operator splitting method for convex conic problems (2020)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../../acceleration/">« Acceleration</a><a class="docs-footer-nextpage" href="../../../decomposition/">Chordal Decomposition »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.22 on <span class="colophon-date" title="Sunday 21 August 2022 07:39">Sunday 21 August 2022</span>. Using Julia version 1.4.2.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
