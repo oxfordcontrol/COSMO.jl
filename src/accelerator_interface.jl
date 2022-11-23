@@ -35,7 +35,7 @@ end
 check_activation!(ws::Workspace, activation_reason::AccuracyActivation, num_iter::Int64) = nothing
 
 
-function check_activation!(ws::Workspace, activation_reason::AccuracyActivation, r::ResultInfo) where {T <: AbstractFloat}
+function check_activation!(ws::Workspace, activation_reason::AccuracyActivation, r::ResultInfo)
     if !ws.accelerator_active
         tol = activation_reason.start_accuracy
         
@@ -45,7 +45,7 @@ function check_activation!(ws::Workspace, activation_reason::AccuracyActivation,
     end
 end
 
-check_activation!(ws::Workspace, activation_reason::Union{IterActivation, ImmediateActivation}, r::ResultInfo) where {T <: AbstractFloat}= nothing
+check_activation!(ws::Workspace, activation_reason::Union{IterActivation, ImmediateActivation}, r::ResultInfo) = nothing
 
 
 """
