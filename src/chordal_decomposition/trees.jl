@@ -65,7 +65,7 @@ mutable struct SuperNodeTree
 	post::Array{Int} # post ordering of the vertices in elim tree σ(j) = v
 	par::Array{Int}
 	sep::Union{Array{Set{Int},1}, Array{Array{Int, 1}, 1}} #vertices of clique seperators
-	nBlk::Array{Int,1} #sizes of submatrizes defined by each clique, sorted by post-ordering, e.g. size of clique with order 3 => nBlk[3]
+	nBlk::Array{Int,1} #sizes of submatrices defined by each clique, sorted by post-ordering, e.g. size of clique with order 3 => nBlk[3]
 	num::Int # number of supernodes / cliques in tree
 	merge_log::MergeLog
 	strategy::AbstractMergeStrategy
