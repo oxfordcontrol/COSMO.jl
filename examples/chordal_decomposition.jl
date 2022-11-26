@@ -16,7 +16,7 @@ c = [-0.21052661285686525, -1.263324575834677];
 model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "merge_strategy" => COSMO.NoMerge, "complete_dual" => true));
 @variable(model, x[1:m]);
 @objective(model, Min, c' * x )
-@constraint(model, Symmetric(B - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
+@constraint(model, Symmetric(B1 - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
 JuMP.optimize!(model)
 
 
@@ -24,7 +24,7 @@ JuMP.optimize!(model)
 model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "merge_strategy" => COSMO.CliqueGraphMerge, "complete_dual" => true));
 @variable(model, x[1:m]);
 @objective(model, Min, c' * x )
-@constraint(model, Symmetric(B - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
+@constraint(model, Symmetric(B1 - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
 JuMP.optimize!(model)
 
 
@@ -33,5 +33,5 @@ pc_strategy = with_options(COSMO.ParentChildMerge, t_size = 3, t_fill = 3)
 model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "merge_strategy" => pc_strategy, "complete_dual" => true));
 @variable(model, x[1:m]);
 @objective(model, Min, c' * x )
-@constraint(model, Symmetric(B - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
+@constraint(model, Symmetric(B1 - A1  .* x[1] - A2 .* x[2] )  in JuMP.PSDCone());
 JuMP.optimize!(model)
