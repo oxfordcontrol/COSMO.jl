@@ -558,7 +558,7 @@ function pass_attributes!(dest::Optimizer{T}, src::MOI.ModelLike, idxmap::MOIU.I
 
     model_attributes = MOI.get(src, MOI.ListOfModelAttributesSet())
     for attr in model_attributes
-        if attr != MOI.ObjectiveSense() && attr != MOI.ObjectiveFunction{MOI.ScalarAffineFunction{T}}() && attr != MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}() 
+        if attr != MOI.ObjectiveSense() && attr != MOI.ObjectiveFunction{MOI.ScalarAffineFunction{T}}() && attr != MOI.ObjectiveFunction{MOI.ScalarQuadraticFunction{T}}() && attr != MOI.Name() 
             throw(MOI.UnsupportedAttribute(attr))
         end
     end
