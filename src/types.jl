@@ -197,7 +197,7 @@ mutable struct SparsityPattern
     # clique merging only if more than one clique present
     if sntree.num > 1
 		merge_cliques!(sntree)
-	elseif merge_strategy <: AbstractGraphBasedMerge
+	elseif merge_strategy isa AbstractGraphBasedMerge
 		# if no merging attempt happens for a clique graph, we still have to convert the snd and sep back to Array{Array{Int}, 1}
 		# for consistency
 		sntree.snd = sort.(collect.(sntree.snd))
