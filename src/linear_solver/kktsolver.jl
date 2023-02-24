@@ -287,16 +287,23 @@ struct QdldlKKTSolver{Tv, Ti} <: AbstractKKTSolver
     m::Ti
     n::Ti
     ldlfact::QDLDL.QDLDLFactorisation{Tv, Ti}
+    diagidx::Vector{Ti}
 
     function QdldlKKTSolver(P::SparseMatrixCSC{Tv, Ti}, A::SparseMatrixCSC{Tv, Ti}, sigma::Tv, rho::Union{Tv, AbstractVector{Tv}}) where {Tv <: AbstractFloat, Ti <: Integer}
         m, n = _kktutils_check_dims(P, A, sigma, rho)
         K    = assemble_kkt_triangle(P, A, sigma, rho, :U)
         ldlfact = qdldl(K)
+        
+        #we want the index if diagonal entries with K triu, 
+        #this means we want the *last* entry in every column
+        #and assume the diagonal is fully populated
+        @views diagidx = K.colptr[2:end] .- 1
+        
 
         #check for exactly n positive eigenvalues
         positive_inertia(ldlfact) == n || error("Objective function is not convex.")
 
-        new{Tv, Ti}(m, n, ldlfact)
+        new{Tv, Ti}(m, n, ldlfact,diagidx)
     end
 end
 
@@ -307,7 +314,8 @@ end
 
 
 function update_rho!(s::QdldlKKTSolver{Tv, Ti}, rho::Union{Tv, AbstractVector{Tv}}) where {Tv <: AbstractFloat, Ti <: Integer}
-    QDLDL.update_diagonal!(s.ldlfact, (s.n+1):(s.n+s.m), (-one(Ti) ./ rho))
+
+    @views QDLDL.update_values!(s.ldlfact, s.diagidx[(s.n+1):(s.n+s.m)], (-one(Ti) ./ rho))
     refactor!(s.ldlfact)
 end
 
