@@ -152,7 +152,7 @@ function merge_cliques!(t::SuperNodeTree, strategy::AbstractGraphBasedMerge)
   t.snd_post = findall(x -> !isempty(x), t.snd)
   t.snd_par = -ones(Int, length(t.snd))
 
-  # recomute a clique tree from the clique graph
+  # recompute a clique tree from the clique graph
   t.num > 1 && clique_tree_from_graph!(t)
 
   #turn the unordered sets for t.snd and t.sep into orderable arrays
