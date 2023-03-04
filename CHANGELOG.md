@@ -1,3 +1,10 @@
+## Version 0.8.7 (04. March 2023)
+This release contains a number of minor bug fixes and typo removals. It also includes some cleanup tasks like updating dependencies and fixing an issue with the documentation build job.
+
+`3cf312a` - Update MOI_wrapper.jl (#169)
+`724a2d2` - Update QDLDL wrappers for QDLDL v0.4.1 (#171)
+`9ebf334` - fix: merge_strategy() is an instance, not a type (#164)
+
 ## Version 0.8.0 (02. February 2021)
 This is a fairly big release as we wrap the ADMM algorithm into a safeguarded Anderson Acceleration method. The accelerators are provided by [COSMOAccelerators.jl](https://github.com/oxfordcontrol/COSMOAccelerators.jl). This should improve the convergence to higher accuracy solution. 
 
