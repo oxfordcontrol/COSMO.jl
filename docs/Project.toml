@@ -16,7 +16,7 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-Documenter = "0.27.9"
+Documenter = "0.27.24"
 Literate = "2.8"
 Plots = "^1.3.3"
 Distributions = "^0.25"
