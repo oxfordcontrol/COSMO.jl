@@ -45,13 +45,15 @@ __For more information take a look at the COSMO.jl Documentation ([stable](https
 * __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
 * __Smart clique merging__: After an initial decomposition of a structured SDP, COSMO recombines overlapping cliques/blocks to speed up the algorithm.
 <div align="center" margin=0px>
-  <img src="docs/src/assets/example_decomposition.gif" width=45%>
+  <img src="https://github.com/oxfordcontrol/COSMO.jl/blob/master/docs/src/assets/example_decomposition.gif" width=45%>
 </div>
 
 ## Installation
+
 - `COSMO` can be added via the Julia package manager (type `]`): `pkg> add COSMO`
 
 ## Citing
+
 If you find COSMO useful in your project, we kindly request that you cite the following paper:
 ```
 @Article{Garstka_2021,
@@ -69,15 +71,16 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
 ```
 The article is available under Open Access [here](https://link.springer.com/article/10.1007/s10957-021-01896-x).
 
-
-
 ## Contributing
+
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
 - Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues). Please report any issues or bugs that you encounter.
 - As an open source project we are also interested in any projects and applications that use COSMO. Please let us know by opening a GitHub issue.
 
 ## Python - Interface
+
 COSMO can also be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
 
 ## Licence 🔍
+
 This project is licensed under the Apache License - see the [LICENSE.md](https://github.com/oxfordcontrol/COSMO.jl/blob/master/LICENSE.md) file for details.
