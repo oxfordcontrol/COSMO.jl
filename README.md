@@ -80,4 +80,4 @@ The article is available under Open Access [here](https://link.springer.com/arti
 COSMO can also be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
 
 ## Licence 🔍
-This project is licensed under the Apache License - see the [LICENSE.md](https://github.com/oxfordcontrol/COSMO.jl/LICENSE.md) file for details.
+This project is licensed under the Apache License - see the [LICENSE.md](https://github.com/oxfordcontrol/COSMO.jl/blob/master/LICENSE.md) file for details.
