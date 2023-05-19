@@ -39,7 +39,7 @@ __For more information take a look at the COSMO.jl Documentation ([stable](https
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
 * __JuMP / Convex.jl support__: We provide an interface to MathOptInterface (MOI), which allows you to describe your problem in [JuMP](https://github.com/JuliaOpt/JuMP.jl) and [Convex.jl](https://github.com/JuliaOpt/Convex.jl).
 * __Warm starting__: COSMO supports warm starting of the decision variables
-* __Custom sets and linear solver__: Customize COSMO's components by defining your own convex constraint sets and by choosing from a number of direct and indirect linear system solvers, e.g. [QDLDL](https://github.com/oxfordcontrol/qdldl), [Pardiso](https://github.com/JuliaSparse/Pardiso.jl), [Conjugate Gradient](https://juliamath.github.io/IterativeSolvers.jl/dev/) and [MINRES](https://juliamath.github.io/IterativeSolvers.jl/dev/)
+* __Custom sets and linear solver__: Customize COSMO's components by defining your own convex constraint sets and by choosing from a number of direct and indirect linear system solvers, for example, [QDLDL](https://github.com/oxfordcontrol/qdldl), [Pardiso](https://github.com/JuliaSparse/Pardiso.jl), [Conjugate Gradient](https://juliamath.github.io/IterativeSolvers.jl/dev/) and [MINRES](https://juliamath.github.io/IterativeSolvers.jl/dev/)
 * __Arbitrary precision types__: You can solve problems with any floating point precision.
 * __Open Source__: Our code is free to use and distributed under the Apache 2.0 Licence
 * __Chordal decomposition__: COSMO tries to decompose large structured PSD constraints using chordal decomposition techniques. This often results in a significant speedup compared to the original problem.
@@ -74,10 +74,10 @@ The article is available under Open Access [here](https://link.springer.com/arti
 ## Contributing
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
 - Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues). Please report any issues or bugs that you encounter.
-- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know!
+- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know by opening a GitHub issue.
 
 ## Python - Interface
 COSMO can also be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
 
 ## Licence 🔍
-This project is licensed under the Apache License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the Apache License - see the [LICENSE.md](https://github.com/oxfordcontrol/COSMO.jl/LICENSE.md) file for details.
