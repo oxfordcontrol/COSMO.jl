@@ -387,8 +387,9 @@ function type_checks(constraints::Vector{COSMO.Constraint{T}}) where {T <: Abstr
 	end
 	return nothing
 end
-type_checks(convex_set::AbstractConvexSet) = nothing
-type_checks(convex_set::Union{PsdCone{BigFloat}, PsdConeTriangle{BigFloat}}) = throw(ArgumentError("COSMO currently does not support the combination of PSD constraints and BigFloat."))
+type_checks(::AbstractConvexSet) = nothing
+type_checks(::PsdCone{BigFloat}) = throw(ArgumentError("COSMO currently does not support the combination of PSD constraints and BigFloat."))
+type_checks(::PsdConeTriangle{BigFloat}) = throw(ArgumentError("COSMO currently does not support the combination of PSD constraints and BigFloat."))
 
 
 
