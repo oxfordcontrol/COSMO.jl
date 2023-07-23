@@ -8,16 +8,6 @@ const MOI = MathOptInterface
 const MOIT = MOI.Test
 const MOIB = MOI.Bridges
 const MOIU = MOI.Utilities
-MOIU.@model(COSMOModelData,
-        (),
-        (MOI.EqualTo, MOI.GreaterThan, MOI.LessThan, MOI.Interval),
-        (MOI.Zeros, MOI.Nonnegatives, MOI.SecondOrderCone,
-         MOI.PositiveSemidefiniteConeTriangle, MOI.ExponentialCone, MOI.DualExponentialCone),
-        (MOI.PowerCone, MOI.DualPowerCone),
-        (),
-        (MOI.ScalarAffineFunction, MOI.ScalarQuadraticFunction),
-        (MOI.VectorOfVariables,),
-        (MOI.VectorAffineFunction,),);
 
 
 struct UnsupportedModelAttribute  <: MOI.AbstractModelAttribute end
