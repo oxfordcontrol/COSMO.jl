@@ -67,10 +67,10 @@ function solve!(S::IndirectReducedKKTSolver, y::AbstractVector{T}, x::AbstractVe
     end
     L = LinearMap(reduced_mul!, S.n; ismutating=true, issymmetric=true)
     if S.solver_type == :CG
-        cg!(S.previous_solution, L, y1, tol=get_tolerance(S)/norm(y1))
+        cg!(S.previous_solution, L, y1, abstol=get_tolerance(S)/norm(y1), reltol = 0.)
     elseif S.solver_type == :MINRES
         init_residual = norm(L*S.previous_solution - y1)
-        minres!(S.previous_solution, L, y1, tol=get_tolerance(S)/init_residual)
+        minres!(S.previous_solution, L, y1, abstol=get_tolerance(S)/init_residual, reltol = 0.)
     end
     # Sanity check for tolerance
     # might not always hold for MINRES, as its termination criterion is approximate, (see its documentation)
@@ -149,7 +149,7 @@ function solve!(S::IndirectKKTSolver, y::AbstractVector{T}, x::AbstractVector{T}
     L = LinearMap(kkt_mul!, S.n + S.m; ismutating=true, issymmetric=true)
     if S.solver_type == :MINRES
         init_residual = norm(L*S.previous_solution - x)
-        minres!(S.previous_solution, L, x, tol=get_tolerance(S)/init_residual)
+        minres!(S.previous_solution, L, x, abstol=get_tolerance(S)/init_residual, reltol = 0.)
     end
     # Sanity check for tolerance
     # might not always hold for MINRES, as its termination criterion is approximate, (see its documentation)
