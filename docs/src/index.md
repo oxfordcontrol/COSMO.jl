@@ -96,10 +96,11 @@ obj_value = JuMP.objective_value(m)
 - A video of my first presentation of COSMO at JuMP-dev (Santiago) is available here: [COSMO.jl at JuMP-dev](https://www.youtube.com/watch?v=H4Q0ZXDqB70)
 - A more detailed presentation on chordal decomposition and clique merging is available here: [Chordal decomposition and clique merging](https://vimeo.com/439962112)
 - I gave an overview on recent features of COSMO such as acceleration methods at JuliaCon 2021: [What's new in COSMO?](https://www.youtube.com/watch?v=O50kKay3Ie8)
+- More details on the acceleration methods were presented in my ECC 2022 talk [Safeguarded Anderson acceleration for parametric nonexpansive operators](https://vimeo.com/735144787)
 
 ## Credits
 
-The following people are involved in the development of COSMO:
+The following people are involved in the development    of COSMO:
 * [Michael Garstka](https://migarstka.github.io) (main development)
 * [Nikitas Rontsis](https://github.com/nrontsis) (algorithm performance)
 * [Paul Goulart](http://users.ox.ac.uk/~engs1373/) (code architecture, maths and algorithms)
