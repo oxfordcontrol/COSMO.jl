@@ -12,7 +12,6 @@ const SparseTriplets{Tv} = Tuple{Vector{<:Integer}, Vector{<:Integer}, Vector{Tv
 
 const Affine = MOI.ScalarAffineFunction{<: AbstractFloat}
 const Quadratic = MOI.ScalarQuadraticFunction{<: AbstractFloat}
-const VectorOfVariables = MOI.VectorOfVariables
 const VectorAffine = MOI.VectorAffineFunction{<: AbstractFloat}
 
 const Interval = MOI.Interval{<: AbstractFloat}
@@ -421,11 +420,6 @@ function processConstant!(b::AbstractVector{T}, row::Int, f::Affine, s) where {T
     nothing
 end
 
-function processConstant!(b::AbstractVector{T}, rows::UnitRange{Int}, f::VectorOfVariables, s) where {T <: AbstractFloat}
-    b[rows] .= zero(T)
-    nothing
-end
-
 # process constant for functions VectorAffineFunction{Float64}
 function processConstant!(b::AbstractVector{T}, rows::UnitRange{Int}, f::VectorAffine, s) where {T <: AbstractFloat}
         b[rows] = scalecoef(nom_rows(rows, typeof(s)), f.constants, false, s)
@@ -441,18 +435,6 @@ function processConstraint!(triplets::SparseTriplets{T}, f::MOI.ScalarAffineFunc
         push!(J, idxmap[term.variable].value)
         push!(V, scalecoef(row, term.coefficient, true, s))
     end
-end
-
-function processConstraint!(triplets::SparseTriplets{T}, f::MOI.VectorOfVariables, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet) where {T <: AbstractFloat}
-    (I, J, V) = triplets
-    cols = zeros(length(rows))
-    for (i, var) in enumerate(f.variables)
-        cols[i] = idxmap[var].value
-    end
-    append!(I, rows)
-    append!(J, cols)
-    append!(V, scalecoef(nom_rows(rows, typeof(s)), ones(T, length(rows)), true, s))
-    nothing
 end
 
 function processConstraint!(triplets::SparseTriplets{T}, f::MOI.VectorAffineFunction, rows::UnitRange{Int}, idxmap::MOIU.IndexMap, s::MOI.AbstractSet) where {T <: AbstractFloat}
@@ -848,4 +830,4 @@ end
 
 ## Supported Constraints
 MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<: IntervalConvertible}) = true
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Union{VectorOfVariables, VectorAffine}}, ::Type{<:SupportedVectorSets}) = true
+MOI.supports_constraint(optimizer::Optimizer, ::Type{<:VectorAffine}, ::Type{<:SupportedVectorSets}) = true
