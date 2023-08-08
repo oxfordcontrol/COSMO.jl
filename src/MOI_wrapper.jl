@@ -381,7 +381,7 @@ function processConstraint!(triplets::SparseTriplets{T}, f::MOI.ScalarAffineFunc
     for term in f.terms
         push!(I, row)
         push!(J, idxmap[term.variable].value)
-        push!(V, term.coefficient)
+        push!(V, -term.coefficient)
     end
 end
 
@@ -399,7 +399,7 @@ function processConstraint!(triplets::SparseTriplets{T}, f::MOI.VectorAffineFunc
     offset = first(rows) - 1
 
     append!(J, A_J)
-    append!(V, A_V)
+    append!(V, -A_V)
     append!(I, A_I .+ offset)
 end
 
