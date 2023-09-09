@@ -14,18 +14,16 @@ const Quadratic = MOI.ScalarQuadraticFunction{<: AbstractFloat}
 const VectorAffine = MOI.VectorAffineFunction{<: AbstractFloat}
 
 const Interval = MOI.Interval{<: AbstractFloat}
-const LessThan = MOI.LessThan{<: AbstractFloat}
 const GreaterThan = MOI.GreaterThan{<: AbstractFloat}
-const EqualTo = MOI.EqualTo{<: AbstractFloat}
-const IntervalConvertible = Union{LessThan, GreaterThan, Interval}
+const IntervalConvertible = Union{GreaterThan, Interval}
 
 const Zeros = MOI.Zeros
 const SOC = MOI.SecondOrderCone
-const PSDT = MOI.ScaledPositiveSemidefiniteConeTriangle
+const PSDT = MOI.Scaled{MOI.PositiveSemidefiniteConeTriangle}
 const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
-const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.LessThan, MOI.GreaterThan}
+const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.GreaterThan}
 aggregate_equivalent(::Type{<: MOI.Zeros}) = COSMO.ZeroSet
-aggregate_equivalent(::Type{<: Union{MOI.LessThan, MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
+aggregate_equivalent(::Type{<: Union{MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
 
 
 ##############################
@@ -175,8 +173,8 @@ function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
 end
 
 # This is important for set merging
-sort_sets(s::Union{Type{<: MOI.EqualTo}, Type{<: MOI.Zeros}}) = 1
-sort_sets(s::Union{Type{ <: MOI.LessThan}, Type{ <: MOI.GreaterThan}, Type{ <: MOI.Nonnegatives}, Type{ <: MOI.Nonpositives}}) = 2
+sort_sets(s::Type{<: MOI.Zeros}) = 1
+sort_sets(s::Union{Type{ <: MOI.GreaterThan}, Type{ <: MOI.Nonnegatives}}) = 2
 sort_sets(s::Type{MOI.Interval}) = 3
 sort_sets(s::Type{<: MOI.AbstractSet}) = 4
 
@@ -433,11 +431,6 @@ function process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, s::Typ
 end
 
 
-function processSet!(b::Vector{T}, row::Int, cs, s::LessThan) where {T <: AbstractFloat}
-    b[row] += s.upper
-    # push!(cs, COSMO.Nonnegatives{T}(1))
-    nothing
-end
 function processSet!(b::Vector{T}, row::Int, cs, s::GreaterThan) where {T <: AbstractFloat}
     b[row] -= s.lower
     # push!(cs, COSMO.Nonnegatives{T}(1))
