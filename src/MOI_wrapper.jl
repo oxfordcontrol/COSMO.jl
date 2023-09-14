@@ -807,7 +807,8 @@ function MOI.set(optimizer::Optimizer{T}, attr::MOI.TimeLimitSec, ::Nothing) whe
     MOI.set(optimizer, MOI.RawOptimizerAttribute("time_limit"), zero(T))
 end
 function MOI.get(optimizer::Optimizer, ::MOI.TimeLimitSec)
-    return MOI.get(optimizer, MOI.RawOptimizerAttribute("time_limit"))
+    limit = MOI.get(optimizer, MOI.RawOptimizerAttribute("time_limit"))
+    return iszero(limit) ? nothing : limit
 end
 
 """
