@@ -2,8 +2,7 @@
 # https://github.com/oxfordcontrol/OSQP.jl/blob/master/src/MathOptInterfaceOSQP.jl
 # certain utility function are taken from the SCS  MathOptInterface:
 # https://github.com/JuliaOpt/SCS.jl
-using MathOptInterface
-const MOI = MathOptInterface
+import MathOptInterface as MOI
 const MOIU = MOI.Utilities
 const CI = MOI.ConstraintIndex
 const VI = MOI.VariableIndex
@@ -15,19 +14,16 @@ const Quadratic = MOI.ScalarQuadraticFunction{<: AbstractFloat}
 const VectorAffine = MOI.VectorAffineFunction{<: AbstractFloat}
 
 const Interval = MOI.Interval{<: AbstractFloat}
-const LessThan = MOI.LessThan{<: AbstractFloat}
 const GreaterThan = MOI.GreaterThan{<: AbstractFloat}
-const EqualTo = MOI.EqualTo{<: AbstractFloat}
-const IntervalConvertible = Union{LessThan, GreaterThan, Interval}
+const IntervalConvertible = Union{GreaterThan, Interval}
 
 const Zeros = MOI.Zeros
 const SOC = MOI.SecondOrderCone
-const PSDT = MOI.PositiveSemidefiniteConeTriangle
-const PSD = Union{MOI.PositiveSemidefiniteConeSquare,MOI.PositiveSemidefiniteConeTriangle}
+const PSDT = MOI.Scaled{MOI.PositiveSemidefiniteConeTriangle}
 const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
-const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.LessThan, MOI.GreaterThan}
+const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.GreaterThan}
 aggregate_equivalent(::Type{<: MOI.Zeros}) = COSMO.ZeroSet
-aggregate_equivalent(::Type{<: Union{MOI.LessThan, MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
+aggregate_equivalent(::Type{<: Union{MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
 
 
 ##############################
@@ -177,8 +173,8 @@ function MOIU.IndexMap(dest::Optimizer, src::MOI.ModelLike)
 end
 
 # This is important for set merging
-sort_sets(s::Union{Type{<: MOI.EqualTo}, Type{<: MOI.Zeros}}) = 1
-sort_sets(s::Union{Type{ <: MOI.LessThan}, Type{ <: MOI.GreaterThan}, Type{ <: MOI.Nonnegatives}, Type{ <: MOI.Nonpositives}}) = 2
+sort_sets(s::Type{<: MOI.Zeros}) = 1
+sort_sets(s::Union{Type{ <: MOI.GreaterThan}, Type{ <: MOI.Nonnegatives}}) = 2
 sort_sets(s::Type{MOI.Interval}) = 3
 sort_sets(s::Type{<: MOI.AbstractSet}) = 4
 
@@ -300,40 +296,6 @@ end
 
 # The following utility functions are from https://github.com/JuliaOpt/SCS.jl
 
-# Scale coefficients depending on rows index
-# rows: List of row indices
-# coef: List of corresponding coefficients
-# minus: if true, multiply the result by -1
-# d: dimension of set
-# rev: if true, we unscale instead (e.g. divide by √2 instead of multiply for PSD cone)
-_scalecoef(rows, coef::Union{Vector{T}, T}, minus, ::Type{<:MOI.AbstractSet}, rev) where {T <: AbstractFloat} = minus ? -coef : coef
-_scalecoef(rows, coef::Union{Vector{T}, T}, minus, ::Union{Type{<:MOI.LessThan}, Type{<:MOI.Nonpositives}, Type{<:MOI.EqualTo}}, rev) where {T <: AbstractFloat} = minus ? coef : -coef
-function _scalecoef(rows, coef::Union{Vector{T}, T}, minus, ::Type{MOI.PositiveSemidefiniteConeTriangle}, rev) where {T <: AbstractFloat}
-    scaling = minus ? -one(T) : one(T)
-    scaling2 = rev ? scaling / sqrt(T(2)) : scaling * sqrt(T(2))
-    output = copy(coef)
-    idx = 0
-    for i in 1:length(output)
-        # See https://en.wikipedia.org/wiki/Triangular_number#Triangular_roots_and_tests_for_triangular_numbers
-        is_diagonal_index = isinteger(sqrt(8 * rows[i] + 1))
-        if is_diagonal_index
-            output[i] *= scaling
-        else
-            output[i] *= scaling2
-        end
-    end
-    output
-end
-# Unscale the coefficients in `coef` with respective rows in `rows` for a set `s` and multiply by `-1` if `minus` is `true`.
-scalecoef(rows, coef, minus, s) = _scalecoef(rows, coef, minus, typeof(s), false)
-# Unscale the coefficients in `coef` with respective rows in `rows` for a set of type `S`
-unscalecoef(rows, coef, S::Type{<:MOI.AbstractSet}) = _scalecoef(rows, coef, false, S, true)
-
-# This helper function is to provide scale- and unscalecoef with the nomimal rows in the case of at PSDTriangle constraint
-# this is because for _scalecoef the actual row in A doesn't matter, what matters is the row in the upper triangle matrix
-nom_rows(rows, s::Type{MOI.PositiveSemidefiniteConeTriangle}) = 1:length(rows)
-nom_rows(rows, s::Type{<:MOI.AbstractSet}) = rows
-
 output_index(t::MOI.VectorAffineTerm) = t.output_index
 variable_index_value(t::MOI.ScalarAffineTerm) = t.variable.value
 variable_index_value(t::MOI.VectorAffineTerm) = variable_index_value(t.scalar_term)
@@ -393,10 +355,10 @@ function processconstraints!(triplets::SparseTriplets{T}, b::Vector{T}, COSMOcon
         f = MOI.get(src, MOI.ConstraintFunction(), ci)
         rows = constraint_rows(rowranges, idxmap[ci])
         aggregate_dim += length(rows)
-        processConstant!(b, rows, f, s)
+        b[rows] = MOI.constant(f, T)
         constant[rows] = b[rows]
         if typeof(s) <: MOI.AbstractScalarSet && !(typeof(s) <: MOI.Interval)
-            set_constant[rows] =  MOI.constant(s)
+            set_constant[rows] = MOI.constant(s)
         end
         processConstraint!(triplets, f, rows, idxmap, s)
         processSet!(b, rows, COSMOconvexSets, s)
@@ -410,22 +372,6 @@ end
 ##############################
 # PROCESS FUNCTIONS
 ##############################
-constant(f::MOI.VariableIndex) = 0
-constant(f::MOI.ScalarAffineFunction) = f.constant
-
-
-# process constant for functions Union{Affine, VariableIndex}
-function processConstant!(b::AbstractVector{T}, row::Int, f::Affine, s) where {T <: AbstractFloat}
-    b[row] = scalecoef(row, constant(f), false, s)
-    nothing
-end
-
-# process constant for functions VectorAffineFunction{Float64}
-function processConstant!(b::AbstractVector{T}, rows::UnitRange{Int}, f::VectorAffine, s) where {T <: AbstractFloat}
-        b[rows] = scalecoef(nom_rows(rows, typeof(s)), f.constants, false, s)
-    nothing
-end
-
 
 # process function like f(x) = coeff*x_1
 function processConstraint!(triplets::SparseTriplets{T}, f::MOI.ScalarAffineFunction, row::Int, idxmap::MOIU.IndexMap, s::MOI.AbstractSet) where {T <: AbstractFloat}
@@ -433,7 +379,7 @@ function processConstraint!(triplets::SparseTriplets{T}, f::MOI.ScalarAffineFunc
     for term in f.terms
         push!(I, row)
         push!(J, idxmap[term.variable].value)
-        push!(V, scalecoef(row, term.coefficient, true, s))
+        push!(V, -term.coefficient)
     end
 end
 
@@ -451,7 +397,7 @@ function processConstraint!(triplets::SparseTriplets{T}, f::MOI.VectorAffineFunc
     offset = first(rows) - 1
 
     append!(J, A_J)
-    append!(V, scalecoef(A_I, A_V, true, s))
+    append!(V, -A_V)
     append!(I, A_I .+ offset)
 end
 
@@ -485,11 +431,6 @@ function process_aggregate_set!(b::Vector{T}, cs, dim::Int, cis_src, src, s::Typ
 end
 
 
-function processSet!(b::Vector{T}, row::Int, cs, s::LessThan) where {T <: AbstractFloat}
-    b[row] += s.upper
-    # push!(cs, COSMO.Nonnegatives{T}(1))
-    nothing
-end
 function processSet!(b::Vector{T}, row::Int, cs, s::GreaterThan) where {T <: AbstractFloat}
     b[row] -= s.lower
     # push!(cs, COSMO.Nonnegatives{T}(1))
@@ -507,7 +448,7 @@ function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::SOC) where {T <:
 end
 
 
-function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::MOI.PositiveSemidefiniteConeTriangle) where {T <: AbstractFloat}
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::PSDT) where {T <: AbstractFloat}
     push!(cs, COSMO.PsdConeTriangle{T}(length(rows)))
     nothing
 end
@@ -730,7 +671,7 @@ function MOI.get(optimizer::Optimizer, a::MOI.ConstraintPrimal, ci_src::CI{<:MOI
     # offset = constroffset(optimizer, ci)
     # rows = constrrows(optimizer, ci)
     rows = COSMO.constraint_rows(optimizer.rowranges, ci_src)
-    c_primal = unscalecoef(nom_rows(rows, S), optimizer.results.s[rows], S)
+    c_primal = optimizer.results.s[rows]
     # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))
     return _unshift(optimizer, rows, c_primal, S)
 end
@@ -738,7 +679,7 @@ end
 function MOI.get(optimizer::Optimizer, a::MOI.ConstraintDual, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
     MOI.check_result_index_bounds(optimizer, a)
     rows = constraint_rows(optimizer.rowranges, ci_src)
-    return unscalecoef(nom_rows(rows, S), optimizer.results.y[rows], S)
+    return optimizer.results.y[rows]
 end
 
 ## Variable attributes:
@@ -760,10 +701,9 @@ function process_warm_start!(optimizer::Optimizer, a::MOI.ConstraintPrimalStart,
     (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     rows = constraint_rows(optimizer.rowranges, ci)
-    # this undoes the scaling and shifting that was used in get(MOI.ConstraintPrimal)
-    # Off-diagonal entries of slack variable of a PSDTriangle constraint has to be scaled by sqrt(2)
+    # this undoes the shifting that was used in get(MOI.ConstraintPrimal)
     value = _shift(optimizer, rows, value, S)
-    COSMO.warm_start_slack!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, false), rows)
+    COSMO.warm_start_slack!(optimizer.inner, value, rows)
 end
 
 MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{<:MOI.ConstraintIndex}) = true
@@ -771,9 +711,7 @@ function process_warm_start!(optimizer::Optimizer, a::MOI.ConstraintDualStart, c
     (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
     rows = constraint_rows(optimizer.rowranges, ci)
-    # this undoes the scaling that was used in get(MOI.ConstraintDual)
-    # Off-diagonal entries of dual variable of a PSDTriangle constraint has to be scaled by sfqrt(2)
-    COSMO.warm_start_dual!(optimizer.inner, _scalecoef(nom_rows(rows, S), value, false, S, false), rows)
+    COSMO.warm_start_dual!(optimizer.inner, value, rows)
     nothing
 end
 
