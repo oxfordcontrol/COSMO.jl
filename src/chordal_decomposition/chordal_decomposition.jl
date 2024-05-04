@@ -85,7 +85,7 @@ function nz_rows(a::SparseMatrixCSC{T}, ind::UnitRange{Int}, DROP_ZEROS_FLAG::Bo
       active[r - ind.start + 1] = true
     end
   end
-  return findall(active)
+  active
 end
 
 function number_of_overlaps_in_rows(A::SparseMatrixCSC{T}) where {T <: AbstractFloat}
@@ -97,7 +97,16 @@ end
 
 
 function find_aggregate_sparsity(A::SparseMatrixCSC{T}, b::AbstractVector{T}, ind::UnitRange{Int}, C::DecomposableCones{T}) where {T <: AbstractFloat}
-  AInd = nz_rows(A, ind, false)
+
+  AInd_logical = nz_rows(A, ind, false)
+
+  # explicitly flag all the terms corresonding to the cone diagonal
+  for i = 1:C.sqrt_dim
+    AInd_logical[vec_dim(i, C)] = true
+  end
+
+  AInd = findall(AInd_logical)
+
   # commonZeros = AInd[find(x->x==0,b[AInd])]
   bInd = findall(x -> x != 0, view(b, ind))
   commonNZeros = union(AInd, bInd)
