@@ -6,7 +6,7 @@ function print_header(ws::COSMO.Workspace{T}) where {T <: AbstractFloat}
 	settings = ws.settings
 	settings.scaling > 0 ? scaling_status = "on" : scaling_status = "off"
 
-	println("-"^66 * "\n" * " "^10 * "COSMO v0.8.8 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2022\n" * "-"^66 * "\n")
+	println("-"^66 * "\n" * " "^10 * "COSMO v0.8.9 - A Quadratic Objective Conic Solver\n" * " "^25 * "Michael Garstka\n"  * " "^16 * "University of Oxford, 2017 - 2022\n" * "-"^66 * "\n")
 
 	println("Problem:  x ∈ R^{$(n)},\n          constraints: A ∈ R^{$(m)x$(n)} ($(count(!iszero, ws.p.A)) nnz),\n          matrix size to factor: $(n + m)x$(n + m),\n          Floating-point precision: $(T)")
 	for (iii, set) in enumerate(sort(ws.p.C.sets, by = x -> -x.dim))
