@@ -38,4 +38,4 @@ model = COSMO.Model()
 # - We suggest to use the pure Julia QDLDL linear system solver (`kkt_solver = QdldlKKTSolver`) when working with arbitrary precision types as some of the other available solvers don't support all available precisions.
 
 #md # !!! note
-#md #     `JuMP` does not currently support arbitrary precision. However, if you want to use `COSMO` directly with `MathOptInterface`, you can use: `COSMO.Optimizer{<: AbstractFloat}` as your optimizer. Again, the problem data precision of your MathOptInterface-model has to agree with the optimizer's precision.
+#md #    If you want to use `COSMO` directly with `MathOptInterface`, you can use: `COSMO.Optimizer{<: AbstractFloat}` as your optimizer. Again, the problem data precision of your MathOptInterface-model has to agree with the optimizer's precision.
