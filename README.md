@@ -31,7 +31,7 @@ with decision variables `x ϵ R^n`, `s ϵ R^m` and data matrices `P=P'>=0`, `q �
 
 __For more information take a look at the COSMO.jl Documentation ([stable](https://oxfordcontrol.github.io/COSMO.jl/stable) |  [dev](https://oxfordcontrol.github.io/COSMO.jl/dev)).__
 
-## Features
+## ⚙️ Features
 
 * __Versatile__: COSMO solves linear programs, quadratic programs, second-order cone programs, semidefinite programs and problems involving exponential and power cones
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
@@ -48,11 +48,15 @@ __For more information take a look at the COSMO.jl Documentation ([stable](https
   <img src="https://github.com/oxfordcontrol/COSMO.jl/blob/master/docs/src/assets/example_decomposition.gif" width=45%>
 </div>
 
-## Installation
+## ⚡️ Installation
 
-- `COSMO` can be added via the Julia package manager (type `]`): `pkg> add COSMO`
+`COSMO` can be installed via the Julia package manager (type `]`): `pkg> add COSMO`
 
-## Citing
+## 🧪 Examples
+Optimization problems appear in many applications such as power flow modelling, finance, control and machine learning. We have collected a number of [example problems](https://oxfordcontrol.github.io/COSMO.jl/stable/examples/portfolio_optimisation/) in our documentation.
+
+
+## 🎓 Citing
 
 If you find COSMO useful in your project, we kindly request that you cite the following paper:
 ```
@@ -71,16 +75,16 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
 ```
 The article is available under Open Access [here](https://link.springer.com/article/10.1007/s10957-021-01896-x).
 
-## Contributing
+## 🤝 Contributing
 
 - Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
 - Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues). Please report any issues or bugs that you encounter.
 - As an open source project we are also interested in any projects and applications that use COSMO. Please let us know by opening a GitHub issue.
 
-## Python - Interface
+## 🐍 Python - Interface
 
 COSMO can also be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
 
-## Licence 🔍
+## 🔍 Licence 
 
 This project is licensed under the Apache License - see the [LICENSE.md](https://github.com/oxfordcontrol/COSMO.jl/blob/master/LICENSE.md) file for details.
