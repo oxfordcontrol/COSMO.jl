@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Relaxed Two-Way Partitioning Problem · COSMO.jl</title><script async src="https://www.googletagmanager.com/gtag/js?id=UA-134239283-1"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-134239283-1', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../../assets/warner.js"></script><link rel="canonical" href="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/two_way_partitioning/"/><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../assets/github_buttons.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="COSMO.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">COSMO.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../jump/">JuMP Interface</a></li><li><a class="tocitem" href="../../lin_solver/">Linear System Solver</a></li><li><a class="tocitem" href="../../acceleration/">Acceleration</a></li><li><a class="tocitem" href="../../literate/build/custom_cone/">Custom Cone Constraint</a></li><li><a class="tocitem" href="../../decomposition/">Chordal Decomposition</a></li><li><a class="tocitem" href="../../literate/build/portfolio_model_updates/">Model Updates</a></li><li><a class="tocitem" href="../../literate/build/arbitrary_precision/">Arbitrary Precision</a></li><li><a class="tocitem" href="../../performance/">Performance Tips</a></li></ul></li><li><a class="tocitem" href="../../method/">Method</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../closest_correlation_matrix/">Closest Correlation Matrix</a></li><li><a class="tocitem" href="../logistic_regression/">Logistic Regression</a></li><li><a class="tocitem" href="../lovasz_petersen/">Lovász Theta Function</a></li><li><a class="tocitem" href="../lp/">Linear Program</a></li><li><a class="tocitem" href="../maxcut/">Maximum Cut Problem</a></li><li><a class="tocitem" href="../portfolio_optimisation/">Portfolio Optimisation</a></li><li><a class="tocitem" href="../qp/">Quadratic Program</a></li><li><a class="tocitem" href="../sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ</a></li><li><a class="tocitem" href="../svm_primal/">Support Vector Machine</a></li><li class="is-active"><a class="tocitem" href>Relaxed Two-Way Partitioning Problem</a><ul class="internal"><li><a class="tocitem" href="#References"><span>References</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../citing/">Citing COSMO</a></li><li><a class="tocitem" href="../../contributing/">Contributing</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Relaxed Two-Way Partitioning Problem</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Relaxed Two-Way Partitioning Problem</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/examples/two_way_partitioning.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><p>The source files for all examples can be found in <a href="https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples/">/examples</a>.</p><h1 id="Relaxed-Two-Way-Partitioning-Problem"><a class="docs-heading-anchor" href="#Relaxed-Two-Way-Partitioning-Problem">Relaxed Two-Way Partitioning Problem</a><a id="Relaxed-Two-Way-Partitioning-Problem-1"></a><a class="docs-heading-anchor-permalink" href="#Relaxed-Two-Way-Partitioning-Problem" title="Permalink"></a></h1><p>We consider the (nonconvex) two-way partitioning problem from Boyd and Vandenberghe (2004), p.219 [1]:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp;  x^\top W x \\
+\text{subject to} &amp;  x_i^2 = 1, \quad i=1,\dots, n,
+\end{array}\]</p><p>with <span>$x \in \mathbf{R}^n$</span> and <span>$W \in \mathbf{S}^n$</span>. The problem can be interpreted as finding a partition of the points <span>$i = 1,\dots, n$</span> into two sets, where the cost of two points in the same set is <span>$W_{ij}$</span> and <span>$-W_{ij}$</span> otherwise. Brute forcing the solution <span>$x^*$</span> takes <span>$2^n$</span> attempts and becomes quickly intractable, e.g. for <span>$n \geq 30$</span>. However, a lower-bound for this problem can be computed by solving the convex dual of the problem:</p><p class="math-container">\[\begin{array}{ll} \text{maximize} &amp;  -\sum_i \nu \\
+\text{subject to} &amp;  W + \text{diag}(\nu) \in \mathbf{S}_+^n.
+\end{array}\]</p><p>Solving this problem with optimal objective <span>$d^*$</span> yields a lower bound as least as good as a lower bound based on the minimum eigenvalue <span>$d^* \geq \lambda_{\text{min}}(W)$</span>. Let&#39;s set up the problem for <span>$n = 20$</span> and with a specially structured (banded) <span>$W$</span>:</p><pre><code class="language-julia hljs">using LinearAlgebra, Random, COSMO, JuMP, IterTools
+
+rng = Random.MersenneTwister(212313);
+n = 20;
+
+W = diagm(0 =&gt; randn(rng, n));
+W += diagm(1 =&gt; randn(rng, n-1));
+W = Symmetric(W)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">20×20 LinearAlgebra.Symmetric{Float64, Matrix{Float64}}:
+ 1.6562   1.03129     0.0        …   0.0        0.0        0.0
+ 1.03129  1.38424     0.0970901      0.0        0.0        0.0
+ 0.0      0.0970901   0.648929       0.0        0.0        0.0
+ 0.0      0.0        -0.210802       0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0        …   0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0        …   0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0            0.0        0.0        0.0
+ 0.0      0.0         0.0        …   0.0        0.0        0.0
+ 0.0      0.0         0.0            0.500723   0.0        0.0
+ 0.0      0.0         0.0           -0.951779   0.518206   0.0
+ 0.0      0.0         0.0            0.518206  -0.136439  -0.175429
+ 0.0      0.0         0.0            0.0       -0.175429   0.781579</code></pre><p>As you can see, the matrix <span>$W$</span> imposes a structure on the LMI-constraint. Accordingly, COSMO will be able to use chordal decomposition to decompose the LMI constraint into multiple smaller constraints. This can make a significant difference in the performance of the algorithm for large <span>$n$</span>.</p><pre><code class="language-julia hljs">model = JuMP.Model(COSMO.Optimizer);
+@variable(model, ν[1:n]);
+@objective(model, Max, -ones(n)&#39; * ν )
+@constraint(model, Symmetric(W + diagm(ν) )  in JuMP.PSDCone());
+JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">------------------------------------------------------------------
+          COSMO v0.8.9 - A Quadratic Objective Conic Solver
+                         Michael Garstka
+                University of Oxford, 2017 - 2022
+------------------------------------------------------------------
+
+Problem:  x ∈ R^{38},
+          constraints: A ∈ R^{57x38} (56 nnz),
+          matrix size to factor: 95x95,
+          Floating-point precision: Float64
+Sets:     PsdConeTriangle of dim: 3 (2x2)
+          PsdConeTriangle of dim: 3 (2x2)
+          PsdConeTriangle of dim: 3 (2x2)
+          PsdConeTriangle of dim: 3 (2x2)
+          PsdConeTriangle of dim: 3 (2x2)
+          ... and 14 more
+Decomp:   Num of original PSD cones: 1
+          Num decomposable PSD cones: 1
+          Num PSD cones after decomposition: 19
+          Merge Strategy: CliqueGraphMerge
+Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
+          ϵ_prim_inf = 1.0e-04, ϵ_dual_inf = 1.0e-04,
+          ρ = 0.1, σ = 1e-06, α = 1.6,
+          max_iter = 5000,
+          scaling iter = 10 (on),
+          check termination every 25 iter,
+          check infeasibility every 40 iter,
+          KKT system solver: QDLDL
+Acc:      Anderson Type2{QRDecomp},
+          Memory size = 15, RestartedMemory,
+          Safeguarded: true, tol: 2.0
+Setup Time: 0.09ms
+
+Iter:	Objective:	Primal Res:	Dual Res:	Rho:
+1	-6.1146e+02	1.7072e+01	5.9998e-01	1.0000e-01
+25	 2.3958e+01	2.9812e-01	1.1267e-09	1.0000e-01
+50	 2.5146e+01	2.0059e-01	3.3875e-08	1.0000e-01
+75	 2.5430e+01	1.3731e-01	1.6859e-10	1.0000e-01
+100	 4.6635e+01	4.1935e-04	1.0000e+00	2.0235e+03
+125	 2.5430e+01	1.3731e-01	4.9535e-06	7.7002e-02
+150	 2.5430e+01	1.3731e-01	4.1990e-12	7.7002e-02
+175	 2.5749e+01	8.8781e-04	1.0000e+00	1.5929e+03
+200	 2.5697e+01	4.2068e-09	1.0000e+00	5.7766e-02
+225	 2.5430e+01	1.3731e-01	1.6800e-11	5.7766e-02
+250	 2.5773e+01	1.1828e-03	1.0000e+00	1.1956e+03
+275	 2.5933e+01	9.3413e-09	1.0000e+00	1.1956e+03
+300	 2.5430e+01	1.3731e-01	5.7127e-11	1.8017e-02
+325	 2.5430e+01	1.3731e-01	3.3307e-16	1.8017e-02
+350	 2.7406e+01	1.3745e-05	1.0000e+00	3.7327e+02
+375	 2.5429e+01	1.3731e-01	5.0149e-07	6.0167e-02
+400	 2.5430e+01	1.3731e-01	2.0717e+04	1.2465e+03
+425	 3.6045e+01	6.8600e-06	1.0000e+00	1.2465e+03
+450	 2.5430e+01	1.3731e-01	2.7724e-07	3.0784e-02
+475	 2.5430e+01	1.3731e-01	4.7296e-14	3.0784e-02
+500	 3.6956e+01	1.7243e-04	1.0000e+00	6.3774e+02
+525	 2.5431e+01	1.3731e-01	1.0869e-06	2.1186e-02
+550	 2.5430e+01	1.3731e-01	3.4306e-14	2.1186e-02
+575	 2.5697e+01	1.1600e-03	1.0000e+00	4.3890e+02
+600	 2.5624e+01	1.8021e-10	4.7280e-10	4.3890e+02
+
+------------------------------------------------------------------
+&gt;&gt;&gt; Results
+Status: Solved
+Iterations: 677 (incl. 77 safeguarding iter)
+Optimal objective: 25.62
+Runtime: 0.114s (113.56ms)</code></pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-julia hljs">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">-25.623709241260592</code></pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-julia hljs">function brute_force_optimisation(W, n)
+   opt_obj = Inf
+   opt_x = Inf * ones(n)
+
+   for xt in Iterators.product([[1.; -1.] for k = 1:n]...)
+      x = [i for i in xt]
+      obj_val = x&#39; * W * x
+      if obj_val &lt; opt_obj
+         opt_obj = obj_val
+         opt_x = x
+      end
+   end
+   return opt_obj, opt_x
+end
+opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(-25.623709242765823, [-1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0])</code></pre><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 4 May 2024 14:12">Saturday 4 May 2024</span>. Using Julia version 1.10.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
