@@ -21,4 +21,6 @@ A clear and concise description of any alternative solutions or features you've 
 **Additional context**
 Add any other context or screenshots about the feature request here.
 
+If you want to contribute a feature yourself, you can follow our guide [How-to-develop](https://oxfordcontrol.github.io/COSMO.jl/dev/contributing/#How-to-develop).
+
 Thanks for contributing to COSMO.
