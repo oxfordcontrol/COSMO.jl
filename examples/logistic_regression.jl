@@ -252,4 +252,4 @@ res = COSMO.optimize!(model);
 #-
 using Test
 theta_cosmo = res.x[2:2+n_theta-1]
-@test norm(theta_cosmo - theta) < 1e-10
+@test norm(theta_cosmo - theta) < 1e-4

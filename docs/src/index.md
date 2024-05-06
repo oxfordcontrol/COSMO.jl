@@ -21,13 +21,14 @@ with decision variables ``x \in \mathbb{R}^n``, ``s \in \mathbb{R}^m`` and data 
 * __Arbitrary precision types__: You can solve problems with any floating point precision.
 * __Open Source__: Our code is available on [GitHub](https://github.com/oxfordcontrol/COSMO.jl) and distributed under the Apache 2.0 Licence
 
-!!! Audience: User
 
-    COSMO has both a native interface and can also be interfaced through JuMP. If you are interested in using COSMO to solve your optimization problem, we recommend using JuMP to define your problem. Install this package as described below, take a look at our [Examples](@ref) and the [JuMP documentation](https://jump.dev/JuMP.jl/stable/) for inspiration.
+!!! tip
 
-!!! Audience: Researcher / Developer
+    **For users:** COSMO has both a native interface and can also be interfaced through JuMP. If you are interested in using COSMO to solve your optimization problem, we recommend using JuMP to define your problem. Install this package as described below, take a look at our [Examples](@ref) and the [JuMP documentation](https://jump.dev/JuMP.jl/stable/) for inspiration.
 
-    If you are interested in COSMO's algorithm, chordal decomposition or acceleration methods take a look at [Method](@ref), [Chordal Decomposition](@ref), and [Acceleration](@ref). If you want low-level control over the algorithm, it can make sense to start with COSMO's native interface.
+!!! tip
+
+    **For researchers and developers:** If you are interested in COSMO's algorithm, chordal decomposition or acceleration methods take a look at [Method](@ref), [Chordal Decomposition](@ref), and [Acceleration](@ref). If you want low-level control over the algorithm, it can make sense to start with COSMO's native interface. Moreover, take a look at [Contributing](@ref) if you want to propose changes.
 
     
 ## Installation

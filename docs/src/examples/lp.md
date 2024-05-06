@@ -1,6 +1,6 @@
 The source files for all examples can be found in [/examples](https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples/).
 ```@meta
-EditURL = "<unknown>/../examples/lp.jl"
+EditURL = "../../../examples/lp.jl"
 ```
 
 # Linear Program
@@ -16,22 +16,22 @@ We want to solve the following linear program with decision variable `x`:
 ```
 The problem can be solved with `COSMO` in the following way:
 
-```@example lp
+````@example lp
 using COSMO, LinearAlgebra, SparseArrays, Test
-```
+````
 
-```@example lp
+````@example lp
 ##Define problem data:
 c = [1; 2; 3; 4.];
 A = Matrix(1.0I, 4, 4);
 b = [10.; 10; 10; 10];
 n = 4;
 nothing #hide
-```
+````
 
 Create the constraints $Ax + b \in \mathcal{K}$:
 
-```@example lp
+````@example lp
 # Ax <= b
 c1 = COSMO.Constraint(-A, b, COSMO.Nonnegatives);
 # x >= 1
@@ -41,34 +41,34 @@ c3 = COSMO.Constraint(1, -5, COSMO.Nonnegatives, n, 2:2);
 # x1 + x3 >= 4
 c4 = COSMO.Constraint([1 0 1 0], -4, COSMO.Nonnegatives);
 nothing #hide
-```
+````
 
 Define matrix $P$ and vector $q$ for the objective function:
 
-```@example lp
+````@example lp
 P = spzeros(4, 4);
 q = c;
 nothing #hide
-```
+````
 
 Create, assemble and solve the model:
 
-```@example lp
+````@example lp
 settings = COSMO.Settings(verbose=true, eps_abs = 1e-4, eps_rel = 1e-5);
 model = COSMO.Model();
 assemble!(model, P, q, [c1; c2; c3; c4], settings = settings);
 res = COSMO.optimize!(model)
-```
+````
 
 Compare the result to the known solution:
 
-```@example lp
+````@example lp
 @test isapprox(res.x[1:4], [3; 5; 1; 1], atol=1e-2, norm = (x -> norm(x, Inf)))
-```
+````
 
-```@example lp
+````@example lp
 @test isapprox(res.obj_val, 20.0, atol=1e-2)
-```
+````
 
 ---
 
