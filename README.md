@@ -53,7 +53,7 @@ __For more information take a look at the COSMO.jl Documentation ([stable](https
 `COSMO` can be installed via the Julia package manager (type `]`): `pkg> add COSMO`
 
 ## 🧪 Examples
-Optimization problems appear in many applications such as power flow modelling, finance, control and machine learning. We have collected a number of [example problems](https://oxfordcontrol.github.io/COSMO.jl/stable/examples/portfolio_optimisation/) in our documentation.
+Optimization problems appear in many applications such as power flow modelling, finance, control, and machine learning. We have collected a number of [example problems](https://oxfordcontrol.github.io/COSMO.jl/stable/examples/portfolio_optimisation/) in our documentation.
 
 
 ## 🎓 Citing
@@ -76,10 +76,10 @@ If you find COSMO useful in your project, we kindly request that you cite the fo
 The article is available under Open Access [here](https://link.springer.com/article/10.1007/s10957-021-01896-x).
 
 ## 🤝 Contributing
-
-- Contributions are always welcome. Our style guide can be found [here](https://github.com/oxfordcontrol/COSMO.jl/wiki/Code-Style-Guide).
-- Current issues, tasks and future ideas are listed in [Issues](https://github.com/oxfordcontrol/ossdp/issues). Please report any issues or bugs that you encounter.
-- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know by opening a GitHub issue.
+This package is currently in maintenance mode. We are trying to keep it compatible with new releases of JuMP/MOI. Contributions are always welcome. Enhancement ideas are tagged as such in the [Issues](https://github.com/oxfordcontrol/ossdp/issues) section.
+- How to get started with developing and testing this package is described in the documentation.
+- Please report any issues or bugs that you encounter.
+- As an open source project we are also interested in any projects and applications that use COSMO. Please let us know by opening a GitHub issue or [via email](https://migarstka.github.io/).
 
 ## 🐍 Python - Interface
 
