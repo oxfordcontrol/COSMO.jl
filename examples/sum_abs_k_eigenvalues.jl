@@ -40,7 +40,7 @@ k_λ_abs = sum(sort(abs.(eigen(A).values), rev = true)[1:k])
 #
 # Alternatively, we can solve the dual problem:
 #-
-model = JuMP.Model(with_optimizer(COSMO.Optimizer, verbose=true));
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, "verbose" => true));
 @variable(model, V[1:n, 1:n], PSD);
 @variable(model, U[1:n, 1:n], PSD);
 @variable(model, z);
