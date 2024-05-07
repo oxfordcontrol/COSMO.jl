@@ -14,11 +14,11 @@
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> •
-  <a href="#installation">Installation</a> •
-  <a href="NEWS.md">News</a> •
-  <a href="#citing-">Citing</a> •
-  <a href="#contributing">Contributing</a>
+  <a href="# -features">Features</a> •
+  <a href="# -installation">Installation</a> •
+  <a href="CHANGELOG.md">Changelog</a> •
+  <a href="# -citing-">Citing</a> •
+  <a href="# -contributing">Contributing</a>
 </p>
 
 This is a Julia implementation of the _Conic operator splitting method_ (COSMO) solver. It can solve large convex conic optimization problems of the following form:
@@ -37,7 +37,7 @@ __For more information take a look at the COSMO.jl Documentation ([stable](https
 * __Quad SDPs__: Positive semidefinite programs with quadratic objective functions are natively supported
 * __Safeguarded acceleration__: robust and faster convergence to higher precision using [COSMOAccelerators](https://github.com/oxfordcontrol/COSMOAccelerators.jl)
 * __Infeasibility detection__: Infeasible problems are detected without a homogeneous self-dual embedding of the problem
-* __JuMP / Convex.jl support__: We provide an interface to MathOptInterface (MOI), which allows you to describe your problem in [JuMP](https://github.com/JuliaOpt/JuMP.jl) and [Convex.jl](https://github.com/JuliaOpt/Convex.jl).
+* __JuMP / Convex.jl support__: We provide an interface to MathOptInterface (MOI), which allows you to describe your problem in [JuMP](https://github.com/jump-dev/JuMP.jl) and [Convex.jl](https://github.com/jump-dev/Convex.jl).
 * __Warm starting__: COSMO supports warm starting of the decision variables
 * __Custom sets and linear solver__: Customize COSMO's components by defining your own convex constraint sets and by choosing from a number of direct and indirect linear system solvers, for example, [QDLDL](https://github.com/oxfordcontrol/qdldl), [Pardiso](https://github.com/JuliaSparse/Pardiso.jl), [Conjugate Gradient](https://juliamath.github.io/IterativeSolvers.jl/dev/) and [MINRES](https://juliamath.github.io/IterativeSolvers.jl/dev/)
 * __Arbitrary precision types__: You can solve problems with any floating point precision.
