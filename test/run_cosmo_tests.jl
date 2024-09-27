@@ -4,7 +4,7 @@ rng = Random.MersenneTwister(12345)
 
 
 
-include("./UnitTests/COSMOTestUtils.jl")
+#include("./UnitTests/COSMOTestUtils.jl")
 # Define the types to run the unit tests with
 UnitTestFloats = [Float32; Float64; BigFloat]
 

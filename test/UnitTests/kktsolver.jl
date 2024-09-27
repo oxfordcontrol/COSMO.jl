@@ -1,5 +1,5 @@
 using COSMO, Test, LinearAlgebra, SparseArrays, Random, QDLDL, Pkg
-include("COSMOTestUtils.jl")
+#include("COSMOTestUtils.jl")
 
 # check if optional dependencies are available
 test_iterative_solvers = pkg_installed("IterativeSolvers", "42fd0dbc-a981-5370-80f2-aaf504508153") && pkg_installed("LinearMaps", "7a12625a-238d-50fd-b39a-03d52299707e")
