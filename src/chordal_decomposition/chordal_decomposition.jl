@@ -75,7 +75,8 @@ function _analyse_sparsity_pattern(ci::ChordalInfo{T}, csp::Array{Int, 1}, sets:
 end
 
 DenseEquivalent(C::COSMO.PsdCone{T}, dim::Int) where {T <: AbstractFloat} = COSMO.DensePsdCone{T}(dim)
-DenseEquivalent(C::COSMO.PsdConeTriangle{T}, dim::Int) where {T <: AbstractFloat} = COSMO.DensePsdConeTriangle{T}(dim)
+DenseEquivalent(C::COSMO.PsdConeTriangle{T, T}, dim::Int) where {T <: AbstractFloat} = COSMO.DensePsdConeTriangle{T, T}(dim)
+DenseEquivalent(C::COSMO.PsdConeTriangle{T, Complex{T}}, dim::Int) where {T <: AbstractFloat} = COSMO.DensePsdConeTriangle{T, Complex{T}}(dim)
 
 function nz_rows(a::SparseMatrixCSC{T}, ind::UnitRange{Int}, DROP_ZEROS_FLAG::Bool) where {T <: AbstractFloat}
   DROP_ZEROS_FLAG && dropzeros!(a)

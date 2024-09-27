@@ -93,7 +93,17 @@ function Constraint{T}(
 	# this constructor doesnt work with cones that need special arguments like the power cone
 	set_type <: ArgumentCones && error("You can't create a constraint by passing the convex set as a type, if your convex set is a $(set_type). Please pass an object.")
 	# call the appropriate set constructor
-	convex_set = set_type{T}(size(A, 1))
+    n = size(A, 1)
+    # we can deduce whether the PsdCone must be real or complex from the dimension
+	if set_type <: PsdConeTriangles
+	    if n == 1 || isqrt(n)^2 != n
+            convex_set = set_type{T, T}(n)
+        else
+            convex_set = set_type{T, Complex{T}}(n)
+        end
+    else
+        convex_set = set_type{T}(n)
+    end
 	Constraint{T}(A, b, convex_set, args...)
 end
 

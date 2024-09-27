@@ -2,6 +2,8 @@ using UnsafeArrays
 import Base: showarg, eltype
 const DSYEVR_ = (BLAS.@blasfunc(dsyevr_),Base.liblapack_name)
 const SSYEVR_ = (BLAS.@blasfunc(ssyevr_),Base.liblapack_name)
+const ZHEEVR_ = (BLAS.@blasfunc(zheevr_),Base.liblapack_name)
+const CHEEVR_ = (BLAS.@blasfunc(cheevr_),Base.liblapack_name)
 
 # ----------------------------------------------------
 # Zero cone
@@ -124,33 +126,37 @@ end
 # ----------------------------------------------------
 
 #a type to maintain internal workspace data for the BLAS syevr function
-mutable struct PsdBlasWorkspace{T}
+mutable struct PsdBlasWorkspace{T, R}
     m::Base.RefValue{BLAS.BlasInt}
     w::Vector{T}
-    Z::Matrix{T}
+    Z::Matrix{R}
     isuppz::Vector{BLAS.BlasInt}
-    work::Vector{T}
+    work::Vector{R}
     lwork::BLAS.BlasInt
+    rwork::Vector{T}
+    lrwork::BLAS.BlasInt
     iwork::Vector{BLAS.BlasInt}
     liwork::BLAS.BlasInt
     info::Base.RefValue{BLAS.BlasInt}
 
-    function PsdBlasWorkspace{T}(n::Integer) where{T}
+    function PsdBlasWorkspace{T, R}(n::Integer) where {T <: Real, R <: RealOrComplex{T}}
 
         BlasInt = BLAS.BlasInt
 
         #workspace data for BLAS
         m      = Ref{BlasInt}()
         w      = Vector{T}(undef,n)
-        Z      = Matrix{T}(undef,n,n)
+        Z      = Matrix{R}(undef,n,n)
         isuppz = Vector{BlasInt}(undef, 2*n)
-        work   = Vector{T}(undef, 1)
+        work   = Vector{R}(undef, 1)
         lwork  = BlasInt(-1)
+        rwork  = Vector{T}(undef, 1)
+        lrwork = BlasInt(-1)
         iwork  = Vector{BlasInt}(undef, 1)
         liwork = BlasInt(-1)
         info   = Ref{BlasInt}()
 
-        new(m,w,Z,isuppz,work,lwork,iwork,liwork,info)
+        new(m,w,Z,isuppz,work,lwork,rwork,lrwork,iwork,liwork,info)
     end
 end
 
@@ -158,9 +164,8 @@ for (syevr, elty) in
     ((DSYEVR_,:Float64),
      (SSYEVR_,:Float32))
    @eval begin
-        function _syevr!(A::AbstractMatrix{$elty}, ws::PsdBlasWorkspace{$elty})
+        function _syevr!(A::AbstractMatrix{$elty}, ws::PsdBlasWorkspace{$elty,$elty})
 
-            #Float64 only support for now since we call dsyevr_ directly
             n       = size(A,1)
             ldz     = n
             lda     = stride(A,2)
@@ -183,7 +188,35 @@ for (syevr, elty) in
     end #@eval
 end #for
 
-function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
+for (syevr, elty, relty) in
+    ((ZHEEVR_,:ComplexF64,:Float64),
+     (CHEEVR_,:ComplexF32,:Float32))
+   @eval begin
+        function _syevr!(A::AbstractMatrix{$elty}, ws::PsdBlasWorkspace{$relty,$elty})
+
+            n       = size(A,1)
+            ldz     = n
+            lda     = stride(A,2)
+
+                ccall($syevr, Cvoid,
+                (Ref{UInt8}, Ref{UInt8}, Ref{UInt8}, Ref{BLAS.BlasInt},
+                Ptr{$elty}, Ref{BLAS.BlasInt}, Ref{$elty}, Ref{$elty},
+                Ref{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ref{$elty}, Ptr{BLAS.BlasInt},
+                Ptr{$relty}, Ptr{$elty}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt},
+                Ptr{$elty}, Ref{BLAS.BlasInt}, Ptr{$relty}, Ref{BLAS.BlasInt},
+                Ptr{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ptr{BLAS.BlasInt}),
+                'V', 'A', 'U', n,
+                A, max(1,lda), 0.0, 0.0,
+                0, 0, -1.0, ws.m,
+                ws.w, ws.Z, ldz, ws.isuppz,
+                ws.work, ws.lwork, ws.rwork, ws.lrwork,
+                ws.iwork, ws.liwork, ws.info)
+                LAPACK.chklapackerror(ws.info[])
+        end
+    end #@eval
+end #for
+
+function _project!(X::AbstractMatrix{R}, ws::PsdBlasWorkspace{T,R}) where {T <: Real, R <: RealOrComplex{T}}
 
     #computes the upper triangular part of the projection of X onto the PSD cone
 
@@ -195,17 +228,22 @@ function _project!(X::AbstractMatrix, ws::PsdBlasWorkspace{T}) where{T}
          resize!(ws.work, ws.lwork)
          ws.liwork = ws.iwork[1]
          resize!(ws.iwork, ws.liwork)
+         if R <: Complex
+            ws.lrwork = BLAS.BlasInt(ws.rwork[1])
+            resize!(ws.rwork, ws.lrwork)
+        end
      end
 
-	 # below LAPACK function does the following: w,Z  = eigen!(Symmetric(X))
+	 # below LAPACK function does the following: w,Z  = eigen!(Hermitian(X))
 	 	_syevr!(X, ws)
 		# compute upper triangle of: X .= Z*Diagonal(max.(w, 0.0))*Z'
 		rank_k_update!(X, ws)
 end
 
-function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where {T}
+function rank_k_update!(X::AbstractMatrix{R}, ws::PsdBlasWorkspace{T,R}) where {T <: Real, R <: RealOrComplex{T}}
+  _syrk! = R <: Real ? BLAS.syrk! : BLAS.herk!
   n = size(X, 1)
-  @. X = zero(T)
+  @. X = zero(R)
   nnz_λ = 0
   for j = 1:length(ws.w)
     λ = ws.w[j]
@@ -219,7 +257,7 @@ function rank_k_update!(X::AbstractMatrix, ws::COSMO.PsdBlasWorkspace{T}) where 
 
   if nnz_λ > 0
     V = uview(ws.Z, :, (n - nnz_λ + 1):n)
-    BLAS.syrk!('U', 'N', one(T), V, one(T), X)
+    _syrk!('U', 'N', true, V, true, X)
   end
   return nothing
 end
@@ -233,14 +271,14 @@ Accordingly  ``X \\in \\mathbb{S}_+ \\Rightarrow x \\in \\mathcal{S}_+^{dim}``, 
 struct PsdCone{T} <: AbstractConvexCone{T}
 	dim::Int
 	sqrt_dim::Int
-  work::PsdBlasWorkspace{T}
+  work::PsdBlasWorkspace{T, T}
   tree_ind::Int  # tree number that this cone belongs to
   clique_ind::Int
 	function PsdCone{T}(dim::Int, tree_ind::Int, clique_ind::Int) where{T}
 		dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
 		iroot = isqrt(dim)
 		iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
-		new(dim, iroot, PsdBlasWorkspace{T}(iroot), tree_ind, clique_ind)
+		new(dim, iroot, PsdBlasWorkspace{T, T}(iroot), tree_ind, clique_ind)
 	end
 end
 PsdCone(dim) = PsdCone{DefaultFloat}(dim)
@@ -250,12 +288,12 @@ PsdCone{T}(dim::Int) where{T} = PsdCone{T}(dim, 0, 0)
 struct DensePsdCone{T} <: AbstractConvexCone{T}
   dim::Int
   sqrt_dim::Int
-  work::PsdBlasWorkspace{T}
+  work::PsdBlasWorkspace{T, T}
   function DensePsdCone{T}(dim::Int) where{T}
     dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
     iroot = isqrt(dim)
     iroot^2 == dim || throw(DomainError(dim, "dimension must be a square"))
-    new(dim, iroot, PsdBlasWorkspace{T}(iroot))
+    new(dim, iroot, PsdBlasWorkspace{T, T}(iroot))
   end
 end
 DensePsdCone(dim) = DensePsdCone{DefaultFloat}(dim)
@@ -298,8 +336,6 @@ end
 in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol::T) where{T} = in_pol_recc!(copy(x), cone, tol)
 
 
-
-
 # ----------------------------------------------------
 # Positive Semidefinite Cone (Triangle)
 # ----------------------------------------------------
@@ -307,8 +343,8 @@ in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol:
 """
     PsdConeTriangle(dim)
 
-Creates the cone of symmetric positive semidefinite matrices. The entries of the upper-triangular part of matrix `X` are stored in the vector `x` of dimension `dim`.
-A ``r \\times r`` matrix has ``r(r+1)/2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r(r+1)/2``.
+Creates the cone of real or complex Hermitian positive semidefinite matrices. The entries of the upper-triangular part of matrix `X` are stored in the vector `x` of dimension `dim`.
+A ``r \\times r`` real matrix has ``r(r+1)/2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r(r+1)/2``. A ``r \\times r`` complex matrix has ``r^2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r^2``.
 
 
 ### Examples
@@ -319,103 +355,134 @@ The matrix
 is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corresponding constraint  `PsdConeTriangle(6)`.
 
 """
-mutable struct PsdConeTriangle{T} <: AbstractConvexCone{T}
+mutable struct PsdConeTriangle{T <: AbstractFloat, R <: RealOrComplex{T}} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix
-    X::Array{T,2}
-    work::PsdBlasWorkspace{T}
+    X::Array{R,2}
+    work::PsdBlasWorkspace{T, R}
     tree_ind::Int # tree number that this cone belongs to
     clique_ind::Int
 
-    function PsdConeTriangle{T}(dim::Int, tree_ind::Int, clique_ind::Int) where{T}
+    function PsdConeTriangle{T, R}(dim::Int, tree_ind::Int, clique_ind::Int) where {T <: AbstractFloat, R <: RealOrComplex{T}}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
-        side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-        new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension), tree_ind, clique_ind)
-
+        side_dimension = R <: Complex ? isqrt(dim) : div(isqrt(1 + 8dim) - 1, 2)
+        new(dim, side_dimension, zeros(R, side_dimension, side_dimension), PsdBlasWorkspace{T, R}(side_dimension), tree_ind, clique_ind)
     end
 end
+
 PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
-PsdConeTriangle{T}(dim::Int) where{T} = PsdConeTriangle{T}(dim, 0, 0)
+PsdConeTriangle{T}(dim) where {T} = PsdConeTriangle{T, T}(dim)
+PsdConeTriangle{T, R}(dim::Int) where {T <: AbstractFloat, R <: RealOrComplex{T}} = PsdConeTriangle{T, R}(dim, 0, 0)
 
-DecomposableCones{T} = Union{PsdCone{T}, PsdConeTriangle{T}}
+DecomposableCones{T} = Union{PsdCone{T}, PsdConeTriangle{T, T}, PsdConeTriangle{T, Complex{T}}}
 
-mutable struct DensePsdConeTriangle{T} <: AbstractConvexCone{T}
+mutable struct DensePsdConeTriangle{T <: AbstractFloat, R <: RealOrComplex{T}} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
     sqrt_dim::Int # side length of matrix
-    X::Array{T,2}
-    work::PsdBlasWorkspace{T}
+    X::Array{R,2}
+    work::PsdBlasWorkspace{T, R}
 
-    function DensePsdConeTriangle{T}(dim::Int) where{T}
+    function DensePsdConeTriangle{T, R}(dim::Int) where {T <: AbstractFloat, R <: RealOrComplex{T}}
         dim >= 0       || throw(DomainError(dim, "dimension must be nonnegative"))
-        side_dimension = Int(sqrt(0.25 + 2 * dim) - 0.5);
-        new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T}(side_dimension))
+        side_dimension = R <: Complex ? isqrt(dim) : div(isqrt(1 + 8dim) - 1, 2)
+        new(dim, side_dimension, zeros(side_dimension, side_dimension), PsdBlasWorkspace{T, R}(side_dimension))
     end
 end
-DensePsdConeTriangle(dim) = DensePsdConeTriangle{DefaultFloat}(dim)
+#DensePsdConeTriangle(dim) = DensePsdConeTriangle{DefaultFloat}(dim)
+#DensePsdConeTriangle{T}(dim) where {T} = DensePsdConeTriangle{T, T}(dim)
+
+# Union for all triangle PSD cones that might be complex
+const PsdConeTriangles = Union{PsdConeTriangle, DensePsdConeTriangle}
 
 
-
-function project!(x::AbstractArray, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where{T}
+function project!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T, R}, DensePsdConeTriangle{T, R}}) where {T <: AbstractFloat, R <: RealOrComplex{T}}
     # handle 1D case
     if length(x) == 1
         x .= max(x[1],zero(T))
     else
-        populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
-        _project!(cone.X,cone.work)
-        extract_upper_triangle!(cone.X, x, sqrt(2) )
+        populate_upper_triangle!(cone.X, x, 1 / sqrt(T(2)))
+        _project!(cone.X, cone.work)
+        extract_upper_triangle!(cone.X, x, sqrt(T(2)) )
     end
     return nothing
 end
 
 # Notice that we are using a (faster) in-place version that modifies the input
-function in_dual!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
-    n = cone.sqrt_dim
-    populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
+function in_dual!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T, R}, DensePsdConeTriangle{T, R}}, tol::T) where {T <: AbstractFloat, R <: RealOrComplex{T}}
+    populate_upper_triangle!(cone.X, x, 1 / sqrt(T(2)))
     return COSMO.is_pos_def!(cone.X, tol)
 end
-in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where {T} = in_dual!(x, cone, tol)
+in_dual(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T, R}, DensePsdConeTriangle{T, R}}, tol::T) where {T <: AbstractFloat, R <: RealOrComplex{T}} = in_dual!(x, cone, tol)
 
-function in_pol_recc!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where{T}
-    n = cone.sqrt_dim
-    populate_upper_triangle!(cone.X, x, 1 / sqrt(2))
-    Xs = Symmetric(cone.X)
+function in_pol_recc!(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T, R}, DensePsdConeTriangle{T, R}}, tol::T) where {T <: AbstractFloat, R <: RealOrComplex{T}}
+    populate_upper_triangle!(cone.X, x, 1 / sqrt(T(2)))
     return COSMO.is_neg_def!(cone.X, tol)
 end
-in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}, tol::T) where {T} = in_pol_recc!(x, cone, tol)
+in_pol_recc(x::AbstractVector{T}, cone::Union{PsdConeTriangle{T, R}, DensePsdConeTriangle{T, R}}, tol::T) where {T <: AbstractFloat, R <: RealOrComplex{T}} = in_pol_recc!(x, cone, tol)
 
 
-function allocate_memory!(cone::Union{PsdConeTriangle{T}, DensePsdConeTriangle{T}}) where {T}
-  cone.X = zeros(cone.sqrt_dim, cone.sqrt_dim)
+function allocate_memory!(cone::Union{PsdConeTriangle{T, R}, DensePsdConeTriangle{T, R}}) where {T <: AbstractFloat, R <: RealOrComplex{T}}
+  cone.X = zeros(R, cone.sqrt_dim, cone.sqrt_dim)
 end
 
-function populate_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
+function populate_upper_triangle!(A::AbstractMatrix{T}, x::AbstractVector{T}, scaling_factor::T) where {T <: AbstractFloat}
  	k = 0
   	for j in 1:size(A, 2)
-     	for i in 1:j
-        	k += 1
-        	if i != j
-        		A[i, j] = scaling_factor * x[k]
-        	else
-        		A[i, j] = x[k]
-        	end
-      	end
-  	end
-  	nothing
+        for i in 1:j-1
+            k += 1
+            A[i, j] = scaling_factor * x[k]
+        end
+        k += 1
+        A[j, j] = x[k]
+    end
 end
 
-function extract_upper_triangle!(A::AbstractMatrix, x::AbstractVector, scaling_factor::Float64)
-	k = 0
-  	for j in 1:size(A, 2)
-     	for i in 1:j
-        	k += 1
-        	if i != j
-        		x[k] = scaling_factor * A[i, j]
-        	else
-        		x[k] = A[i, j]
-        	end
-      	end
-  	end
-	nothing
+function populate_upper_triangle!(A::AbstractMatrix{Complex{T}}, x::AbstractVector{T}, scaling_factor::T) where {T <: AbstractFloat}
+    k = 0
+    for j in 1:size(A, 2)
+        for i in 1:j-1
+            k += 1
+            A[i, j] = scaling_factor * x[k]
+        end
+        k += 1
+        A[j, j] = x[k]
+    end
+    for j in 1:size(A, 2)
+        for i in 1:j-1
+            k += 1
+            A[i, j] += im * scaling_factor * x[k]
+        end
+    end
+end
+
+function extract_upper_triangle!(A::AbstractMatrix{T}, x::AbstractVector{T}, scaling_factor::T) where {T <: AbstractFloat}
+    k = 0
+    for j in 1:size(A, 2)
+        for i in 1:j-1
+            k += 1
+            x[k] = scaling_factor * A[i, j]
+        end
+        k += 1
+        x[k] = A[j, j]
+    end
+end
+
+function extract_upper_triangle!(A::AbstractMatrix{Complex{T}}, x::AbstractVector{T}, scaling_factor::T) where {T <: AbstractFloat}
+    k = 0
+    for j in 1:size(A, 2)
+        for i in 1:j-1
+            k += 1
+            x[k] = scaling_factor * real(A[i, j])
+        end
+        k += 1
+        x[k] = A[j, j]
+    end
+    for j in 1:size(A, 2)
+        for i in 1:j-1
+            k += 1
+            x[k] = scaling_factor * imag(A[i, j])
+        end
+    end
 end
 
 """
