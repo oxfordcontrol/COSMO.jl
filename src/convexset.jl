@@ -374,7 +374,7 @@ PsdConeTriangle(dim) = PsdConeTriangle{DefaultFloat}(dim)
 PsdConeTriangle{T}(dim) where {T} = PsdConeTriangle{T, T}(dim)
 PsdConeTriangle{T, R}(dim::Int) where {T <: AbstractFloat, R <: RealOrComplex{T}} = PsdConeTriangle{T, R}(dim, 0, 0)
 
-DecomposableCones{T} = Union{PsdCone{T}, PsdConeTriangle{T, T}, PsdConeTriangle{T, Complex{T}}}
+DecomposableCones{T} = Union{PsdCone{T}, PsdConeTriangle{T, T}}
 
 mutable struct DensePsdConeTriangle{T <: AbstractFloat, R <: RealOrComplex{T}} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
