@@ -12,6 +12,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
 
   include("./UnitTests/sets.jl")
   include("./UnitTests/nuclear_norm_minimization.jl")
+  include("./UnitTests/least_eigenvalue.jl")
   include("./UnitTests/DecompositionTests/psd_completion.jl")
   include("./UnitTests/DecompositionTests/psd_completion_and_merging.jl")
   include("./UnitTests/DecompositionTests/clique_merging_example.jl")
