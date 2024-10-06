@@ -31,6 +31,8 @@ function mineig_raw(c::AbstractMatrix{R}) where {R}
 end
 
 @testset "Complex PSD Cone" begin
-    X = Hermitian(randn(ComplexF64, 3, 3))
-    @test mineig_raw(X) ≈ minimum(eigvals(X)) atol = 1e-4 rtol = 1e-4
+    X = Hermitian(ComplexF64.([ 1  im 0;
+                               -im 1 im;
+                                0 -im 1]))
+    @test mineig_raw(X) ≈ 1-sqrt(2) atol = 1e-4 rtol = 1e-4
 end
