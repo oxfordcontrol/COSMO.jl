@@ -341,19 +341,23 @@ in_pol_recc(x::AbstractVector{T}, cone::Union{PsdCone{T}, DensePsdCone{T}}, tol:
 # ----------------------------------------------------
 # Psd cone given by upper-triangular entries of matrix
 """
-    PsdConeTriangle(dim)
+    PsdConeTriangle{T, R}(dim) where {T <: Real, R <: Union{T, Complex{T}}}
 
-Creates the cone of real or complex Hermitian positive semidefinite matrices. The entries of the upper-triangular part of matrix `X` are stored in the vector `x` of dimension `dim`.
-A ``r \\times r`` real matrix has ``r(r+1)/2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r(r+1)/2``. A ``r \\times r`` complex matrix has ``r^2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r^2``.
+Creates the cone of real (when `R == T`) or complex (when `R == Complex{T}`) Hermitian positive semidefinite matrices. The entries of the upper-triangular part of matrix `X` are stored in the vector `x` of dimension `dim`. A ``r \\times r`` real matrix has ``r(r+1)/2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r(r+1)/2``. A ``r \\times r`` complex matrix has ``r^2`` upper triangular elements and results in a vector of ``\\mathrm{dim} = r^2``.
 
 
 ### Examples
-The matrix
+The real matrix
 ```math
 \\begin{bmatrix} x_1 & x_2 & x_4\\\\ x_2 & x_3 & x_5\\\\ x_4 & x_5 & x_6 \\end{bmatrix}
 ```
-is transformed to the vector ``[x_1, x_2, x_3, x_4, x_5, x_6]^\\top `` with corresponding constraint  `PsdConeTriangle(6)`.
+is transformed to the vector ``[x_1, \\sqrt{2}x_2, x_3, \\sqrt{2}x_4, \\sqrt{2}x_5, x_6]^\\top `` with corresponding constraint  `PsdConeTriangle{T, T}(6)`.
 
+The complex matrix
+```math
+\\begin{bmatrix} x_1 & x_2 & x_4\\\\ x_2 & x_3 & x_5\\\\ x_4 & x_5 & x_6 \\end{bmatrix}
+```
+is transformed to the vector ``[x_1, \\sqrt{2}\\operatorname{re}(x_2), x_3, \\sqrt{2}\\operatorname{re}(x_4), \\sqrt{2}\\operatorname{re}(x_5), x_6, \\sqrt{2}\\operatorname{im}(x_2), \\sqrt{2}\\operatorname{im}(x_4), \\sqrt{2}\\operatorname{im}(x_5)]^\\top `` with corresponding constraint  `PsdConeTriangle{T, Complex{T}}(9)`.
 """
 mutable struct PsdConeTriangle{T <: AbstractFloat, R <: RealOrComplex{T}} <: AbstractConvexCone{T}
     dim::Int #dimension of vector
