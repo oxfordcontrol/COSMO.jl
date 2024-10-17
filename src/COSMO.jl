@@ -10,6 +10,7 @@ using Reexport
 
 export assemble!, warm_start!, empty_model!, update!
 
+const RealOrComplex{T <: Real} = Union{T, Complex{T}}
 const DefaultFloat = Float64
 const DefaultInt   = LinearAlgebra.BlasInt
 

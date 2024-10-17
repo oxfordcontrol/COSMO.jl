@@ -8,7 +8,6 @@ end
 
 
 # generate a random pos def matrix with eigenvalues between 0.1 and 2
-generate_pos_def_matrix(rng::MersenneTwister, n::Integer, aMin::Float64 = 0.1, aMax::Float64 = 2.) = generate_pos_def_matrix(rng, n, aMin, aMax, MT = Float64)
 function generate_pos_def_matrix(rng::MersenneTwister, n::Integer, aMin::Real = 0.1, aMax::Real = 2.; MT::Type{<:AbstractFloat} = Float64 )
 	X = rand(rng, MT, n, n)
 	# any real square matrix can be QP decomposed into a orthogonal matrix and an uppertriangular matrix R

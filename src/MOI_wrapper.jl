@@ -20,7 +20,8 @@ const IntervalConvertible = Union{GreaterThan, Interval}
 const Zeros = MOI.Zeros
 const SOC = MOI.SecondOrderCone
 const PSDT = MOI.Scaled{MOI.PositiveSemidefiniteConeTriangle}
-const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, SOC, PSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
+const ComplexPSDT = MOI.Scaled{MOI.HermitianPositiveSemidefiniteConeTriangle}
+const SupportedVectorSets = Union{Zeros, MOI.Nonnegatives, SOC, PSDT, ComplexPSDT, MOI.ExponentialCone, MOI.DualExponentialCone, MOI.PowerCone, MOI.DualPowerCone}
 const AggregatedSets = Union{Zeros, MOI.Nonnegatives, MOI.GreaterThan}
 aggregate_equivalent(::Type{<: MOI.Zeros}) = COSMO.ZeroSet
 aggregate_equivalent(::Type{<: Union{MOI.GreaterThan, MOI.Nonnegatives}}) = COSMO.Nonnegatives
@@ -449,7 +450,12 @@ end
 
 
 function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::PSDT) where {T <: AbstractFloat}
-    push!(cs, COSMO.PsdConeTriangle{T}(length(rows)))
+    push!(cs, COSMO.PsdConeTriangle{T, T}(length(rows)))
+    nothing
+end
+
+function processSet!(b::Vector{T}, rows::UnitRange{Int}, cs, s::ComplexPSDT) where {T <: AbstractFloat}
+    push!(cs, COSMO.PsdConeTriangle{T, Complex{T}}(length(rows)))
     nothing
 end
 

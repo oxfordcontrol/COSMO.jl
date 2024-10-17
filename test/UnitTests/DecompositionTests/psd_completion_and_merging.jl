@@ -5,7 +5,7 @@
 # a graph based merge strategy is used
 
 using COSMO, Random, Test, LinearAlgebra, SparseArrays
-include("./../COSMOTestUtils.jl")
+#include("./../COSMOTestUtils.jl")
 rng = Random.MersenneTwister(375)
 
 

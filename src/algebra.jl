@@ -222,23 +222,23 @@ function symmetrize_full!(A::AbstractMatrix{T}) where {T <: AbstractFloat}
 	nothing
 end
 
-# this function assumes real symmetric X and only considers the upper triangular part
-function is_pos_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+# this function assumes real or complex Hermitian X and only considers the upper triangular part
+function is_pos_def!(X::AbstractMatrix{<:RealOrComplex{T}}, tol::T=zero(T)) where {T}
 	# See https://math.stackexchange.com/a/13311
 	@inbounds for i = 1:size(X, 1)
 		X[i, i] += tol
 	end
-	F = cholesky!(Symmetric(X), check = false)
+	F = cholesky!(Hermitian(X), check = false)
 	return issuccess(F)
 end
 
-function is_neg_def!(X::AbstractMatrix{T}, tol::T=zero(T)) where T
+function is_neg_def!(X::AbstractMatrix{<:RealOrComplex{T}}, tol::T=zero(T)) where {T}
 	@. X *= -one(T)
 	return is_pos_def!(X, tol)
 end
 
-is_pos_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(copy(X), tol)
-is_neg_def(X::AbstractMatrix{T}, tol::T=zero(T)) where T = is_pos_def!(-X, tol)
+is_pos_def(X::AbstractMatrix{<:RealOrComplex{T}}, tol::T=zero(T)) where {T} = is_pos_def!(copy(X), tol)
+is_neg_def(X::AbstractMatrix{<:RealOrComplex{T}}, tol::T=zero(T)) where {T} = is_pos_def!(-X, tol)
 
 
 "Round x to the closest multiple of N."

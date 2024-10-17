@@ -4,7 +4,7 @@ rng = Random.MersenneTwister(12345)
 
 
 
-include("./UnitTests/COSMOTestUtils.jl")
+#include("./UnitTests/COSMOTestUtils.jl")
 # Define the types to run the unit tests with
 UnitTestFloats = [Float32; Float64; BigFloat]
 
@@ -12,6 +12,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
 
   include("./UnitTests/sets.jl")
   include("./UnitTests/nuclear_norm_minimization.jl")
+  include("./UnitTests/least_eigenvalue.jl")
   include("./UnitTests/DecompositionTests/psd_completion.jl")
   include("./UnitTests/DecompositionTests/psd_completion_and_merging.jl")
   include("./UnitTests/DecompositionTests/clique_merging_example.jl")

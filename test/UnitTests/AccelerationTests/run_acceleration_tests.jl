@@ -4,7 +4,7 @@ rng = Random.MersenneTwister(12345)
 
 
 
-include("../COSMOTestUtils.jl")
+#include("../COSMOTestUtils.jl")
 
 @testset "Acceleration test set" begin
 
