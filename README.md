@@ -83,7 +83,7 @@ This package is currently in maintenance mode. We are aiming to keep it compatib
 
 ## 🐍 Python - Interface
 
-COSMO can also be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
+COSMO can be called from Python. Take a look at: [cosmo-python](https://github.com/oxfordcontrol/cosmo-python)
 
 ## 🔍 Licence 
 
