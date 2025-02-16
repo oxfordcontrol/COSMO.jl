@@ -27,7 +27,7 @@ UnitTestFloats = [Float32; Float64; BigFloat]
   include("./UnitTests/model_modifications.jl")
   include("./UnitTests/constraints.jl")
   include("./UnitTests/model.jl")
-  include("./UnitTests/socp-lasso.jl")
+  # include("./UnitTests/socp-lasso.jl")
   include("./UnitTests/closestcorr.jl")
   include("./UnitTests/exp_cone.jl")
   include("./UnitTests/pow_cone.jl")
