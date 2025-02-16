@@ -12,7 +12,6 @@
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
   <a href="https://github.com/oxfordcontrol/COSMO.jl/releases"><img src="https://img.shields.io/badge/Release-v0.8.9-blue.svg"></a>
 </p>
-https://github.com/oxfordcontrol/COSMO.jl/actions/workflows/ci.yml/badge.svg?branch=master)
 <p align="center">
   <a href="# -features">Features</a> •
   <a href="# -installation">Installation</a> •
