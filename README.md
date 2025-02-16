@@ -5,14 +5,14 @@
 <h1 align="center" margin=0px>
   <img src="https://github.com/migarstka/COSMO_assets/blob/master/cosmo_rocket_with_convex_set.png" width=70%>
 </h1>
-<p align="center">
-   <a href="https://github.com/oxfordcontrol/COSMO.jl/actions"><img src="https://github.com/oxfordcontrol/COSMO.jl/workflows/ci/badge.svg?branch=master"></a>
+<p align="center">    
+   <a href="https://github.com/oxfordcontrol/COSMO.jl/actions"><img src="https://github.com/oxfordcontrol/COSMO.jl/actions/workflows/ci.yml/badge.svg?branch=master"></a>
   <a href="https://codecov.io/gh/oxfordcontrol/COSMO.jl"><img src="https://codecov.io/gh/oxfordcontrol/COSMO.jl/branch/master/graph/badge.svg"></a>
   <a href="https://oxfordcontrol.github.io/COSMO.jl/stable"><img src="https://img.shields.io/badge/Documentation-stable-purple.svg"></a>
   <a href="https://opensource.org/licenses/Apache-2.0"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg"></a>
   <a href="https://github.com/oxfordcontrol/COSMO.jl/releases"><img src="https://img.shields.io/badge/Release-v0.8.9-blue.svg"></a>
 </p>
-
+https://github.com/oxfordcontrol/COSMO.jl/actions/workflows/ci.yml/badge.svg?branch=master)
 <p align="center">
   <a href="# -features">Features</a> •
   <a href="# -installation">Installation</a> •
