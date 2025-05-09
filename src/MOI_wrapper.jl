@@ -14,24 +14,95 @@ const VectorAffine = MOI.VectorAffineFunction{<: AbstractFloat}
 const SUPPORTED_CONES{T} = Union{
     MOI.Zeros,
     MOI.Nonnegatives,
+    MOI.HyperRectangle{T},
     MOI.SecondOrderCone,
     MOI.Scaled{MOI.PositiveSemidefiniteConeTriangle},
     MOI.Scaled{MOI.HermitianPositiveSemidefiniteConeTriangle},
     MOI.ExponentialCone,
     MOI.DualExponentialCone,
-    MOI.PowerCone,
-    MOI.DualPowerCone,
+    MOI.PowerCone{T},
+    MOI.DualPowerCone{T},
 }
 
-MOI.Utilities.@product_of_sets(
-    Intervals,
-    MOI.Interval{T},
-)
+# Mimicking SCS._SetConstants
+struct _SetConstants{T}
+    b::Vector{T}
+    box_lower_or_power::Vector{T}
+    box_upper::Vector{T}
+    _SetConstants{T}() where {T} = new{T}(T[], T[], T[])
+end
+
+function Base.empty!(x::_SetConstants)
+    empty!(x.b)
+    empty!(x.box_lower_or_power)
+    empty!(x.box_upper)
+    return x
+end
+
+function Base.resize!(x::_SetConstants, n)
+    resize!(x.b, n)
+    resize!(x.box_lower_or_power, n)
+    resize!(x.box_upper, n)
+end
+
+function MOI.Utilities.load_constants(x::_SetConstants, offset, f)
+    MOI.Utilities.load_constants(x.b, offset, f)
+    return
+end
+
+function MOI.Utilities.load_constants(
+    x::_SetConstants{T},
+    offset,
+    set::MOI.HyperRectangle{T},
+) where {T}
+    I = offset .+ (eachindex(set.lower))
+    x.box_lower_or_power[I] = set.lower
+    x.box_upper[I] = set.upper
+    return
+end
+
+function MOI.Utilities.load_constants(
+    x::_SetConstants{T},
+    offset,
+    set::Union{MOI.PowerCone{T},MOI.DualPowerCone{T}},
+) where {T}
+    x.box_lower_or_power[offset+1] = set.exponent
+    return
+end
+
+function MOI.Utilities.function_constants(x::_SetConstants, rows)
+    return MOI.Utilities.function_constants(x.b, rows)
+end
+
+function MOI.Utilities.set_from_constants(x::_SetConstants, S, rows)
+    return MOI.Utilities.set_from_constants(x.b, S, rows)
+end
+
+function MOI.Utilities.set_from_constants(
+    x::_SetConstants{T},
+    ::Type{S},
+    rows,
+) where {T,S<:Union{MOI.PowerCone{T},MOI.DualPowerCone{T}}}
+    @assert length(rows) == 3
+    return S(x.box_lower_or_power[first(rows)])
+end
+
+function MOI.Utilities.set_from_constants(
+    x::_SetConstants{T},
+    ::Type{MOI.HyperRectangle{T}},
+    rows,
+) where {T}
+    return MOI.HyperRectangle(
+        x.box_lower_or_power[rows],
+        x.box_upper[rows],
+    )
+end
 
 MOI.Utilities.@product_of_sets(
     Cones,
     MOI.Zeros,
     MOI.Nonnegatives,
+    MOI.HyperRectangle{T},
     MOI.SecondOrderCone,
     MOI.Scaled{MOI.PositiveSemidefiniteConeTriangle},
     MOI.Scaled{MOI.HermitianPositiveSemidefiniteConeTriangle},
@@ -41,37 +112,19 @@ MOI.Utilities.@product_of_sets(
     MOI.DualPowerCone{T},
 )
 
-MOI.Utilities.@struct_of_constraints_by_set_types(
-    BoxOrNot,
-    MOI.Interval{T},
-    SUPPORTED_CONES{T},
-)
-
 const OptimizerCache{T} = MOI.Utilities.GenericModel{
     T,
     MOI.Utilities.ObjectiveContainer{T},
     MOI.Utilities.VariablesContainer{T},
-    BoxOrNot{T}{
-        MOI.Utilities.MatrixOfConstraints{
+    MOI.Utilities.MatrixOfConstraints{
+        T,
+        MOI.Utilities.MutableSparseMatrixCSC{
             T,
-            MOI.Utilities.MutableSparseMatrixCSC{
-                T,
-                Int,
-                MOI.Utilities.OneBasedIndexing,
-            },
-            MOI.Utilities.Hyperrectangle{T},
-            Intervals{T},
+            Int,
+            MOI.Utilities.OneBasedIndexing,
         },
-        MOI.Utilities.MatrixOfConstraints{
-            T,
-            MOI.Utilities.MutableSparseMatrixCSC{
-                T,
-                Int,
-                MOI.Utilities.OneBasedIndexing,
-            },
-            Vector{T},
-            Cones{T},
-        },
+        _SetConstants{T},
+        Cones{T},
     },
 }
 
@@ -281,25 +334,6 @@ coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike) where {T <: AbstractFloat}
     convex_sets = COSMO.AbstractConvexSet{T}[]
 
-    box_Ab = MOI.Utilities.constraints(
-        src.constraints,
-        MOI.ScalarAffineFunction{T},
-        MOI.Interval{T},
-    )
-    box_A = convert(SparseMatrixCSC{T,Int}, box_Ab.coefficients)
-    box_b = zeros(T, size(box_A, 1))
-    if !isempty(box_b)
-        push!(convex_sets, COSMO.Hyperrectangle{T}(box_Ab.constants.lower, box_Ab.constants.upper))
-    end
-
-    cone_Ab = MOI.Utilities.constraints(
-        src.constraints,
-        MOI.VectorAffineFunction{T},
-        MOI.Nonegatives,
-    )
-    cone_A = convert(SparseMatrixCSC{T,Int}, cone_Ab.coefficients)
-    cone_b = cone_Ab.constants
-
     for (F, S) in MOI.get(cone_Ab, MOI.ListOfConstraintTypesPresent())
         process_sets!(convex_sets, cone_Ab, F, S)
     end
@@ -310,8 +344,8 @@ function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike) where 
 
     # store constraint matrices in inner model
     model = optimizer.inner
-    model.p.A = -[box_A; cone_A]
-    model.p.b = [box_b; cone_b]
+    model.p.A = -convert(SparseMatrixCSC{T,Int}, src.constraints.coefficients)
+    model.p.b = src.constraints.constants.b
     model.p.C = CompositeConvexSet{T}(deepcopy(convex_sets))
     model.p.model_size = [size(A, 1), size(A, 2)]
     return nothing
@@ -327,6 +361,13 @@ function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::T
     return nothing
 end
 
+function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::Type{MOI.HyperRectangle{T}}) where {T}
+    offset = MOIU.num_rows(src, MOI.Zeros) + MOIU.num_rows(src, MOI.Nonnegatives)
+    rows = offset .+ (1:MOIU.num_rows(src, MOI.HyperRectangle{T}))
+    push!(convex_sets, COSMO.Box{T}(src.constants.box_lower_or_power[rows], src.constants.box_upper[rows]))
+    return nothing
+end
+
 function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::Type{S}) where {T, S}
     for ci in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
         set = MOI.get(src, MOI.ConstraintSet(), ci)::S
@@ -335,17 +376,17 @@ function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::T
     return nothing
 end
 
-function processSet!(cs, s::SOC, ::Type{T}) where {T <: AbstractFloat}
+function processSet!(cs, s::MOI.SecondOrderCone, ::Type{T}) where {T <: AbstractFloat}
     push!(cs, COSMO.SecondOrderCone{T}(MOI.dimension(s)))
     nothing
 end
 
-function processSet!(cs, s::PSDT, ::Type{T}) where {T <: AbstractFloat}
+function processSet!(cs, s::MOI.Scaled{MOI.PositiveSemidefiniteConeTriangle}, ::Type{T}) where {T <: AbstractFloat}
     push!(cs, COSMO.PsdConeTriangle{T, T}(MOI.dimension(s)))
     nothing
 end
 
-function processSet!(cs, s::ComplexPSDT, ::Type{T}) where {T <: AbstractFloat}
+function processSet!(cs, s::MOI.Scaled{MOI.HermitianPositiveSemidefiniteConeTriangle}, ::Type{T}) where {T <: AbstractFloat}
     push!(cs, COSMO.PsdConeTriangle{T, Complex{T}}(MOI.dimension(s)))
     nothing
 end
@@ -663,5 +704,4 @@ end
 
 
 ## Supported Constraints
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:Affine}, ::Type{<: IntervalConvertible}) = true
-MOI.supports_constraint(optimizer::Optimizer, ::Type{<:VectorAffine}, ::Type{<:SupportedVectorSets}) = true
+MOI.supports_constraint(optimizer::Optimizer{T}, ::Type{MOI.VectorAffineFunction{T}}, ::Type{<:SUPPORTED_CONES{T}}) where {T} = true
