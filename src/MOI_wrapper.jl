@@ -45,12 +45,12 @@ function Base.resize!(x::_SetConstants, n)
     resize!(x.box_upper, n)
 end
 
-function MOI.Utilities.load_constants(x::_SetConstants, offset, f)
-    MOI.Utilities.load_constants(x.b, offset, f)
+function MOIU.load_constants(x::_SetConstants, offset, f)
+    MOIU.load_constants(x.b, offset, f)
     return
 end
 
-function MOI.Utilities.load_constants(
+function MOIU.load_constants(
     x::_SetConstants{T},
     offset,
     set::MOI.HyperRectangle{T},
@@ -61,7 +61,7 @@ function MOI.Utilities.load_constants(
     return
 end
 
-function MOI.Utilities.load_constants(
+function MOIU.load_constants(
     x::_SetConstants{T},
     offset,
     set::Union{MOI.PowerCone{T},MOI.DualPowerCone{T}},
@@ -70,15 +70,15 @@ function MOI.Utilities.load_constants(
     return
 end
 
-function MOI.Utilities.function_constants(x::_SetConstants, rows)
-    return MOI.Utilities.function_constants(x.b, rows)
+function MOIU.function_constants(x::_SetConstants, rows)
+    return MOIU.function_constants(x.b, rows)
 end
 
-function MOI.Utilities.set_from_constants(x::_SetConstants, S, rows)
-    return MOI.Utilities.set_from_constants(x.b, S, rows)
+function MOIU.set_from_constants(x::_SetConstants, S, rows)
+    return MOIU.set_from_constants(x.b, S, rows)
 end
 
-function MOI.Utilities.set_from_constants(
+function MOIU.set_from_constants(
     x::_SetConstants{T},
     ::Type{S},
     rows,
@@ -87,7 +87,7 @@ function MOI.Utilities.set_from_constants(
     return S(x.box_lower_or_power[first(rows)])
 end
 
-function MOI.Utilities.set_from_constants(
+function MOIU.set_from_constants(
     x::_SetConstants{T},
     ::Type{MOI.HyperRectangle{T}},
     rows,
@@ -98,8 +98,8 @@ function MOI.Utilities.set_from_constants(
     )
 end
 
-MOI.Utilities.@product_of_sets(
-    Cones,
+MOIU.@product_of_sets(
+    _Cones,
     MOI.Zeros,
     MOI.Nonnegatives,
     MOI.HyperRectangle{T},
@@ -112,19 +112,19 @@ MOI.Utilities.@product_of_sets(
     MOI.DualPowerCone{T},
 )
 
-const OptimizerCache{T} = MOI.Utilities.GenericModel{
+const OptimizerCache{T} = MOIU.GenericModel{
     T,
-    MOI.Utilities.ObjectiveContainer{T},
-    MOI.Utilities.VariablesContainer{T},
-    MOI.Utilities.MatrixOfConstraints{
+    MOIU.ObjectiveContainer{T},
+    MOIU.VariablesContainer{T},
+    MOIU.MatrixOfConstraints{
         T,
-        MOI.Utilities.MutableSparseMatrixCSC{
+        MOIU.MutableSparseMatrixCSC{
             T,
             Int,
-            MOI.Utilities.OneBasedIndexing,
+            MOIU.OneBasedIndexing,
         },
         _SetConstants{T},
-        Cones{T},
+        _Cones{T},
     },
 }
 
@@ -139,7 +139,7 @@ mutable struct Optimizer{T} <: MOI.AbstractOptimizer
     is_empty::Bool
     sense::MOI.OptimizationSense
     objconstant::T
-    rowranges::Dict{Int, UnitRange{Int}}
+    cones::Union{Nothing,_Cones{T}}
 
     function Optimizer{T}(; user_settings...) where {T <: AbstractFloat}
         inner = COSMO.Model{T}()
@@ -150,7 +150,7 @@ mutable struct Optimizer{T} <: MOI.AbstractOptimizer
         is_empty = true
         sense = MOI.MIN_SENSE
         objconstant = zero(T)
-        new(inner, hasresults, results, is_empty, sense, objconstant)
+        new(inner, hasresults, results, is_empty, sense, objconstant, nothing)
     end
 end
 Optimizer(args...; kwargs...) = Optimizer{DefaultFloat}(args...; kwargs...)
@@ -187,6 +187,7 @@ function MOI.empty!(optimizer::Optimizer{T}) where {T <: AbstractFloat}
     optimizer.is_empty = true
     optimizer.sense = MOI.MIN_SENSE # model parameter, so needs to be reset
     optimizer.objconstant = zero(T)
+    optimizer.cones = nothing
     optimizer
 end
 
@@ -199,16 +200,17 @@ MOI.is_empty(optimizer::Optimizer) = optimizer.is_empty
 ##############################
 
 function MOI.default_cache(::Optimizer{T}, ::Type{T}) where {T}
-    return MOI.Utilities.UniversalFallback(OptimizerCache{T}())
+    return MOIU.UniversalFallback(OptimizerCache{T}())
 end
 
 function MOI.copy_to(
     dest::Optimizer{T},
-    src::MOI.Utilities.UniversalFallback{OptimizerCache{T}},
+    src::MOIU.UniversalFallback{OptimizerCache{T}},
 ) where {T}
     MOI.empty!(dest)
 
-    processconstraints!(dest, src)
+    dest.cones = src.model.constraints.sets
+    processconstraints!(dest, src.model)
     pre_allocate_variables!(dest.inner)
 
     dest.is_empty = false
@@ -219,11 +221,11 @@ function MOI.copy_to(
 
     # if no cost function is provided, allocate P, q with correct sizes
     dest.sense == MOI.FEASIBILITY_SENSE && COSMO.allocate_cost_variables!(dest)
-    return MOI.Utilities.identity_index_map(src)
+    return MOIU.identity_index_map(src)
 end
 
 function MOI.copy_to(dest::Optimizer{T}, src::MOI.ModelLike) where {T}
-    cache = MOI.Utilities.UniversalFallback(OptimizerCache{T}())
+    cache = MOIU.UniversalFallback(OptimizerCache{T}())
     index_map = MOI.copy_to(cache, src)
     MOI.copy_to(dest, cache)
     return index_map
@@ -332,10 +334,11 @@ coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
 function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike) where {T <: AbstractFloat}
+    println(src)
     convex_sets = COSMO.AbstractConvexSet{T}[]
 
-    for (F, S) in MOI.get(cone_Ab, MOI.ListOfConstraintTypesPresent())
-        process_sets!(convex_sets, cone_Ab, F, S)
+    for (F, S) in MOI.get(src, MOI.ListOfConstraintTypesPresent())
+        processSets!(convex_sets, src.constraints, F, S)
     end
     
     if isempty(convex_sets)
@@ -344,32 +347,32 @@ function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike) where 
 
     # store constraint matrices in inner model
     model = optimizer.inner
-    model.p.A = -convert(SparseMatrixCSC{T,Int}, src.constraints.coefficients)
+    model.p.A = -Base.convert(SparseMatrixCSC{T,Int}, src.constraints.coefficients)
     model.p.b = src.constraints.constants.b
     model.p.C = CompositeConvexSet{T}(deepcopy(convex_sets))
-    model.p.model_size = [size(A, 1), size(A, 2)]
+    model.p.model_size = [size(model.p.A, 1), size(model.p.A, 2)]
     return nothing
 end
 
 function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::Type{MOI.Zeros}) where {T}
-    push!(convex_sets, COSMO.ZeroSet{T}(MOI.Utilities.num_rows(src, MOI.Zeros)))
+    push!(convex_sets, COSMO.ZeroSet{T}(MOIU.num_rows(src.sets, MOI.Zeros)))
     return nothing
 end
 
 function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::Type{MOI.Nonnegatives}) where {T}
-    push!(convex_sets, COSMO.Nonnegatives{T}(MOI.Utilities.num_rows(src, MOI.Nonnegatives)))
+    push!(convex_sets, COSMO.Nonnegatives{T}(MOIU.num_rows(src.sets, MOI.Nonnegatives)))
     return nothing
 end
 
 function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::Type{MOI.HyperRectangle{T}}) where {T}
-    offset = MOIU.num_rows(src, MOI.Zeros) + MOIU.num_rows(src, MOI.Nonnegatives)
-    rows = offset .+ (1:MOIU.num_rows(src, MOI.HyperRectangle{T}))
+    offset = MOIU.num_rows(src.sets, MOI.Zeros) + MOIU.num_rows(src.sets, MOI.Nonnegatives)
+    rows = offset .+ (1:MOIU.num_rows(src.sets, MOI.HyperRectangle{T}))
     push!(convex_sets, COSMO.Box{T}(src.constants.box_lower_or_power[rows], src.constants.box_upper[rows]))
     return nothing
 end
 
 function processSets!(convex_sets, src, ::Type{MOI.VectorAffineFunction{T}}, ::Type{S}) where {T, S}
-    for ci in MOI.get(src, MOI.ListOfConstraintIndices{F, S}())
+    for ci in MOI.get(src, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{T}, S}())
         set = MOI.get(src, MOI.ConstraintSet(), ci)::S
         processSet!(convex_sets, set, T)
     end
@@ -598,25 +601,14 @@ MOI.get(optimizer::Optimizer, ::RawResult) = optimizer.results
 MOIU.map_indices(::Function, r::COSMO.Result) = r
 
 
-_unshift(optimizer::Optimizer, offset, value, s) = value
-_unshift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value + optimizer.set_constant[offset]
-_shift(optimizer::Optimizer, offset, value, s) = value
-_shift(optimizer::Optimizer, offset, value, s::Type{<:MOI.AbstractScalarSet}) = value - optimizer.set_constant[offset]
-
-function MOI.get(optimizer::Optimizer, a::MOI.ConstraintPrimal, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+function MOI.get(optimizer::Optimizer, a::MOI.ConstraintPrimal, ci::CI{<:MOI.VectorAffineFunction, S}) where S <: SUPPORTED_CONES
     MOI.check_result_index_bounds(optimizer, a)
-    # offset = constroffset(optimizer, ci)
-    # rows = constrrows(optimizer, ci)
-    rows = COSMO.constraint_rows(optimizer.rowranges, ci_src)
-    c_primal = optimizer.results.s[rows]
-    # (typeof(c_primal) <: AbstractArray && length(c_primal) == 1) && (c_primal = first(c_primal))
-    return _unshift(optimizer, rows, c_primal, S)
+    return optimizer.results.s[MOIU.rows(optimizer.cones, ci)]
 end
 
-function MOI.get(optimizer::Optimizer, a::MOI.ConstraintDual, ci_src::CI{<:MOI.AbstractFunction, S}) where S <: MOI.AbstractSet
+function MOI.get(optimizer::Optimizer, a::MOI.ConstraintDual, ci::CI{<:MOI.VectorAffineFunction, S}) where S <: SUPPORTED_CONES
     MOI.check_result_index_bounds(optimizer, a)
-    rows = constraint_rows(optimizer.rowranges, ci_src)
-    return optimizer.results.y[rows]
+    return optimizer.results.y[MOIU.rows(optimizer.cones, ci)]
 end
 
 ## Variable attributes:
@@ -635,20 +627,17 @@ process_warm_start!(optimizer::Optimizer, a::MOI.VariablePrimalStart, vi::VI, va
 
 MOI.supports(::Optimizer, a::MOI.ConstraintPrimalStart, ::Type{<:MOI.ConstraintIndex}) = true
 function process_warm_start!(optimizer::Optimizer, a::MOI.ConstraintPrimalStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
-    (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
+    (value === nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(optimizer.rowranges, ci)
     # this undoes the shifting that was used in get(MOI.ConstraintPrimal)
-    value = _shift(optimizer, rows, value, S)
-    COSMO.warm_start_slack!(optimizer.inner, value, rows)
+    COSMO.warm_start_slack!(optimizer.inner, value, MOIU.rows(optimizer.cones, ci))
 end
 
 MOI.supports(::Optimizer, a::MOI.ConstraintDualStart, ::Type{<:MOI.ConstraintIndex}) = true
 function process_warm_start!(optimizer::Optimizer, a::MOI.ConstraintDualStart, ci::CI{<:MOI.AbstractFunction, S}, value) where S <: MOI.AbstractSet
-    (value == nothing || isa(value, Array{Nothing, 1})) && return nothing
+    (value === nothing || isa(value, Array{Nothing, 1})) && return nothing
     MOI.is_empty(optimizer) && throw(MOI.CannotSetAttribute(a))
-    rows = constraint_rows(optimizer.rowranges, ci)
-    COSMO.warm_start_dual!(optimizer.inner, value, rows)
+    COSMO.warm_start_dual!(optimizer.inner, value, MOIU.rows(optimizer.cones, ci))
     nothing
 end
 
