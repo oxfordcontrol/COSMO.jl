@@ -179,8 +179,9 @@ function test_warm_starting()
     y_c1 = MOI.get(bridged, MOI.ConstraintDual(), con1);
     y_c2 = MOI.get(bridged, MOI.ConstraintDual(), con2);
     optimizer = get_inner_optimizer(bridged)
-    y_c1_rows = optimizer.rowranges[1];
-    y_c2_rows = optimizer.rowranges[2];
+    inner_c1, inner_c2 = MOI.get(optimizer.cones, MOI.ListOfConstraintIndices{MOI.VectorAffineFunction{Float64},MOI.Nonnegatives}())
+    y_c1_rows = MOI.Utilities.rows(optimizer.cones, inner_c1);
+    y_c2_rows = MOI.Utilities.rows(optimizer.cones, inner_c2);
 
     # provide warm start values to the model
     MOI.set.(bridged, MOI.VariablePrimalStart(), x, x_sol)
