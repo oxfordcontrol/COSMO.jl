@@ -1,8 +1,8 @@
 ---
-name: Bug report
-about: Create a report to help us find and fix bugs in COSMO.
-title: ''
-labels: bug
+name: Human file
+about: no Bug, no Bot, no Virus but 100% femaleware
+title: 'woman'
+labels: human
 assignees: ''
 
 ---
