@@ -5,7 +5,7 @@ on:
 jobs:
   test:
     name: ${{}} - ${{}} - ${{}}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ .os }}
     strategy:
       fail-fast: false
       matrix:
@@ -23,8 +23,8 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
-          version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
+          version: ${{  }}
+          arch: ${{  }}
       - uses: actions/cache@v1
         env:
           cache-name: cache-artifacts
