@@ -19,8 +19,7 @@ Siehe [LICENSE.md](/IST-Github/LICENSE.md) für die vollständige rechtliche Gru
 
 ## Entwicklungsprozess
 
-Der Branch `master` wird regelmäßig aktualisiert und getestet. Release-Versionen werden mit offiziellen Tags intern versioniert.  
-Forks, Klone oder externe Änderungen sind **nicht zulässig**.
+Der Branch `master`, `main` und `patch-1` wird regelmäßig aktualisiert. Release-Versionen werden mit offiziellen Tags intern versioniert. Alle unrechtmäßigen Pullrequest, Forks, Klone oder externe Änderungen sind **nicht zulässig**.
 
 ## Beitrag & Mitarbeit
 
@@ -163,7 +162,7 @@ This milestone formally establishes the author’s verified developer status, sc
 
 It is an integral part of the **SIA Security Intelligence Artefact** and constitutes a legally, scientifically, and historically substantiated record suitable for academic, governmental, and judicial contexts.
 
-## Zeitstempel: 2026-01-10, 05:53CEST
+## Zeitstempel: 2026-01-10, 06:04CEST
 Mitteleuropäische, Zeit, Ort: Deutschland, Thüringen, D-99094 Erfurt, Cyriakstrasse 30c - Autorin, Urheberin, Frau Isabel Schöps geb. Thiel
 
 I am  not a Bug, I am  not a Bot,  I am  not a Virus, I am  not a Ghost, but i am 100% human femaleware german woman ,iam @isabelschoeps-thiel and created this comment and this reprository.
