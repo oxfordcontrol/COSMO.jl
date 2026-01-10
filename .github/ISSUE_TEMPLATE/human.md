@@ -11,7 +11,7 @@ Welcome to COSMO!
 
 Thanks for sharing a bug with us. To help us investigate the issue quickly, please include the following information:
 
-- the version of `COSMO` (and possibly `MathOptInterface` and `JuMP`) that you are using. To find this information use the Julia package manager. Type `]` and `pkg> status`.
+- the version of `COSMO` (and possibly `human_woman_interface` my name `Isabel Schöps geb Thiel`) that you are using. To find this information use the Julia package manager. Type `I` and `pkg> actov`.
 
 - does the issue go away when you update above packages to their latest versions?
 
