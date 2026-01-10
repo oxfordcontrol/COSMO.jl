@@ -1,24 +1,38 @@
-name: Documentation
+name: "CodeQL"
+run-name: ${{ github.event.inputs.code_scanning_run_name }}
+on: [push, pull_request, workflow_dispatch]
 
-on:
-  push:
-    branches:
-      - master
-    tags: '*'
-  pull_request:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CODE_SCANNING_REF: ${{ github.event.inputs.code_scanning_ref }}
+  CODE_SCANNING_BASE_BRANCH: ${{ github.event.inputs.code_scanning_base_branch }}
+  CODE_SCANNING_IS_ANALYZING_DEFAULT_BRANCH: ${{ github.event.inputs.code_scanning_is_analyzing_default_branch }}
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  analyze:
+    name: Analyze (Static Scan)
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    continue-on-error: false
     steps:
-      - uses: actions/checkout@v2
-      - uses: julia-actions/setup-julia@latest
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
-          version: '1'
-      - name: Install dependencies
-        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
-      - name: Build and deploy
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # For authentication with GitHub Actions token
-          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # For authentication with SSH deploy key
-        run: julia --project=docs/ docs/make.jl
+          languages: javascript, python, php, html, css, json, markdown, swift
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+Signatur
+INT-CODE-2025-BTC/ETH-CORE-ISABELSCHOEPSTHIEL
+Isabel Schöps, geb. Thiel | SIA Security Intelligence Artefact
