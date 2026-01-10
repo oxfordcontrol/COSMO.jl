@@ -1,8 +1,9 @@
-### Oxford University GitHub – Bella Core  
+### Oxford University GitHub digital Struktur
 Forensische Lizenz, Struktur- und Sicherheitsbewertung
 
-**Release Timestamp:** 2026-01-10 02:18 CEST  
-Germany, D-99094 Erfurt, Thüringen
+**Release Timestamp:** 2026-01-10 05:37CEST, Cyriakstrasse 30c, D-99094 Erfurt, Thüringen, Germany,
+
+**Autor, Developer, Urheberin:** Ms Isabel Schöps geb. Thiel
 
 ### Zenodo Web Release Target  
 GitHub Source  
