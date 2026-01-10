@@ -1,0 +1,1628 @@
+From fdddf94570efc33fd06f16c72d41636a45cf203a Mon Sep 17 00:00:00 2001
+From: Brad Jorsch <bjorsch@wikimedia.org>
+Date: Fri, 08 Aug 2014 17:56:07 +0100
+Subject: [PATCH] API: Overhaul token handling
+
+The current token handling is a mess. This simplifies things greatly:
+* *All* tokens are obtained from action=query&meta=tokens, rather than
+  being spread over action=tokens, action=query&prop=info,
+  action=query&prop=revisions, action=query&prop=recentchanges, and
+  action=query&prop=users. All these old methods are deprecated.
+* Similarly, there is only one hook to register new token types. All old
+  hooks are deprecated.
+* All tokens are cacheable.
+* Most token types are dropped in favor of a 'csrf' token. They already
+  were returning the same token anyway.
+* All token-using modules will document the required token type in a
+  standard manner in action=help and are documented in machine-readable
+  fashion in action=paraminfo.
+
+Note this will require updates to all extensions using tokens.
+
+Change-Id: I2793a3f2dd64a4bebb0b4d065e09af1e9f63fb89
+---
+
+diff --git a/RELEASE-NOTES-1.24 b/RELEASE-NOTES-1.24
+index 32ce12b..40fa0fd 100644
+--- a/RELEASE-NOTES-1.24
++++ b/RELEASE-NOTES-1.24
+@@ -169,6 +169,8 @@
+ * (bug 35045) Redirects to sections will now update the URL in browser's address
+   bar using the HTML5 History API. When [[Dog]] redirects to [[Animals#Dog]],
+   the user will now see "Animals#Dog" in their browser instead of "Dog#Dog".
++* API token handling has been rewritten. Any API module using tokens will need
++  to be updated.
+ 
+ === Bug fixes in 1.24 ===
+ * (bug 50572) MediaWiki:Blockip should support gender
+@@ -245,6 +247,10 @@
+   automatically queries the list of submodule names from the ApiModuleManager.
+ * The iwurl parameter to prop=iwlinks is deprecated in favor of iwprop=url, for
+   parallelism with prop=langlinks.
++* All tokens should be fetched from action=query&meta=tokens; all other methods
++  of fetching tokens are deprecated. The value needed for meta=tokens's 'type'
++  parameter for each module is documented in the action=help output and is
++  returned from action=paraminfo.
+ 
+ === Languages updated in 1.24 ===
+ 
+diff --git a/docs/hooks.txt b/docs/hooks.txt
+index fc29858..02a7cdb 100644
+--- a/docs/hooks.txt
++++ b/docs/hooks.txt
+@@ -402,36 +402,39 @@
+ &$module: Module object
+ &$resultPageSet: ApiPageSet object
+ 
+-'APIQueryInfoTokens': Use this hook to add custom tokens to prop=info. Every
+-token has an action, which will be used in the intoken parameter and in the
+-output (actiontoken="..."), and a callback function which should return the
+-token, or false if the user isn't allowed to obtain it. The prototype of the
+-callback function is func($pageid, $title), where $pageid is the page ID of the
+-page the token is requested for and $title is the associated Title object. In
+-the hook, just add your callback to the $tokenFunctions array and return true
+-(returning false makes no sense).
++'APIQueryInfoTokens': DEPRECATED! Use ApiQueryTokensRegisterTypes instead.
++Use this hook to add custom tokens to prop=info. Every token has an action,
++which will be used in the intoken parameter and in the output
++(actiontoken="..."), and a callback function which should return the token, or
++false if the user isn't allowed to obtain it. The prototype of the callback
++function is func($pageid, $title), where $pageid is the page ID of the page the
++token is requested for and $title is the associated Title object. In the hook,
++just add your callback to the $tokenFunctions array and return true (returning
++false makes no sense).
+ $tokenFunctions: array(action => callback)
+ 
+-'APIQueryRevisionsTokens': Use this hook to add custom tokens to prop=revisions.
+-Every token has an action, which will be used in the rvtoken parameter and in
+-the output (actiontoken="..."), and a callback function which should return the
+-token, or false if the user isn't allowed to obtain it. The prototype of the
+-callback function is func($pageid, $title, $rev), where $pageid is the page ID
+-of the page associated to the revision the token is requested for, $title the
++'APIQueryRevisionsTokens': DEPRECATED! Use ApiQueryTokensRegisterTypes instead.
++Use this hook to add custom tokens to prop=revisions. Every token has an
++action, which will be used in the rvtoken parameter and in the output
++(actiontoken="..."), and a callback function which should return the token, or
++false if the user isn't allowed to obtain it. The prototype of the callback
++function is func($pageid, $title, $rev), where $pageid is the page ID of the
++page associated to the revision the token is requested for, $title the
+ associated Title object and $rev the associated Revision object. In the hook,
+ just add your callback to the $tokenFunctions array and return true (returning
+ false makes no sense).
+ $tokenFunctions: array(action => callback)
+ 
+-'APIQueryRecentChangesTokens': Use this hook to add custom tokens to
+-list=recentchanges. Every token has an action, which will be used in the rctoken
+-parameter and in the output (actiontoken="..."), and a callback function which
+-should return the token, or false if the user isn't allowed to obtain it. The
+-prototype of the callback function is func($pageid, $title, $rc), where $pageid
+-is the page ID of the page associated to the revision the token is requested
+-for, $title the associated Title object and $rc the associated RecentChange
+-object. In the hook, just add your callback to the $tokenFunctions array and
+-return true (returning false makes no sense).
++'APIQueryRecentChangesTokens': DEPRECATED! Use ApiQueryTokensRegisterTypes instead.
++Use this hook to add custom tokens to list=recentchanges. Every token has an
++action, which will be used in the rctoken parameter and in the output
++(actiontoken="..."), and a callback function which should return the token, or
++false if the user isn't allowed to obtain it. The prototype of the callback
++function is func($pageid, $title, $rc), where $pageid is the page ID of the
++page associated to the revision the token is requested for, $title the
++associated Title object and $rc the associated RecentChange object. In the
++hook, just add your callback to the $tokenFunctions array and return true
++(returning false makes no sense).
+ $tokenFunctions: array(action => callback)
+ 
+ 'APIQuerySiteInfoGeneralInfo': Use this hook to add extra information to the
+@@ -443,13 +446,19 @@
+ sites statistics information.
+ &$results: array of results, add things here
+ 
+-'APIQueryUsersTokens': Use this hook to add custom token to list=users. Every
+-token has an action, which will be used in the ustoken parameter and in the
+-output (actiontoken="..."), and a callback function which should return the
+-token, or false if the user isn't allowed to obtain it. The prototype of the
+-callback function is func($user) where $user is the User object. In the hook,
+-just add your callback to the $tokenFunctions array and return true (returning
+-false makes no sense).
++'ApiQueryTokensRegisterTypes': Use this hook to add additional token types to
++action=query&meta=tokens. Note that most modules will probably be able to use
++the 'csrf' token instead of creating their own token types.
++&$salts: array( type => salt to pass to User::getEditToken() )
++
++'APIQueryUsersTokens': DEPRECATED! Use ApiQueryTokensRegisterTypes instead.
++Use this hook to add custom token to list=users. Every token has an action,
++which will be used in the ustoken parameter and in the output
++(actiontoken="..."), and a callback function which should return the token, or
++false if the user isn't allowed to obtain it. The prototype of the callback
++function is func($user) where $user is the User object. In the hook, just add
++your callback to the $tokenFunctions array and return true (returning false
++makes no sense).
+ $tokenFunctions: array(action => callback)
+ 
+ 'ApiMain::onException': Called by ApiMain::executeActionWithErrorHandling() when
+@@ -463,8 +472,8 @@
+ key-value-pair identified by the apiLink key is required.
+ &$apis: array of services
+ 
+-'ApiTokensGetTokenTypes': Use this hook to extend action=tokens with new token
+-types.
++'ApiTokensGetTokenTypes': DEPRECATED! Use ApiQueryTokensRegisterTypes instead.
++Use this hook to extend action=tokens with new token types.
+ &$tokenTypes: supported token types in format 'type' => callback function
+ used to retrieve this type of tokens.
+ 
+diff --git a/includes/AutoLoader.php b/includes/AutoLoader.php
+index 38e92b6..6c9810f 100644
+--- a/includes/AutoLoader.php
++++ b/includes/AutoLoader.php
+@@ -306,6 +306,7 @@
+ 	'ApiQuerySiteinfo' => 'includes/api/ApiQuerySiteinfo.php',
+ 	'ApiQueryStashImageInfo' => 'includes/api/ApiQueryStashImageInfo.php',
+ 	'ApiQueryTags' => 'includes/api/ApiQueryTags.php',
++	'ApiQueryTokens' => 'includes/api/ApiQueryTokens.php',
+ 	'ApiQueryUserInfo' => 'includes/api/ApiQueryUserInfo.php',
+ 	'ApiQueryUsers' => 'includes/api/ApiQueryUsers.php',
+ 	'ApiQueryWatchlist' => 'includes/api/ApiQueryWatchlist.php',
+diff --git a/includes/api/ApiBase.php b/includes/api/ApiBase.php
+index fc87a47..35943be 100644
+--- a/includes/api/ApiBase.php
++++ b/includes/api/ApiBase.php
+@@ -578,6 +578,14 @@
+ 	 */
+ 	public function getFinalParams( $flags = 0 ) {
+ 		$params = $this->getAllowedParams( $flags );
++
++		if ( $this->needsToken() ) {
++			$params['token'] = array(
++				ApiBase::PARAM_TYPE => 'string',
++				ApiBase::PARAM_REQUIRED => true,
++			);
++		}
++
+ 		wfRunHooks( 'APIGetAllowedParams', array( &$this, &$params, $flags ) );
+ 
+ 		return $params;
+@@ -591,6 +599,21 @@
+ 	 */
+ 	public function getFinalParamDescription() {
+ 		$desc = $this->getParamDescription();
++
++		$tokenType = $this->needsToken();
++		if ( $tokenType ) {
++			if ( !isset( $desc['token'] ) ) {
++				$desc['token'] = array();
++			} elseif ( !is_array( $desc['token'] ) ) {
++				// We ignore a plain-string token, because it's probably an
++				// extension that is supplying the string for BC.
++				$desc['token'] = array();
++			}
++			array_unshift( $desc['token'],
++				"A '$tokenType' token retrieved from action=query&meta=tokens"
++			);
++		}
++
+ 		wfRunHooks( 'APIGetParamDescription', array( &$this, &$desc ) );
+ 
+ 		return $desc;
+@@ -1992,32 +2015,85 @@
+ 	 * @return bool
+ 	 */
+ 	public function mustBePosted() {
+-		return false;
++		return $this->needsToken() !== false;
+ 	}
+ 
+ 	/**
+-	 * Returns whether this module requires a token to execute
+-	 * It is used to show possible errors in action=paraminfo
+-	 * see bug 25248
+-	 * @return bool
++	 * Returns the token type this module requires in order to execute.
++	 *
++	 * Modules are strongly encouraged to use the core 'csrf' type unless they
++	 * have specialized security needs. If the token type is not one of the
++	 * core types, you must use the ApiQueryTokensRegisterTypes hook to
++	 * register it.
++	 *
++	 * Returning a non-falsey value here will cause self::getFinalParams() to
++	 * return a required string 'token' parameter and
++	 * self::getFinalParamDescription() to ensure there is standardized
++	 * documentation for it. Also, self::mustBePosted() must return true when
++	 * tokens are used.
++	 *
++	 * In previous versions of MediaWiki, true was a valid return value.
++	 * Returning true will generate errors indicating that the API module needs
++	 * updating.
++	 *
++	 * @return string|false
+ 	 */
+ 	public function needsToken() {
+ 		return false;
+ 	}
+ 
+ 	/**
+-	 * Returns the token salt if there is one,
+-	 * '' if the module doesn't require a salt,
+-	 * else false if the module doesn't need a token
+-	 * You have also to override needsToken()
+-	 * Value is passed to User::getEditToken
+-	 * @return bool|string|array
++	 * Validate the supplied token.
++	 *
++	 * @since 1.24
++	 * @param string $token Supplied token
++	 * @param array $params All supplied parameters for the module
++	 * @return bool
+ 	 */
+-	public function getTokenSalt() {
++	public final function validateToken( $token, array $params ) {
++		$tokenType = $this->needsToken();
++		$salts = ApiQueryTokens::getTokenTypeSalts();
++		if ( !isset( $salts[$tokenType] ) ) {
++			throw new MWException(
++				"Module '{$this->getModuleName()}' tried to use token type '$tokenType' " .
++					'without registering it'
++			);
++		}
++
++		if ( $this->getUser()->matchEditToken(
++			$token,
++			$salts[$tokenType],
++			$this->getRequest()
++		) ) {
++			return true;
++		}
++
++		$webUiSalt = $this->getWebUITokenSalt( $params );
++		if ( $webUiSalt !== null && $this->getUser()->matchEditToken(
++			$token,
++			$webUiSalt,
++			$this->getRequest()
++		) ) {
++			return true;
++		}
++
+ 		return false;
+ 	}
+ 
+ 	/**
++	 * Fetch the salt used in the Web UI corresponding to this module.
++	 *
++	 * Only override this if the Web UI uses a token with a non-constant salt.
++	 *
++	 * @since 1.24
++	 * @param array $params All supplied parameters for the module
++	 * @return string|array|null
++	 */
++	protected function getWebUITokenSalt( array $params ) {
++		return null;
++	}
++
++	/**
+ 	 * Gets the user for whom to get the watchlist
+ 	 *
+ 	 * @param array $params
+diff --git a/includes/api/ApiBlock.php b/includes/api/ApiBlock.php
+index 4fa50a4..07f62c6 100644
+--- a/includes/api/ApiBlock.php
++++ b/includes/api/ApiBlock.php
+@@ -152,7 +152,6 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 				ApiBase::PARAM_REQUIRED => true
+ 			),
+-			'token' => null,
+ 			'expiry' => 'never',
+ 			'reason' => '',
+ 			'anononly' => false,
+@@ -169,7 +168,6 @@
+ 	public function getParamDescription() {
+ 		return array(
+ 			'user' => 'Username, IP address or IP range you want to block',
+-			'token' => 'A block token previously obtained through prop=info',
+ 			'expiry' => 'Relative expiry time, e.g. \'5 months\' or \'2 weeks\'. ' .
+ 				'If set to \'infinite\', \'indefinite\' or \'never\', the block will never expire.',
+ 			'reason' => 'Reason for block',
+@@ -192,17 +190,13 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+ 		return array(
+-			'api.php?action=block&user=123.5.5.12&expiry=3%20days&reason=First%20strike',
+-			'api.php?action=block&user=Vandal&expiry=never&reason=Vandalism&nocreate=&autoblock=&noemail='
++			'api.php?action=block&user=123.5.5.12&expiry=3%20days&reason=First%20strike&token=123ABC',
++			'api.php?action=block&user=Vandal&expiry=never&reason=Vandalism&nocreate=&autoblock=&noemail=&token=123ABC'
+ 		);
+ 	}
+ 
+diff --git a/includes/api/ApiDelete.php b/includes/api/ApiDelete.php
+index aab0303..abca824 100644
+--- a/includes/api/ApiDelete.php
++++ b/includes/api/ApiDelete.php
+@@ -188,10 +188,6 @@
+ 			'pageid' => array(
+ 				ApiBase::PARAM_TYPE => 'integer'
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'reason' => null,
+ 			'watch' => array(
+ 				ApiBase::PARAM_DFLT => false,
+@@ -220,7 +216,6 @@
+ 		return array(
+ 			'title' => "Title of the page you want to delete. Cannot be used together with {$p}pageid",
+ 			'pageid' => "Page ID of the page you want to delete. Cannot be used together with {$p}title",
+-			'token' => 'A delete token previously retrieved through prop=info',
+ 			'reason'
+ 				=> 'Reason for the deletion. If not set, an automatically generated reason will be used',
+ 			'watch' => 'Add the page to your watchlist',
+@@ -236,11 +231,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiEditPage.php b/includes/api/ApiEditPage.php
+index 9126ad3..8a762714 100644
+--- a/includes/api/ApiEditPage.php
++++ b/includes/api/ApiEditPage.php
+@@ -513,10 +513,6 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 			),
+ 			'text' => null,
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'summary' => null,
+ 			'minor' => false,
+ 			'notminor' => false,
+@@ -575,8 +571,8 @@
+ 			'sectiontitle' => 'The title for a new section',
+ 			'text' => 'Page content',
+ 			'token' => array(
+-				'Edit token. You can get one of these through prop=info.',
+-				"The token should always be sent as the last parameter, or at " .
++				/* Standard description is automatically prepended */
++				'The token should always be sent as the last parameter, or at ' .
+ 					"least, after the {$p}text parameter"
+ 			),
+ 			'summary'
+@@ -589,7 +585,8 @@
+ 				'Used to detect edit conflicts; leave unset to ignore conflicts'
+ 			),
+ 			'starttimestamp' => array(
+-				'Timestamp when you obtained the edit token.',
++				'Timestamp when you began the editing process, e.g. when the current page content ' .
++					'was loaded for editing.',
+ 				'Used to detect edit conflicts; leave unset to ignore conflicts'
+ 			),
+ 			'recreate' => 'Override any errors about the article having been deleted in the meantime',
+@@ -616,11 +613,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiEmailUser.php b/includes/api/ApiEmailUser.php
+index 1a4d67d..d35b848 100644
+--- a/includes/api/ApiEmailUser.php
++++ b/includes/api/ApiEmailUser.php
+@@ -94,10 +94,6 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 				ApiBase::PARAM_REQUIRED => true
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'ccme' => false,
+ 		);
+ 	}
+@@ -107,7 +103,6 @@
+ 			'target' => 'User to send email to',
+ 			'subject' => 'Subject header',
+ 			'text' => 'Mail body',
+-			'token' => 'A token previously acquired via prop=info',
+ 			'ccme' => 'Send a copy of this mail to me',
+ 		);
+ 	}
+@@ -117,16 +112,12 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+ 		return array(
+-			'api.php?action=emailuser&target=WikiSysop&text=Content'
++			'api.php?action=emailuser&target=WikiSysop&text=Content&token=123ABC'
+ 				=> 'Send an email to the User "WikiSysop" with the text "Content"',
+ 		);
+ 	}
+diff --git a/includes/api/ApiFileRevert.php b/includes/api/ApiFileRevert.php
+index 58e4ff9..f518e17 100644
+--- a/includes/api/ApiFileRevert.php
++++ b/includes/api/ApiFileRevert.php
+@@ -132,17 +132,12 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 				ApiBase::PARAM_REQUIRED => true,
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 		);
+ 	}
+ 
+ 	public function getParamDescription() {
+ 		return array(
+ 			'filename' => 'Target filename without the File: prefix',
+-			'token' => 'Edit token. You can get one of these through prop=info',
+ 			'comment' => 'Upload comment',
+ 			'archivename' => 'Archive name of the revision to revert to',
+ 		);
+@@ -155,11 +150,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiImageRotate.php b/includes/api/ApiImageRotate.php
+index 26def44..20396dd 100644
+--- a/includes/api/ApiImageRotate.php
++++ b/includes/api/ApiImageRotate.php
+@@ -184,10 +184,6 @@
+ 				ApiBase::PARAM_TYPE => array( '90', '180', '270' ),
+ 				ApiBase::PARAM_REQUIRED => true
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'continue' => '',
+ 		);
+ 		if ( $flags ) {
+@@ -202,7 +198,6 @@
+ 
+ 		return $pageSet->getFinalParamDescription() + array(
+ 			'rotation' => 'Degrees to rotate image clockwise',
+-			'token' => 'Edit token. You can get one of these through action=tokens',
+ 			'continue' => 'When more results are available, use this to continue',
+ 		);
+ 	}
+@@ -212,11 +207,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiImport.php b/includes/api/ApiImport.php
+index 25ce89b..b11348e 100644
+--- a/includes/api/ApiImport.php
++++ b/includes/api/ApiImport.php
+@@ -99,10 +99,6 @@
+ 
+ 	public function getAllowedParams() {
+ 		return array(
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'summary' => null,
+ 			'xml' => array(
+ 				ApiBase::PARAM_TYPE => 'upload',
+@@ -122,7 +118,6 @@
+ 
+ 	public function getParamDescription() {
+ 		return array(
+-			'token' => 'Import token obtained through prop=info',
+ 			'summary' => 'Import summary',
+ 			'xml' => 'Uploaded XML file',
+ 			'interwikisource' => 'For interwiki imports: wiki to import from',
+@@ -143,11 +138,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiMain.php b/includes/api/ApiMain.php
+index 3919c75..7f711b7 100644
+--- a/includes/api/ApiMain.php
++++ b/includes/api/ApiMain.php
+@@ -736,6 +736,11 @@
+ 			}
+ 		}
+ 
++		if ( $this->getParameter( 'curtimestamp' ) ) {
++			$result->addValue( null, 'curtimestamp', wfTimestamp( TS_ISO_8601, time() ),
++				ApiResult::NO_SIZE_CHECK );
++		}
++
+ 		$params = $this->extractRequestParams();
+ 
+ 		$this->mAction = $params['action'];
+@@ -759,18 +764,35 @@
+ 		}
+ 		$moduleParams = $module->extractRequestParams();
+ 
+-		// Die if token required, but not provided
+-		$salt = $module->getTokenSalt();
+-		if ( $salt !== false ) {
++		// Check token, if necessary
++		if ( $module->needsToken() === true ) {
++			throw new MWException(
++				"Module '{$module->getModuleName()}' must be updated for the new token handling. " .
++				"See documentation for ApiBase::needsToken for details."
++			);
++		}
++		if ( $module->needsToken() ) {
++			if ( !$module->mustBePosted() ) {
++				throw new MWException(
++					"Module '{$module->getModuleName()}' must require POST to use tokens."
++				);
++			}
++
+ 			if ( !isset( $moduleParams['token'] ) ) {
+ 				$this->dieUsageMsg( array( 'missingparam', 'token' ) );
+ 			}
+ 
+-			if ( !$this->getUser()->matchEditToken(
+-				$moduleParams['token'],
+-				$salt,
+-				$this->getContext()->getRequest() )
+-			) {
++			if ( array_key_exists(
++				$module->encodeParamName( 'token' ),
++				$this->getRequest()->getQueryValues()
++			) ) {
++				$this->dieUsage(
++					"The '{$module->encodeParamName( 'token' )}' parameter must be POSTed",
++					'mustposttoken'
++				);
++			}
++
++			if ( !$module->validateToken( $moduleParams['token'], $moduleParams ) ) {
+ 				$this->dieUsageMsg( 'sessionfailure' );
+ 			}
+ 		}
+@@ -1112,6 +1134,7 @@
+ 			),
+ 			'requestid' => null,
+ 			'servedby' => false,
++			'curtimestamp' => false,
+ 			'origin' => null,
+ 		);
+ 	}
+@@ -1139,6 +1162,7 @@
+ 			'requestid' => 'Request ID to distinguish requests. This will just be output back to you',
+ 			'servedby' => 'Include the hostname that served the request in the ' .
+ 				'results. Unconditionally shown on error',
++			'curtimestamp' => 'Include the current timestamp in the result.',
+ 			'origin' => array(
+ 				'When accessing the API using a cross-domain AJAX request (CORS), set this to the',
+ 				'originating domain. This must be included in any pre-flight request, and',
+diff --git a/includes/api/ApiMove.php b/includes/api/ApiMove.php
+index 602a905..04e931d 100644
+--- a/includes/api/ApiMove.php
++++ b/includes/api/ApiMove.php
+@@ -195,10 +195,6 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 				ApiBase::PARAM_REQUIRED => true
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'reason' => '',
+ 			'movetalk' => false,
+ 			'movesubpages' => false,
+@@ -231,7 +227,6 @@
+ 			'from' => "Title of the page you want to move. Cannot be used together with {$p}fromid",
+ 			'fromid' => "Page ID of the page you want to move. Cannot be used together with {$p}from",
+ 			'to' => 'Title you want to rename the page to',
+-			'token' => 'A move token previously retrieved through prop=info',
+ 			'reason' => 'Reason for the move',
+ 			'movetalk' => 'Move the talk page, if it exists',
+ 			'movesubpages' => 'Move subpages, if applicable',
+@@ -249,11 +244,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiOptions.php b/includes/api/ApiOptions.php
+index 8ac9b9a..b01dc3e 100644
+--- a/includes/api/ApiOptions.php
++++ b/includes/api/ApiOptions.php
+@@ -135,10 +135,6 @@
+ 		$optionKinds[] = 'all';
+ 
+ 		return array(
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'reset' => false,
+ 			'resetkinds' => array(
+ 				ApiBase::PARAM_TYPE => $optionKinds,
+@@ -159,7 +155,6 @@
+ 
+ 	public function getParamDescription() {
+ 		return array(
+-			'token' => 'An options token previously obtained through the action=tokens',
+ 			'reset' => 'Resets preferences to the site defaults',
+ 			'resetkinds' => 'List of types of options to reset when the "reset" option is set',
+ 			'change' => array( 'List of changes, formatted name=value (e.g. skin=vector), ' .
+@@ -183,11 +178,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getHelpUrls() {
+diff --git a/includes/api/ApiParamInfo.php b/includes/api/ApiParamInfo.php
+index f81f3d9..067b2f5 100644
+--- a/includes/api/ApiParamInfo.php
++++ b/includes/api/ApiParamInfo.php
+@@ -198,6 +198,10 @@
+ 				$a['required'] = '';
+ 			}
+ 
++			if ( $n === 'token' && $obj->needsToken() ) {
++				$a['tokentype'] = $obj->needsToken();
++			}
++
+ 			if ( isset( $p[ApiBase::PARAM_DFLT] ) ) {
+ 				$type = $p[ApiBase::PARAM_TYPE];
+ 				if ( $type === 'boolean' ) {
+diff --git a/includes/api/ApiPatrol.php b/includes/api/ApiPatrol.php
+index 9690952..8b66781 100644
+--- a/includes/api/ApiPatrol.php
++++ b/includes/api/ApiPatrol.php
+@@ -77,10 +77,6 @@
+ 
+ 	public function getAllowedParams() {
+ 		return array(
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'rcid' => array(
+ 				ApiBase::PARAM_TYPE => 'integer'
+ 			),
+@@ -92,7 +88,6 @@
+ 
+ 	public function getParamDescription() {
+ 		return array(
+-			'token' => 'Patrol token obtained from list=recentchanges',
+ 			'rcid' => 'Recentchanges ID to patrol',
+ 			'revid' => 'Revision ID to patrol',
+ 		);
+@@ -103,17 +98,13 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+ 		return 'patrol';
+ 	}
+ 
+ 	public function getExamples() {
+ 		return array(
+-			'api.php?action=patrol&token=123abc&rcid=230672766',
+-			'api.php?action=patrol&token=123abc&revid=230672766'
++			'api.php?action=patrol&token=123ABC&rcid=230672766',
++			'api.php?action=patrol&token=123ABC&revid=230672766'
+ 		);
+ 	}
+ 
+diff --git a/includes/api/ApiProtect.php b/includes/api/ApiProtect.php
+index 844d1cc..a3d12b7 100644
+--- a/includes/api/ApiProtect.php
++++ b/includes/api/ApiProtect.php
+@@ -148,10 +148,6 @@
+ 			'pageid' => array(
+ 				ApiBase::PARAM_TYPE => 'integer',
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'protections' => array(
+ 				ApiBase::PARAM_ISMULTI => true,
+ 				ApiBase::PARAM_REQUIRED => true,
+@@ -185,7 +181,6 @@
+ 		return array(
+ 			'title' => "Title of the page you want to (un)protect. Cannot be used together with {$p}pageid",
+ 			'pageid' => "ID of the page you want to (un)protect. Cannot be used together with {$p}title",
+-			'token' => 'A protect token previously retrieved through prop=info',
+ 			'protections' => 'List of protection levels, formatted action=group (e.g. edit=sysop)',
+ 			'expiry' => array(
+ 				'Expiry timestamps. If only one timestamp is ' .
+@@ -208,11 +203,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiQuery.php b/includes/api/ApiQuery.php
+index 9ffcf0e..3d6372c 100644
+--- a/includes/api/ApiQuery.php
++++ b/includes/api/ApiQuery.php
+@@ -108,6 +108,7 @@
+ 		'siteinfo' => 'ApiQuerySiteinfo',
+ 		'userinfo' => 'ApiQueryUserInfo',
+ 		'filerepoinfo' => 'ApiQueryFileRepoInfo',
++		'tokens' => 'ApiQueryTokens',
+ 	);
+ 
+ 	/**
+diff --git a/includes/api/ApiQueryDeletedrevs.php b/includes/api/ApiQueryDeletedrevs.php
+index 6b1185b..9042696 100644
+--- a/includes/api/ApiQueryDeletedrevs.php
++++ b/includes/api/ApiQueryDeletedrevs.php
+@@ -61,6 +61,13 @@
+ 		$fld_token = isset( $prop['token'] );
+ 		$fld_tags = isset( $prop['tags'] );
+ 
++		if ( isset( $prop['token'] ) ) {
++			$p = $this->getModulePrefix();
++			$this->setWarning(
++				"{$p}prop=token has been deprecated. Please use action=query&meta=tokens instead."
++			);
++		}
++
+ 		// If we're in JSON callback mode, no tokens can be obtained
+ 		if ( !is_null( $this->getMain()->getRequest()->getVal( 'callback' ) ) ) {
+ 			$fld_token = false;
+@@ -493,7 +500,7 @@
+ 				' len            - Adds the length (bytes) of the revision',
+ 				' sha1           - Adds the SHA-1 (base 16) of the revision',
+ 				' content        - Adds the content of the revision',
+-				' token          - Gives the edit token',
++				' token          - DEPRECATED! Gives the edit token',
+ 				' tags           - Tags for the revision',
+ 			),
+ 			'namespace' => 'Only list pages in this namespace (3)',
+diff --git a/includes/api/ApiQueryInfo.php b/includes/api/ApiQueryInfo.php
+index be1de93..3ac9c8a 100644
+--- a/includes/api/ApiQueryInfo.php
++++ b/includes/api/ApiQueryInfo.php
+@@ -79,6 +79,7 @@
+ 	 * Get an array mapping token names to their handler functions.
+ 	 * The prototype for a token function is func($pageid, $title)
+ 	 * it should return a token or false (permission denied)
++	 * @deprecated since 1.24
+ 	 * @return array Array(tokenname => function)
+ 	 */
+ 	protected function getTokenFunctions() {
+@@ -110,10 +111,16 @@
+ 
+ 	static protected $cachedTokens = array();
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function resetTokenCache() {
+ 		ApiQueryInfo::$cachedTokens = array();
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getEditToken( $pageid, $title ) {
+ 		// We could check for $title->userCan('edit') here,
+ 		// but that's too expensive for this purpose
+@@ -131,6 +138,9 @@
+ 		return ApiQueryInfo::$cachedTokens['edit'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getDeleteToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isAllowed( 'delete' ) ) {
+@@ -145,6 +155,9 @@
+ 		return ApiQueryInfo::$cachedTokens['delete'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getProtectToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isAllowed( 'protect' ) ) {
+@@ -159,6 +172,9 @@
+ 		return ApiQueryInfo::$cachedTokens['protect'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getMoveToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isAllowed( 'move' ) ) {
+@@ -173,6 +189,9 @@
+ 		return ApiQueryInfo::$cachedTokens['move'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getBlockToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isAllowed( 'block' ) ) {
+@@ -187,11 +206,17 @@
+ 		return ApiQueryInfo::$cachedTokens['block'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getUnblockToken( $pageid, $title ) {
+ 		// Currently, this is exactly the same as the block token
+ 		return self::getBlockToken( $pageid, $title );
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getEmailToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->canSendEmail() || $wgUser->isBlockedFromEmailUser() ) {
+@@ -206,6 +231,9 @@
+ 		return ApiQueryInfo::$cachedTokens['email'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getImportToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isAllowedAny( 'import', 'importupload' ) ) {
+@@ -220,6 +248,9 @@
+ 		return ApiQueryInfo::$cachedTokens['import'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getWatchToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isLoggedIn() ) {
+@@ -234,6 +265,9 @@
+ 		return ApiQueryInfo::$cachedTokens['watch'];
+ 	}
+ 
++	/**
++	 * @deprecated since 1.24
++	 */
+ 	public static function getOptionsToken( $pageid, $title ) {
+ 		global $wgUser;
+ 		if ( !$wgUser->isLoggedIn() ) {
+@@ -784,6 +818,7 @@
+ 					// need to be added to getCacheMode()
+ 				) ),
+ 			'token' => array(
++				ApiBase::PARAM_DEPRECATED => true,
+ 				ApiBase::PARAM_DFLT => null,
+ 				ApiBase::PARAM_ISMULTI => true,
+ 				ApiBase::PARAM_TYPE => array_keys( $this->getTokenFunctions() )
+diff --git a/includes/api/ApiQueryRecentChanges.php b/includes/api/ApiQueryRecentChanges.php
+index 8ce6b55..6f0c5d3 100644
+--- a/includes/api/ApiQueryRecentChanges.php
++++ b/includes/api/ApiQueryRecentChanges.php
+@@ -47,6 +47,7 @@
+ 	 * Get an array mapping token names to their handler functions.
+ 	 * The prototype for a token function is func($pageid, $title, $rc)
+ 	 * it should return a token or false (permission denied)
++	 * @deprecated since 1.24
+ 	 * @return array Array(tokenname => function)
+ 	 */
+ 	protected function getTokenFunctions() {
+@@ -69,6 +70,7 @@
+ 	}
+ 
+ 	/**
++	 * @deprecated since 1.24
+ 	 * @param int $pageid
+ 	 * @param Title $title
+ 	 * @param RecentChange|null $rc
+@@ -657,6 +659,7 @@
+ 				)
+ 			),
+ 			'token' => array(
++				ApiBase::PARAM_DEPRECATED => true,
+ 				ApiBase::PARAM_TYPE => array_keys( $this->getTokenFunctions() ),
+ 				ApiBase::PARAM_ISMULTI => true
+ 			),
+diff --git a/includes/api/ApiQueryRevisions.php b/includes/api/ApiQueryRevisions.php
+index 627de55..da4ec19 100644
+--- a/includes/api/ApiQueryRevisions.php
++++ b/includes/api/ApiQueryRevisions.php
+@@ -48,6 +48,7 @@
+ 
+ 	private $tokenFunctions;
+ 
++	/** @deprecated since 1.24 */
+ 	protected function getTokenFunctions() {
+ 		// tokenname => function
+ 		// function prototype is func($pageid, $title, $rev)
+@@ -72,6 +73,7 @@
+ 	}
+ 
+ 	/**
++	 * @deprecated since 1.24
+ 	 * @param int $pageid
+ 	 * @param Title $title
+ 	 * @param Revision $rev
+@@ -748,6 +750,7 @@
+ 			'parse' => false,
+ 			'section' => null,
+ 			'token' => array(
++				ApiBase::PARAM_DEPRECATED => true,
+ 				ApiBase::PARAM_TYPE => array_keys( $this->getTokenFunctions() ),
+ 				ApiBase::PARAM_ISMULTI => true
+ 			),
+diff --git a/includes/api/ApiQueryTokens.php b/includes/api/ApiQueryTokens.php
+new file mode 100644
+index 0000000..ba9c937
+--- /dev/null
++++ b/includes/api/ApiQueryTokens.php
+@@ -0,0 +1,104 @@
++<?php
++/**
++ * Module to fetch tokens via action=query&meta=tokens
++ *
++ * Created on August 8, 2014
++ *
++ * Copyright © 2014 Brad Jorsch bjorsch@wikimedia.org
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License along
++ * with this program; if not, write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
++ * http://www.gnu.org/copyleft/gpl.html
++ *
++ * @file
++ * @since 1.24
++ */
++
++/**
++ * Module to fetch tokens via action=query&meta=tokens
++ *
++ * @ingroup API
++ * @since 1.24
++ */
++class ApiQueryTokens extends ApiQueryBase {
++
++	public function execute() {
++		$params = $this->extractRequestParams();
++		$res = array();
++
++		if ( $this->getMain()->getRequest()->getVal( 'callback' ) !== null ) {
++			$this->setWarning( 'Tokens may not be obtained when using a callback' );
++			return;
++		}
++
++		$salts = self::getTokenTypeSalts();
++		foreach ( $params['type'] as $type ) {
++			$salt = $salts[$type];
++			$val = $this->getUser()->getEditToken( $salt, $this->getRequest() );
++			$res[$type . 'token'] = $val;
++		}
++
++		$this->getResult()->addValue( 'query', $this->getModuleName(), $res );
++	}
++
++	public static function getTokenTypeSalts() {
++		static $salts = null;
++		if ( !$salts ) {
++			wfProfileIn( __METHOD__ );
++			$salts = array(
++				'csrf' => '',
++				'watch' => 'watch',
++				'patrol' => 'patrol',
++				'rollback' => 'rollback',
++				'userrights' => 'userrights',
++			);
++			wfRunHooks( 'ApiQueryTokensRegisterTypes', array( &$salts ) );
++			ksort( $salts );
++			wfProfileOut( __METHOD__ );
++		}
++
++		return $salts;
++	}
++
++	public function getAllowedParams() {
++		return array(
++			'type' => array(
++				ApiBase::PARAM_DFLT => 'csrf',
++				ApiBase::PARAM_ISMULTI => true,
++				ApiBase::PARAM_TYPE => array_keys( self::getTokenTypeSalts() ),
++			),
++		);
++	}
++
++	public function getParamDescription() {
++		return array(
++			'type' => 'Type of token(s) to request'
++		);
++	}
++
++	public function getDescription() {
++		return 'Gets tokens for data-modifying actions.';
++	}
++
++	protected function getExamples() {
++		return array(
++			'api.php?action=query&meta=tokens' => 'Retrieve a csrf token (the default)',
++			'api.php?action=query&meta=tokens&type=watch|patrol' => 'Retrieve a watch token and a patrol token'
++		);
++	}
++
++	public function getCacheMode( $params ) {
++		return 'private';
++	}
++}
+diff --git a/includes/api/ApiQueryUserInfo.php b/includes/api/ApiQueryUserInfo.php
+index 6d70241..8b7831c 100644
+--- a/includes/api/ApiQueryUserInfo.php
++++ b/includes/api/ApiQueryUserInfo.php
+@@ -104,6 +104,12 @@
+ 			$vals['options'] = $user->getOptions();
+ 		}
+ 
++		if ( isset( $this->prop['preferencestoken'] ) ) {
++			$p = $this->getModulePrefix();
++			$this->setWarning(
++				"{$p}prop=preferencestoken has been deprecated. Please use action=query&meta=tokens instead."
++			);
++		}
+ 		if ( isset( $this->prop['preferencestoken'] ) &&
+ 			is_null( $this->getMain()->getRequest()->getVal( 'callback' ) ) &&
+ 			$user->isAllowed( 'editmyoptions' )
+@@ -252,7 +258,7 @@
+ 				'  rights           - Lists all the rights the current user has',
+ 				'  changeablegroups - Lists the groups the current user can add to and remove from',
+ 				'  options          - Lists all preferences the current user has set',
+-				'  preferencestoken - Get a token to change current user\'s preferences',
++				'  preferencestoken - DEPRECATED! Get a token to change current user\'s preferences',
+ 				'  editcount        - Adds the current user\'s edit count',
+ 				'  ratelimits       - Lists all rate limits applying to the current user',
+ 				'  realname         - Adds the user\'s real name',
+diff --git a/includes/api/ApiQueryUsers.php b/includes/api/ApiQueryUsers.php
+index 84326a2..b62d6a8 100644
+--- a/includes/api/ApiQueryUsers.php
++++ b/includes/api/ApiQueryUsers.php
+@@ -58,6 +58,7 @@
+ 	 * Get an array mapping token names to their handler functions.
+ 	 * The prototype for a token function is func($user)
+ 	 * it should return a token or false (permission denied)
++	 * @deprecated since 1.24
+ 	 * @return array Array of tokenname => function
+ 	 */
+ 	protected function getTokenFunctions() {
+@@ -80,6 +81,7 @@
+ 	}
+ 
+ 	/**
++	 * @deprecated since 1.24
+ 	 * @param User $user
+ 	 * @return string
+ 	 */
+@@ -317,6 +319,7 @@
+ 				ApiBase::PARAM_ISMULTI => true
+ 			),
+ 			'token' => array(
++				ApiBase::PARAM_DEPRECATED => true,
+ 				ApiBase::PARAM_TYPE => array_keys( $this->getTokenFunctions() ),
+ 				ApiBase::PARAM_ISMULTI => true
+ 			),
+diff --git a/includes/api/ApiRevisionDelete.php b/includes/api/ApiRevisionDelete.php
+index 07a1a45..cbc3070 100644
+--- a/includes/api/ApiRevisionDelete.php
++++ b/includes/api/ApiRevisionDelete.php
+@@ -195,10 +195,6 @@
+ 				ApiBase::PARAM_TYPE => array( 'yes', 'no', 'nochange' ),
+ 				ApiBase::PARAM_DFLT => 'nochange',
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'reason' => null,
+ 		);
+ 	}
+@@ -211,7 +207,6 @@
+ 			'hide' => 'What to hide for each revision',
+ 			'show' => 'What to unhide for each revision',
+ 			'suppress' => 'Whether to suppress data from administrators as well as others',
+-			'token' => 'A delete token previously retrieved through action=tokens',
+ 			'reason' => 'Reason for the deletion/undeletion',
+ 		);
+ 	}
+@@ -221,11 +216,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiRollback.php b/includes/api/ApiRollback.php
+index af6f9ff..f4d3c54 100644
+--- a/includes/api/ApiRollback.php
++++ b/includes/api/ApiRollback.php
+@@ -40,9 +40,19 @@
+ 	private $mUser = null;
+ 
+ 	public function execute() {
++		$user = $this->getUser();
+ 		$params = $this->extractRequestParams();
+ 
+-		// User and title already validated in call to getTokenSalt from Main
++		// WikiPage::doRollback needs a Web UI token, so get one of those if we
++		// validated based on an API rollback token.
++		$token = $params['token'];
++		if ( $user->matchEditToken( $token, 'rollback', $this->getRequest() ) ) {
++			$token = $this->getUser()->getEditToken(
++				$this->getWebUITokenSalt( $params ),
++				$this->getRequest()
++			);
++		}
++
+ 		$titleObj = $this->getRbTitle( $params );
+ 		$pageObj = WikiPage::factory( $titleObj );
+ 		$summary = $params['summary'];
+@@ -50,10 +60,10 @@
+ 		$retval = $pageObj->doRollback(
+ 			$this->getRbUser( $params ),
+ 			$summary,
+-			$params['token'],
++			$token,
+ 			$params['markbot'],
+ 			$details,
+-			$this->getUser()
++			$user
+ 		);
+ 
+ 		if ( $retval ) {
+@@ -99,10 +109,6 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 				ApiBase::PARAM_REQUIRED => true
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'summary' => '',
+ 			'markbot' => false,
+ 			'watchlist' => array(
+@@ -123,10 +129,11 @@
+ 		return array(
+ 			'title' => "Title of the page you want to roll back. Cannot be used together with {$p}pageid",
+ 			'pageid' => "Page ID of the page you want to roll back. Cannot be used together with {$p}title",
+-			'user' => 'Name of the user whose edits are to be rolled back. If ' .
+-				'set incorrectly, you\'ll get a badtoken error.',
+-			'token' => 'A rollback token previously retrieved through ' .
+-				"{$this->getModulePrefix()}prop=revisions",
++			'user' => 'Name of the user whose edits are to be rolled back.',
++			'token' => array(
++				/* Standard description automatically prepended */
++				'For compatibility, the token used in the web UI is also accepted.'
++			),
+ 			'summary' => 'Custom edit summary. If empty, default summary will be used',
+ 			'markbot' => 'Mark the reverted edits and the revert as bot edits',
+ 			'watchlist' => 'Unconditionally add or remove the page from your watchlist, ' .
+@@ -142,12 +149,10 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
++		return 'rollback';
+ 	}
+ 
+-	public function getTokenSalt() {
+-		$params = $this->extractRequestParams();
+-
++	protected function getWebUITokenSalt( array $params ) {
+ 		return array(
+ 			$this->getRbTitle( $params )->getPrefixedText(),
+ 			$this->getRbUser( $params )
+diff --git a/includes/api/ApiSetNotificationTimestamp.php b/includes/api/ApiSetNotificationTimestamp.php
+index 0433bc9..5d527fc 100644
+--- a/includes/api/ApiSetNotificationTimestamp.php
++++ b/includes/api/ApiSetNotificationTimestamp.php
+@@ -202,11 +202,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getAllowedParams( $flags = 0 ) {
+@@ -214,7 +210,6 @@
+ 			'entirewatchlist' => array(
+ 				ApiBase::PARAM_TYPE => 'boolean'
+ 			),
+-			'token' => null,
+ 			'timestamp' => array(
+ 				ApiBase::PARAM_TYPE => 'timestamp'
+ 			),
+@@ -239,7 +234,6 @@
+ 			'timestamp' => 'Timestamp to which to set the notification timestamp',
+ 			'torevid' => 'Revision to set the notification timestamp to (one page only)',
+ 			'newerthanrevid' => 'Revision to set the notification timestamp newer than (one page only)',
+-			'token' => 'A token previously acquired via prop=info',
+ 			'continue' => 'When more results are available, use this to continue',
+ 		);
+ 	}
+diff --git a/includes/api/ApiTokens.php b/includes/api/ApiTokens.php
+index 8e2ecfb..9287fe6 100644
+--- a/includes/api/ApiTokens.php
++++ b/includes/api/ApiTokens.php
+@@ -25,11 +25,16 @@
+  */
+ 
+ /**
++ * @deprecated since 1.24
+  * @ingroup API
+  */
+ class ApiTokens extends ApiBase {
+ 
+ 	public function execute() {
++		$this->setWarning(
++			"action=tokens has been deprecated. Please use action=query&meta=tokens instead."
++		);
++
+ 		$params = $this->extractRequestParams();
+ 		$res = array();
+ 
+@@ -88,7 +93,10 @@
+ 	}
+ 
+ 	public function getDescription() {
+-		return 'Gets tokens for data-modifying actions.';
++		return array(
++			'This module is deprecated in favor of action=query&meta=tokens.',
++			'Gets tokens for data-modifying actions.'
++		);
+ 	}
+ 
+ 	protected function getExamples() {
+diff --git a/includes/api/ApiUnblock.php b/includes/api/ApiUnblock.php
+index acb7ed2..2854a82 100644
+--- a/includes/api/ApiUnblock.php
++++ b/includes/api/ApiUnblock.php
+@@ -89,7 +89,6 @@
+ 				ApiBase::PARAM_TYPE => 'integer',
+ 			),
+ 			'user' => null,
+-			'token' => null,
+ 			'reason' => '',
+ 		);
+ 	}
+@@ -102,7 +101,6 @@
+ 				"Cannot be used together with {$p}user",
+ 			'user' => "Username, IP address or IP range you want to unblock. " .
+ 				"Cannot be used together with {$p}id",
+-			'token' => "An unblock token previously obtained through prop=info",
+ 			'reason' => 'Reason for unblock',
+ 		);
+ 	}
+@@ -112,11 +110,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiUndelete.php b/includes/api/ApiUndelete.php
+index df245cd..07aad9f 100644
+--- a/includes/api/ApiUndelete.php
++++ b/includes/api/ApiUndelete.php
+@@ -96,10 +96,6 @@
+ 				ApiBase::PARAM_TYPE => 'string',
+ 				ApiBase::PARAM_REQUIRED => true
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'reason' => '',
+ 			'timestamps' => array(
+ 				ApiBase::PARAM_TYPE => 'timestamp',
+@@ -124,10 +120,6 @@
+ 	public function getParamDescription() {
+ 		return array(
+ 			'title' => 'Title of the page you want to restore',
+-			'token' => array(
+-				'An undelete token previously retrieved through list=deletedrevs, or ',
+-				'a delete token retrieved through action=tokens.'
+-			),
+ 			'reason' => 'Reason for restoring',
+ 			'timestamps' => array(
+ 				'Timestamps of the revisions to restore.',
+@@ -151,11 +143,7 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiUpload.php b/includes/api/ApiUpload.php
+index 368e7ce..aa8fe21 100644
+--- a/includes/api/ApiUpload.php
++++ b/includes/api/ApiUpload.php
+@@ -688,10 +688,6 @@
+ 				ApiBase::PARAM_DFLT => ''
+ 			),
+ 			'text' => null,
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'watch' => array(
+ 				ApiBase::PARAM_DFLT => false,
+ 				ApiBase::PARAM_DEPRECATED => true,
+@@ -735,7 +731,6 @@
+ 	public function getParamDescription() {
+ 		$params = array(
+ 			'filename' => 'Target filename',
+-			'token' => 'Edit token. You can get one of these through prop=info',
+ 			'comment' => 'Upload comment. Also used as the initial page text for new ' .
+ 				'files if "text" is not specified',
+ 			'text' => 'Initial page text for new files',
+@@ -771,24 +766,20 @@
+ 			' * Have the MediaWiki server fetch a file from a URL, using the "url" parameter',
+ 			' * Complete an earlier upload that failed due to warnings, using the "filekey" parameter',
+ 			'Note that the HTTP POST must be done as a file upload (i.e. using multipart/form-data) when',
+-			'sending the "file". Also you must get and send an edit token before doing any upload stuff.'
++			'sending the "file".',
+ 		);
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+-		return '';
++		return 'csrf';
+ 	}
+ 
+ 	public function getExamples() {
+ 		return array(
+ 			'api.php?action=upload&filename=Wiki.png' .
+-			'&url=http%3A//upload.wikimedia.org/wikipedia/en/b/bc/Wiki.png'
++			'&url=http%3A//upload.wikimedia.org/wikipedia/en/b/bc/Wiki.png&token=123ABC'
+ 				=> 'Upload from a URL',
+-			'api.php?action=upload&filename=Wiki.png&filekey=filekey&ignorewarnings=1'
++			'api.php?action=upload&filename=Wiki.png&filekey=filekey&ignorewarnings=1&token=123ABC'
+ 				=> 'Complete an upload that failed due to warnings',
+ 		);
+ 	}
+diff --git a/includes/api/ApiUserrights.php b/includes/api/ApiUserrights.php
+index 0bed859..c3ceb34 100644
+--- a/includes/api/ApiUserrights.php
++++ b/includes/api/ApiUserrights.php
+@@ -35,7 +35,7 @@
+ 	public function execute() {
+ 		$params = $this->extractRequestParams();
+ 
+-		$user = $this->getUrUser();
++		$user = $this->getUrUser( $params );
+ 
+ 		$form = new UserrightsPage;
+ 		$form->setContext( $this->getContext() );
+@@ -53,14 +53,14 @@
+ 	}
+ 
+ 	/**
++	 * @param array $params
+ 	 * @return User
+ 	 */
+-	private function getUrUser() {
++	private function getUrUser( array $params ) {
+ 		if ( $this->mUser !== null ) {
+ 			return $this->mUser;
+ 		}
+ 
+-		$params = $this->extractRequestParams();
+ 		$this->requireOnlyOneParameter( $params, 'user', 'userid' );
+ 
+ 		$user = isset( $params['user'] ) ? $params['user'] : '#' . $params['userid'];
+@@ -101,10 +101,6 @@
+ 				ApiBase::PARAM_TYPE => User::getAllGroups(),
+ 				ApiBase::PARAM_ISMULTI => true
+ 			),
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'reason' => array(
+ 				ApiBase::PARAM_DFLT => ''
+ 			)
+@@ -117,7 +113,10 @@
+ 			'userid' => 'User id',
+ 			'add' => 'Add the user to these groups',
+ 			'remove' => 'Remove the user from these groups',
+-			'token' => 'A userrights token previously retrieved through list=users',
++			'token' => array(
++				/* Standard description automatically prepended */
++				'For compatibility, the token used in the web UI is also accepted.'
++			),
+ 			'reason' => 'Reason for the change',
+ 		);
+ 	}
+@@ -127,11 +126,11 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
++		return 'userrights';
+ 	}
+ 
+-	public function getTokenSalt() {
+-		return $this->getUrUser()->getName();
++	protected function getWebUITokenSalt( array $params ) {
++		return $this->getUrUser( $params )->getName();
+ 	}
+ 
+ 	public function getExamples() {
+diff --git a/includes/api/ApiWatch.php b/includes/api/ApiWatch.php
+index 8060260..e6a660b 100644
+--- a/includes/api/ApiWatch.php
++++ b/includes/api/ApiWatch.php
+@@ -166,10 +166,6 @@
+ 	}
+ 
+ 	public function needsToken() {
+-		return true;
+-	}
+-
+-	public function getTokenSalt() {
+ 		return 'watch';
+ 	}
+ 
+@@ -181,10 +177,6 @@
+ 			),
+ 			'unwatch' => false,
+ 			'uselang' => null,
+-			'token' => array(
+-				ApiBase::PARAM_TYPE => 'string',
+-				ApiBase::PARAM_REQUIRED => true
+-			),
+ 			'continue' => '',
+ 		);
+ 		if ( $flags ) {
+@@ -201,7 +193,6 @@
+ 			'title' => 'The page to (un)watch. use titles instead',
+ 			'unwatch' => 'If set the page will be unwatched rather than watched',
+ 			'uselang' => 'Language to show the message in',
+-			'token' => 'A token previously acquired via prop=info',
+ 			'continue' => 'When more results are available, use this to continue',
+ 		);
+ 	}
+diff --git a/includes/resourceloader/ResourceLoaderUserTokensModule.php b/includes/resourceloader/ResourceLoaderUserTokensModule.php
+index e652422..668467c 100644
+--- a/includes/resourceloader/ResourceLoaderUserTokensModule.php
++++ b/includes/resourceloader/ResourceLoaderUserTokensModule.php
+@@ -44,8 +44,8 @@
+ 
+ 		return array(
+ 			'editToken' => $wgUser->getEditToken(),
+-			'patrolToken' => ApiQueryRecentChanges::getPatrolToken( null, null ),
+-			'watchToken' => ApiQueryInfo::getWatchToken( null, null ),
++			'patrolToken' => $wgUser->getEditToken( 'patrol' ),
++			'watchToken' => $wgUser->getEditToken( 'watch' ),
+ 		);
+ 	}
+ 
