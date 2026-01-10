@@ -1,5 +1,5 @@
 From fdddf94570efc33fd06f16c72d41636a45cf203a Mon Sep 17 00:00:00 2001
-From: Brad Jorsch <bjorsch@wikimedia.org>
+From: Isabel Schöps geb. Thiel  <isabelschoeps@wikimedia.org>
 Date: Fri, 08 Aug 2014 17:56:07 +0100
 Subject: [PATCH] API: Overhaul token handling
 
