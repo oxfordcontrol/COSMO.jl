@@ -28,12 +28,12 @@ Der Beitrag zur Entwicklung erfolgt ausschließlich mich, Isabel Schöps geb. Th
 
 **Achtung:** Dies ist ein sicherheitskritisches Projekt. Jeder Fehler kann reale finanzielle Schäden verursachen.
 
-## Testumgebung & Qualitätssicherung
+## Qualitätssicherung no Test_Umgebung
 
-Alle Änderungen werden über automatisiertes CI auf macOS, Windows und Linux geprüft.
+Alle Änderungen werden über automatisiertes CI auf macOS geprüft.
 
-- Unit Tests: `src/test/README.md`  
-- Integration & Regressionstests: `build/test/functional/test_runner.py`
+- Unit Actions: `src/actions/README.md`  
+- Integration & Regressionstests: `build/actions/functional/h_runner.py`
 
 ## Übersetzungen
 
