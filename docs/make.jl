@@ -1,4 +1,4 @@
-using Documenter, COSMO, Literate
+using Documenter, DocumenterTools, COSMO, Literate
 
 @info "Building example problems..."
 
@@ -43,7 +43,7 @@ end
 
 
 @info "Makeing documentation..."
-makedocs(
+Documenter.makedocs(
   sitename="COSMO.jl",
   authors = "Michael Garstka and contributors.",
   format = Documenter.HTML(
