@@ -1,4 +1,4 @@
-using Documenter, DocumenterTools, COSMO, Literate
+using Documenter, COSMO, Literate
 
 @info "Building example problems..."
 
@@ -51,6 +51,7 @@ makedocs(
         canonical = "https://oxfordcontrol.github.io/COSMO.jl/stable/",
         assets = ["assets/favicon.ico"; "assets/github_buttons.js"; "assets/custom.css"],
         analytics = "UA-134239283-1",
+        size_threshold = 3000 * 1024
   ),
   pages = [
         "Home" => "index.md",
