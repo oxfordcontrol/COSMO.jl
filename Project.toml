@@ -25,7 +25,7 @@ UnsafeArrays = "c4a57d5a-5b31-53a6-b365-19f8c011fbd6"
 [compat]
 AMD = "0.4, 0.5"
 COSMOAccelerators = "^0.1.0"
-DataStructures = "0.17, 18.0, 0.19"
+DataStructures = "^0.17.0, ^0.18.0, 0.19"
 IterTools = "^1"
 IterativeSolvers = "^0.9"
 MathOptInterface = "1.25"
