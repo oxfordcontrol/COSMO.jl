@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Support Vector Machine · COSMO.jl</title><meta name="title" content="Support Vector Machine · COSMO.jl"/><meta property="og:title" content="Support Vector Machine · COSMO.jl"/><meta property="twitter:title" content="Support Vector Machine · COSMO.jl"/><meta name="description" content="Documentation for COSMO.jl."/><meta property="og:description" content="Documentation for COSMO.jl."/><meta property="twitter:description" content="Documentation for COSMO.jl."/><meta property="og:url" content="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/svm_primal/"/><meta property="twitter:url" content="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/svm_primal/"/><link rel="canonical" href="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/svm_primal/"/><script async src="https://www.googletagmanager.com/gtag/js?id=UA-134239283-1"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-134239283-1', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../assets/github_buttons.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="COSMO.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">COSMO.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../jump/">JuMP Interface</a></li><li><a class="tocitem" href="../../lin_solver/">Linear System Solver</a></li><li><a class="tocitem" href="../../acceleration/">Acceleration</a></li><li><a class="tocitem" href="../../literate/build/custom_cone/">Custom Cone Constraint</a></li><li><a class="tocitem" href="../../decomposition/">Chordal Decomposition</a></li><li><a class="tocitem" href="../../literate/build/portfolio_model_updates/">Model Updates</a></li><li><a class="tocitem" href="../../literate/build/arbitrary_precision/">Arbitrary Precision</a></li><li><a class="tocitem" href="../../performance/">Performance Tips</a></li></ul></li><li><a class="tocitem" href="../../method/">Method</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../closest_correlation_matrix/">Closest Correlation Matrix</a></li><li><a class="tocitem" href="../logistic_regression/">Logistic Regression</a></li><li><a class="tocitem" href="../lovasz_petersen/">Lovász Theta Function</a></li><li><a class="tocitem" href="../lp/">Linear Program</a></li><li><a class="tocitem" href="../maxcut/">Maximum Cut Problem</a></li><li><a class="tocitem" href="../portfolio_optimisation/">Portfolio Optimisation</a></li><li><a class="tocitem" href="../qp/">Quadratic Program</a></li><li><a class="tocitem" href="../sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ</a></li><li class="is-active"><a class="tocitem" href>Support Vector Machine</a><ul class="internal"><li><a class="tocitem" href="#Generating-the-Dataset"><span>Generating the Dataset</span></a></li><li><a class="tocitem" href="#Solving-SVM-as-a-QP"><span>Solving SVM as a QP</span></a></li><li><a class="tocitem" href="#Modelling-in-JuMP"><span>Modelling in JuMP</span></a></li><li><a class="tocitem" href="#Plotting-the-hyperplane"><span>Plotting the hyperplane</span></a></li><li><a class="tocitem" href="#Modelling-with-COSMO"><span>Modelling with COSMO</span></a></li></ul></li><li><a class="tocitem" href="../two_way_partitioning/">Relaxed Two-Way Partitioning Problem</a></li></ul></li><li><a class="tocitem" href="../../citing/">Citing COSMO</a></li><li><a class="tocitem" href="../../contributing/">Contributing</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Support Vector Machine</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Support Vector Machine</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/oxfordcontrol/COSMO.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/examples/svm_primal.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p>The source files for all examples can be found in <a href="https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples/">/examples</a>.</p><h1 id="Support-Vector-Machine"><a class="docs-heading-anchor" href="#Support-Vector-Machine">Support Vector Machine</a><a id="Support-Vector-Machine-1"></a><a class="docs-heading-anchor-permalink" href="#Support-Vector-Machine" title="Permalink"></a></h1><p>We are showing how to solve a support vector machine problem with COSMO (and JuMP).</p><h2 id="Generating-the-Dataset"><a class="docs-heading-anchor" href="#Generating-the-Dataset">Generating the Dataset</a><a id="Generating-the-Dataset-1"></a><a class="docs-heading-anchor-permalink" href="#Generating-the-Dataset" title="Permalink"></a></h2><p>We want to classify the points in this example dataset with <span>$m = 100$</span> samples and <span>$n = 2$</span> features:</p><pre><code class="language-julia hljs">using Distributions: MvNormal
+using Plots, LinearAlgebra, SparseArrays, Random, Test</code></pre><pre><code class="language-julia hljs"># Generate dataset
+rng = Random.MersenneTwister(123);
+num_samples = 100;
+Xpos = rand(rng, MvNormal([1.5, 1.5], 1.25), div(num_samples, 2))&#39;;
+Xneg = rand(rng, MvNormal([-1.5, -1.5], 1.25), div(num_samples, 2))&#39;;
+ypos = ones(div(num_samples, 2));
+yneg = -ones(div(num_samples, 2));</code></pre><pre><code class="language-julia hljs"># Plot dataset
+plot(Xpos[:, 1], Xpos[:, 2], color = :red, st=:scatter, markershape = :rect, label = &quot;positive&quot;, xlabel = &quot;x1&quot;, ylabel = &quot;x2&quot;)
+plot!(Xneg[:, 1], Xneg[:, 2], color = :blue, st=:scatter, markershape = :circle, label = &quot;negative&quot;)</code></pre><img src="47303cb5.svg" alt="Example block output"/><p>with samples <span>$(x_1, x_2, \ldots, x_m) \in \mathbb{R}^2$</span> and labels <span>$y_i \in \{-1,1\}$</span>.</p><h2 id="Solving-SVM-as-a-QP"><a class="docs-heading-anchor" href="#Solving-SVM-as-a-QP">Solving SVM as a QP</a><a id="Solving-SVM-as-a-QP-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-SVM-as-a-QP" title="Permalink"></a></h2><p>We want to compute the weights <span>$w$</span> and bias term <span>$b$</span> of the (soft-margin) SVM classifier:</p><p class="math-container">\[\begin{array}{ll}
+    \text{minimize}   &amp; \|w\|^2 + \lambda \sum_{i=1}^m \text{max}(0, 1 - y_i(w^\top x_i  - b)),
+\end{array}\]</p><p>where <span>$\lambda$</span> is a hyperparameter. This problem can be solved as a quadratic program. We can rewrite above problem into an optimisation problem in primal form by introducing the auxiliary slack variables <span>$t_i$</span>:</p><p class="math-container">\[t_i = \text{max}(0, 1 - y_i(w^T x_i  - b)), \quad t_i \geq 0.\]</p><p>This allows us to write the problems in standard QP format:</p><p class="math-container">\[\begin{array}{ll}
+    \text{minimize}   &amp; \|w\|^2 + \lambda \sum_{i=1}^m t_i\\
+    \text{subject to} &amp; y_i (w^\top x_i - b) \geq 1 - t_i, \quad \text{for } i = 1,\ldots, m\\
+                      &amp; t_i \geq 0, \quad \text{for } i = 1,\ldots, m.
+\end{array}\]</p><p>Next, we will remove the bias term <span>$b$</span> by adding an initial feature <span>$x_0 = -1$</span> to each sample (now: <span>$n = 3$</span>):</p><pre><code class="language-julia hljs">X = [-ones(num_samples) [Xpos; Xneg]];
+y = [ypos; yneg];
+m, n = size(X)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(100, 3)</code></pre><h2 id="Modelling-in-JuMP"><a class="docs-heading-anchor" href="#Modelling-in-JuMP">Modelling in JuMP</a><a id="Modelling-in-JuMP-1"></a><a class="docs-heading-anchor-permalink" href="#Modelling-in-JuMP" title="Permalink"></a></h2><p>We can model this problem using <code>JuMP</code> and then hand it to <code>COSMO</code>:</p><pre><code class="language-julia hljs">using JuMP, COSMO</code></pre><pre><code class="language-julia hljs">λ = 1.0; # hyperparameter
+model = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, &quot;verbose&quot; =&gt; true));
+
+
+@variable(model, w[1:n]);
+@variable(model, t[1:m] &gt;= 0.);
+@objective(model, Min, w&#39; * w  + λ * ones(m)&#39; * t);
+@constraint(model, diagm(0 =&gt; y) * X * w .+ t .- 1 .&gt;= 0);
+status = JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Minimize ScalarQuadraticFunction{Float64}:
+ 0.0 + 1.0 t[1] + 1.0 t[2] + 1.0 t[3] + 1.0 t[4] + 1.0 t[5] + 1.0 t[6] + 1.0 t[7] + 1.0 t[8] + 1.0 t[9] + 1.0 t[10] + 1.0 t[11] + 1.0 t[12] + 1.0 t[13] + 1.0 t[14] + 1.0 t[15] + 1.0 t[16] + 1.0 t[17] + 1.0 t[18] + 1.0 t[19] + 1.0 t[20] + 1.0 t[21] + 1.0 t[22] + 1.0 t[23] + 1.0 t[24] + 1.0 t[25] + 1.0 t[26] + 1.0 t[27] + 1.0 t[28] + 1.0 t[29] + 1.0 t[30] + 1.0 t[31] + 1.0 t[32] + 1.0 t[33] + 1.0 t[34] + 1.0 t[35] + 1.0 t[36] + 1.0 t[37] + 1.0 t[38] + 1.0 t[39] + 1.0 t[40] + 1.0 t[41] + 1.0 t[42] + 1.0 t[43] + 1.0 t[44] + 1.0 t[45] + 1.0 t[46] + 1.0 t[47] + 1.0 t[48] + 1.0 t[49] + 1.0 t[50] + 1.0 t[51] + 1.0 t[52] + 1.0 t[53] + 1.0 t[54] + 1.0 t[55] + 1.0 t[56] + 1.0 t[57] + 1.0 t[58] + 1.0 t[59] + 1.0 t[60] + 1.0 t[61] + 1.0 t[62] + 1.0 t[63] + 1.0 t[64] + 1.0 t[65] + 1.0 t[66] + 1.0 t[67] + 1.0 t[68] + 1.0 t[69] + 1.0 t[70] + 1.0 t[71] + 1.0 t[72] + 1.0 t[73] + 1.0 t[74] + 1.0 t[75] + 1.0 t[76] + 1.0 t[77] + 1.0 t[78] + 1.0 t[79] + 1.0 t[80] + 1.0 t[81] + 1.0 t[82] + 1.0 t[83] + 1.0 t[84] + 1.0 t[85] + 1.0 t[86] + 1.0 t[87] + 1.0 t[88] + 1.0 t[89] + 1.0 t[90] + 1.0 t[91] + 1.0 t[92] + 1.0 t[93] + 1.0 t[94] + 1.0 t[95] + 1.0 t[96] + 1.0 t[97] + 1.0 t[98] + 1.0 t[99] + 1.0 t[100] + 1.0 w[1]² + 1.0 w[2]² + 1.0 w[3]²
+
+Subject to:
+
+VectorAffineFunction{Float64}-in-Nonnegatives
+ ┌               ┐
+ │-0.0 + 1.0 t[1]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[2]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[3]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[4]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[5]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[6]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[7]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[8]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌               ┐
+ │-0.0 + 1.0 t[9]│
+ └               ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[10]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[11]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[12]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[13]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[14]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[15]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[16]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[17]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[18]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[19]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[20]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[21]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[22]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[23]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[24]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[25]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[26]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[27]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[28]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[29]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[30]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[31]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[32]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[33]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[34]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[35]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[36]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[37]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[38]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[39]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[40]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[41]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[42]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[43]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[44]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[45]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[46]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[47]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[48]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[49]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[50]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[51]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[52]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[53]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[54]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[55]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[56]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[57]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[58]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[59]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[60]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[61]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[62]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[63]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[64]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[65]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[66]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[67]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[68]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[69]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[70]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[71]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[72]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[73]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[74]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[75]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[76]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[77]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[78]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[79]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[80]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[81]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[82]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[83]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[84]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[85]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[86]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[87]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[88]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[89]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[90]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[91]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[92]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[93]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[94]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[95]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[96]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[97]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[98]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                ┐
+ │-0.0 + 1.0 t[99]│
+ └                ┘ ∈ Nonnegatives(1)
+ ┌                 ┐
+ │-0.0 + 1.0 t[100]│
+ └                 ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 1.9044050821782788 w[2] - 0.8778931721628123 w[3] + 1.0 t[1]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 1.6921749970603748 w[2] + 0.8392066374491349 w[3] + 1.0 t[2]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 - 1.0 w[1] + 2.407399111914249 w[2] - 0.6351627929840542 w[3] + 1.0 t[3]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 - 1.0 w[1] + 2.666650532456237 w[2] + 2.3781101216270795 w[3] + 1.0 t[4]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] - 0.7945436068198393 w[2] + 3.2887040386218094 w[3] + 1.0 t[5]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 2.4587447437696257 w[2] + 0.7522138703244783 w[3] + 1.0 t[6]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.029137973491074387 w[2] + 3.2981964569770312 w[3] + 1.0 t[7]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] - 1.1606597240327021 w[2] + 2.4665478174050177 w[3] + 1.0 t[8]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 2.3693969782980675 w[2] + 0.6688761034571953 w[3] + 1.0 t[9]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 1.3633912773129766 w[2] - 0.969520699520805 w[3] + 1.0 t[10]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.25049358726662474 w[2] - 1.2367002542059526 w[3] + 1.0 t[11]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 4.060801037334988 w[2] + 1.6601701178765802 w[3] + 1.0 t[12]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 1.5673950794476883 w[2] + 1.4734650104568374 w[3] + 1.0 t[13]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.30289029984031757 w[2] + 0.4535202925143216 w[3] + 1.0 t[14]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 2.6178609005811437 w[2] + 0.2524897528623349 w[3] + 1.0 t[15]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 0.6367643742519011 w[2] + 1.988263589992648 w[3] + 1.0 t[16]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                            ┐
+ │-1.0 - 1.0 w[1] + 1.90150527693164 w[2] + 3.452007447734336 w[3] + 1.0 t[17]│
+ └                                                                            ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 0.8790250501594428 w[2] + 1.9477647678828538 w[3] + 1.0 t[18]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 2.5473881106595266 w[2] + 2.8394471850906537 w[3] + 1.0 t[19]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 0.42884994264585097 w[2] + 0.808493671221747 w[3] + 1.0 t[20]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 2.1531918484836075 w[2] + 1.414250053728006 w[3] + 1.0 t[21]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 2.5019062194047397 w[2] + 2.9701929229944533 w[3] + 1.0 t[22]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.41687635850508764 w[2] + 0.4592459024208795 w[3] + 1.0 t[23]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 - 1.0 w[1] + 2.294530371380282 w[2] + 2.071700386857233 w[3] + 1.0 t[24]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 1.8646117341162864 w[2] + 0.19618024578913174 w[3] + 1.0 t[25]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] - 0.4405159701264061 w[2] + 0.531088174845206 w[3] + 1.0 t[26]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 2.480730324467792 w[2] + 1.2466195374052111 w[3] + 1.0 t[27]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.6884653559453876 w[2] + 0.24081215077585894 w[3] + 1.0 t[28]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 2.1669404416948854 w[2] + 1.6596339227492545 w[3] + 1.0 t[29]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 3.8960541042698704 w[2] + 2.7827239471937304 w[3] + 1.0 t[30]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 0.2981715415309556 w[2] + 2.6013429281560745 w[3] + 1.0 t[31]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 1.0210156288712333 w[2] + 2.8395545650414697 w[3] + 1.0 t[32]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 3.1764945546171406 w[2] + 3.276880174650432 w[3] + 1.0 t[33]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 - 1.0 w[1] + 1.977085152642475 w[2] + 3.776704151323462 w[3] + 1.0 t[34]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 3.0855692300405018 w[2] + 0.3935410090695033 w[3] + 1.0 t[35]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 1.6476985516706992 w[2] + 2.3431354663827584 w[3] + 1.0 t[36]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] - 1.3906145600953441 w[2] + 0.2881246349756523 w[3] + 1.0 t[37]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 1.002865250341916 w[2] - 0.041037919975509984 w[3] + 1.0 t[38]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 3.0787626943201083 w[2] + 2.4263350785835756 w[3] + 1.0 t[39]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 1.3651076372476303 w[2] + 1.8534288546835338 w[3] + 1.0 t[40]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 2.9984028401044682 w[2] - 0.8958670229821082 w[3] + 1.0 t[41]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 0.9529792847364923 w[2] - 2.0649156646495603 w[3] + 1.0 t[42]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 - 1.0 w[1] + 1.726284513482959 w[2] + 1.032905241473888 w[3] + 1.0 t[43]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] - 1.4493652740362175 w[2] - 1.4428290555055132 w[3] + 1.0 t[44]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] - 0.02606695182895935 w[2] + 1.175233841335777 w[3] + 1.0 t[45]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.9906839784684999 w[2] - 0.05577491966931003 w[3] + 1.0 t[46]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 - 1.0 w[1] + 0.40237096625699564 w[2] + 0.6571368908284778 w[3] + 1.0 t[47]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 - 1.0 w[1] + 0.8713642551931092 w[2] + 1.1456901267473296 w[3] + 1.0 t[48]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 2.9107924630534243 w[2] + 1.243951394762717 w[3] + 1.0 t[49]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 - 1.0 w[1] + 0.7619018925802161 w[2] + 2.099668334168377 w[3] + 1.0 t[50]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 1.7050547847468693 w[2] + 1.461648421501637 w[3] + 1.0 t[51]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] - 0.4535186209885942 w[2] + 1.141702597573809 w[3] + 1.0 t[52]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] + 0.32413888224320053 w[2] + 1.5605108576961277 w[3] + 1.0 t[53]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 1.8370167550277885 w[2] + 2.223443502056958 w[3] + 1.0 t[54]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] + 0.6648499036230462 w[2] + 0.21850106789021462 w[3] + 1.0 t[55]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] + 2.2360696795848556 w[2] - 0.09421484785019363 w[3] + 1.0 t[56]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] - 0.8071539045829819 w[2] + 0.7388393380917516 w[3] + 1.0 t[57]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 + 1.0 w[1] + 2.617003632873076 w[2] + 1.976210931155406 w[3] + 1.0 t[58]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] - 1.0564893763266037 w[2] + 0.9141002771100818 w[3] + 1.0 t[59]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.9841003469093572 w[2] - 0.8581698921000354 w[3] + 1.0 t[60]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.1798603429686738 w[2] + 0.7900018909323311 w[3] + 1.0 t[61]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] - 0.2423000114118743 w[2] + 1.8283226134184127 w[3] + 1.0 t[62]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] + 1.847038035352767 w[2] + 0.030167570324913795 w[3] + 1.0 t[63]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 0.6872910777191164 w[2] + 2.304774836583441 w[3] + 1.0 t[64]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.8561654341404152 w[2] + 2.7089685309586655 w[3] + 1.0 t[65]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 3.1932130238685854 w[2] + 0.631552600543039 w[3] + 1.0 t[66]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 0.9784730526844883 w[2] + 2.1636525906075113 w[3] + 1.0 t[67]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 4.57066724464439 w[2] - 0.41175263797550965 w[3] + 1.0 t[68]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.2061855854969679 w[2] + 1.7276195498386113 w[3] + 1.0 t[69]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 0.2909928220896669 w[2] + 2.970406217755305 w[3] + 1.0 t[70]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] - 0.7385724298490843 w[2] + 0.8330501539339288 w[3] + 1.0 t[71]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] - 0.5359575705212603 w[2] + 0.12400020651924892 w[3] + 1.0 t[72]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 2.6736043708507453 w[2] + 4.067255077868854 w[3] + 1.0 t[73]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 2.2848383975625306 w[2] + 3.2207574338600473 w[3] + 1.0 t[74]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 0.7031836361350728 w[2] + 1.0026649288848324 w[3] + 1.0 t[75]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 2.2138635792548147 w[2] + 1.7170704708905302 w[3] + 1.0 t[76]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.7352646369039408 w[2] + 0.1380158896384176 w[3] + 1.0 t[77]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 3.1929833443601177 w[2] + 2.2971516786230914 w[3] + 1.0 t[78]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 0.7995697475674601 w[2] - 0.566628174303617 w[3] + 1.0 t[79]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 2.224884346124198 w[2] + 0.8967677251625108 w[3] + 1.0 t[80]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.5564079232983732 w[2] + 2.4246289346969805 w[3] + 1.0 t[81]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 2.9565449613096555 w[2] + 0.9392460087175475 w[3] + 1.0 t[82]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 1.866007585680288 w[2] + 0.15227423767644988 w[3] + 1.0 t[83]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 2.0766485277563165 w[2] + 2.0007468253769334 w[3] + 1.0 t[84]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 2.4366747511854943 w[2] + 1.5724120375300632 w[3] + 1.0 t[85]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] - 0.4042249897447381 w[2] + 2.2976561428540534 w[3] + 1.0 t[86]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 0.9327985907837375 w[2] + 2.258271611492172 w[3] + 1.0 t[87]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 1.302686978093341 w[2] + 1.8142863711961583 w[3] + 1.0 t[88]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 2.3495374683497685 w[2] + 2.339180875753052 w[3] + 1.0 t[89]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 3.2488626017759006 w[2] + 2.630280006228408 w[3] + 1.0 t[90]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 1.176781027053721 w[2] + 2.4830272963457007 w[3] + 1.0 t[91]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] + 0.3876975857383711 w[2] + 0.17268501141430037 w[3] + 1.0 t[92]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 + 1.0 w[1] + 0.642296323128654 w[2] + 2.423860921330225 w[3] + 1.0 t[93]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                                 ┐
+ │-1.0 + 1.0 w[1] - 0.32492027800726464 w[2] + 0.03802937450359489 w[3] + 1.0 t[94]│
+ └                                                                                 ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 0.7135856454581445 w[2] - 0.4247919633465951 w[3] + 1.0 t[95]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                                ┐
+ │-1.0 + 1.0 w[1] + 0.8574387102059663 w[2] + 0.38919408136511513 w[3] + 1.0 t[96]│
+ └                                                                                ┘ ∈ Nonnegatives(1)
+ ┌                                                                               ┐
+ │-1.0 + 1.0 w[1] + 2.8664674645420902 w[2] + 1.6222968958144164 w[3] + 1.0 t[97]│
+ └                                                                               ┘ ∈ Nonnegatives(1)
+ ┌                                                                             ┐
+ │-1.0 + 1.0 w[1] + 2.923823786570074 w[2] + 1.967111065051214 w[3] + 1.0 t[98]│
+ └                                                                             ┘ ∈ Nonnegatives(1)
+ ┌                                                                              ┐
+ │-1.0 + 1.0 w[1] + 0.3085742632374382 w[2] + 1.296710932374735 w[3] + 1.0 t[99]│
+ └                                                                              ┘ ∈ Nonnegatives(1)
+ ┌                                                                                  ┐
+ │-1.0 + 1.0 w[1] - 0.022799091209680933 w[2] + 1.6121507293238937 w[3] + 1.0 t[100]│
+ └                                                                                  ┘ ∈ Nonnegatives(1)
+
+------------------------------------------------------------------
+          COSMO v0.8.10 - A Quadratic Objective Conic Solver
+                         Michael Garstka
+                University of Oxford, 2017 - 2022
+------------------------------------------------------------------
+
+Problem:  x ∈ R^{103},
+          constraints: A ∈ R^{200x103} (500 nnz),
+          matrix size to factor: 303x303,
+          Floating-point precision: Float64
+Sets:     Nonnegatives of dim: 200
+Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
+          ϵ_prim_inf = 1.0e-04, ϵ_dual_inf = 1.0e-04,
+          ρ = 0.1, σ = 1e-06, α = 1.6,
+          max_iter = 5000,
+          scaling iter = 10 (on),
+          check termination every 25 iter,
+          check infeasibility every 40 iter,
+          KKT system solver: QDLDL
+Acc:      Anderson Type2{QRDecomp},
+          Memory size = 15, RestartedMemory,
+          Safeguarded: true, tol: 2.0
+Setup Time: 0.91ms
+
+Iter:	Objective:	Primal Res:	Dual Res:	Rho:
+1	-1.2386e+03	1.8621e+01	7.9772e+00	1.0000e-01
+25	 2.0745e+01	1.9518e-01	2.2851e-01	1.0000e-01
+50	 2.1369e+01	7.2162e-02	4.2689e-03	1.0000e-01
+75	 2.1467e+01	4.3595e-02	4.6488e-02	1.0000e-01
+100	 2.1572e+01	2.8674e-02	1.4458e-03	1.0000e-01
+125	 2.1608e+01	2.5533e-02	1.1443e-02	1.0000e-01
+150	 2.1637e+01	3.2745e-02	3.7370e-03	1.0000e-01
+175	 2.1640e+01	8.4182e-03	8.8947e-04	1.0000e-01
+200	 2.1639e+01	8.2338e-03	1.5859e-05	1.0000e-01
+225	 2.1655e+01	3.5792e-03	1.4710e-01	5.7984e+00
+250	 2.1660e+01	4.8320e-03	5.5805e-02	4.5757e-01
+275	 2.1660e+01	1.1357e-03	4.3063e-03	4.5757e-01
+300	 2.1659e+01	4.7073e-04	3.3973e-03	4.5757e-01
+325	 2.1659e+01	5.2610e-04	1.7640e-05	4.5757e-01
+350	 2.1659e+01	5.2680e-04	5.8482e-06	4.5757e-01
+375	 2.1659e+01	5.2687e-04	1.0761e-04	1.3055e+01
+400	 2.1660e+01	3.6146e-05	1.7425e+00	4.7653e-01
+425	 2.1660e+01	1.5754e-04	2.2764e-04	4.7653e-01
+450	 2.1660e+01	3.6026e-05	3.8520e-04	4.7653e-01
+475	 2.1660e+01	1.4531e-05	1.1846e-04	4.7653e-01
+500	 2.1660e+01	5.2318e-06	5.7118e-05	4.7653e-01
+525	 2.1660e+01	1.1499e-06	3.4096e-06	4.7653e-01
+
+------------------------------------------------------------------
+&gt;&gt;&gt; Results
+Status: Solved
+Iterations: 552 (incl. 27 safeguarding iter)
+Optimal objective: 21.66
+Runtime: 0.006s (5.7ms)</code></pre><p>The optimal weights <span>$w = [w_0, w_1, w_2]^\top$</span> (where <span>$w_0 = b$</span>) are:</p><pre><code class="language-julia hljs">w_opt = JuMP.value.(w)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3-element Vector{Float64}:
+ -0.12492155904339833
+  0.9045137097145621
+  0.7804077259116898</code></pre><h2 id="Plotting-the-hyperplane"><a class="docs-heading-anchor" href="#Plotting-the-hyperplane">Plotting the hyperplane</a><a id="Plotting-the-hyperplane-1"></a><a class="docs-heading-anchor-permalink" href="#Plotting-the-hyperplane" title="Permalink"></a></h2><p>The separating hyperplane is defined by <span>$w^\top x - b = 0$</span>. To plot the hyperplane, we calculate <span>$x_2$</span> over a range of <span>$x_1$</span> values:</p><p class="math-container">\[x_2 = (-w_1 x_1 - w_0) / w_2, \text{ where } w_0 = b.\]</p><pre><code class="language-julia hljs">x1 = -4:0.1:4;
+x2 = (-w_opt[2] * x1  .- w_opt[1]) / w_opt[3]
+plot!(x1, x2, label = &quot;SVM separator&quot;, legend = :topleft)</code></pre><img src="7eeaa622.svg" alt="Example block output"/><h2 id="Modelling-with-COSMO"><a class="docs-heading-anchor" href="#Modelling-with-COSMO">Modelling with COSMO</a><a id="Modelling-with-COSMO-1"></a><a class="docs-heading-anchor-permalink" href="#Modelling-with-COSMO" title="Permalink"></a></h2><p>The problem can also be solved by transforming it directly into <code>COSMO</code>&#39;s problem format. Define <code>COSMO</code>`s <span>$x$</span>-variable to be <span>$x=[w, t]^\top$</span> and choose <span>$P$</span>, <span>$q$</span>, accordingly:</p><pre><code class="language-julia hljs">P = blockdiag(spdiagm(0 =&gt; ones(n)), spzeros(m, m));
+q = [zeros(n); 0.5 * λ * ones(m)];</code></pre><p>Next we transform the first constraint <span>$y_i (w^\top x_i - b) \geq 1 - t_i, \quad \text{for } i = 1,\ldots, m$</span> into <code>COSMO</code>&#39;s constraint format: <span>$Ax + b \in \mathcal{K}$</span>.</p><pre><code class="language-julia hljs">A1 = [(spdiagm(0 =&gt; y) * X) spdiagm(0 =&gt; ones(m))];
+b1 = -ones(m);
+cs1 = COSMO.Constraint(A1, b1, COSMO.Nonnegatives);</code></pre><p>It remains to specify the constraint <span>$t_i \geq 0, \quad \text{for } i = 1,\ldots, m$</span>:</p><pre><code class="language-julia hljs">A2 = spdiagm(0 =&gt; ones(m));
+b2 = zeros(m);
+cs2 = COSMO.Constraint(A2, b2, COSMO.Nonnegatives, m+n, n+1:m+n);</code></pre><p>Create, assemble and solve the <code>COSMO.Model</code>:</p><pre><code class="language-julia hljs">model2 = COSMO.Model();
+assemble!(model2, P, q, [cs1; cs2]);
+result2 = COSMO.optimize!(model2);
+w_opt2 = result2.x[1:3];
+@test norm(w_opt2 - w_opt, Inf) &lt; 1e-3</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../sum_abs_k_eigenvalues/">« Minimizing the sum of the k-largest λ</a><a class="docs-footer-nextpage" href="../two_way_partitioning/">Relaxed Two-Way Partitioning Problem »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 15:52">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

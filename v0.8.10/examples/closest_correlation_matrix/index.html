@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Closest Correlation Matrix · COSMO.jl</title><meta name="title" content="Closest Correlation Matrix · COSMO.jl"/><meta property="og:title" content="Closest Correlation Matrix · COSMO.jl"/><meta property="twitter:title" content="Closest Correlation Matrix · COSMO.jl"/><meta name="description" content="Documentation for COSMO.jl."/><meta property="og:description" content="Documentation for COSMO.jl."/><meta property="twitter:description" content="Documentation for COSMO.jl."/><meta property="og:url" content="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/closest_correlation_matrix/"/><meta property="twitter:url" content="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/closest_correlation_matrix/"/><link rel="canonical" href="https://oxfordcontrol.github.io/COSMO.jl/stable/examples/closest_correlation_matrix/"/><script async src="https://www.googletagmanager.com/gtag/js?id=UA-134239283-1"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-134239283-1', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../assets/github_buttons.js"></script><link href="../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="COSMO.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">COSMO.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../jump/">JuMP Interface</a></li><li><a class="tocitem" href="../../lin_solver/">Linear System Solver</a></li><li><a class="tocitem" href="../../acceleration/">Acceleration</a></li><li><a class="tocitem" href="../../literate/build/custom_cone/">Custom Cone Constraint</a></li><li><a class="tocitem" href="../../decomposition/">Chordal Decomposition</a></li><li><a class="tocitem" href="../../literate/build/portfolio_model_updates/">Model Updates</a></li><li><a class="tocitem" href="../../literate/build/arbitrary_precision/">Arbitrary Precision</a></li><li><a class="tocitem" href="../../performance/">Performance Tips</a></li></ul></li><li><a class="tocitem" href="../../method/">Method</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Closest Correlation Matrix</a></li><li><a class="tocitem" href="../logistic_regression/">Logistic Regression</a></li><li><a class="tocitem" href="../lovasz_petersen/">Lovász Theta Function</a></li><li><a class="tocitem" href="../lp/">Linear Program</a></li><li><a class="tocitem" href="../maxcut/">Maximum Cut Problem</a></li><li><a class="tocitem" href="../portfolio_optimisation/">Portfolio Optimisation</a></li><li><a class="tocitem" href="../qp/">Quadratic Program</a></li><li><a class="tocitem" href="../sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ</a></li><li><a class="tocitem" href="../svm_primal/">Support Vector Machine</a></li><li><a class="tocitem" href="../two_way_partitioning/">Relaxed Two-Way Partitioning Problem</a></li></ul></li><li><a class="tocitem" href="../../citing/">Citing COSMO</a></li><li><a class="tocitem" href="../../contributing/">Contributing</a></li><li><a class="tocitem" href="../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Closest Correlation Matrix</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Closest Correlation Matrix</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/oxfordcontrol/COSMO.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/examples/closest_correlation_matrix.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><p>The source files for all examples can be found in <a href="https://github.com/oxfordcontrol/COSMO.jl/tree/master/examples/">/examples</a>.</p><h1 id="Closest-Correlation-Matrix"><a class="docs-heading-anchor" href="#Closest-Correlation-Matrix">Closest Correlation Matrix</a><a id="Closest-Correlation-Matrix-1"></a><a class="docs-heading-anchor-permalink" href="#Closest-Correlation-Matrix" title="Permalink"></a></h1><p>We consider the problem of finding the closest correlation matrix <span>$X$</span> to a given random matrix <span>$C$</span>. With closest correlation matrix we mean a positive semidefinite matrix with ones on the diagonal. The problem is given by:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp;  \frac{1}{2}||X - C||_F^2\\
+\text{subject to} &amp;  X_{ii} = 1, \quad i=1,\dots,n \\
+                  &amp;  X \succeq 0.
+\end{array}\]</p><p>Notice that we use <code>JuMP</code> to model the problem. <code>COSMO</code> is chosen as the backend solver. And COSMO-specific settings are passed using the <code>optimizer_with_attributes()</code> function.</p><pre><code class="language-julia hljs">using COSMO, JuMP, LinearAlgebra, SparseArrays, Test, Random</code></pre><pre><code class="language-julia hljs">rng = Random.MersenneTwister(12345);
+# create a random test matrix C
+n = 8;
+C = -1 .+ rand(rng, n, n) .* 2;
+c = vec(C);</code></pre><p>Define problem in <code>JuMP</code>:</p><pre><code class="language-julia hljs">q = -vec(C);
+r = 0.5 * vec(C)&#39; * vec(C);
+m = JuMP.Model(optimizer_with_attributes(COSMO.Optimizer, &quot;verbose&quot; =&gt; true));
+@variable(m, X[1:n, 1:n], PSD);
+x = vec(X);
+@objective(m, Min, 0.5 * x&#39; * x  + q&#39; * x + r);
+for i = 1:n
+  @constraint(m, X[i, i] == 1.);
+end</code></pre><p>Solve the <code>JuMP</code> model with <code>COSMO</code> and query the solution <code>X_sol</code>:</p><pre><code class="language-julia hljs">status = JuMP.optimize!(m);
+obj_val = JuMP.objective_value(m);
+X_sol = JuMP.value.(X);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Minimize ScalarQuadraticFunction{Float64}:
+ 9.153897960749184 - 0.5868445948072374 X[1,1] - 0.6979328738566593 X[1,2] - 0.7086271918729499 X[1,3] - 0.34791857373710666 X[1,4] + 0.39881354761120935 X[1,5] - 1.5157405234804902 X[1,6] - 0.2779934009144056 X[1,7] - 0.724869793873145 X[1,8] + 0.0007824842282477817 X[2,2] + 1.1688231933811437 X[2,3] + 0.39138130091300827 X[2,4] + 1.1754088610406903 X[2,5] - 0.49033659501878457 X[2,6] - 0.2433110958503466 X[2,7] - 0.0888332573675128 X[2,8] - 0.5841006783457146 X[3,3] - 1.0859021758454164 X[3,4] - 0.21982762884318996 X[3,5] + 0.77349753680036 X[3,6] + 0.006240353381980146 X[3,7] + 0.35917684338625033 X[3,8] - 0.03464464750524243 X[4,4] + 0.7620066249958741 X[4,5] - 1.0971751275764996 X[4,6] - 0.4168944118970974 X[4,7] - 1.3903367522952355 X[4,8] - 0.3781801564883356 X[5,5] - 0.512564646198213 X[5,6] - 0.00030128280174812616 X[5,7] - 0.3510799342418949 X[5,8] + 0.6507354932966494 X[6,6] - 0.7986461394322726 X[6,7] + 0.30662204970370954 X[6,8] - 0.5281451186073247 X[7,7] + 1.3797582344661254 X[7,8] + 0.7932198369405121 X[8,8] + 0.5 X[1,1]² + 1.0 X[1,2]² + 1.0 X[1,3]² + 1.0 X[1,4]² + 1.0 X[1,5]² + 1.0 X[1,6]² + 1.0 X[1,7]² + 1.0 X[1,8]² + 0.5 X[2,2]² + 1.0 X[2,3]² + 1.0 X[2,4]² + 1.0 X[2,5]² + 1.0 X[2,6]² + 1.0 X[2,7]² + 1.0 X[2,8]² + 0.5 X[3,3]² + 1.0 X[3,4]² + 1.0 X[3,5]² + 1.0 X[3,6]² + 1.0 X[3,7]² + 1.0 X[3,8]² + 0.5 X[4,4]² + 1.0 X[4,5]² + 1.0 X[4,6]² + 1.0 X[4,7]² + 1.0 X[4,8]² + 0.5 X[5,5]² + 1.0 X[5,6]² + 1.0 X[5,7]² + 1.0 X[5,8]² + 0.5 X[6,6]² + 1.0 X[6,7]² + 1.0 X[6,8]² + 0.5 X[7,7]² + 1.0 X[7,8]² + 0.5 X[8,8]²
+
+Subject to:
+
+VectorAffineFunction{Float64}-in-Zeros
+ ┌                 ┐
+ │-1.0 + 1.0 X[1,1]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[2,2]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[3,3]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[4,4]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[5,5]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[6,6]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[7,7]│
+ └                 ┘ ∈ Zeros(1)
+ ┌                 ┐
+ │-1.0 + 1.0 X[8,8]│
+ └                 ┘ ∈ Zeros(1)
+
+VectorAffineFunction{Float64}-in-Scaled{PositiveSemidefiniteConeTriangle}
+ ┌                               ┐
+ │0.0 + 1.0 X[1,1]               │
+ │0.0 + 1.4142135623730951 X[1,2]│
+ │0.0 + 1.0 X[2,2]               │
+ │0.0 + 1.4142135623730951 X[1,3]│
+ │0.0 + 1.4142135623730951 X[2,3]│
+ │0.0 + 1.0 X[3,3]               │
+ │0.0 + 1.4142135623730951 X[1,4]│
+ │0.0 + 1.4142135623730951 X[2,4]│
+ │0.0 + 1.4142135623730951 X[3,4]│
+ │0.0 + 1.0 X[4,4]               │
+ │0.0 + 1.4142135623730951 X[1,5]│
+ │0.0 + 1.4142135623730951 X[2,5]│
+ │0.0 + 1.4142135623730951 X[3,5]│
+ │0.0 + 1.4142135623730951 X[4,5]│
+ │0.0 + 1.0 X[5,5]               │
+ │0.0 + 1.4142135623730951 X[1,6]│
+ │0.0 + 1.4142135623730951 X[2,6]│
+ │0.0 + 1.4142135623730951 X[3,6]│
+ │0.0 + 1.4142135623730951 X[4,6]│
+ │0.0 + 1.4142135623730951 X[5,6]│
+ │0.0 + 1.0 X[6,6]               │
+ │0.0 + 1.4142135623730951 X[1,7]│
+ │0.0 + 1.4142135623730951 X[2,7]│
+ │0.0 + 1.4142135623730951 X[3,7]│
+ │0.0 + 1.4142135623730951 X[4,7]│
+ │0.0 + 1.4142135623730951 X[5,7]│
+ │0.0 + 1.4142135623730951 X[6,7]│
+ │0.0 + 1.0 X[7,7]               │
+ │0.0 + 1.4142135623730951 X[1,8]│
+ │0.0 + 1.4142135623730951 X[2,8]│
+ │0.0 + 1.4142135623730951 X[3,8]│
+ │0.0 + 1.4142135623730951 X[4,8]│
+ │0.0 + 1.4142135623730951 X[5,8]│
+ │0.0 + 1.4142135623730951 X[6,8]│
+ │0.0 + 1.4142135623730951 X[7,8]│
+ │0.0 + 1.0 X[8,8]               │
+ └                               ┘ ∈ Scaled{PositiveSemidefiniteConeTriangle}(PositiveSemidefiniteConeTriangle(8))
+
+------------------------------------------------------------------
+          COSMO v0.8.10 - A Quadratic Objective Conic Solver
+                         Michael Garstka
+                University of Oxford, 2017 - 2022
+------------------------------------------------------------------
+
+Problem:  x ∈ R^{36},
+          constraints: A ∈ R^{44x36} (44 nnz),
+          matrix size to factor: 80x80,
+          Floating-point precision: Float64
+Sets:     DensePsdConeTriangle of dim: 36 (8x8)
+          ZeroSet of dim: 8
+Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
+          ϵ_prim_inf = 1.0e-04, ϵ_dual_inf = 1.0e-04,
+          ρ = 0.1, σ = 1e-06, α = 1.6,
+          max_iter = 5000,
+          scaling iter = 10 (on),
+          check termination every 25 iter,
+          check infeasibility every 40 iter,
+          KKT system solver: QDLDL
+Acc:      Anderson Type2{QRDecomp},
+          Memory size = 15, RestartedMemory,
+          Safeguarded: true, tol: 2.0
+Setup Time: 845.84ms
+
+Iter:	Objective:	Primal Res:	Dual Res:	Rho:
+1	 5.7298e+00	5.9277e-01	7.1084e-01	1.0000e-01
+25	-3.9953e-01	4.6201e-06	2.1964e-06	1.0000e-01
+
+------------------------------------------------------------------
+&gt;&gt;&gt; Results
+Status: Solved
+Iterations: 25
+Optimal objective: -0.3995
+Runtime: 4.278s (4277.85ms)</code></pre><p>Double check result against known solution:</p><pre><code class="language-julia hljs">known_opt_val = 8.75427
+known_solution =  [1.0         0.354428    0.238389    0.323015  -0.117854    0.620975    0.0969092   0.231657
+  0.354428    1.0        -0.590998   -0.172179  -0.571414    0.232656    0.109805    0.0229169
+  0.238389   -0.590998    1.0         0.379909   0.0205233  -0.237496    0.0431976  -0.0364916
+  0.323015   -0.172179    0.379909    1.0       -0.250821    0.349762    0.13669     0.49255
+ -0.117854   -0.571414    0.0205233  -0.250821   1.0         0.145922   -0.0418897   0.0604382
+  0.620975    0.232656   -0.237496    0.349762   0.145922    1.0         0.457861    0.0215352
+  0.0969092   0.109805    0.0431976   0.13669   -0.0418897   0.457861    1.0        -0.626215
+  0.231657    0.0229169  -0.0364916   0.49255    0.0604382   0.0215352  -0.626215    1.0   ];
+
+@test isapprox(obj_val, known_opt_val , atol=1e-3)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><pre><code class="language-julia hljs">@test norm(X_sol - known_solution, Inf) &lt; 1e-3</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr32"><span class="sgr1">Test Passed</span></span></code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../method/">« Method</a><a class="docs-footer-nextpage" href="../logistic_regression/">Logistic Regression »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 15:52">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
