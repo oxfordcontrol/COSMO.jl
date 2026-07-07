@@ -334,7 +334,6 @@ coefficient(t::MOI.ScalarAffineTerm) = t.coefficient
 coefficient(t::MOI.VectorAffineTerm) = coefficient(t.scalar_term)
 
 function processconstraints!(optimizer::Optimizer{T}, src::MOI.ModelLike) where {T <: AbstractFloat}
-    println(src)
     convex_sets = COSMO.AbstractConvexSet{T}[]
 
     for (F, S) in MOI.get(src, MOI.ListOfConstraintTypesPresent())
