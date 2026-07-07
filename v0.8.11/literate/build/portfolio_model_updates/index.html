@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Model Updates · COSMO.jl</title><meta name="title" content="Model Updates · COSMO.jl"/><meta property="og:title" content="Model Updates · COSMO.jl"/><meta property="twitter:title" content="Model Updates · COSMO.jl"/><meta name="description" content="Documentation for COSMO.jl."/><meta property="og:description" content="Documentation for COSMO.jl."/><meta property="twitter:description" content="Documentation for COSMO.jl."/><meta property="og:url" content="https://oxfordcontrol.github.io/COSMO.jl/stable/literate/build/portfolio_model_updates/"/><meta property="twitter:url" content="https://oxfordcontrol.github.io/COSMO.jl/stable/literate/build/portfolio_model_updates/"/><link rel="canonical" href="https://oxfordcontrol.github.io/COSMO.jl/stable/literate/build/portfolio_model_updates/"/><script async src="https://www.googletagmanager.com/gtag/js?id=UA-134239283-1"></script><script>  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'UA-134239283-1', {'page_path': location.pathname + location.search + location.hash});
+</script><script data-outdated-warner src="../../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../../assets/documenter.js"></script><script src="../../../search_index.js"></script><script src="../../../siteinfo.js"></script><script src="../../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../../assets/themeswap.js"></script><link href="../../../assets/favicon.ico" rel="icon" type="image/x-icon"/><script src="../../../assets/github_buttons.js"></script><link href="../../../assets/custom.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../../"><img src="../../../assets/logo.png" alt="COSMO.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../../">COSMO.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../../">Home</a></li><li><span class="tocitem">User Guide</span><ul><li><a class="tocitem" href="../../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../../jump/">JuMP Interface</a></li><li><a class="tocitem" href="../../../lin_solver/">Linear System Solver</a></li><li><a class="tocitem" href="../../../acceleration/">Acceleration</a></li><li><a class="tocitem" href="../custom_cone/">Custom Cone Constraint</a></li><li><a class="tocitem" href="../../../decomposition/">Chordal Decomposition</a></li><li class="is-active"><a class="tocitem" href>Model Updates</a></li><li><a class="tocitem" href="../arbitrary_precision/">Arbitrary Precision</a></li><li><a class="tocitem" href="../../../performance/">Performance Tips</a></li></ul></li><li><a class="tocitem" href="../../../method/">Method</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../../../examples/closest_correlation_matrix/">Closest Correlation Matrix</a></li><li><a class="tocitem" href="../../../examples/logistic_regression/">Logistic Regression</a></li><li><a class="tocitem" href="../../../examples/lovasz_petersen/">Lovász Theta Function</a></li><li><a class="tocitem" href="../../../examples/lp/">Linear Program</a></li><li><a class="tocitem" href="../../../examples/maxcut/">Maximum Cut Problem</a></li><li><a class="tocitem" href="../../../examples/portfolio_optimisation/">Portfolio Optimisation</a></li><li><a class="tocitem" href="../../../examples/qp/">Quadratic Program</a></li><li><a class="tocitem" href="../../../examples/sum_abs_k_eigenvalues/">Minimizing the sum of the k-largest λ</a></li><li><a class="tocitem" href="../../../examples/svm_primal/">Support Vector Machine</a></li><li><a class="tocitem" href="../../../examples/two_way_partitioning/">Relaxed Two-Way Partitioning Problem</a></li></ul></li><li><a class="tocitem" href="../../../citing/">Citing COSMO</a></li><li><a class="tocitem" href="../../../contributing/">Contributing</a></li><li><a class="tocitem" href="../../../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Model Updates</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Model Updates</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/oxfordcontrol/COSMO.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/oxfordcontrol/COSMO.jl/blob/master/docs/src/literate/portfolio_model_updates.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Model-Updates"><a class="docs-heading-anchor" href="#Model-Updates">Model Updates</a><a id="Model-Updates-1"></a><a class="docs-heading-anchor-permalink" href="#Model-Updates" title="Permalink"></a></h1><p>When a pareto-optimal front in portfolio optimisation is computed for different risk-aversion parameters <span>$\gamma$</span>, we are repeatedly solving the same model with only a slight change in the cost function. This allows us to reuse the KKT factorisation from previous solves and recompute the solution very efficiently, see <a href="../../../method/#Algorithm">Algorithm</a>. For more information about solving portfolio optimsiation problems with COSMO see <a href="../../../examples/portfolio_optimisation/#Portfolio-Optimisation">Portfolio Optimisation</a>. We are planning to solve the following QP for different values of <span>$\gamma$</span>:</p><p class="math-container">\[\begin{array}{ll} \text{minimize} &amp;  x^\top D x + y^\top y - \gamma^{-1} \mu^\top x \\
+\text{subject to} &amp;  y = F^\top x \\
+                  &amp;  1^\top x = d + 1^\top x^0 \\
+                   &amp;  x  \geq 0,
+\end{array}\]</p><p>As you can see <span>$\gamma$</span> enters only in the linear part of the cost function, i.e. our vector <code>q</code>. Let&#39;s generate some example data:</p><pre><code class="language-julia hljs">using LinearAlgebra, SparseArrays, Random, COSMO
+
+rng = Random.MersenneTwister(1)
+k = 5; # number of factors
+n = k * 10; # number of assets
+D = spdiagm(0 =&gt; rand(rng, n) .* sqrt(k))
+F = sprandn(rng, n, k, 0.5); # factor loading matrix
+μ = (3 .+ 9. * rand(rng, n)) / 100. # expected returns between 3% - 12%
+d = 1 # we are starting from all cash
+x0 = zeros(n);</code></pre><p>We want to solve this problem for the following risk-parameters:</p><pre><code class="language-julia hljs">gammas = [ 0.001, 0.01, 0.1,  0.5,  1., 3., 10, 100, 1000]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">9-element Vector{Float64}:
+    0.001
+    0.01
+    0.1
+    0.5
+    1.0
+    3.0
+   10.0
+  100.0
+ 1000.0</code></pre><p>Let&#39;s solve the problem for the first parameter:</p><pre><code class="language-julia hljs"># x = (x, y)
+γ = gammas[1]
+P = blockdiag(D, spdiagm(0 =&gt; ones(k)))
+q = [-μ ./ (2 * γ); zeros(k)];
+
+Aeq = [ transpose(F) -diagm(0 =&gt; ones(k));
+        ones(1, n) zeros(1, k)]
+beq = [zeros(k); -1.0]
+Aineq = [spdiagm(0 =&gt; ones(n)) spzeros(n, k)]
+
+cs1 = COSMO.Constraint(Aeq, beq, COSMO.ZeroSet);
+cs2 = COSMO.Constraint(Aineq, zeros(n), COSMO.Nonnegatives);
+cosmo_settings = COSMO.Settings(verbose = false)
+
+# solve the problem once
+model = COSMO.Model();
+assemble!(model, P, q, [cs1; cs2], settings = cosmo_settings);
+result = COSMO.optimize!(model);
+x_opt = view(result.x, 1:n);
+y_opt = view(result.x, n+1:n+k);
+
+# allocate some space for results
+risks = zeros(length(gammas));
+returns = zeros(length(gammas));
+returns[1] = dot(μ, x_opt);
+risks[1] = sqrt(dot(y_opt, y_opt));</code></pre><p>After a successful solve, we can use the <code>update!(model, q = nothing, b = nothing)</code> function to update our model and re-solve the problem efficiently:</p><pre><code class="language-julia hljs"># solve the problem efficiently for the remaining γ using model updates
+function solve_repeatedly!(returns, risks, gammas, model, k, n, μ)
+        for (i, γ) in enumerate(gammas[2:end])
+                q_new = [-μ ./ (2 * γ); zeros(k)];
+
+                # here we use the update! function to change the model
+                update!(model, q = q_new)
+                result = COSMO.optimize!(model);
+
+                x_opt = view(result.x, 1:n)
+                y_opt = view(result.x, n+1:n+k)
+                returns[i + 1] = dot(μ, x_opt)
+                risks[i + 1] = sqrt(dot(y_opt, y_opt))
+        end
+end
+solve_repeatedly!(returns, risks, gammas, model, k, n, μ);</code></pre><p>We can now plot the risk-return trade-off curve:</p><pre><code class="language-julia hljs">using Plots
+Plots.plot(risks, returns, xlabel = &quot;Standard deviation (risk)&quot;, ylabel = &quot;Expected return&quot;, title = &quot;Risk-return trade-off for efficient portfolios&quot;, legend = false)</code></pre><img src="10655474.svg" alt="Example block output"/><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../../decomposition/">« Chordal Decomposition</a><a class="docs-footer-nextpage" href="../arbitrary_precision/">Arbitrary Precision »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 7 July 2026 16:27">Tuesday 7 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
