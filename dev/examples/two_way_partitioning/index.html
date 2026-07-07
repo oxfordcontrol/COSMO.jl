@@ -38,226 +38,7 @@ W = Symmetric(W)</code></pre><pre class="documenter-example-output"><code class=
 @variable(model, ν[1:n]);
 @objective(model, Max, -ones(n)&#39; * ν )
 @constraint(model, Symmetric(W + diagm(ν) )  in JuMP.PSDCone());
-JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Maximize ScalarAffineFunction{Float64}:
- 0.0 - 1.0 ν[1] - 1.0 ν[2] - 1.0 ν[3] - 1.0 ν[4] - 1.0 ν[5] - 1.0 ν[6] - 1.0 ν[7] - 1.0 ν[8] - 1.0 ν[9] - 1.0 ν[10] - 1.0 ν[11] - 1.0 ν[12] - 1.0 ν[13] - 1.0 ν[14] - 1.0 ν[15] - 1.0 ν[16] - 1.0 ν[17] - 1.0 ν[18] - 1.0 ν[19] - 1.0 ν[20]
-
-Subject to:
-
-VectorAffineFunction{Float64}-in-Scaled{PositiveSemidefiniteConeTriangle}
- ┌                                ┐
- │-1.0528363306124202 + 1.0 ν[1]  │
- │0.43450460079681563             │
- │0.02835428739065727 + 1.0 ν[2]  │
- │0.0                             │
- │1.1344555620998293              │
- │-0.7602362063711745 + 1.0 ν[3]  │
- │0.0                             │
- │0.0                             │
- │0.8272574966701005              │
- │-0.3209415773794654 + 1.0 ν[4]  │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.6347750259939933             │
- │-0.057547453373101486 + 1.0 ν[5]│
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.21642154367708533            │
- │1.9305238145486778 + 1.0 ν[6]   │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │1.1299973966118715              │
- │0.322146132811399 + 1.0 ν[7]    │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.6769163654348226             │
- │-0.29178365714150484 + 1.0 ν[8] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.31041697885051156             │
- │-0.5610902671491463 + 1.0 ν[9]  │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.21626918917423013            │
- │-0.9654005199504526 + 1.0 ν[10] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.3282846997746994              │
- │-0.8216864802613469 + 1.0 ν[11] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │1.590643027786316               │
- │0.8036336112584134 + 1.0 ν[12]  │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.10593008441102737            │
- │-0.5521994921431328 + 1.0 ν[13] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │2.917733868611536               │
- │0.03759227595991484 + 1.0 ν[14] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.9482849268801556              │
- │-1.3486136363403636 + 1.0 ν[15] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.5069950085676354             │
- │0.42053061837018363 + 1.0 ν[16] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │1.029204297794958               │
- │0.1582417620725275 + 1.0 ν[17]  │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-0.4501426417706077             │
- │0.503905800867215 + 1.0 ν[18]   │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.3830282797137492              │
- │-1.2155534535643648 + 1.0 ν[19] │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │0.0                             │
- │-2.638863787749651              │
- │-1.0998836346904342 + 1.0 ν[20] │
- └                                ┘ ∈ Scaled{PositiveSemidefiniteConeTriangle}(PositiveSemidefiniteConeTriangle(20))
-
-------------------------------------------------------------------
+JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">------------------------------------------------------------------
           COSMO v0.8.10 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2022
@@ -288,7 +69,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 0.19ms
+Setup Time: 0.22ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-6.0024e+02	1.7158e+01	5.9999e-01	1.0000e-01
@@ -304,7 +85,7 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 174 (incl. 24 safeguarding iter)
 Optimal objective: 28.15
-Runtime: 0.192s (192.29ms)</code></pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-julia hljs">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">-28.149260383754584</code></pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-julia hljs">function brute_force_optimisation(W, n)
+Runtime: 0.19s (189.63ms)</code></pre><p>Looking at the solver output you can see how the PSD constraint was decomposed into 19 PSD constraints. Let&#39;s look at the lower bound:</p><pre><code class="language-julia hljs">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">-28.149260383754584</code></pre><p>As <span>$n$</span> is small, we can verify our result by finding the optimal solution by trying out all possible combinations:</p><pre><code class="language-julia hljs">function brute_force_optimisation(W, n)
    opt_obj = Inf
    opt_x = Inf * ones(n)
 
@@ -318,4 +99,4 @@ Runtime: 0.192s (192.29ms)</code></pre><p>Looking at the solver output you can s
    end
    return opt_obj, opt_x
 end
-opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(-28.14926038252595, [-1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0])</code></pre><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 14:37">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+opt_obj, opt_x = brute_force_optimisation(W, n)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(-28.14926038252595, [-1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0])</code></pre><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Boyd and Vandenberghe - Convex Optimization, Cambridge University Press (2004)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../svm_primal/">« Support Vector Machine</a><a class="docs-footer-nextpage" href="../../citing/">Citing COSMO »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 7 July 2026 15:46">Tuesday 7 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

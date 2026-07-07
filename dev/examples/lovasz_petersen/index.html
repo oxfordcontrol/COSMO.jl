@@ -31,7 +31,7 @@ end
 for θ = 90:-72:-198
   push!(coordinates, [ri * cosd(θ), ri * sind(θ)])
 end
-graphplot(E, names = 1:n,  x = getindex.(coordinates, 1), y = getindex.(coordinates, 2), fontsize = 10, nodesize = 1, nodeshape =:circle, curvature = 0.)</code></pre><img src="206c209c.svg" alt="Example block output"/><p>Let&#39;s solve the SDP with COSMO and JuMP:</p><pre><code class="language-julia hljs">model = JuMP.Model(COSMO.Optimizer);
+graphplot(E, names = 1:n,  x = getindex.(coordinates, 1), y = getindex.(coordinates, 2), fontsize = 10, nodesize = 1, nodeshape =:circle, curvature = 0.)</code></pre><img src="32245f14.svg" alt="Example block output"/><p>Let&#39;s solve the SDP with COSMO and JuMP:</p><pre><code class="language-julia hljs">model = JuMP.Model(COSMO.Optimizer);
 
 @variable(model, X[1:n, 1:n], PSD)
 x = vec(X)
@@ -44,121 +44,7 @@ for j = 1:n
     end
   end
 end
-status = JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Maximize ScalarAffineFunction{Float64}:
- 0.0 + 1.0 X[1,1] + 2.0 X[1,2] + 2.0 X[1,3] + 2.0 X[1,4] + 2.0 X[1,5] + 2.0 X[1,6] + 2.0 X[1,7] + 2.0 X[1,8] + 2.0 X[1,9] + 2.0 X[1,10] + 1.0 X[2,2] + 2.0 X[2,3] + 2.0 X[2,4] + 2.0 X[2,5] + 2.0 X[2,6] + 2.0 X[2,7] + 2.0 X[2,8] + 2.0 X[2,9] + 2.0 X[2,10] + 1.0 X[3,3] + 2.0 X[3,4] + 2.0 X[3,5] + 2.0 X[3,6] + 2.0 X[3,7] + 2.0 X[3,8] + 2.0 X[3,9] + 2.0 X[3,10] + 1.0 X[4,4] + 2.0 X[4,5] + 2.0 X[4,6] + 2.0 X[4,7] + 2.0 X[4,8] + 2.0 X[4,9] + 2.0 X[4,10] + 1.0 X[5,5] + 2.0 X[5,6] + 2.0 X[5,7] + 2.0 X[5,8] + 2.0 X[5,9] + 2.0 X[5,10] + 1.0 X[6,6] + 2.0 X[6,7] + 2.0 X[6,8] + 2.0 X[6,9] + 2.0 X[6,10] + 1.0 X[7,7] + 2.0 X[7,8] + 2.0 X[7,9] + 2.0 X[7,10] + 1.0 X[8,8] + 2.0 X[8,9] + 2.0 X[8,10] + 1.0 X[9,9] + 2.0 X[9,10] + 1.0 X[10,10]
-
-Subject to:
-
-VectorAffineFunction{Float64}-in-Zeros
- ┌                                                                                                                                        ┐
- │-1.0 + 1.0 X[1,1] + 1.0 X[2,2] + 1.0 X[3,3] + 1.0 X[4,4] + 1.0 X[5,5] + 1.0 X[6,6] + 1.0 X[7,7] + 1.0 X[8,8] + 1.0 X[9,9] + 1.0 X[10,10]│
- └                                                                                                                                        ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[1,2]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[2,3]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[3,4]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[1,5]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[4,5]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[1,6]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[2,7]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[3,8]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[6,8]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[4,9]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[6,9]│
- └                ┘ ∈ Zeros(1)
- ┌                ┐
- │0.0 + 1.0 X[7,9]│
- └                ┘ ∈ Zeros(1)
- ┌                 ┐
- │0.0 + 1.0 X[5,10]│
- └                 ┘ ∈ Zeros(1)
- ┌                 ┐
- │0.0 + 1.0 X[7,10]│
- └                 ┘ ∈ Zeros(1)
- ┌                 ┐
- │0.0 + 1.0 X[8,10]│
- └                 ┘ ∈ Zeros(1)
-
-VectorAffineFunction{Float64}-in-Scaled{PositiveSemidefiniteConeTriangle}
- ┌                                ┐
- │0.0 + 1.0 X[1,1]                │
- │0.0 + 1.4142135623730951 X[1,2] │
- │0.0 + 1.0 X[2,2]                │
- │0.0 + 1.4142135623730951 X[1,3] │
- │0.0 + 1.4142135623730951 X[2,3] │
- │0.0 + 1.0 X[3,3]                │
- │0.0 + 1.4142135623730951 X[1,4] │
- │0.0 + 1.4142135623730951 X[2,4] │
- │0.0 + 1.4142135623730951 X[3,4] │
- │0.0 + 1.0 X[4,4]                │
- │0.0 + 1.4142135623730951 X[1,5] │
- │0.0 + 1.4142135623730951 X[2,5] │
- │0.0 + 1.4142135623730951 X[3,5] │
- │0.0 + 1.4142135623730951 X[4,5] │
- │0.0 + 1.0 X[5,5]                │
- │0.0 + 1.4142135623730951 X[1,6] │
- │0.0 + 1.4142135623730951 X[2,6] │
- │0.0 + 1.4142135623730951 X[3,6] │
- │0.0 + 1.4142135623730951 X[4,6] │
- │0.0 + 1.4142135623730951 X[5,6] │
- │0.0 + 1.0 X[6,6]                │
- │0.0 + 1.4142135623730951 X[1,7] │
- │0.0 + 1.4142135623730951 X[2,7] │
- │0.0 + 1.4142135623730951 X[3,7] │
- │0.0 + 1.4142135623730951 X[4,7] │
- │0.0 + 1.4142135623730951 X[5,7] │
- │0.0 + 1.4142135623730951 X[6,7] │
- │0.0 + 1.0 X[7,7]                │
- │0.0 + 1.4142135623730951 X[1,8] │
- │0.0 + 1.4142135623730951 X[2,8] │
- │0.0 + 1.4142135623730951 X[3,8] │
- │0.0 + 1.4142135623730951 X[4,8] │
- │0.0 + 1.4142135623730951 X[5,8] │
- │0.0 + 1.4142135623730951 X[6,8] │
- │0.0 + 1.4142135623730951 X[7,8] │
- │0.0 + 1.0 X[8,8]                │
- │0.0 + 1.4142135623730951 X[1,9] │
- │0.0 + 1.4142135623730951 X[2,9] │
- │0.0 + 1.4142135623730951 X[3,9] │
- │0.0 + 1.4142135623730951 X[4,9] │
- │0.0 + 1.4142135623730951 X[5,9] │
- │0.0 + 1.4142135623730951 X[6,9] │
- │0.0 + 1.4142135623730951 X[7,9] │
- │0.0 + 1.4142135623730951 X[8,9] │
- │0.0 + 1.0 X[9,9]                │
- │0.0 + 1.4142135623730951 X[1,10]│
- │0.0 + 1.4142135623730951 X[2,10]│
- │0.0 + 1.4142135623730951 X[3,10]│
- │0.0 + 1.4142135623730951 X[4,10]│
- │0.0 + 1.4142135623730951 X[5,10]│
- │0.0 + 1.4142135623730951 X[6,10]│
- │0.0 + 1.4142135623730951 X[7,10]│
- │0.0 + 1.4142135623730951 X[8,10]│
- │0.0 + 1.4142135623730951 X[9,10]│
- │0.0 + 1.0 X[10,10]              │
- └                                ┘ ∈ Scaled{PositiveSemidefiniteConeTriangle}(PositiveSemidefiniteConeTriangle(10))
-
-------------------------------------------------------------------
+status = JuMP.optimize!(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">------------------------------------------------------------------
           COSMO v0.8.10 - A Quadratic Objective Conic Solver
                          Michael Garstka
                 University of Oxford, 2017 - 2022
@@ -181,7 +67,7 @@ Settings: ϵ_abs = 1.0e-05, ϵ_rel = 1.0e-05,
 Acc:      Anderson Type2{QRDecomp},
           Memory size = 15, RestartedMemory,
           Safeguarded: true, tol: 2.0
-Setup Time: 172.5ms
+Setup Time: 176.99ms
 
 Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 1	-1.2711e+03	2.1055e+01	1.0052e+00	1.0000e-01
@@ -192,4 +78,4 @@ Iter:	Objective:	Primal Res:	Dual Res:	Rho:
 Status: Solved
 Iterations: 25
 Optimal objective: -4
-Runtime: 0.579s (579.14ms)</code></pre><p>The optimal objective is given by:</p><pre><code class="language-julia hljs">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4.000000007423991</code></pre><p>Which is the correct known value for the Petersen Graph.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../logistic_regression/">« Logistic Regression</a><a class="docs-footer-nextpage" href="../lp/">Linear Program »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 14:37">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Runtime: 0.686s (686.29ms)</code></pre><p>The optimal objective is given by:</p><pre><code class="language-julia hljs">JuMP.objective_value(model)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4.000000007423991</code></pre><p>Which is the correct known value for the Petersen Graph.</p><h2 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h2><p>[1] Lovász - On the Shannon Capacity of a Graph, IEEE Transactions on Information Theory (1979)</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../logistic_regression/">« Logistic Regression</a><a class="docs-footer-nextpage" href="../lp/">Linear Program »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Tuesday 7 July 2026 15:46">Tuesday 7 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
