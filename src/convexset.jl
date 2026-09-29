@@ -1,9 +1,9 @@
 using UnsafeArrays
 import Base: showarg, eltype
-const DSYEVR_ = (BLAS.@blasfunc(dsyevr_),Base.liblapack_name)
-const SSYEVR_ = (BLAS.@blasfunc(ssyevr_),Base.liblapack_name)
-const ZHEEVR_ = (BLAS.@blasfunc(zheevr_),Base.liblapack_name)
-const CHEEVR_ = (BLAS.@blasfunc(cheevr_),Base.liblapack_name)
+const DSYEVR_ = BLAS.@blasfunc(dsyevr_)
+const SSYEVR_ = BLAS.@blasfunc(ssyevr_)
+const ZHEEVR_ = BLAS.@blasfunc(zheevr_)
+const CHEEVR_ = BLAS.@blasfunc(cheevr_)
 
 # ----------------------------------------------------
 # Zero cone
@@ -170,7 +170,7 @@ for (syevr, elty) in
             ldz     = n
             lda     = stride(A,2)
 
-                ccall($syevr, Cvoid,
+                ccall(($(QuoteNode(syevr)), LinearAlgebra.BLAS.liblapack), Cvoid,
                 (Ref{UInt8}, Ref{UInt8}, Ref{UInt8}, Ref{BLAS.BlasInt},
                 Ptr{$elty}, Ref{BLAS.BlasInt}, Ref{$elty}, Ref{$elty},
                 Ref{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ref{$elty}, Ptr{BLAS.BlasInt},
@@ -198,7 +198,7 @@ for (syevr, elty, relty) in
             ldz     = n
             lda     = stride(A,2)
 
-                ccall($syevr, Cvoid,
+                ccall(($(QuoteNode(syevr)), LinearAlgebra.BLAS.liblapack), Cvoid,
                 (Ref{UInt8}, Ref{UInt8}, Ref{UInt8}, Ref{BLAS.BlasInt},
                 Ptr{$elty}, Ref{BLAS.BlasInt}, Ref{$elty}, Ref{$elty},
                 Ref{BLAS.BlasInt}, Ref{BLAS.BlasInt}, Ref{$elty}, Ptr{BLAS.BlasInt},
